@@ -85,14 +85,17 @@ Only include entries if there is meaningful information to extract. Be concise b
     };
   }
   
-  async storeExtractedKnowledge(userId: number, knowledge: ExtractedKnowledge): Promise<void> {
+  async storeExtractedKnowledge(userId: number, projectId: string, knowledge: ExtractedKnowledge): Promise<void> {
     for (const memory of knowledge.memories) {
       await memoryIndex.storeMemory(
         userId,
         memory.content,
-        memory.type,
+        'reflection' as const,
         memory.importance,
-        memory.tags
+        memory.tags,
+        projectId,
+        'default',
+        'default'
       );
     }
     
@@ -124,7 +127,7 @@ Only include entries if there is meaningful information to extract. Be concise b
     }
   }
   
-  async reflectOnSession(userId: number, messages: Array<{ role: string; content: string }>): Promise<void> {
+  async reflectOnSession(userId: number, projectId: string, messages: Array<{ role: string; content: string }>): Promise<void> {
     const conversationText = messages
       .map(m => `${m.role}: ${m.content}`)
       .join('\n\n');
@@ -157,9 +160,12 @@ Focus on:
           await memoryIndex.storeMemory(
             userId,
             insight.content,
-            insight.type,
+            'reflection' as const,
             insight.importance,
-            insight.tags
+            insight.tags,
+            projectId,
+            'default',
+            'default'
           );
         }
       }

@@ -2,7 +2,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import { config } from '../config/env';
 
 export interface VectorPoint {
-  id: string;
+  id: string | number;
   vector: number[];
   payload: Record<string, any>;
 }

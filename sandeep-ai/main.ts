@@ -9,6 +9,7 @@ function parseArgs(): { mode: 'server' | 'cli'; options: any } {
   if (mode === 'cli') {
     const options: any = {
       interactive: true,
+      memoryMode: 'persistent',
     };
     
     for (let i = 1; i < args.length; i++) {
@@ -25,6 +26,11 @@ function parseArgs(): { mode: 'server' | 'cli'; options: any } {
         i++;
       } else if (arg === '--provider' && args[i + 1]) {
         options.modelProvider = args[i + 1];
+        i++;
+      } else if (arg === '--mode' && args[i + 1]) {
+        if (args[i + 1] === 'ephemeral' || args[i + 1] === 'persistent') {
+          options.memoryMode = args[i + 1];
+        }
         i++;
       } else if (arg === '--interactive') {
         options.interactive = true;
