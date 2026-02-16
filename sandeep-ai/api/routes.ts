@@ -54,7 +54,7 @@ router.get('/memory/:userId', async (req: Request, res: Response) => {
       return;
     }
     
-    const context = await memoryIndex.retrieveContext(userId, '');
+    const context = await memoryIndex.retrieveContext(userId, "", '');
     
     res.json({
       memories: context.memories,

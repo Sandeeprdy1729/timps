@@ -6,10 +6,12 @@ import { config } from '../config/env';
 
 export interface AgentConfig {
   userId: number;
+  projectId?: string;
   username?: string;
   systemPrompt?: string;
   maxIterations?: number;
   modelProvider?: 'openai' | 'gemini' | 'ollama';
+  memoryMode?: 'persistent' | 'ephemeral';
 }
 
 export interface AgentResponse {
@@ -35,6 +37,8 @@ After each conversation, reflect on what you learned about the user and store im
 
 export class Agent {
   private userId: number;
+  private projectId: string;
+  private memoryMode: 'persistent' | 'ephemeral';
   private username?: string;
   private systemPrompt: string;
   private model: BaseModel;
@@ -43,6 +47,8 @@ export class Agent {
   
   constructor(config: AgentConfig) {
     this.userId = config.userId;
+    this.projectId = config.projectId || 'default';
+    this.memoryMode = config.memoryMode || 'persistent';
     this.username = config.username;
     this.systemPrompt = config.systemPrompt || DEFAULT_SYSTEM_PROMPT;
     this.model = createModel(config.modelProvider || 'ollama');
@@ -61,12 +67,12 @@ export class Agent {
   }
   
   async run(userMessage: string): Promise<AgentResponse> {
-    memoryIndex.addToShortTerm(this.userId, {
+    memoryIndex.addToShortTerm(this.userId, this.projectId, {
       role: 'user',
       content: userMessage,
     });
     
-    const context = await memoryIndex.retrieveContext(this.userId, userMessage);
+    const context = await memoryIndex.retrieveContext(this.userId, this.projectId, userMessage);
     const contextString = memoryIndex.formatContextForPrompt(context);
     
     let messages = this.buildMessages(userMessage, contextString);
@@ -81,7 +87,7 @@ export class Agent {
         tools: this.toolDefinitions,
       });
       
-      memoryIndex.addToShortTerm(this.userId, {
+      memoryIndex.addToShortTerm(this.userId, this.projectId, {
         role: 'assistant',
         content: response.content,
         tool_calls: response.toolCalls,
@@ -126,7 +132,7 @@ export class Agent {
   private buildMessages(userMessage: string, contextString: string): Message[] {
     const systemContent = this.systemPrompt +
       (contextString ? `\n\n### User Context\n${contextString}` : '') +
-      `\n\n### Recent Conversation\n${memoryIndex.getShortTermContext(this.userId)}`;
+      `\n\n### Recent Conversation\n${memoryIndex.getShortTermContext(this.userId, this.projectId)}`;
 
     return [
       { role: 'system', content: systemContent },
@@ -162,15 +168,25 @@ export class Agent {
   }
   
   private async reflectAndStore(userMessage: string, assistantResponse: string): Promise<void> {
-    const reflection = await this.extractMemories(userMessage, assistantResponse);
+    // Skip memory storage in ephemeral mode
+    if (this.memoryMode === 'ephemeral') {
+      return;
+    }
     
+    const reflection = await this.extractMemories(userMessage, assistantResponse);
+    const projectId = "default";
+    const conversationId = "conv_" + Date.now();
+    const messageId = "msg_" + Date.now();
     for (const memory of reflection.memories) {
       await memoryIndex.storeMemory(
         this.userId,
+        projectId,
         memory.content,
-        memory.type,
+        memory.type === "reflection" ? "reflection" : "explicit",
         memory.importance,
-        memory.tags
+        memory.tags || [],
+        conversationId,
+        messageId
       );
     }
     
@@ -257,7 +273,19 @@ Assistant: ${assistantResponse}`;
     this.systemPrompt = prompt;
   }
   
+  getProjectId(): string {
+    return this.projectId;
+  }
+  
+  getUserId(): number {
+    return this.userId;
+  }
+  
+  getMemoryMode(): string {
+    return this.memoryMode;
+  }
+  
   clearConversation(): void {
-    memoryIndex.clearShortTerm(this.userId);
+    memoryIndex.clearShortTerm(this.userId, this.projectId);
   }
 }
