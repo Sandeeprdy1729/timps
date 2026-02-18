@@ -39,7 +39,7 @@ router.get('/memory/:userId', async (req, res) => {
             res.status(400).json({ error: 'Invalid userId' });
             return;
         }
-        const context = await memoryIndex_1.memoryIndex.retrieveContext(userId, '');
+        const context = await memoryIndex_1.memoryIndex.retrieveContext(userId, "", '');
         res.json({
             memories: context.memories,
             goals: context.goals,

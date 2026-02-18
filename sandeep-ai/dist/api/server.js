@@ -50,7 +50,7 @@ async function startServer() {
         console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║     Sandeep AI Server                                     ║
+║     TIMPs Server                                     ║
 ║     A persistent cognitive partner                        ║
 ║                                                           ║
 ║     Server running on http://localhost:${env_1.config.port}        ║

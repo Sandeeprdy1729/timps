@@ -10,25 +10,30 @@ class MemoryIndex {
     constructor() {
         this.longTermStore = new longTerm_1.LongTermMemoryStore();
     }
-    getOrCreateUserMemory(userId, username) {
-        if (!this.userMemories.has(userId)) {
-            this.userMemories.set(userId, {
+    getMemoryKey(userId, projectId) {
+        return `${userId}:${projectId}`;
+    }
+    getOrCreateUserMemory(userId, projectId, username) {
+        const key = this.getMemoryKey(userId, projectId);
+        if (!this.userMemories.has(key)) {
+            this.userMemories.set(key, {
                 shortTerm: new shortTerm_1.ShortTermMemoryStore(),
                 longTerm: this.longTermStore,
                 userId,
+                projectId,
                 username,
             });
         }
-        const userMemory = this.userMemories.get(userId);
+        const userMemory = this.userMemories.get(key);
         if (username) {
             userMemory.username = username;
         }
         return userMemory;
     }
-    async retrieveContext(userId, query) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    async retrieveContext(userId, projectId, query) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         const [memories, goals, preferences, projects] = await Promise.all([
-            userMemory.longTerm.retrieveMemories(userId, query, env_1.config.memory.longTermTopResults),
+            userMemory.longTerm.retrieveMemories(userId, projectId, query, env_1.config.memory.longTermTopResults),
             userMemory.longTerm.getGoals(userId),
             userMemory.longTerm.getPreferences(userId),
             userMemory.longTerm.getProjects(userId),
@@ -64,38 +69,42 @@ class MemoryIndex {
         }
         return parts.join('\n');
     }
-    addToShortTerm(userId, message) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    addToShortTerm(userId, projectId, message) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         userMemory.shortTerm.addMessage(message);
     }
-    addToShortTermBatch(userId, messages) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    addToShortTermBatch(userId, projectId, messages) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         userMemory.shortTerm.addMessages(messages);
     }
-    getShortTermMessages(userId) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    getShortTermMessages(userId, projectId) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         return userMemory.shortTerm.getMessages();
     }
-    getShortTermContext(userId) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    getShortTermContext(userId, projectId) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         return userMemory.shortTerm.toContextString();
     }
-    clearShortTerm(userId) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    clearShortTerm(userId, projectId) {
+        const userMemory = this.getOrCreateUserMemory(userId, projectId);
         userMemory.shortTerm.clear();
     }
-    async storeMemory(userId, content, memoryType = 'general', importance = 1, tags = []) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+    async storeMemory(userId, projectId, content, memoryType = "explicit", importance = 1, tags = [], sourceConversationId, sourceMessageId) {
+        const userMemory = this.getOrCreateUserMemory(userId, "default");
         return userMemory.longTerm.storeMemory({
             user_id: userId,
+            project_id: projectId,
             content,
             memory_type: memoryType,
             importance,
+            retrieval_count: 0,
+            source_conversation_id: sourceConversationId,
+            source_message_id: sourceMessageId,
             tags,
         });
     }
     async storeGoal(userId, title, description, priority = 1, targetDate) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+        const userMemory = this.getOrCreateUserMemory(userId, 'default');
         return userMemory.longTerm.storeGoal({
             user_id: userId,
             title,
@@ -106,7 +115,7 @@ class MemoryIndex {
         });
     }
     async storePreference(userId, key, value, category) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+        const userMemory = this.getOrCreateUserMemory(userId, 'default');
         return userMemory.longTerm.storePreference({
             user_id: userId,
             preference_key: key,
@@ -115,7 +124,7 @@ class MemoryIndex {
         });
     }
     async storeProject(userId, name, description, techStack, repositoryUrl) {
-        const userMemory = this.getOrCreateUserMemory(userId);
+        const userMemory = this.getOrCreateUserMemory(userId, 'default');
         return userMemory.longTerm.storeProject({
             user_id: userId,
             name,
@@ -125,8 +134,8 @@ class MemoryIndex {
             repository_url: repositoryUrl,
         });
     }
-    removeUser(userId) {
-        this.userMemories.delete(userId);
+    removeUser(userId, projectId) {
+        this.userMemories.delete(this.getMemoryKey(userId, projectId));
     }
 }
 exports.MemoryIndex = MemoryIndex;

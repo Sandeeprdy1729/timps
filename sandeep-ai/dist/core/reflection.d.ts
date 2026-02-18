@@ -27,8 +27,8 @@ export declare class Reflection {
     private model;
     constructor();
     analyzeConversation(userId: number, userMessage: string, assistantMessage: string): Promise<ExtractedKnowledge>;
-    storeExtractedKnowledge(userId: number, knowledge: ExtractedKnowledge): Promise<void>;
-    reflectOnSession(userId: number, messages: Array<{
+    storeExtractedKnowledge(userId: number, projectId: string, knowledge: ExtractedKnowledge): Promise<void>;
+    reflectOnSession(userId: number, projectId: string, messages: Array<{
         role: string;
         content: string;
     }>): Promise<void>;

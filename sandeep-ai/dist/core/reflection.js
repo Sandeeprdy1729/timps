@@ -49,9 +49,9 @@ Only include entries if there is meaningful information to extract. Be concise b
             projects: [],
         };
     }
-    async storeExtractedKnowledge(userId, knowledge) {
+    async storeExtractedKnowledge(userId, projectId, knowledge) {
         for (const memory of knowledge.memories) {
-            await memoryIndex_1.memoryIndex.storeMemory(userId, memory.content, memory.type, memory.importance, memory.tags);
+            await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, memory.content, "reflection", memory.importance, memory.tags || [], "reflection-analysis", "llm-extracted");
         }
         for (const goal of knowledge.goals) {
             await memoryIndex_1.memoryIndex.storeGoal(userId, goal.title, goal.description, goal.priority);
@@ -59,11 +59,11 @@ Only include entries if there is meaningful information to extract. Be concise b
         for (const pref of knowledge.preferences) {
             await memoryIndex_1.memoryIndex.storePreference(userId, pref.key, pref.value, pref.category);
         }
-        for (const project of knowledge.projects) {
-            await memoryIndex_1.memoryIndex.storeProject(userId, project.name, project.description, project.techStack);
+        for (const proj of knowledge.projects) {
+            await memoryIndex_1.memoryIndex.storeProject(userId, proj.name, proj.description, proj.techStack || [], undefined);
         }
     }
-    async reflectOnSession(userId, messages) {
+    async reflectOnSession(userId, projectId, messages) {
         const conversationText = messages
             .map(m => `${m.role}: ${m.content}`)
             .join('\n\n');
@@ -71,22 +71,17 @@ Only include entries if there is meaningful information to extract. Be concise b
 
 ${conversationText}
 
-Return a JSON array of important things to remember from this session:
+Return JSON array:
 
-[{"content": "important insight", "type": "fact|preference|general", "importance": 1-5, "tags": ["session"]}]
-
-Focus on:
-- Key information the user shared
-- Tasks or goals mentioned
-- User preferences revealed
-- Important context`;
+[{"content": "...", "type": "fact|preference|general", "importance": 1-5, "tags": ["session"]}]
+`;
         try {
             const response = await this.model.generate([{ role: 'user', content: sessionPrompt }], { max_tokens: 1000 });
             const jsonMatch = response.content.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
                 const insights = JSON.parse(jsonMatch[0]);
                 for (const insight of insights) {
-                    await memoryIndex_1.memoryIndex.storeMemory(userId, insight.content, insight.type, insight.importance, insight.tags);
+                    await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, insight.content, "reflection", insight.importance || 1, insight.tags || [], "session-reflection", "session");
                 }
             }
         }

@@ -52,7 +52,7 @@ export async function startServer(): Promise<void> {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║     Sandeep AI Server                                     ║
+║     TIMPs Server                                     ║
 ║     A persistent cognitive partner                        ║
 ║                                                           ║
 ║     Server running on http://localhost:${config.port}        ║

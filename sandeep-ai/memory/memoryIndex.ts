@@ -125,27 +125,30 @@ export class MemoryIndex {
   }
   
   async storeMemory(
-    userId: number,
-    content: string,
-    memoryType: "explicit" | "reflection",
-    importance: number,
-    tags: string[],
-    projectId: string,
-    conversationId: string,
-    messageId: string
-  ): Promise<Memory> {
-    const userMemory = this.getOrCreateUserMemory(userId, projectId);
-    return userMemory.longTerm.storeMemory(
-      userId,
-      content,
-      memoryType,
-      importance,
-      tags,
-      projectId,
-      conversationId,
-      messageId
-    );
-  }
+  userId: number,
+  projectId: string,
+  content: string,
+  memoryType: "explicit" | "reflection" = "explicit",
+  importance: number = 1,
+  tags: string[] = [],
+  sourceConversationId: string,
+  sourceMessageId: string
+): Promise<Memory> {
+
+  const userMemory = this.getOrCreateUserMemory(userId,"default");
+
+  return userMemory.longTerm.storeMemory({
+    user_id: userId,
+    project_id: projectId,
+    content,
+    memory_type: memoryType,
+    importance,
+    retrieval_count: 0,
+    source_conversation_id: sourceConversationId,
+    source_message_id: sourceMessageId,
+    tags,
+  });
+}
   
   async storeGoal(
     userId: number,

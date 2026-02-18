@@ -21,7 +21,7 @@ export interface AgentResponse {
   memoryStored: boolean;
 }
 
-const DEFAULT_SYSTEM_PROMPT = `You are Sandeep AI – A persistent cognitive partner that remembers, evolves, and builds with your user.
+const DEFAULT_SYSTEM_PROMPT = `You are TIMPs – A persistent cognitive partner that remembers, evolves, and builds with your user.
 
 You have access to the following tools:
 - file_operations: Read, write, list, create, and delete files on the filesystem
@@ -253,12 +253,26 @@ Assistant: ${assistantResponse}`;
         { max_tokens: 2000 }
       );
       
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      // Better JSON extraction
+      const content = response.content.trim();
+      if (content.startsWith('{')) {
+        let braceCount = 0;
+        let endIdx = -1;
+        for (let i = 0; i < content.length; i++) {
+          if (content[i] === '{') braceCount++;
+          if (content[i] === '}') braceCount--;
+          if (braceCount === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+        if (endIdx > 0) {
+          const jsonStr = content.substring(0, endIdx + 1);
+          return JSON.parse(jsonStr);
+        }
       }
     } catch (error) {
-      console.error('Failed to extract memories:', error);
+      // Silent fail - return empty knowledge
     }
     
     return {

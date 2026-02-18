@@ -18,11 +18,16 @@ export async function runCLI(options: CLIOptions): Promise<void> {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║     Sandeep AI - CLI                                      ║
-║     A persistent cognitive partner                        ║
+║  ████████╗██╗███╗   ███╗██████╗ ███████╗                ║
+║  ╚══██╔══╝██║████╗ ████║██╔══██╗██╔════╝                ║
+║     ██║   ██║██╔████╔██║██████╔╝███████╗                ║
+║     ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║                ║
+║     ██║   ██║██║ ╚═╝ ██║██║     ███████║                ║
+║     ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝                ║
 ║                                                           ║
+║  Trustworthy Intelligent Memory & Privacy System         ║
 ╚═══════════════════════════════════════════════════════════╝
-  `);
+`);
   
   try {
     await initDatabase();
@@ -370,7 +375,7 @@ async function runInteractiveMode(agent: Agent): Promise<void> {
       
       try {
         const response = await agent.run(input);
-        console.log('\nSandeep AI:', response.content);
+        console.log('\nTIMPs:', response.content);
         
         if (response.toolResults && response.toolResults.length > 0) {
           console.log('\n[Tool Results]');
@@ -394,7 +399,7 @@ async function runInteractiveMode(agent: Agent): Promise<void> {
 
 export function printHelp(): void {
   console.log(`
-Sandeep AI - Command Line Interface
+TIMPs - Command Line Interface
 
 Usage: 
   npm run cli -- --user-id <id> [options]
@@ -408,6 +413,6 @@ Options:
 
 Examples:
   npm run cli -- --user-id 1 --interactive
-  npm run cli -- --user-id 1 --username "Sandeep" --interactive
+  npm run cli -- --user-id 1 --username "TIMPs" --interactive
   `);
 }

@@ -3,6 +3,7 @@ export interface CLIOptions {
     username?: string;
     systemPrompt?: string;
     interactive?: boolean;
+    memoryMode?: 'persistent' | 'ephemeral';
 }
 export declare function runCLI(options: CLIOptions): Promise<void>;
 export declare function printHelp(): void;

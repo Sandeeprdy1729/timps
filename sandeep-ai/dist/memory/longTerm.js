@@ -7,34 +7,40 @@ const models_1 = require("../models");
 const env_1 = require("../config/env");
 class LongTermMemoryStore {
     embeddingModel = (0, models_1.createEmbeddingModel)('ollama');
-    async storeMemory(memory) {
-        const result = await (0, postgres_1.query)(`INSERT INTO memories (user_id, content, embedding_id, memory_type, importance, tags)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`, [
-            memory.user_id,
-            memory.content,
-            memory.embedding_id,
-            memory.memory_type,
-            memory.importance,
-            memory.tags,
+    async storeMemory(memoryInput) {
+        const result = await (0, postgres_1.query)(`INSERT INTO memories 
+     (user_id, project_id, content, memory_type, importance, 
+      retrieval_count, source_conversation_id, source_message_id, tags)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     RETURNING *`, [
+            memoryInput.user_id,
+            memoryInput.project_id,
+            memoryInput.content,
+            memoryInput.memory_type,
+            memoryInput.importance,
+            0,
+            memoryInput.source_conversation_id,
+            memoryInput.source_message_id,
+            memoryInput.tags,
         ]);
         const storedMemory = result[0];
-        if (storedMemory && env_1.config.qdrant.url) {
+        if (!storedMemory) {
+            throw new Error("Failed to store memory");
+        }
+        if (env_1.config.qdrant.url) {
             try {
-                const embedding = await this.embeddingModel.getEmbedding(memory.content);
-                const vectorId = `mem_${storedMemory.id}`;
+                const embedding = await this.embeddingModel.getEmbedding(memoryInput.content);
                 await (0, vector_1.upsertVectors)([{
-                        id: vectorId,
+                        id: storedMemory.id, // <-- important fix
                         vector: embedding.embedding,
                         payload: {
-                            user_id: memory.user_id,
+                            user_id: memoryInput.user_id,
                             memory_id: storedMemory.id,
-                            content: memory.content,
-                            memory_type: memory.memory_type,
-                            tags: memory.tags,
+                            project_id: memoryInput.project_id,
+                            memory_type: memoryInput.memory_type,
                         },
                     }]);
-                await (0, postgres_1.execute)('UPDATE memories SET embedding_id = $1 WHERE id = $2', [vectorId, storedMemory.id]);
+                await (0, postgres_1.execute)(`UPDATE memories SET embedding_id = $1 WHERE id = $2`, [storedMemory.id.toString(), storedMemory.id]);
             }
             catch (error) {
                 console.error('Failed to store vector embedding:', error);
@@ -42,28 +48,31 @@ class LongTermMemoryStore {
         }
         return storedMemory;
     }
-    async retrieveMemories(userId, queryText, limit = env_1.config.memory.longTermTopResults) {
+    async retrieveMemories(userId, projectId, queryText, limit = env_1.config.memory.longTermTopResults) {
         if (!env_1.config.qdrant.url) {
-            return this.getMemoriesFromDB(userId, limit);
+            return this.getMemoriesFromDB(userId, projectId, limit);
         }
         try {
             const embedding = await this.embeddingModel.getEmbedding(queryText);
             const searchResults = await (0, vector_1.searchVectors)(embedding.embedding, limit, {
-                must: [{ key: 'user_id', match: { value: userId } }],
+                must: [
+                    { key: 'user_id', match: { value: userId } },
+                    { key: 'project_id', match: { value: projectId } },
+                ],
             });
             if (searchResults.length === 0) {
-                return this.getMemoriesFromDB(userId, limit);
+                return this.getMemoriesFromDB(userId, projectId, limit);
             }
             const memoryIds = searchResults.map(r => r.payload.memory_id);
-            return (0, postgres_1.query)(`SELECT * FROM memories WHERE id = ANY($1) ORDER BY created_at DESC`, [memoryIds]);
+            return (0, postgres_1.query)(`SELECT * FROM memories WHERE user_id = $1 AND project_id = $2 AND id = ANY($3) ORDER BY created_at DESC`, [userId, projectId, memoryIds]);
         }
         catch (error) {
             console.error('Vector search failed, falling back to DB:', error);
-            return this.getMemoriesFromDB(userId, limit);
+            return this.getMemoriesFromDB(userId, projectId, limit);
         }
     }
-    async getMemoriesFromDB(userId, limit) {
-        return (0, postgres_1.query)(`SELECT * FROM memories WHERE user_id = $1 ORDER BY importance DESC, created_at DESC LIMIT $2`, [userId, limit]);
+    async getMemoriesFromDB(userId, projectId, limit) {
+        return (0, postgres_1.query)(`SELECT * FROM memories WHERE user_id = $1 AND project_id = $2 ORDER BY importance DESC, created_at DESC LIMIT $3`, [userId, projectId, limit]);
     }
     async getUserMemories(userId) {
         return (0, postgres_1.query)(`SELECT * FROM memories WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);

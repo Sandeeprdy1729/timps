@@ -1,10 +1,14 @@
 export interface Memory {
     id?: number;
     user_id: number;
+    project_id: string;
     content: string;
-    embedding_id?: string;
-    memory_type: string;
+    memory_type: "explicit" | "reflection";
+    source_conversation_id: string;
+    source_message_id: string;
     importance: number;
+    retrieval_count: number;
+    last_retrieved_at?: Date;
     tags: string[];
     created_at?: Date;
     updated_at?: Date;
@@ -42,8 +46,8 @@ export interface Project {
 }
 export declare class LongTermMemoryStore {
     private embeddingModel;
-    storeMemory(memory: Omit<Memory, 'id' | 'created_at' | 'updated_at'>): Promise<Memory>;
-    retrieveMemories(userId: number, queryText: string, limit?: number): Promise<Memory[]>;
+    storeMemory(memoryInput: Omit<Memory, 'id' | 'created_at' | 'updated_at'>): Promise<Memory>;
+    retrieveMemories(userId: number, projectId: string, queryText: string, limit?: number): Promise<Memory[]>;
     private getMemoriesFromDB;
     getUserMemories(userId: number): Promise<Memory[]>;
     updateMemory(id: number, updates: Partial<Memory>): Promise<void>;
