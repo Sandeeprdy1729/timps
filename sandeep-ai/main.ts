@@ -1,6 +1,9 @@
 import { startServer } from './api/server';
 import { runCLI, printHelp } from './interfaces/cli';
 import { config } from './config/env';
+import { initDatabase } from './db/postgres';
+
+
 
 function parseArgs(): { mode: 'server' | 'cli'; options: any } {
   const args = process.argv.slice(2);
@@ -32,6 +35,8 @@ function parseArgs(): { mode: 'server' | 'cli'; options: any } {
           options.memoryMode = args[i + 1];
         }
         i++;
+      } else if (arg === '--tui') {
+        options.useUI = 'tui';
       } else if (arg === '--interactive') {
         options.interactive = true;
       } else if (arg === '--help' || arg === '-h') {
@@ -53,10 +58,18 @@ function parseArgs(): { mode: 'server' | 'cli'; options: any } {
 }
 
 async function main(): Promise<void> {
+  
+  await initDatabase();
+
   const { mode, options } = parseArgs();
   
   if (mode === 'cli') {
-    await runCLI(options);
+    if (options.useUI === 'tui') {
+      const { runTUI } = await import('./interfaces/tui');
+      await runTUI(options);
+    } else {
+      await runCLI(options);
+    }
   } else {
     await startServer();
   }

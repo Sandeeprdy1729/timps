@@ -1,6 +1,8 @@
 import { Pool } from 'pg';
 import { config } from '../config/env';
 
+console.log("POSTGRES CONFIG:", config.postgres);
+
 export const pool = new Pool({
   host: config.postgres.host,
   port: config.postgres.port,
@@ -9,8 +11,9 @@ export const pool = new Pool({
   password: config.postgres.password,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
+
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
@@ -124,3 +127,4 @@ export async function execute(text: string, params?: any[]): Promise<number> {
   const result = await pool.query(text, params);
   return result.rowCount || 0;
 }
+

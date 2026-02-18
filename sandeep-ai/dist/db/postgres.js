@@ -54,11 +54,15 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS memories (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
         content TEXT NOT NULL,
-        embedding_id VARCHAR(255),
-        memory_type VARCHAR(50) DEFAULT 'general',
+        memory_type VARCHAR(50) NOT NULL CHECK (memory_type IN ('explicit', 'reflection')),
         importance INTEGER DEFAULT 1,
+        retrieval_count INTEGER DEFAULT 0,
         tags TEXT[],
+        source_conversation_id TEXT,
+        source_message_id TEXT,
+        last_retrieved_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -98,8 +102,7 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE INDEX IF NOT EXISTS idx_memories_user_id ON memories(user_id);
-      CREATE INDEX IF NOT EXISTS idx_memories_embedding_id ON memories(embedding_id);
+      CREATE INDEX IF NOT EXISTS idx_memories_user_id_project_id ON memories(user_id, project_id);
       CREATE INDEX IF NOT EXISTS idx_goals_user_id ON goals(user_id);
       CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);

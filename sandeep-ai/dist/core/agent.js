@@ -4,7 +4,7 @@ exports.Agent = void 0;
 const models_1 = require("../models");
 const memoryIndex_1 = require("../memory/memoryIndex");
 const tools_1 = require("../tools");
-const DEFAULT_SYSTEM_PROMPT = `You are Sandeep AI – A persistent cognitive partner that remembers, evolves, and builds with your user.
+const DEFAULT_SYSTEM_PROMPT = `You are TIMPs – A persistent cognitive partner that remembers, evolves, and builds with your user.
 
 You have access to the following tools:
 - file_operations: Read, write, list, create, and delete files on the filesystem
@@ -19,6 +19,8 @@ Use these tools whenever you need to:
 After each conversation, reflect on what you learned about the user and store important information in your memory.`;
 class Agent {
     userId;
+    projectId;
+    memoryMode;
     username;
     systemPrompt;
     model;
@@ -26,6 +28,8 @@ class Agent {
     toolDefinitions;
     constructor(config) {
         this.userId = config.userId;
+        this.projectId = config.projectId || 'default';
+        this.memoryMode = config.memoryMode || 'persistent';
         this.username = config.username;
         this.systemPrompt = config.systemPrompt || DEFAULT_SYSTEM_PROMPT;
         this.model = (0, models_1.createModel)(config.modelProvider || 'ollama');
@@ -41,11 +45,11 @@ class Agent {
         }));
     }
     async run(userMessage) {
-        memoryIndex_1.memoryIndex.addToShortTerm(this.userId, {
+        memoryIndex_1.memoryIndex.addToShortTerm(this.userId, this.projectId, {
             role: 'user',
             content: userMessage,
         });
-        const context = await memoryIndex_1.memoryIndex.retrieveContext(this.userId, userMessage);
+        const context = await memoryIndex_1.memoryIndex.retrieveContext(this.userId, this.projectId, userMessage);
         const contextString = memoryIndex_1.memoryIndex.formatContextForPrompt(context);
         let messages = this.buildMessages(userMessage, contextString);
         let iterations = 0;
@@ -55,7 +59,7 @@ class Agent {
             const response = await this.model.generate(messages, {
                 tools: this.toolDefinitions,
             });
-            memoryIndex_1.memoryIndex.addToShortTerm(this.userId, {
+            memoryIndex_1.memoryIndex.addToShortTerm(this.userId, this.projectId, {
                 role: 'assistant',
                 content: response.content,
                 tool_calls: response.toolCalls,
@@ -93,7 +97,7 @@ class Agent {
     buildMessages(userMessage, contextString) {
         const systemContent = this.systemPrompt +
             (contextString ? `\n\n### User Context\n${contextString}` : '') +
-            `\n\n### Recent Conversation\n${memoryIndex_1.memoryIndex.getShortTermContext(this.userId)}`;
+            `\n\n### Recent Conversation\n${memoryIndex_1.memoryIndex.getShortTermContext(this.userId, this.projectId)}`;
         return [
             { role: 'system', content: systemContent },
             { role: 'user', content: userMessage },
@@ -125,9 +129,16 @@ class Agent {
         }
     }
     async reflectAndStore(userMessage, assistantResponse) {
+        // Skip memory storage in ephemeral mode
+        if (this.memoryMode === 'ephemeral') {
+            return;
+        }
         const reflection = await this.extractMemories(userMessage, assistantResponse);
+        const projectId = "default";
+        const conversationId = "conv_" + Date.now();
+        const messageId = "msg_" + Date.now();
         for (const memory of reflection.memories) {
-            await memoryIndex_1.memoryIndex.storeMemory(this.userId, memory.content, memory.type, memory.importance, memory.tags);
+            await memoryIndex_1.memoryIndex.storeMemory(this.userId, projectId, memory.content, memory.type === "reflection" ? "reflection" : "explicit", memory.importance, memory.tags || [], conversationId, messageId);
         }
         for (const goal of reflection.goals) {
             await memoryIndex_1.memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority);
@@ -161,13 +172,29 @@ User: ${userMessage}
 Assistant: ${assistantResponse}`;
         try {
             const response = await this.model.generate([{ role: 'user', content: extractionPrompt }], { max_tokens: 2000 });
-            const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
+            // Better JSON extraction
+            const content = response.content.trim();
+            if (content.startsWith('{')) {
+                let braceCount = 0;
+                let endIdx = -1;
+                for (let i = 0; i < content.length; i++) {
+                    if (content[i] === '{')
+                        braceCount++;
+                    if (content[i] === '}')
+                        braceCount--;
+                    if (braceCount === 0) {
+                        endIdx = i;
+                        break;
+                    }
+                }
+                if (endIdx > 0) {
+                    const jsonStr = content.substring(0, endIdx + 1);
+                    return JSON.parse(jsonStr);
+                }
             }
         }
         catch (error) {
-            console.error('Failed to extract memories:', error);
+            // Silent fail - return empty knowledge
         }
         return {
             memories: [],
@@ -179,8 +206,17 @@ Assistant: ${assistantResponse}`;
     setSystemPrompt(prompt) {
         this.systemPrompt = prompt;
     }
+    getProjectId() {
+        return this.projectId;
+    }
+    getUserId() {
+        return this.userId;
+    }
+    getMemoryMode() {
+        return this.memoryMode;
+    }
     clearConversation() {
-        memoryIndex_1.memoryIndex.clearShortTerm(this.userId);
+        memoryIndex_1.memoryIndex.clearShortTerm(this.userId, this.projectId);
     }
 }
 exports.Agent = Agent;
