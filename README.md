@@ -14,16 +14,16 @@
 
 ---
 
-## 🎯 What is TIMPs?
+## What is TIMPs?
 
 TIMPs is an **AI-powered memory partner** that:
-- 🧠 **Understands** your context and learns from conversations
-- 💾 **Remembers** important facts and patterns across sessions  
-- 🔍 **Retrieves** memories when relevant using semantic search
-- 🚀 **Evolves** by reflecting on retrieved memories
-- 🎮 **Interfaces** via beautiful TUI (Terminal UI) or CLI
-- 🔒 **Isolates** memories by project to prevent contamination
-- ⚡ **Performs** dual-search (SQL + vectors) for accuracy
+- **Understands** your context and learns from conversations
+- **Remembers** important facts and patterns across sessions  
+- **Retrieves** memories when relevant using semantic search
+- **Evolves** by reflecting on retrieved memories
+- **Interfaces** via beautiful TUI (Terminal UI) or CLI
+- **Isolates** memories by project to prevent contamination
+- **Performs** dual-search (SQL + vectors) for accuracy
 
 ## System Overview
 
@@ -107,7 +107,7 @@ sandeep-ai/
 
 ### 1. Install Dependencies
 ```bash
-cd /Users/sandeepreddy/Desktop/testbot/sandeep-ai
+cd sandeep-ai
 npm install
 ```
 
@@ -148,7 +148,7 @@ npm run init-db
 npm run tui -- --user-id 1
 ```
 
-**You're done! 🎉** See [Full Setup Guide](QUICKSTART.md)
+**You're done!** See [Full Setup Guide](QUICKSTART.md)
 
 ## Usage
 
