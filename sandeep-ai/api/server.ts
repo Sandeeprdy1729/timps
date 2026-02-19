@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import cors from 'cors';
+import path from 'path';
 import routes from './routes';
 import { config } from '../config/env';
 import { initDatabase } from '../db/postgres';
@@ -16,6 +17,9 @@ export function createApp(): Express {
     console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
     next();
   });
+  
+  // Serve static files from public directory
+  app.use(express.static(path.join(__dirname, '../public')));
   
   app.use('/api', routes);
   
@@ -52,13 +56,16 @@ export async function startServer(): Promise<void> {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║     TIMPs Server                                     ║
+║     TIMPs Server                                          ║
 ║     A persistent cognitive partner                        ║
 ║                                                           ║
 ║     Server running on http://localhost:${config.port}        ║
 ║     Environment: ${config.nodeEnv.padEnd(35)}║
 ║                                                           ║
-║     Endpoints:                                            ║
+║     🌐 Web Interface:                                     ║
+║     → Open http://localhost:${config.port} in your browser      ║
+║                                                           ║
+║     API Endpoints:                                        ║
 ║     - POST /api/chat          : Chat with AI             ║
 ║     - GET  /api/memory/:userId : Get user memories        ║
 ║     - GET  /api/goals/:userId  : Get user goals           ║

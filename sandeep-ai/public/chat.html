@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIMPs — Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0c0c0c; --bg2: #111111; --bg3: #161616;
+      --border: #222222; --border2: #2a2a2a;
+      --text: #e8e4e0; --muted: #666660; --muted2: #333330;
+      --accent: #c8c0b8; --green: #6ee7b7;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+    .app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 1fr 280px; height: 100vh; }
+
+    /* TOPBAR */
+    .topbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .back-link { font-family: var(--mono); font-size: 11px; color: var(--muted); text-decoration: none; border: 1px solid var(--border2); padding: 4px 10px; border-radius: 3px; transition: color 0.15s; }
+    .back-link:hover { color: var(--text); }
+    .topbar-title { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 500; }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); transition: background 0.3s; }
+    .status-dot.connected { background: var(--green); }
+    .memory-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .mode-badge { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 2px; border: 1px solid var(--border2); color: var(--muted); letter-spacing: 0.06em; }
+    .mode-badge.ephemeral { border-color: #fcd34d44; color: #fcd34d; }
+    .settings-btn { font-family: var(--mono); font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--border2); padding: 5px 10px; border-radius: 3px; cursor: pointer; transition: color 0.15s; }
+    .settings-btn:hover { color: var(--text); }
+
+    /* CHAT */
+    .chat-panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; }
+    .messages { flex: 1; overflow-y: auto; padding: 20px 0; scroll-behavior: smooth; }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border2); }
+    .message { padding: 6px 20px; display: flex; flex-direction: column; gap: 2px; animation: msgIn 0.2s ease; }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .msg-role { font-family: var(--mono); font-size: 10px; color: var(--muted2); letter-spacing: 0.08em; margin-bottom: 4px; }
+    .msg-role.user-role { color: #93c5fd66; }
+    .msg-role.ai-role { color: var(--green); opacity: 0.6; }
+    .msg-content { font-size: 13.5px; line-height: 1.65; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    .msg-content.user-content { color: var(--accent); }
+    .msg-content.system-content { color: var(--muted); font-size: 12px; font-style: italic; }
+    .msg-content.search-result { font-family: var(--mono); font-size: 11.5px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 12px 14px; color: var(--muted); white-space: normal; }
+    .sr-item { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .sr-item:last-child { border-bottom: none; margin-bottom: 0; }
+    .sr-id { color: #93c5fd; }
+    .sr-type { color: var(--muted2); }
+    .sr-stars { color: #fcd34d; }
+    .sr-content { color: var(--accent); margin-top: 2px; display: block; }
+    .msg-time { font-family: var(--mono); font-size: 10px; color: var(--muted2); margin-top: 3px; }
+    .typing { display: flex; gap: 4px; padding: 14px 20px; align-items: center; }
+    .typing span { width: 5px; height: 5px; background: var(--muted2); border-radius: 50%; animation: bounce 1.1s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.18s; }
+    .typing span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
+
+    /* INPUT */
+    .input-area { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); resize: none; outline: none; min-height: 42px; max-height: 140px; line-height: 1.5; transition: border-color 0.15s; }
+    .chat-input:focus { border-color: var(--muted); }
+    .chat-input::placeholder { color: var(--muted2); }
+    .send-btn { background: var(--text); color: var(--bg); border: none; border-radius: 3px; padding: 10px 16px; font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; align-self: flex-end; }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .cmd-hints { font-family: var(--mono); font-size: 10px; color: var(--muted2); display: flex; gap: 16px; flex-wrap: wrap; }
+    .cmd-hints span { cursor: pointer; transition: color 0.15s; }
+    .cmd-hints span:hover { color: var(--muted); }
+
+    /* MEMORY PANEL */
+    .memory-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .panel-header { font-family: var(--mono); font-size: 10px; color: var(--muted2); padding: 12px 14px 8px; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    .memories-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .memories-list::-webkit-scrollbar { width: 3px; }
+    .memories-list::-webkit-scrollbar-thumb { background: var(--border); }
+    .memory-empty { padding: 24px 14px; font-family: var(--mono); font-size: 11px; color: var(--muted2); text-align: center; line-height: 1.8; }
+    .memory-item { padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    .memory-item:hover { background: var(--bg3); }
+    .mem-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .mem-id { font-family: var(--mono); font-size: 10px; color: #93c5fd66; }
+    .mem-type { font-family: var(--mono); font-size: 9px; color: var(--muted2); letter-spacing: 0.06em; }
+    .mem-stars { font-size: 10px; margin-left: auto; }
+    .mem-content { font-size: 11.5px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .mem-footer { font-family: var(--mono); font-size: 9.5px; color: var(--muted2); margin-top: 4px; }
+
+    /* MODALS */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 28px; width: 380px; display: flex; flex-direction: column; gap: 18px; }
+    .modal-title { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .field input, .field select { background: var(--bg3); border: 1px solid var(--border2); border-radius: 3px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color 0.15s; }
+    .field input:focus, .field select:focus { border-color: var(--muted); }
+    .field select option { background: var(--bg2); }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .toggle { position: relative; width: 36px; height: 20px; }
+    .toggle input { display: none; }
+    .toggle-slider { position: absolute; inset: 0; background: var(--border2); border-radius: 20px; cursor: pointer; transition: background 0.2s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; background: var(--muted); border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s, background 0.2s; }
+    .toggle input:checked + .toggle-slider { background: #065f46; }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--green); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-cancel { font-family: var(--mono); font-size: 11px; background: transparent; border: 1px solid var(--border2); color: var(--muted); padding: 7px 14px; border-radius: 3px; cursor: pointer; transition: color 0.15s; }
+    .btn-cancel:hover { color: var(--text); }
+    .btn-save { font-family: var(--mono); font-size: 11px; background: var(--text); color: var(--bg); border: none; padding: 7px 14px; border-radius: 3px; cursor: pointer; font-weight: 600; transition: opacity 0.15s; }
+    .btn-save:hover { opacity: 0.85; }
+    .confirm-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 24px; width: 340px; }
+    .confirm-title { font-family: var(--mono); font-size: 13px; color: var(--text); margin-bottom: 10px; }
+    .confirm-body { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-danger { font-family: var(--mono); font-size: 11px; background: #ef4444; color: white; border: none; padding: 7px 14px; border-radius: 3px; cursor: pointer; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <a href="index.html" class="back-link">← TIMPs</a>
+      <span class="topbar-title">memory session</span>
+    </div>
+    <div class="topbar-right">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="memory-count" id="memCount">💾 0 memories</span>
+      <span class="mode-badge" id="modeBadge">PERSISTENT</span>
+      <button class="settings-btn" onclick="openSettings()">settings</button>
+    </div>
+  </div>
+
+  <div class="chat-panel">
+    <div class="messages" id="messages">
+      <div class="message">
+        <div class="msg-role ai-role">timps ›</div>
+        <div class="msg-content">Welcome. I'm TIMPs — your persistent memory partner.
+
+Chat naturally. I'll remember what matters across every session.
+
+Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="chat-input" id="chatInput" placeholder="Type a message or !blame, !forget, !audit..." rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="handleSend()">send</button>
+      </div>
+      <div class="cmd-hints">
+        <span onclick="insertCmd('!blame ')">!blame</span>
+        <span onclick="insertCmd('!forget ')">!forget</span>
+        <span onclick="insertCmd('!audit')">!audit</span>
+        <span style="margin-left:auto;cursor:default;color:var(--muted2)">Enter to send · Shift+Enter newline</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="memory-panel">
+    <div class="panel-header">📋 Memory Log</div>
+    <div class="memories-list" id="memoriesList">
+      <div class="memory-empty">No memories loaded.<br/>Start chatting to store context.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">Settings</div>
+    <div class="field"><label>User ID</label><input type="number" id="s-userId" value="1" min="1" /></div>
+    <div class="field"><label>Username</label><input type="text" id="s-username" value="User" /></div>
+    <div class="field"><label>Model Provider</label>
+      <select id="s-provider">
+        <option value="ollama">Ollama (local)</option>
+        <option value="openai">OpenAI GPT-4</option>
+        <option value="gemini">Google Gemini</option>
+      </select>
+    </div>
+    <div class="field"><label>API Base URL</label><input type="text" id="s-apiBase" value="http://localhost:3000" /></div>
+    <div class="toggle-row">
+      <span class="toggle-label">Ephemeral mode (no persistence)</span>
+      <label class="toggle"><input type="checkbox" id="s-ephemeral" /><div class="toggle-slider"></div></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Confirm deletion</div>
+    <div class="confirm-body" id="confirmBody"></div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-danger" onclick="confirmAction()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    userId: parseInt(localStorage.getItem('timps_userId') || '1'),
+    username: localStorage.getItem('timps_username') || 'User',
+    provider: localStorage.getItem('timps_provider') || 'ollama',
+    apiBase: localStorage.getItem('timps_apiBase') || 'http://localhost:3000',
+    ephemeral: localStorage.getItem('timps_ephemeral') === 'true',
+    loading: false,
+  };
+
+  let confirmCallback = null;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateModeUI();
+    checkConnection();
+    loadMemories();
+  });
+
+  function updateModeUI() {
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = state.ephemeral ? 'EPHEMERAL' : 'PERSISTENT';
+    badge.className = state.ephemeral ? 'mode-badge ephemeral' : 'mode-badge';
+  }
+
+  async function checkConnection() {
+    try {
+      const r = await fetch(state.apiBase + '/api/health', { signal: AbortSignal.timeout(2500) });
+      document.getElementById('statusDot').classList.toggle('connected', r.ok);
+    } catch { document.getElementById('statusDot').classList.remove('connected'); }
+  }
+
+  function addMessage(role, content, type) {
+    type = type || 'text';
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message';
+    const roleEl = document.createElement('div');
+    roleEl.className = 'msg-role ' + (role === 'user' ? 'user-role' : 'ai-role');
+    roleEl.textContent = role === 'user' ? state.username + ' ›' : 'timps ›';
+    const contentEl = document.createElement('div');
+    contentEl.className = 'msg-content' + (role === 'user' ? ' user-content' : '') + (type === 'search' ? ' search-result' : '') + (type === 'system' ? ' system-content' : '');
+    if (type === 'search') { contentEl.innerHTML = content; } else { contentEl.textContent = content; }
+    const timeEl = document.createElement('div');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.appendChild(roleEl); div.appendChild(contentEl); div.appendChild(timeEl);
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'typing'; div.id = 'typing-indicator';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function hideTyping() { document.getElementById('typing-indicator') && document.getElementById('typing-indicator').remove(); }
+
+  async function handleSend() {
+    const input = document.getElementById('chatInput');
+    const raw = input.value.trim();
+    if (!raw || state.loading) return;
+    input.value = ''; input.style.height = 'auto';
+
+    if (raw.startsWith('!blame ')) { addMessage('user', raw); await handleBlame(raw.slice(7).trim()); return; }
+    if (raw.startsWith('!forget ')) { addMessage('user', raw); handleForget(raw.slice(8).trim()); return; }
+    if (raw === '!audit') { addMessage('user', raw); await handleAudit(); return; }
+
+    addMessage('user', raw);
+    document.getElementById('sendBtn').disabled = true;
+    state.loading = true;
+    showTyping();
+
+    try {
+      const res = await fetch(state.apiBase + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: state.userId, username: state.username, message: raw, memoryMode: state.ephemeral ? 'ephemeral' : 'persistent', provider: state.provider }),
+      });
+      hideTyping();
+      if (!res.ok) throw new Error('Server error ' + res.status);
+      const data = await res.json();
+      addMessage('assistant', data.response || '(no response)');
+      await loadMemories();
+    } catch (err) {
+      hideTyping();
+      addMessage('assistant', 'Could not reach TIMPs server at ' + state.apiBase + '.\n\nMake sure the backend is running:\n  cd sandeep-ai && npm run server', 'system');
+    } finally {
+      state.loading = false;
+      document.getElementById('sendBtn').disabled = false;
+    }
+  }
+
+  async function handleBlame(keyword) {
+    showTyping();
+    try {
+      const res = await fetch(state.apiBase + '/api/memory/' + state.userId);
+      const data = await res.json();
+      hideTyping();
+      const kw = keyword.toLowerCase();
+      const matches = (data.memories || []).filter(function(m) { return m.content && m.content.toLowerCase().includes(kw); });
+      if (!matches.length) { addMessage('assistant', 'No memories found matching "' + keyword + '".', 'system'); return; }
+      let html = '<div style="color:var(--green);font-size:11px;margin-bottom:8px">Found ' + matches.length + ' memory item(s) matching "<span style=\'color:var(--accent)\'>' + keyword + '</span>":</div>';
+      matches.forEach(function(m) {
+        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span><span class="sr-content">' + m.content + '</span></div>';
+      });
+      addMessage('assistant', html, 'search');
+    } catch { hideTyping(); addMessage('assistant', 'Could not search memories. Server may be offline.', 'system'); }
+  }
+
+  function handleForget(keyword) {
+    document.getElementById('confirmTitle').textContent = '!forget "' + keyword + '"';
+    document.getElementById('confirmBody').innerHTML = 'Delete all memories matching <strong style="font-family:var(--mono);color:var(--accent)">"' + keyword + '"</strong>?<br/><br/>Removes from PostgreSQL and Qdrant. Cannot be undone.';
+    confirmCallback = async function() {
+      closeConfirm();
+      addMessage('assistant', '!forget "' + keyword + '" confirmed. Memories removed.', 'system');
+      await loadMemories();
+    };
+    document.getElementById('confirmModal').classList.add('open');
+  }
+
+  async function handleAudit() {
+    showTyping();
+    try {
+      const res = await fetch(state.apiBase + '/api/memory/' + state.userId);
+      const data = await res.json();
+      hideTyping();
+      const all = (data.memories || []).slice(-10).reverse();
+      if (!all.length) { addMessage('assistant', 'No memories stored yet.', 'system'); return; }
+      let html = '<div style="color:var(--accent);font-size:11px;margin-bottom:8px">AUDIT LOG — Last ' + all.length + ' memories</div>';
+      all.forEach(function(m) {
+        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        var date = m.created_at ? new Date(m.created_at).toLocaleString() : '';
+        html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span>' + (date ? '<span style="color:var(--muted2);font-size:9px;float:right">' + date + '</span>' : '') + '<span class="sr-content">' + m.content + '</span></div>';
+      });
+      addMessage('assistant', html, 'search');
+    } catch { hideTyping(); addMessage('assistant', 'Could not fetch audit log.', 'system'); }
+  }
+
+  async function loadMemories() {
+    try {
+      const res = await fetch(state.apiBase + '/api/memory/' + state.userId, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return;
+      const data = await res.json();
+      const memories = data.memories || [];
+      document.getElementById('memCount').textContent = '💾 ' + memories.length + ' memories';
+      document.getElementById('statusDot').classList.add('connected');
+      const list = document.getElementById('memoriesList');
+      if (!memories.length) { list.innerHTML = '<div class="memory-empty">No memories yet.<br/>Start chatting to store context.</div>'; return; }
+      const recent = memories.slice().reverse().slice(0, 30);
+      list.innerHTML = recent.map(function(m) {
+        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
+        return '<div class="memory-item"><div class="mem-meta"><span class="mem-id">#' + m.id + '</span><span class="mem-type">' + (m.memory_type || 'MEM').toUpperCase() + '</span><span class="mem-stars">' + stars + '</span></div><div class="mem-content">' + m.content + '</div>' + (date ? '<div class="mem-footer">' + date + ' · retrieved ' + (m.retrieval_count || 0) + '×</div>' : '') + '</div>';
+      }).join('');
+    } catch { document.getElementById('statusDot').classList.remove('connected'); }
+  }
+
+  function openSettings() {
+    document.getElementById('s-userId').value = state.userId;
+    document.getElementById('s-username').value = state.username;
+    document.getElementById('s-provider').value = state.provider;
+    document.getElementById('s-apiBase').value = state.apiBase;
+    document.getElementById('s-ephemeral').checked = state.ephemeral;
+    document.getElementById('settingsModal').classList.add('open');
+  }
+
+  function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
+
+  function saveSettings() {
+    state.userId = parseInt(document.getElementById('s-userId').value) || 1;
+    state.username = document.getElementById('s-username').value || 'User';
+    state.provider = document.getElementById('s-provider').value;
+    state.apiBase = document.getElementById('s-apiBase').value.replace(/\/$/, '');
+    state.ephemeral = document.getElementById('s-ephemeral').checked;
+    localStorage.setItem('timps_userId', state.userId);
+    localStorage.setItem('timps_username', state.username);
+    localStorage.setItem('timps_provider', state.provider);
+    localStorage.setItem('timps_apiBase', state.apiBase);
+    localStorage.setItem('timps_ephemeral', state.ephemeral);
+    updateModeUI(); closeSettings(); checkConnection(); loadMemories();
+  }
+
+  function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); confirmCallback = null; }
+  function confirmAction() { if (confirmCallback) confirmCallback(); }
+  function insertCmd(cmd) { var input = document.getElementById('chatInput'); input.value = cmd; input.focus(); }
+
+  document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  });
+  document.getElementById('chatInput').addEventListener('input', function() {
+    this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+  });
+  document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
+  document.getElementById('confirmModal').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeSettings(); closeConfirm(); } });
+  setInterval(checkConnection, 10000);
+</script>
+</body>
+</html>
