@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const server_1 = require("./api/server");
 const cli_1 = require("./interfaces/cli");
+const postgres_1 = require("./db/postgres");
 function parseArgs() {
     const args = process.argv.slice(2);
     const mode = args[0] === 'cli' ? 'cli' : 'server';
@@ -88,6 +89,7 @@ function parseArgs() {
     return { mode: 'server', options: {} };
 }
 async function main() {
+    await (0, postgres_1.initDatabase)();
     const { mode, options } = parseArgs();
     if (mode === 'cli') {
         if (options.useUI === 'tui') {

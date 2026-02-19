@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIMPs — Trustworthy Interactive Memory Partner System</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0c0c0c; --bg2: #111111; --bg3: #161616;
+      --border: #222222; --border2: #2a2a2a;
+      --text: #e8e4e0; --muted: #666660; --muted2: #333330;
+      --accent: #c8c0b8; --green: #6ee7b7;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    html, body { height: 100%; width: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; display: flex; align-items: center; justify-content: center; -webkit-font-smoothing: antialiased; }
+    
+    .landing { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; max-width: 600px; text-align: center; padding: 40px; }
+    .logo { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--accent); letter-spacing: 0.1em; }
+    .tagline { font-size: 18px; color: var(--muted); line-height: 1.8; }
+    .description { font-size: 14px; color: var(--muted); line-height: 1.8; max-width: 500px; }
+    .cta { display: inline-block; background: var(--text); color: var(--bg); padding: 12px 32px; border-radius: 4px; text-decoration: none; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; cursor: pointer; transition: opacity 0.2s; border: none; }
+    .cta:hover { opacity: 0.85; }
+    .features { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 40px; width: 100%; max-width: 500px; }
+    .feature { padding: 20px; border: 1px solid var(--border); border-radius: 4px; text-align: left; }
+    .feature-icon { font-size: 20px; margin-bottom: 8px; }
+    .feature-title { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div class="landing">
+  <div class="logo">◆ TIMPs</div>
+  <div class="tagline">Trustworthy Interactive Memory Partner System</div>
+  <div class="description">
+    Your persistent memory companion. Chat naturally across every session. I remember what matters.
+  </div>
+  
+  <button class="cta" onclick="window.location.href='chat.html'">Start Session</button>
+  
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">💾</div>
+      <div class="feature-title">Persistent Memory</div>
+      <div class="feature-desc">Automatic context retention across all conversations.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Instant Search</div>
+      <div class="feature-desc">Recall memories with !blame, audit logs with !audit.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Privacy First</div>
+      <div class="feature-desc">Local execution, ephemeral mode, complete control.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Fast & Responsive</div>
+      <div class="feature-desc">Optimized vector search and memory retrieval.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
