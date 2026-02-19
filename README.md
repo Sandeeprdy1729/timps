@@ -273,7 +273,7 @@ CREATE UNIQUE INDEX idx_project ON memories(user_id, project_id);
 CREATE INDEX idx_updated ON memories(updated_at DESC);
 ```
 
-## Memory System Features
+<!-- ## Memory System Features
 
 ### 6 Complete Phases (v1.0)
 
@@ -310,9 +310,9 @@ CREATE INDEX idx_updated ON memories(updated_at DESC);
 - Temporary conversations
 - No storage to persistent layer
 - Perfect for sensitive/private discussions
-- Flag: `--mode ephemeral`
+- Flag: `--mode ephemeral` -->
 
-### Memory Types
+<!-- ### Memory Types
 
 **EXPLICIT** — Facts directly stated
 - "I like TypeScript" 
@@ -320,7 +320,7 @@ CREATE INDEX idx_updated ON memories(updated_at DESC);
 
 **REFLECTION** — AI-discovered patterns
 - "User prefers type-safe languages"
-- Importance: 4-5 stars (inferred)
+- Importance: 4-5 stars (inferred) -->
 
 ## Database Schema
 
@@ -359,7 +359,7 @@ The system automatically creates these tables:
 
 ## Extending the System
 
-### Adding a New Language Model
+<!-- ### Adding a New Language Model
 
 1. Create `models/newModel.ts` extending `BaseModel`
 2. Implement `generate()` and `getEmbedding()` methods
@@ -371,7 +371,7 @@ The system automatically creates these tables:
 1. Create `tools/newTool.ts` extending `BaseTool`
 2. Implement `execute()` and `getDefinition()` methods
 3. Add to `tools/index.ts`
-4. AI will auto-call when contextually relevant
+4. AI will auto-call when contextually relevant -->
 
 ## Keyboard Shortcuts (TUI)
 
@@ -384,7 +384,7 @@ The system automatically creates these tables:
 | `↑/↓` | Scroll history |
 | `hjkl` | Vim navigation |
 
-## Roadmap for v1.1+
+<!-- ## Roadmap for v1.1+
 
 - [ ] Web UI dashboard (React)
 - [ ] Docker Compose one-command setup
@@ -394,7 +394,7 @@ The system automatically creates these tables:
 - [ ] Multi-user collaboration
 - [ ] Redis caching layer
 - [ ] Plugin system
-- [ ] Advanced theme support
+- [ ] Advanced theme support -->
 
 ## Contributing
 
