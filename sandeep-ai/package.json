@@ -1,8 +1,8 @@
 {
   "name": "timps",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "bin": {
-  "timps": "./quickstart.sh"
+  "timps": "./sandeep-ai/main.js"
   },
   "preferGlobal": true,
   "engines": {
