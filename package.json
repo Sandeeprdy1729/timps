@@ -1,6 +1,13 @@
 {
   "name": "timps",
   "version": "1.0.0",
+  "bin": {
+    "timps-install": "./install.sh"
+  },
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
   "main": "dist/main.js",
   "scripts": {
