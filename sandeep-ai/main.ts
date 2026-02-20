@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { startServer } from './api/server';
 import { runCLI, printHelp } from './interfaces/cli';
 import { config } from './config/env';
