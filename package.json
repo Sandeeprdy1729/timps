@@ -2,7 +2,7 @@
   "name": "timps",
   "version": "1.0.0",
   "bin": {
-    "timps-install": "./install.sh"
+  "timps": "./quickstart.sh"
   },
   "preferGlobal": true,
   "engines": {
