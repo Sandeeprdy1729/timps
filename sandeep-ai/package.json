@@ -2,7 +2,7 @@
   "name": "timps",
   "version": "1.0.3",
   "bin": {
-  "timps": "./sandeep-ai/main.ts"
+  "timps": "./sandeep-ai/main.js"
   },
   "preferGlobal": true,
   "engines": {
