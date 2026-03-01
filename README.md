@@ -1,6 +1,6 @@
 # TIMPs v1.0 — Trustworthy Interactive Memory Partner System
 
-# TIMPs – Trustworthy Interactive Memory Partner System
+
 
 <p align="center">
   <img src="https://api.star-history.com/svg?repos=Sandeeprdy1729/timps&type=Date" />
