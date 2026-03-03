@@ -1,4 +1,4 @@
-# TIMPs v1.0 — Trustworthy Interactive Memory Partner System
+# TIMPs 1.0 — Trustworthy Interactive Memory Partner System
 
 
 
