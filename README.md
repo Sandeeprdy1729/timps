@@ -253,7 +253,7 @@ curl http://localhost:3000/api/goals/1
 | `POSTGRES_PASSWORD` | Database password | - |
 | `QDRANT_URL` | Vector store URL | http://localhost:6333 |
 | `NODE_ENV` | Environment | development |
-| `PORT` | API server port | 3000 |
+| `PORT` | API server port | 3000 
 
 ### Database Schema
 
