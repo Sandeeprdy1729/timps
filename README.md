@@ -84,7 +84,7 @@ sandeep-ai/
 │   ├── shortTerm.ts       # Session cache
 │   └── memoryIndex.ts     # Memory manager (composite keys)
 │
-├── models/                # LLM providers
+├── models/                 LLM providers
 │   ├── baseModel.ts       # Interface
 │   ├── openaiModel.ts     # OpenAI adapter
 │   ├── geminiModel.ts     # Gemini adapter
