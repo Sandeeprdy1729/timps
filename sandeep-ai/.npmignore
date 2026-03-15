@@ -1,0 +1,39 @@
+# Source TypeScript (compiled JS is in dist/)
+*.ts
+!dist/**
+
+# Dev files
+node_modules/
+.env
+.env.*
+*.log
+
+# Test files
+test_*.ts
+*.test.ts
+*.spec.ts
+
+# Config
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.github/
+
+# Seed data (not needed in package)
+seed.ts
