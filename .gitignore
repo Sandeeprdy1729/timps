@@ -50,3 +50,5 @@ temp/
 
 # Docker
 .dockerignore
+.DS_Store
+sandeep-ai/.env
