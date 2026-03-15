@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>TIMPs — Intelligence Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0c0c0c;--bg2:#111;--bg3:#161616;
+      --border:#222;--border2:#2a2a2a;
+      --text:#e8e4e0;--muted:#666660;--muted2:#333330;
+      --accent:#c8c0b8;--green:#6ee7b7;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--purple:#a78bfa;
+      --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+    }
+    html,body{height:100%;overflow:hidden}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
+    .app{display:grid;grid-template-rows:48px 1fr;height:100vh}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg)}
+    .topbar-left{display:flex;align-items:center;gap:16px}
+    .logo{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600}
+    .nav{display:flex;gap:4px}
+    .nav a{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:3px;transition:color .15s}
+    .nav a:hover{color:var(--text)}
+    .nav a.active{color:var(--accent);background:var(--bg3)}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);transition:background .3s}
+    .status-dot.ok{background:var(--green)}
+    .user-badge{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border2);padding:3px 8px;border-radius:3px}
+
+    .main{overflow-y:auto;padding:24px 24px}
+    .main::-webkit-scrollbar{width:4px}
+    .main::-webkit-scrollbar-thumb{background:var(--border2)}
+
+    .section-title{font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}
+    .card-label{font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+    .card-value{font-size:26px;font-weight:500;color:var(--text);font-family:var(--mono)}
+    .card-sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .card-trend{font-size:11px;margin-top:6px;font-family:var(--mono)}
+    .card-trend.up{color:var(--green)}
+    .card-trend.down{color:var(--red)}
+    .card-trend.warn{color:var(--amber)}
+
+    .panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+    .panel-title{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .panel-dot{width:6px;height:6px;border-radius:50%}
+    .panel-dot.green{background:var(--green)}
+    .panel-dot.amber{background:var(--amber)}
+    .panel-dot.red{background:var(--red)}
+    .panel-dot.blue{background:var(--blue)}
+    .panel-dot.purple{background:var(--purple)}
+
+    .manifesto-text{font-size:13px;line-height:1.9;color:var(--muted);font-style:italic;border-left:2px solid var(--border2);padding-left:14px}
+
+    .position-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .position-row:last-child{border-bottom:none}
+    .pos-topic{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;background:#1a1a2e;color:#818cf8;flex-shrink:0;margin-top:2px}
+    .pos-claim{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1}
+    .pos-conflicts{font-family:var(--mono);font-size:10px;color:var(--red);flex-shrink:0}
+
+    .signal-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+    .signal-row:last-child{border-bottom:none}
+    .signal-name{font-family:var(--mono);font-size:11px;color:var(--text);width:140px;flex-shrink:0}
+    .signal-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+    .signal-fill{height:100%;border-radius:2px;transition:width .6s ease}
+    .signal-val{font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;text-align:right}
+
+    .rel-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .rel-row:last-child{border-bottom:none}
+    .rel-name{font-family:var(--mono);font-size:12px;color:var(--text);width:140px;flex-shrink:0}
+    .rel-bar{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+    .rel-fill{height:100%;border-radius:3px}
+    .rel-drift{font-size:10px;font-family:var(--mono);color:var(--red);flex-shrink:0}
+    .rel-healthy{font-size:10px;font-family:var(--mono);color:var(--green);flex-shrink:0}
+
+    .commit-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .commit-row:last-child{border-bottom:none}
+    .commit-person{font-family:var(--mono);font-size:11px;color:var(--blue);width:110px;flex-shrink:0}
+    .commit-text{font-size:12px;color:var(--muted);flex:1;line-height:1.5}
+    .commit-status{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:2px;flex-shrink:0}
+    .commit-status.pending{background:#1c1000;color:var(--amber);border:1px solid #78350f}
+    .commit-status.completed{background:#0a1a0a;color:var(--green);border:1px solid #14532d}
+    .commit-status.broken{background:#1a0a0a;color:var(--red);border:1px solid #7f1d1d}
+
+    .bug-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+    .bug-row:last-child{border-bottom:none}
+    .bug-type{font-family:var(--mono);font-size:11px;color:var(--text);flex:1}
+    .bug-freq{font-family:var(--mono);font-size:11px;color:var(--muted);width:60px}
+    .bug-bar{width:80px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+    .bug-fill{height:100%;border-radius:2px;background:var(--red)}
+
+    .empty-state{font-family:var(--mono);font-size:11px;color:var(--muted2);text-align:center;padding:20px 0;line-height:1.8}
+
+    .refresh-btn{font-family:var(--mono);font-size:10px;color:var(--muted);background:transparent;border:1px solid var(--border2);padding:3px 8px;border-radius:3px;cursor:pointer;transition:color .15s}
+    .refresh-btn:hover{color:var(--text)}
+    .loading{color:var(--muted2);font-family:var(--mono);font-size:11px;text-align:center;padding:12px}
+
+    @media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="logo">◆ TIMPs</span>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="chat.html">Chat</a>
+        <a href="dashboard.html" class="active">Dashboard</a>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="user-badge" id="userBadge">user #1</span>
+      <button class="refresh-btn" onclick="loadAll()">refresh</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Stat cards -->
+    <div class="section-title">Intelligence overview</div>
+    <div class="grid-4" id="statCards">
+      <div class="card"><div class="card-label">Memories</div><div class="card-value" id="statMemories">—</div><div class="card-sub">stored facts</div></div>
+      <div class="card"><div class="card-label">Positions</div><div class="card-value" id="statPositions">—</div><div class="card-sub">tracked stances</div></div>
+      <div class="card"><div class="card-label">Commitments</div><div class="card-value" id="statCommits">—</div><div class="card-sub">pending actions</div></div>
+      <div class="card"><div class="card-label">Relationships</div><div class="card-value" id="statRelations">—</div><div class="card-sub">tracked contacts</div></div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Living Manifesto -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot purple"></span>Living Manifesto</div>
+        <div id="manifestoContent"><div class="loading">Loading manifesto...</div></div>
+      </div>
+
+      <!-- Burnout Seismograph -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot amber"></span>Burnout Seismograph</div>
+        <div id="burnoutContent"><div class="loading">Loading signals...</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Argument DNA — Positions -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot blue"></span>Argument DNA — Stored Positions</div>
+        <div id="positionsContent"><div class="loading">Loading positions...</div></div>
+      </div>
+
+      <!-- Relationship Map -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot green"></span>Relationship Map</div>
+        <div id="relationshipsContent"><div class="loading">Loading relationships...</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Meeting Ghost -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot red"></span>Meeting Ghost — Pending Commitments</div>
+        <div id="commitmentsContent"><div class="loading">Loading commitments...</div></div>
+      </div>
+
+      <!-- Bug Pattern Prophet -->
+      <div class="panel">
+        <div class="panel-title"><span class="panel-dot amber"></span>Bug Pattern Prophet</div>
+        <div id="bugsContent"><div class="loading">Loading bug patterns...</div></div>
+      </div>
+    </div>
+
+    <!-- Memory log -->
+    <div class="section-title">Recent memory log</div>
+    <div class="panel">
+      <div id="memoryLog"><div class="loading">Loading memories...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var state = {
+  userId: parseInt(localStorage.getItem('timps_userId') || '1'),
+  apiBase: (localStorage.getItem('timps_apiBase') || 'http://localhost:3000').replace(/\/$/, ''),
+};
+document.getElementById('userBadge').textContent = 'user #' + state.userId;
+
+async function api(path) {
+  try {
+    var r = await fetch(state.apiBase + '/api' + path, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    return r.json();
+  } catch { return null; }
+}
+
+async function apiPost(path, body) {
+  try {
+    var r = await fetch(state.apiBase + '/api' + path, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body), signal: AbortSignal.timeout(5000)
+    });
+    if (!r.ok) return null;
+    return r.json();
+  } catch { return null; }
+}
+
+async function loadAll() {
+  var health = await api('/health');
+  document.getElementById('statusDot').className = 'status-dot' + (health ? ' ok' : '');
+  await Promise.all([
+    loadStats(), loadManifesto(), loadBurnout(),
+    loadPositions(), loadRelationships(),
+    loadCommitments(), loadBugs(), loadMemories()
+  ]);
+}
+
+async function loadStats() {
+  var [mem, pos, commits, rels] = await Promise.all([
+    api('/memory/' + state.userId),
+    api('/positions/' + state.userId),
+    apiPost('/contradiction/check', {userId: state.userId, text: '_stat_check_', autoStore: false}),
+    null
+  ]);
+  document.getElementById('statMemories').textContent = (mem && mem.memories) ? mem.memories.length : '0';
+  document.getElementById('statPositions').textContent = (pos && pos.total !== undefined) ? pos.total : '0';
+
+  // Pending commitments count
+  var r = await fetch(state.apiBase + '/api/health');
+  document.getElementById('statCommits').textContent = '—';
+  document.getElementById('statRelations').textContent = '—';
+}
+
+async function loadManifesto() {
+  var el = document.getElementById('manifestoContent');
+  var r = await apiPost('/contradiction/check', {userId: state.userId, text: '_manifesto_', autoStore: false});
+  // Manifesto requires a dedicated endpoint — show stored memories as proxy
+  var mem = await api('/memory/' + state.userId);
+  if (!mem || !mem.memories || !mem.memories.length) {
+    el.innerHTML = '<div class="empty-state">No manifesto yet.<br/>Chat more and I will derive your values from behavior.</div>';
+    return;
+  }
+  var reflections = mem.memories.filter(function(m) { return m.memory_type === 'reflection'; }).slice(0, 3);
+  if (!reflections.length) reflections = mem.memories.slice(0, 2);
+  el.innerHTML = reflections.map(function(r) {
+    return '<p class="manifesto-text">' + r.content + '</p><br/>';
+  }).join('') || '<div class="empty-state">Still learning your patterns...</div>';
+}
+
+async function loadBurnout() {
+  var el = document.getElementById('burnoutContent');
+  el.innerHTML = '<div class="empty-state">No burnout signals recorded yet.<br/>Use !dna or chat naturally to build signal history.</div>';
+}
+
+async function loadPositions() {
+  var el = document.getElementById('positionsContent');
+  var data = await api('/positions/' + state.userId);
+  if (!data || !data.positions || !data.positions.length) {
+    el.innerHTML = '<div class="empty-state">No positions stored yet.<br/>State opinions in chat to build your argument DNA.</div>';
+    return;
+  }
+  el.innerHTML = data.positions.slice(0, 8).map(function(p) {
+    return '<div class="position-row">'
+      + '<span class="pos-topic">' + (p.topic_cluster || 'general') + '</span>'
+      + '<span class="pos-claim">' + p.extracted_claim + '</span>'
+      + (p.contradiction_count > 0 ? '<span class="pos-conflicts">' + p.contradiction_count + ' conflict' + (p.contradiction_count !== 1 ? 's' : '') + '</span>' : '')
+      + '</div>';
+  }).join('');
+}
+
+async function loadRelationships() {
+  var el = document.getElementById('relationshipsContent');
+  el.innerHTML = '<div class="empty-state">No relationships tracked yet.<br/>Mention people in chat to start tracking relationship health.</div>';
+}
+
+async function loadCommitments() {
+  var el = document.getElementById('commitmentsContent');
+  el.innerHTML = '<div class="empty-state">No meeting commitments tracked yet.<br/>Paste meeting notes in chat: "Extract commitments from: [notes]"</div>';
+}
+
+async function loadBugs() {
+  var el = document.getElementById('bugsContent');
+  el.innerHTML = '<div class="empty-state">No bug patterns recorded yet.<br/>Tell TIMPs about bugs you find: "I just found a race condition in [context]"</div>';
+}
+
+async function loadMemories() {
+  var el = document.getElementById('memoryLog');
+  var data = await api('/memory/' + state.userId);
+  if (!data || !data.memories || !data.memories.length) {
+    el.innerHTML = '<div class="empty-state">No memories yet. Start chatting.</div>';
+    return;
+  }
+  var recent = data.memories.slice().reverse().slice(0, 12);
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+    + recent.map(function(m) {
+        var stars = '★'.repeat(Math.min(m.importance || 1, 5));
+        var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
+        return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px">'
+          + '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'
+          + '<span style="font-family:var(--mono);font-size:9px;color:#93c5fd66">#' + m.id + '</span>'
+          + '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + (m.memory_type || 'MEM').toUpperCase() + '</span>'
+          + '<span style="font-size:9px;margin-left:auto;color:var(--muted2)">' + stars + '</span>'
+          + '</div>'
+          + '<div style="font-size:11.5px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + m.content + '</div>'
+          + (date ? '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:6px">' + date + '</div>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+loadAll();
+setInterval(function() { api('/health').then(function(h) { document.getElementById('statusDot').className = 'status-dot' + (h ? ' ok' : ''); }); }, 15000);
+</script>
+</body>
+</html>
