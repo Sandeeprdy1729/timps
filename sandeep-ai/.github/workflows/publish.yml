@@ -1,0 +1,50 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: sandeep-ai/package-lock.json
+
+      - run: cd sandeep-ai && npm ci
+
+      - run: cd sandeep-ai && npm run build
+        name: Build
+
+      - name: Verify build
+        run: test -f sandeep-ai/dist/main.js
+
+      - run: cd sandeep-ai && npm publish --access public
+        name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## TIMPs ${{ github.ref_name }}
+
+            Install or update:
+            ```bash
+            npx timps start
+            # or
+            npm install -g timps
+            ```
+
+            See [CHANGELOG](https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md) for what's new.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
