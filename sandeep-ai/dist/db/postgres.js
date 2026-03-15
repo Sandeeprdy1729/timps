@@ -108,6 +108,40 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON preferences(user_id);
       CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+
+      CREATE TABLE IF NOT EXISTS positions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        content TEXT NOT NULL,
+        extracted_claim TEXT NOT NULL,
+        topic_cluster VARCHAR(100) NOT NULL,
+        claim_type VARCHAR(50) NOT NULL DEFAULT 'general',
+        confidence_expressed FLOAT DEFAULT 0.5,
+        source_context TEXT,
+        embedding_id VARCHAR(255),
+        contradiction_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS contradiction_history (
+        id SERIAL PRIMARY KEY,
+        position_id INTEGER REFERENCES positions(id) ON DELETE CASCADE,
+        contradicted_by_position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,
+        contradicted_by_text TEXT NOT NULL,
+        contradiction_score FLOAT NOT NULL,
+        semantic_similarity FLOAT NOT NULL,
+        explanation TEXT,
+        memory_quote TEXT,
+        acknowledged BOOLEAN DEFAULT FALSE,
+        resolved BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_positions_user_project ON positions(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_positions_topic ON positions(topic_cluster);
+      CREATE INDEX IF NOT EXISTS idx_contradiction_history_position ON contradiction_history(position_id);
     `);
         console.log('Database initialized successfully');
     }

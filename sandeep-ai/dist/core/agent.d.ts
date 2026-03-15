@@ -5,7 +5,7 @@ export interface AgentConfig {
     username?: string;
     systemPrompt?: string;
     maxIterations?: number;
-    modelProvider?: 'openai' | 'gemini' | 'ollama';
+    modelProvider?: 'openai' | 'gemini' | 'ollama' | 'openrouter';
     memoryMode?: 'persistent' | 'ephemeral';
 }
 export interface AgentResponse {
@@ -13,6 +13,8 @@ export interface AgentResponse {
     toolResults?: ToolResult[];
     iterations: number;
     memoryStored: boolean;
+    toolsActivated?: string[];
+    planExecuted?: boolean;
 }
 export declare class Agent {
     private userId;
@@ -22,9 +24,12 @@ export declare class Agent {
     private systemPrompt;
     private model;
     private maxIterations;
-    private toolDefinitions;
-    constructor(config: AgentConfig);
+    private allToolDefinitions;
+    private planner;
+    private executor;
+    constructor(agentConfig: AgentConfig);
     run(userMessage: string): Promise<AgentResponse>;
+    private runWithPlan;
     private buildMessages;
     private executeToolCall;
     private reflectAndStore;
