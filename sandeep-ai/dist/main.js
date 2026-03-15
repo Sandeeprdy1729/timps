@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -38,12 +39,16 @@ const cli_1 = require("./interfaces/cli");
 const postgres_1 = require("./db/postgres");
 function parseArgs() {
     const args = process.argv.slice(2);
-    const mode = args[0] === 'cli' ? 'cli' : 'server';
-    if (mode === 'cli') {
-        const options = {
-            interactive: true,
-            memoryMode: 'persistent',
-        };
+    const first = args[0];
+    // npx timps start  OR  npx timps (no args) → start server with setup wizard
+    if (!first || first === 'start') {
+        return { mode: 'start', options: {} };
+    }
+    if (first === 'server') {
+        return { mode: 'server', options: {} };
+    }
+    if (first === 'cli') {
+        const options = { interactive: true, memoryMode: 'persistent' };
         for (let i = 1; i < args.length; i++) {
             const arg = args[i];
             if (arg === '--user-id' && args[i + 1]) {
@@ -63,9 +68,8 @@ function parseArgs() {
                 i++;
             }
             else if (arg === '--mode' && args[i + 1]) {
-                if (args[i + 1] === 'ephemeral' || args[i + 1] === 'persistent') {
+                if (args[i + 1] === 'ephemeral' || args[i + 1] === 'persistent')
                     options.memoryMode = args[i + 1];
-                }
                 i++;
             }
             else if (arg === '--tui') {
@@ -86,12 +90,51 @@ function parseArgs() {
         }
         return { mode: 'cli', options };
     }
+    if (first === '--help' || first === '-h') {
+        printBanner();
+        (0, cli_1.printHelp)();
+        process.exit(0);
+    }
     return { mode: 'server', options: {} };
+}
+function printBanner() {
+    console.log(`
+╔══════════════════════════════════════════════════════════╗
+║  ◆ TIMPs v2.0 — Trustworthy Interactive Memory Partner   ║
+║  17 Intelligence Tools · Model Agnostic · Open Source    ║
+╚══════════════════════════════════════════════════════════╝
+
+Usage:
+  npx timps start              Start server (default)
+  npx timps server             Start server
+  npx timps cli --user-id 1   Interactive CLI
+  npx timps cli --tui          TUI interface
+
+After starting:
+  http://localhost:3000          → Landing page
+  http://localhost:3000/chat     → Chat
+  http://localhost:3000/dashboard → Intelligence dashboard
+
+Environment (.env):
+  DEFAULT_MODEL_PROVIDER=openrouter
+  OPENROUTER_API_KEY=sk-or-v1-...
+  POSTGRES_HOST=localhost
+
+GitHub: https://github.com/Sandeeprdy1729/timps
+`);
+}
+async function runStart() {
+    printBanner();
+    console.log('Starting TIMPs server...\n');
+    await (0, server_1.startServer)();
 }
 async function main() {
     await (0, postgres_1.initDatabase)();
     const { mode, options } = parseArgs();
-    if (mode === 'cli') {
+    if (mode === 'start') {
+        await runStart();
+    }
+    else if (mode === 'cli') {
         if (options.useUI === 'tui') {
             const { runTUI } = await Promise.resolve().then(() => __importStar(require('./interfaces/tui')));
             await runTUI(options);

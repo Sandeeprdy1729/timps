@@ -19,7 +19,7 @@ export interface Config {
         password?: string;
     };
     models: {
-        defaultProvider: 'openai' | 'gemini' | 'ollama';
+        defaultProvider: 'openai' | 'gemini' | 'ollama' | 'openrouter';
         openai?: {
             apiKey: string;
             defaultModel: string;
@@ -30,6 +30,10 @@ export interface Config {
         };
         ollama?: {
             baseUrl: string;
+            defaultModel: string;
+        };
+        openrouter?: {
+            apiKey: string;
             defaultModel: string;
         };
     };

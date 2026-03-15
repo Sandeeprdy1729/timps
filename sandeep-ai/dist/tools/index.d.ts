@@ -1,8 +1,8 @@
 import { BaseTool, InternalToolDefinition, ToolResult } from './baseTool';
 export { BaseTool } from './baseTool';
 export { InternalToolDefinition, ToolResult } from './baseTool';
-export { FileTool } from './fileTool';
-export { WebSearchTool, WebFetchTool } from './webSearchTool';
+export { ContradictionTool } from './contradictionTool';
+export { positionStore } from './positionStore';
 export declare function getAllTools(): BaseTool[];
 export declare function getToolDefinitions(): InternalToolDefinition[];
 export declare function getToolByName(name: string): BaseTool | undefined;
