@@ -1,0 +1,17 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd sandeep-ai && npm install && npm run build"
+
+[deploy]
+startCommand = "cd sandeep-ai && node dist/main.js server"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "timps-api"
+
+[services.variables]
+NODE_ENV = "production"
+PORT = "3000"

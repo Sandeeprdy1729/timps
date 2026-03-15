@@ -12,13 +12,13 @@
       --border: #222222; --border2: #2a2a2a;
       --text: #e8e4e0; --muted: #666660; --muted2: #333330;
       --accent: #c8c0b8; --green: #6ee7b7;
+      --red: #f87171; --amber: #fbbf24;
       --mono: 'IBM Plex Mono', monospace;
       --sans: 'IBM Plex Sans', sans-serif;
     }
     html, body { height: 100%; overflow: hidden; }
     body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
-
-    .app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 1fr 280px; height: 100vh; }
+    .app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 1fr 300px; height: 100vh; }
 
     /* TOPBAR */
     .topbar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--border); background: var(--bg); }
@@ -62,6 +62,19 @@
     .typing span:nth-child(3) { animation-delay: 0.36s; }
     @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
 
+    /* DNA alert in chat */
+    .dna-alert { font-family: var(--mono); font-size: 11.5px; background: var(--bg3); border-radius: 4px; padding: 12px 14px; white-space: normal; }
+    .dna-alert.contradiction { border: 1px solid #7f1d1d; }
+    .dna-alert.partial { border: 1px solid #78350f; }
+    .dna-alert.clean { border: 1px solid var(--border2); }
+    .dna-verdict { font-weight: 600; font-size: 12px; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .dna-verdict.contradiction { color: var(--red); }
+    .dna-verdict.partial { color: var(--amber); }
+    .dna-verdict.clean { color: var(--green); }
+    .dna-explanation { color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+    .dna-quote { border-left: 2px solid var(--border2); padding-left: 8px; color: var(--muted2); font-style: italic; font-size: 11px; margin-top: 4px; }
+    .dna-meta { color: var(--muted2); font-size: 10px; margin-top: 6px; }
+
     /* INPUT */
     .input-area { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
     .input-row { display: flex; gap: 8px; align-items: flex-end; }
@@ -75,12 +88,19 @@
     .cmd-hints span { cursor: pointer; transition: color 0.15s; }
     .cmd-hints span:hover { color: var(--muted); }
 
-    /* MEMORY PANEL */
-    .memory-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-    .panel-header { font-family: var(--mono); font-size: 10px; color: var(--muted2); padding: 12px 14px 8px; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-    .memories-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-    .memories-list::-webkit-scrollbar { width: 3px; }
-    .memories-list::-webkit-scrollbar-thumb { background: var(--border); }
+    /* RIGHT PANEL — tabbed */
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+    .panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .panel-tab { flex: 1; font-family: var(--mono); font-size: 10px; color: var(--muted2); padding: 10px 0; text-align: center; cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+    .panel-tab:hover { color: var(--muted); }
+    .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .panel-content { flex: 1; overflow-y: auto; }
+    .panel-content::-webkit-scrollbar { width: 3px; }
+    .panel-content::-webkit-scrollbar-thumb { background: var(--border); }
+    .panel-section { display: none; }
+    .panel-section.active { display: block; }
+
+    /* Memory items */
     .memory-empty { padding: 24px 14px; font-family: var(--mono); font-size: 11px; color: var(--muted2); text-align: center; line-height: 1.8; }
     .memory-item { padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
     .memory-item:hover { background: var(--bg3); }
@@ -90,6 +110,35 @@
     .mem-stars { font-size: 10px; margin-left: auto; }
     .mem-content { font-size: 11.5px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .mem-footer { font-family: var(--mono); font-size: 9.5px; color: var(--muted2); margin-top: 4px; }
+
+    /* DNA Panel */
+    .dna-panel-header { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .dna-panel-title { font-family: var(--mono); font-size: 10px; color: var(--muted2); letter-spacing: 0.1em; text-transform: uppercase; }
+    .dna-count-badge { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 2px; background: var(--bg3); color: var(--muted); border: 1px solid var(--border2); }
+    .dna-empty { padding: 24px 14px; font-family: var(--mono); font-size: 11px; color: var(--muted2); text-align: center; line-height: 1.8; }
+    .pos-item { padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    .pos-item:hover { background: var(--bg3); }
+    .pos-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+    .pos-id { font-family: var(--mono); font-size: 10px; color: #93c5fd66; }
+    .pos-topic { font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 2px; background: #1a1a2e; color: #818cf8; border: 1px solid #818cf822; letter-spacing: 0.04em; }
+    .pos-type { font-family: var(--mono); font-size: 9px; color: var(--muted2); letter-spacing: 0.04em; }
+    .pos-contra-badge { font-family: var(--mono); font-size: 9px; padding: 1px 6px; border-radius: 2px; color: var(--red); border: 1px solid #7f1d1d; margin-left: auto; }
+    .pos-claim { font-size: 11.5px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pos-footer { font-family: var(--mono); font-size: 9.5px; color: var(--muted2); margin-top: 4px; display: flex; align-items: center; justify-content: space-between; }
+    .pos-del { font-size: 9px; color: var(--muted2); cursor: pointer; padding: 1px 4px; border-radius: 2px; border: 1px solid transparent; transition: all 0.12s; }
+    .pos-del:hover { color: var(--red); border-color: #7f1d1d; }
+
+    /* DNA check form */
+    .dna-check-form { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+    .dna-check-form textarea { background: var(--bg3); border: 1px solid var(--border2); border-radius: 3px; padding: 7px 10px; font-family: var(--mono); font-size: 11px; color: var(--text); resize: none; outline: none; min-height: 52px; max-height: 80px; line-height: 1.5; }
+    .dna-check-form textarea:focus { border-color: var(--muted2); }
+    .dna-check-btn { font-family: var(--mono); font-size: 10px; background: var(--bg3); color: var(--muted); border: 1px solid var(--border2); border-radius: 3px; padding: 6px 10px; cursor: pointer; transition: color 0.15s; text-align: center; }
+    .dna-check-btn:hover { color: var(--text); }
+    .dna-check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .dna-inline-result { font-family: var(--mono); font-size: 10.5px; padding: 7px 10px; border-radius: 3px; line-height: 1.6; }
+    .dna-inline-result.contradiction { background: #1a0a0a; border: 1px solid #7f1d1d; color: var(--red); }
+    .dna-inline-result.partial { background: #1a1000; border: 1px solid #78350f; color: var(--amber); }
+    .dna-inline-result.clean { background: #0a1a0a; border: 1px solid #14532d; color: var(--green); }
 
     /* MODALS */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
@@ -130,7 +179,7 @@
     </div>
     <div class="topbar-right">
       <span class="status-dot" id="statusDot"></span>
-      <span class="memory-count" id="memCount">💾 0 memories</span>
+      <span class="memory-count" id="memCount">0 memories</span>
       <span class="mode-badge" id="modeBadge">PERSISTENT</span>
       <button class="settings-btn" onclick="openSettings()">settings</button>
     </div>
@@ -144,27 +193,49 @@
 
 Chat naturally. I'll remember what matters across every session.
 
-Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
+Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;statement&gt;</div>
       </div>
     </div>
     <div class="input-area">
       <div class="input-row">
-        <textarea class="chat-input" id="chatInput" placeholder="Type a message or !blame, !forget, !audit..." rows="1"></textarea>
+        <textarea class="chat-input" id="chatInput" placeholder="Type a message or use !blame, !audit, !dna..." rows="1"></textarea>
         <button class="send-btn" id="sendBtn" onclick="handleSend()">send</button>
       </div>
       <div class="cmd-hints">
         <span onclick="insertCmd('!blame ')">!blame</span>
         <span onclick="insertCmd('!forget ')">!forget</span>
         <span onclick="insertCmd('!audit')">!audit</span>
-        <span style="margin-left:auto;cursor:default;color:var(--muted2)">Enter to send · Shift+Enter newline</span>
+        <span onclick="insertCmd('!dna ')">!dna</span>
+        <span style="margin-left:auto;cursor:default;color:var(--muted2)">Enter · Shift+Enter newline</span>
       </div>
     </div>
   </div>
 
-  <div class="memory-panel">
-    <div class="panel-header">📋 Memory Log</div>
-    <div class="memories-list" id="memoriesList">
-      <div class="memory-empty">No memories loaded.<br/>Start chatting to store context.</div>
+  <div class="right-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" id="tab-memory" onclick="switchTab('memory')">memory</div>
+      <div class="panel-tab" id="tab-dna" onclick="switchTab('dna')">arg dna</div>
+    </div>
+    <div class="panel-content">
+      <div class="panel-section active" id="section-memory">
+        <div id="memoriesList">
+          <div class="memory-empty">No memories loaded.<br/>Start chatting to store context.</div>
+        </div>
+      </div>
+      <div class="panel-section" id="section-dna">
+        <div class="dna-panel-header">
+          <span class="dna-panel-title">Argument DNA</span>
+          <span class="dna-count-badge" id="dnaCount">0 positions</span>
+        </div>
+        <div class="dna-check-form">
+          <textarea id="dnaCheckInput" placeholder="Type a statement to check for contradictions..."></textarea>
+          <button class="dna-check-btn" id="dnaCheckBtn" onclick="handleDNACheck()">check for contradictions</button>
+          <div id="dnaInlineResult" style="display:none"></div>
+        </div>
+        <div id="positionsList">
+          <div class="dna-empty">No positions stored yet.<br/>Use !dna or chat naturally.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -178,18 +249,19 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
     <div class="field"><label>Model Provider</label>
       <select id="s-provider">
         <option value="ollama">Ollama (local)</option>
-        <option value="openai">OpenAI GPT-4</option>
-        <option value="gemini">Google Gemini</option>
+        <option value="openrouter">OpenRouter (recommended)</option>
+        <option value="openai">OpenAI</option>
+        <option value="gemini">Gemini</option>
       </select>
     </div>
     <div class="field"><label>API Base URL</label><input type="text" id="s-apiBase" value="http://localhost:3000" /></div>
     <div class="toggle-row">
-      <span class="toggle-label">Ephemeral mode (no persistence)</span>
-      <label class="toggle"><input type="checkbox" id="s-ephemeral" /><div class="toggle-slider"></div></label>
+      <span class="toggle-label">Ephemeral mode (no memory)</span>
+      <label class="toggle"><input type="checkbox" id="s-ephemeral" /><span class="toggle-slider"></span></label>
     </div>
     <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
-      <button class="btn-save" onclick="saveSettings()">Save</button>
+      <button class="btn-cancel" onclick="closeSettings()">cancel</button>
+      <button class="btn-save" onclick="saveSettings()">save</button>
     </div>
   </div>
 </div>
@@ -197,58 +269,70 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
 <!-- Confirm Modal -->
 <div class="modal-overlay" id="confirmModal">
   <div class="confirm-box">
-    <div class="confirm-title" id="confirmTitle">Confirm deletion</div>
+    <div class="confirm-title" id="confirmTitle">Confirm action</div>
     <div class="confirm-body" id="confirmBody"></div>
     <div class="confirm-actions">
-      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
-      <button class="btn-danger" onclick="confirmAction()">Delete</button>
+      <button class="btn-cancel" onclick="closeConfirm()">cancel</button>
+      <button class="btn-danger" onclick="confirmAction()">confirm</button>
     </div>
   </div>
 </div>
 
 <script>
-  const state = {
+  var state = {
     userId: parseInt(localStorage.getItem('timps_userId') || '1'),
     username: localStorage.getItem('timps_username') || 'User',
     provider: localStorage.getItem('timps_provider') || 'ollama',
-    apiBase: localStorage.getItem('timps_apiBase') || 'http://localhost:3000',
+    apiBase: (localStorage.getItem('timps_apiBase') || 'http://localhost:3000').replace(/\/$/, ''),
     ephemeral: localStorage.getItem('timps_ephemeral') === 'true',
     loading: false,
+    activeTab: 'memory',
   };
-
-  let confirmCallback = null;
-
-  window.addEventListener('DOMContentLoaded', () => {
-    updateModeUI();
-    checkConnection();
-    loadMemories();
-  });
+  var confirmCallback = null;
 
   function updateModeUI() {
-    const badge = document.getElementById('modeBadge');
-    badge.textContent = state.ephemeral ? 'EPHEMERAL' : 'PERSISTENT';
-    badge.className = state.ephemeral ? 'mode-badge ephemeral' : 'mode-badge';
+    var b = document.getElementById('modeBadge');
+    b.textContent = state.ephemeral ? 'EPHEMERAL' : 'PERSISTENT';
+    b.className = 'mode-badge' + (state.ephemeral ? ' ephemeral' : '');
+  }
+
+  function switchTab(name) {
+    state.activeTab = name;
+    document.querySelectorAll('.panel-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.panel-section').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('section-' + name).classList.add('active');
+    if (name === 'dna') loadPositions();
   }
 
   async function checkConnection() {
     try {
-      const r = await fetch(state.apiBase + '/api/health', { signal: AbortSignal.timeout(2500) });
-      document.getElementById('statusDot').classList.toggle('connected', r.ok);
+      var res = await fetch(state.apiBase + '/api/health', { signal: AbortSignal.timeout(3000) });
+      if (res.ok) document.getElementById('statusDot').classList.add('connected');
+      else document.getElementById('statusDot').classList.remove('connected');
     } catch { document.getElementById('statusDot').classList.remove('connected'); }
   }
 
   function addMessage(role, content, type) {
-    type = type || 'text';
-    const msgs = document.getElementById('messages');
-    const div = document.createElement('div');
+    type = type || 'normal';
+    var msgs = document.getElementById('messages');
+    var div = document.createElement('div');
     div.className = 'message';
-    const roleEl = document.createElement('div');
-    roleEl.className = 'msg-role ' + (role === 'user' ? 'user-role' : 'ai-role');
-    roleEl.textContent = role === 'user' ? state.username + ' ›' : 'timps ›';
-    const contentEl = document.createElement('div');
-    contentEl.className = 'msg-content' + (role === 'user' ? ' user-content' : '') + (type === 'search' ? ' search-result' : '') + (type === 'system' ? ' system-content' : '');
-    if (type === 'search') { contentEl.innerHTML = content; } else { contentEl.textContent = content; }
-    const timeEl = document.createElement('div');
+    var roleEl = document.createElement('div');
+    roleEl.className = 'msg-role ' + (role === 'user' ? 'user-role' : role === 'assistant' ? 'ai-role' : '');
+    roleEl.textContent = role === 'user' ? 'you ›' : role === 'assistant' ? 'timps ›' : 'system ›';
+    var contentEl = document.createElement('div');
+    if (type === 'search') {
+      contentEl.className = 'msg-content search-result';
+      contentEl.innerHTML = content;
+    } else if (type === 'dna') {
+      contentEl.className = 'msg-content';
+      contentEl.innerHTML = content;
+    } else {
+      contentEl.className = 'msg-content' + (role === 'user' ? ' user-content' : role === 'system' ? ' system-content' : '');
+      contentEl.textContent = content;
+    }
+    var timeEl = document.createElement('div');
     timeEl.className = 'msg-time';
     timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     div.appendChild(roleEl); div.appendChild(contentEl); div.appendChild(timeEl);
@@ -257,24 +341,30 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
   }
 
   function showTyping() {
-    const msgs = document.getElementById('messages');
-    const div = document.createElement('div');
+    var msgs = document.getElementById('messages');
+    var div = document.createElement('div');
     div.className = 'typing'; div.id = 'typing-indicator';
     div.innerHTML = '<span></span><span></span><span></span>';
     msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
   }
-
-  function hideTyping() { document.getElementById('typing-indicator') && document.getElementById('typing-indicator').remove(); }
+  function hideTyping() { var t = document.getElementById('typing-indicator'); if (t) t.remove(); }
 
   async function handleSend() {
-    const input = document.getElementById('chatInput');
-    const raw = input.value.trim();
+    var input = document.getElementById('chatInput');
+    var raw = input.value.trim();
     if (!raw || state.loading) return;
     input.value = ''; input.style.height = 'auto';
 
     if (raw.startsWith('!blame ')) { addMessage('user', raw); await handleBlame(raw.slice(7).trim()); return; }
     if (raw.startsWith('!forget ')) { addMessage('user', raw); handleForget(raw.slice(8).trim()); return; }
     if (raw === '!audit') { addMessage('user', raw); await handleAudit(); return; }
+    if (raw.startsWith('!dna ') || raw === '!dna') {
+      addMessage('user', raw);
+      var statement = raw.startsWith('!dna ') ? raw.slice(5).trim() : '';
+      if (!statement) { addMessage('assistant', 'Usage: !dna <statement to check>', 'system'); return; }
+      await handleDNACommand(statement);
+      return;
+    }
 
     addMessage('user', raw);
     document.getElementById('sendBtn').disabled = true;
@@ -282,16 +372,17 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
     showTyping();
 
     try {
-      const res = await fetch(state.apiBase + '/api/chat', {
+      var res = await fetch(state.apiBase + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: state.userId, username: state.username, message: raw, memoryMode: state.ephemeral ? 'ephemeral' : 'persistent', provider: state.provider }),
       });
       hideTyping();
       if (!res.ok) throw new Error('Server error ' + res.status);
-      const data = await res.json();
+      var data = await res.json();
       addMessage('assistant', data.response || '(no response)');
       await loadMemories();
+      if (state.activeTab === 'dna') await loadPositions();
     } catch (err) {
       hideTyping();
       addMessage('assistant', 'Could not reach TIMPs server at ' + state.apiBase + '.\n\nMake sure the backend is running:\n  cd sandeep-ai && npm run server', 'system');
@@ -301,30 +392,153 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
     }
   }
 
+  // ─── DNA Command handler ────────────────────────────────────────────────────
+
+  async function handleDNACommand(statement) {
+    showTyping();
+    try {
+      var res = await fetch(state.apiBase + '/api/contradiction/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: state.userId, text: statement, autoStore: true }),
+      });
+      var data = await res.json();
+      hideTyping();
+      var html = buildDNAAlertHTML(data, statement);
+      addMessage('assistant', html, 'dna');
+      if (state.activeTab === 'dna') await loadPositions();
+    } catch (err) {
+      hideTyping();
+      addMessage('assistant', 'DNA check failed: ' + err.message, 'system');
+    }
+  }
+
+  async function handleDNACheck() {
+    var input = document.getElementById('dnaCheckInput');
+    var text = input.value.trim();
+    if (!text) return;
+    var btn = document.getElementById('dnaCheckBtn');
+    var resultEl = document.getElementById('dnaInlineResult');
+    btn.disabled = true;
+    btn.textContent = 'checking...';
+    resultEl.style.display = 'none';
+    try {
+      var res = await fetch(state.apiBase + '/api/contradiction/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: state.userId, text: text, autoStore: true }),
+      });
+      var data = await res.json();
+      var v = (data.verdict || 'CLEAN').toLowerCase();
+      var score = Math.round((data.contradiction_score || 0) * 100);
+      var msg = v === 'contradiction'
+        ? 'Contradiction detected (' + score + '% score)'
+        : v === 'partial'
+        ? 'Partial conflict (' + score + '% score)'
+        : 'No contradiction found';
+      if (data.explanation) msg += '\n' + data.explanation;
+      resultEl.className = 'dna-inline-result ' + v;
+      resultEl.textContent = msg;
+      resultEl.style.display = 'block';
+      await loadPositions();
+    } catch (err) {
+      resultEl.className = 'dna-inline-result';
+      resultEl.textContent = 'Error: ' + err.message;
+      resultEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'check for contradictions';
+    }
+  }
+
+  function buildDNAAlertHTML(data, statement) {
+    var v = (data.verdict || 'CLEAN').toLowerCase();
+    var score = Math.round((data.contradiction_score || 0) * 100);
+    var verdictText = v === 'contradiction' ? 'CONTRADICTION DETECTED'
+      : v === 'partial' ? 'PARTIAL CONFLICT'
+      : 'NO CONTRADICTION';
+    var html = '<div class="dna-alert ' + v + '">';
+    html += '<div class="dna-verdict ' + v + '">' + verdictText + ' — ' + score + '%</div>';
+    if (data.explanation) html += '<div class="dna-explanation">' + data.explanation + '</div>';
+    if (data.memory_quote && data.matched_position) {
+      html += '<div class="dna-quote">Stored on ' + new Date(data.matched_position.created_at).toLocaleDateString() + ': &ldquo;' + data.memory_quote + '&rdquo;</div>';
+    }
+    if (data.extracted_claims && data.extracted_claims.length) {
+      html += '<div class="dna-meta">Claim extracted: ' + data.extracted_claims[0] + '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // ─── Positions panel ────────────────────────────────────────────────────────
+
+  async function loadPositions() {
+    try {
+      var res = await fetch(state.apiBase + '/api/positions/' + state.userId);
+      if (!res.ok) return;
+      var data = await res.json();
+      var positions = data.positions || [];
+      document.getElementById('dnaCount').textContent = positions.length + ' position' + (positions.length !== 1 ? 's' : '');
+      var list = document.getElementById('positionsList');
+      if (!positions.length) {
+        list.innerHTML = '<div class="dna-empty">No positions stored yet.<br/>Use !dna &lt;statement&gt; to begin.</div>';
+        return;
+      }
+      list.innerHTML = positions.map(function(p) {
+        var date = p.created_at ? new Date(p.created_at).toLocaleDateString() : '';
+        var contra = p.contradiction_count > 0
+          ? '<span class="pos-contra-badge">' + p.contradiction_count + ' conflict' + (p.contradiction_count !== 1 ? 's' : '') + '</span>'
+          : '';
+        return '<div class="pos-item">'
+          + '<div class="pos-meta"><span class="pos-id">#' + p.id + '</span>'
+          + '<span class="pos-topic">' + (p.topic_cluster || 'general') + '</span>'
+          + '<span class="pos-type">' + (p.claim_type || '') + '</span>'
+          + contra + '</div>'
+          + '<div class="pos-claim">' + p.extracted_claim + '</div>'
+          + '<div class="pos-footer"><span>' + date + '</span>'
+          + '<span class="pos-del" onclick="deletePosition(' + p.id + ')">delete</span></div>'
+          + '</div>';
+      }).join('');
+    } catch (err) {
+      console.warn('Could not load positions:', err);
+    }
+  }
+
+  async function deletePosition(posId) {
+    try {
+      await fetch(state.apiBase + '/api/positions/' + state.userId + '/' + posId, { method: 'DELETE' });
+      await loadPositions();
+    } catch (err) {
+      console.warn('Delete failed:', err);
+    }
+  }
+
+  // ─── Memory panel ───────────────────────────────────────────────────────────
+
   async function handleBlame(keyword) {
     showTyping();
     try {
-      const res = await fetch(state.apiBase + '/api/memory/' + state.userId);
-      const data = await res.json();
+      var res = await fetch(state.apiBase + '/api/memory/' + state.userId);
+      var data = await res.json();
       hideTyping();
-      const kw = keyword.toLowerCase();
-      const matches = (data.memories || []).filter(function(m) { return m.content && m.content.toLowerCase().includes(kw); });
+      var kw = keyword.toLowerCase();
+      var matches = (data.memories || []).filter(function(m) { return m.content && m.content.toLowerCase().includes(kw); });
       if (!matches.length) { addMessage('assistant', 'No memories found matching "' + keyword + '".', 'system'); return; }
-      let html = '<div style="color:var(--green);font-size:11px;margin-bottom:8px">Found ' + matches.length + ' memory item(s) matching "<span style=\'color:var(--accent)\'>' + keyword + '</span>":</div>';
+      var html = '<div style="color:var(--green);font-size:11px;margin-bottom:8px">Found ' + matches.length + ' item(s) matching "<span style=\'color:var(--accent)\'>' + keyword + '</span>":</div>';
       matches.forEach(function(m) {
-        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        var stars = '★'.repeat(Math.min(m.importance || 1, 5));
         html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span><span class="sr-content">' + m.content + '</span></div>';
       });
       addMessage('assistant', html, 'search');
-    } catch { hideTyping(); addMessage('assistant', 'Could not search memories. Server may be offline.', 'system'); }
+    } catch { hideTyping(); addMessage('assistant', 'Could not search memories.', 'system'); }
   }
 
   function handleForget(keyword) {
     document.getElementById('confirmTitle').textContent = '!forget "' + keyword + '"';
-    document.getElementById('confirmBody').innerHTML = 'Delete all memories matching <strong style="font-family:var(--mono);color:var(--accent)">"' + keyword + '"</strong>?<br/><br/>Removes from PostgreSQL and Qdrant. Cannot be undone.';
+    document.getElementById('confirmBody').innerHTML = 'Delete all memories matching <strong style="font-family:var(--mono);color:var(--accent)">"' + keyword + '"</strong>?<br/><br/>Cannot be undone.';
     confirmCallback = async function() {
       closeConfirm();
-      addMessage('assistant', '!forget "' + keyword + '" confirmed. Memories removed.', 'system');
+      addMessage('assistant', '!forget "' + keyword + '" confirmed.', 'system');
       await loadMemories();
     };
     document.getElementById('confirmModal').classList.add('open');
@@ -333,14 +547,14 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
   async function handleAudit() {
     showTyping();
     try {
-      const res = await fetch(state.apiBase + '/api/memory/' + state.userId);
-      const data = await res.json();
+      var res = await fetch(state.apiBase + '/api/memory/' + state.userId);
+      var data = await res.json();
       hideTyping();
-      const all = (data.memories || []).slice(-10).reverse();
+      var all = (data.memories || []).slice(-10).reverse();
       if (!all.length) { addMessage('assistant', 'No memories stored yet.', 'system'); return; }
-      let html = '<div style="color:var(--accent);font-size:11px;margin-bottom:8px">AUDIT LOG — Last ' + all.length + ' memories</div>';
+      var html = '<div style="color:var(--accent);font-size:11px;margin-bottom:8px">AUDIT LOG — Last ' + all.length + ' memories</div>';
       all.forEach(function(m) {
-        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        var stars = '★'.repeat(Math.min(m.importance || 1, 5));
         var date = m.created_at ? new Date(m.created_at).toLocaleString() : '';
         html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span>' + (date ? '<span style="color:var(--muted2);font-size:9px;float:right">' + date + '</span>' : '') + '<span class="sr-content">' + m.content + '</span></div>';
       });
@@ -350,17 +564,17 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
 
   async function loadMemories() {
     try {
-      const res = await fetch(state.apiBase + '/api/memory/' + state.userId, { signal: AbortSignal.timeout(3000) });
+      var res = await fetch(state.apiBase + '/api/memory/' + state.userId, { signal: AbortSignal.timeout(3000) });
       if (!res.ok) return;
-      const data = await res.json();
-      const memories = data.memories || [];
-      document.getElementById('memCount').textContent = '💾 ' + memories.length + ' memories';
+      var data = await res.json();
+      var memories = data.memories || [];
+      document.getElementById('memCount').textContent = memories.length + ' memories';
       document.getElementById('statusDot').classList.add('connected');
-      const list = document.getElementById('memoriesList');
+      var list = document.getElementById('memoriesList');
       if (!memories.length) { list.innerHTML = '<div class="memory-empty">No memories yet.<br/>Start chatting to store context.</div>'; return; }
-      const recent = memories.slice().reverse().slice(0, 30);
+      var recent = memories.slice().reverse().slice(0, 30);
       list.innerHTML = recent.map(function(m) {
-        var stars = '⭐'.repeat(Math.min(m.importance || 1, 5));
+        var stars = '★'.repeat(Math.min(m.importance || 1, 5));
         var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
         return '<div class="memory-item"><div class="mem-meta"><span class="mem-id">#' + m.id + '</span><span class="mem-type">' + (m.memory_type || 'MEM').toUpperCase() + '</span><span class="mem-stars">' + stars + '</span></div><div class="mem-content">' + m.content + '</div>' + (date ? '<div class="mem-footer">' + date + ' · retrieved ' + (m.retrieval_count || 0) + '×</div>' : '') + '</div>';
       }).join('');
@@ -375,9 +589,7 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
     document.getElementById('s-ephemeral').checked = state.ephemeral;
     document.getElementById('settingsModal').classList.add('open');
   }
-
   function closeSettings() { document.getElementById('settingsModal').classList.remove('open'); }
-
   function saveSettings() {
     state.userId = parseInt(document.getElementById('s-userId').value) || 1;
     state.username = document.getElementById('s-username').value || 'User';
@@ -391,7 +603,6 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
     localStorage.setItem('timps_ephemeral', state.ephemeral);
     updateModeUI(); closeSettings(); checkConnection(); loadMemories();
   }
-
   function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); confirmCallback = null; }
   function confirmAction() { if (confirmCallback) confirmCallback(); }
   function insertCmd(cmd) { var input = document.getElementById('chatInput'); input.value = cmd; input.focus(); }
@@ -405,6 +616,10 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit</div>
   document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
   document.getElementById('confirmModal').addEventListener('click', function(e) { if (e.target === this) closeConfirm(); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeSettings(); closeConfirm(); } });
+
+  updateModeUI();
+  checkConnection();
+  loadMemories();
   setInterval(checkConnection, 10000);
 </script>
 </body>

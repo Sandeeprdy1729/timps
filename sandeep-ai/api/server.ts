@@ -1,10 +1,13 @@
 import express, { Express } from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import routes from './routes';
 import { config } from '../config/env';
 import { initDatabase } from '../db/postgres';
 import { initVectorStore } from '../db/vector';
+import { positionStore } from '../tools/positionStore';
+import { initToolsTables } from '../tools/toolsDb';
 
 export function createApp(): Express {
   const app = express();
@@ -18,8 +21,23 @@ export function createApp(): Express {
     next();
   });
   
-  // Serve static files from public directory
-  app.use(express.static(path.join(__dirname, '../public')));
+  // Serve static files — resolve correctly for both ts-node and compiled dist
+  // ts-node: __dirname = sandeep-ai/api → public is at sandeep-ai/public
+  // compiled: __dirname = sandeep-ai/dist/api → public is at sandeep-ai/dist/public (doesn't exist)
+  // So we try ../public first (ts-node path), then fall back to checking further up
+  const candidates = [
+    path.join(__dirname, '../public'),          // ts-node: api/../public = sandeep-ai/public ✓
+    path.join(__dirname, '../../public'),        // dist/api/../../public = sandeep-ai/public ✓
+    path.join(process.cwd(), 'public'),          // cwd-relative fallback
+  ];
+  const publicPath = candidates.find(p => fs.existsSync(p)) || candidates[0];
+  console.log(`Serving static files from: ${publicPath}`);
+  app.use(express.static(publicPath));
+
+  // Explicit HTML fallbacks so direct URL access works
+  app.get('/', (_req, res) => res.sendFile(path.join(publicPath, 'index.html')));
+  app.get('/chat', (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
+  app.get('/chat.html', (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
   
   app.use('/api', routes);
   
@@ -40,14 +58,16 @@ export async function startServer(): Promise<void> {
   
   try {
     await initDatabase();
-    console.log('PostgreSQL initialized');
+    await initToolsTables();
+    console.log('PostgreSQL initialized (core + all 17 tool tables)');
   } catch (error) {
     console.warn('PostgreSQL initialization failed, continuing without DB:', error);
   }
   
   try {
     await initVectorStore();
-    console.log('Qdrant vector store initialized');
+    await positionStore.initPositionsCollection();
+    console.log('Qdrant vector store initialized (memories + positions)');
   } catch (error) {
     console.warn('Qdrant initialization failed, continuing without vector store:', error);
   }
@@ -62,14 +82,16 @@ export async function startServer(): Promise<void> {
 ║     Server running on http://localhost:${config.port}        ║
 ║     Environment: ${config.nodeEnv.padEnd(35)}║
 ║                                                           ║
-║     🌐 Web Interface:                                     ║
+║     Web Interface:                                        ║
 ║     → Open http://localhost:${config.port} in your browser      ║
 ║                                                           ║
 ║     API Endpoints:                                        ║
-║     - POST /api/chat          : Chat with AI             ║
-║     - GET  /api/memory/:userId : Get user memories        ║
-║     - GET  /api/goals/:userId  : Get user goals           ║
-║     - GET  /api/health         : Health check             ║
+║     - POST /api/chat                : Chat with AI       ║
+║     - GET  /api/memory/:userId      : Get user memories  ║
+║     - GET  /api/goals/:userId       : Get user goals     ║
+║     - POST /api/contradiction/check : Tool 5 DNA check   ║
+║     - GET  /api/positions/:userId   : List positions     ║
+║     - GET  /api/health              : Health check       ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     `);

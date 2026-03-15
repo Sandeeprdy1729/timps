@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: timps-api
+    runtime: node
+    buildCommand: cd sandeep-ai && npm install && npm run build
+    startCommand: cd sandeep-ai && node dist/main.js server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DEFAULT_MODEL_PROVIDER
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: 5432
+      - key: POSTGRES_DB
+        sync: false
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: EMBEDDINGS_DIMENSION
+        value: 768
+
+databases:
+  - name: timps-postgres
+    plan: free

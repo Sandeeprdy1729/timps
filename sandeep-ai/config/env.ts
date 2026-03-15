@@ -23,7 +23,7 @@ export interface Config {
   };
   
   models: {
-    defaultProvider: 'openai' | 'gemini' | 'ollama';
+    defaultProvider: 'openai' | 'gemini' | 'ollama' | 'openrouter';
     openai?: {
       apiKey: string;
       defaultModel: string;
@@ -34,6 +34,10 @@ export interface Config {
     };
     ollama?: {
       baseUrl: string;
+      defaultModel: string;
+    };
+    openrouter?: {
+      apiKey: string;
       defaultModel: string;
     };
   };
@@ -95,6 +99,10 @@ export function loadConfig(): Config {
         baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
         defaultModel: process.env.OLLAMA_DEFAULT_MODEL || 'llama3.1:8b',
       },
+      openrouter: process.env.OPENROUTER_API_KEY ? {
+        apiKey: process.env.OPENROUTER_API_KEY,
+        defaultModel: process.env.OPENROUTER_DEFAULT_MODEL || 'anthropic/claude-3.5-haiku',
+      } : undefined,
     },
     
     embeddings: {

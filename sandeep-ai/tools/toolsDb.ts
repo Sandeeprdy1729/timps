@@ -1,0 +1,276 @@
+// tools/toolsDb.ts — runs additional CREATE TABLE migrations for all 17 tools
+import { execute } from '../db/postgres';
+
+export async function initToolsTables(): Promise<void> {
+  // ── Tool 1: Temporal Mirror ──────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS behavioral_events (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      event_type VARCHAR(100) NOT NULL,
+      context TEXT,
+      outcome VARCHAR(50),
+      emotional_valence FLOAT DEFAULT 0,
+      tags TEXT[],
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_behavioral_events_user ON behavioral_events(user_id, recorded_at DESC);
+  `);
+
+  // ── Tool 2: Regret Oracle ────────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS decisions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      description TEXT NOT NULL,
+      decision_type VARCHAR(50),
+      regret_score FLOAT DEFAULT 0,
+      outcome_noted TEXT,
+      regret_tags TEXT[],
+      decided_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      outcome_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_decisions_user ON decisions(user_id, decided_at DESC);
+  `);
+
+  // ── Tool 3: Living Manifesto ─────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS value_observations (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      inferred_value VARCHAR(100) NOT NULL,
+      evidence TEXT NOT NULL,
+      frequency INTEGER DEFAULT 1,
+      last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS manifestos (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE REFERENCES users(id),
+      content TEXT NOT NULL,
+      generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_value_obs_user ON value_observations(user_id);
+  `);
+
+  // ── Tool 4: Burnout Seismograph ──────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS burnout_signals (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      signal_type VARCHAR(100) NOT NULL,
+      value FLOAT NOT NULL,
+      baseline_value FLOAT,
+      deviation_pct FLOAT,
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS burnout_baseline (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE REFERENCES users(id),
+      baseline_data JSONB NOT NULL,
+      computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_burnout_signals_user ON burnout_signals(user_id, recorded_at DESC);
+  `);
+
+  // ── Tool 6: Dead Reckoning Engine ────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS life_simulations (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      scenario TEXT NOT NULL,
+      simulation_result JSONB,
+      confidence FLOAT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_simulations_user ON life_simulations(user_id);
+  `);
+
+  // ── Tool 7: Skill Shadow ─────────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS workflow_patterns (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      pattern_type VARCHAR(100) NOT NULL,
+      description TEXT NOT NULL,
+      success_rate FLOAT DEFAULT 0.5,
+      context_tags TEXT[],
+      observed_count INTEGER DEFAULT 1,
+      last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_workflow_patterns_user ON workflow_patterns(user_id);
+  `);
+
+  // ── Tool 8: Curriculum Architect ────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS learning_events (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      topic VARCHAR(200) NOT NULL,
+      outcome VARCHAR(50),
+      retention_days INTEGER,
+      analogy_used TEXT,
+      session_duration_mins INTEGER,
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS curricula (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      topic VARCHAR(200) NOT NULL,
+      plan JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_learning_events_user ON learning_events(user_id, topic);
+  `);
+
+  // ── Tool 9: Technical Debt Seismograph ──────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS code_incidents (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      pattern TEXT NOT NULL,
+      incident_type VARCHAR(100),
+      time_to_debug_hrs FLOAT,
+      code_context TEXT,
+      occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_code_incidents_user_project ON code_incidents(user_id, project_id);
+  `);
+
+  // ── Tool 10: Bug Pattern Prophet ────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS bug_patterns (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      bug_type VARCHAR(100) NOT NULL,
+      trigger_context TEXT,
+      frequency INTEGER DEFAULT 1,
+      last_occurrence TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      environmental_tags TEXT[]
+    );
+    CREATE INDEX IF NOT EXISTS idx_bug_patterns_user ON bug_patterns(user_id);
+  `);
+
+  // ── Tool 11: API Archaeologist ───────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS api_knowledge (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      api_name VARCHAR(200) NOT NULL,
+      endpoint TEXT,
+      discovered_quirk TEXT NOT NULL,
+      severity VARCHAR(50) DEFAULT 'info',
+      verified BOOLEAN DEFAULT FALSE,
+      discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_api_knowledge_user ON api_knowledge(user_id, api_name);
+  `);
+
+  // ── Tool 12: Codebase Anthropologist ────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS codebase_culture (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      insight_type VARCHAR(100) NOT NULL,
+      description TEXT NOT NULL,
+      evidence TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_codebase_culture_project ON codebase_culture(user_id, project_id);
+  `);
+
+  // ── Tool 13: Institutional Memory Necromancer ────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS institutional_knowledge (
+      id SERIAL PRIMARY KEY,
+      org_id TEXT NOT NULL,
+      person_name VARCHAR(200),
+      decision TEXT NOT NULL,
+      rationale TEXT,
+      alternatives_rejected TEXT,
+      source_type VARCHAR(50),
+      preserved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_inst_knowledge_org ON institutional_knowledge(org_id);
+  `);
+
+  // ── Tool 14: Chemistry Engine ────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS behavioral_profiles (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      person_identifier VARCHAR(200) NOT NULL,
+      profile_data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, person_identifier)
+    );
+    CREATE TABLE IF NOT EXISTS compatibility_scores (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      person_a VARCHAR(200) NOT NULL,
+      person_b VARCHAR(200) NOT NULL,
+      score FLOAT NOT NULL,
+      analysis JSONB,
+      computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_profiles_user ON behavioral_profiles(user_id);
+  `);
+
+  // ── Tool 15: Meeting Ghost ───────────────────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS meeting_commitments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      meeting_title TEXT,
+      person_name VARCHAR(200) NOT NULL,
+      commitment TEXT NOT NULL,
+      due_date TIMESTAMP,
+      status VARCHAR(50) DEFAULT 'pending',
+      meeting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_commitments_user ON meeting_commitments(user_id, status);
+  `);
+
+  // ── Tool 16: Collective Wisdom Harvester ─────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS wisdom_contributions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      profile_hash VARCHAR(64) NOT NULL,
+      decision_context TEXT NOT NULL,
+      outcome VARCHAR(50),
+      profile_tags TEXT[],
+      contributed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_wisdom_profile ON wisdom_contributions(profile_hash);
+  `);
+
+  // ── Tool 17: Relationship Intelligence Engine ────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS relationship_signals (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      contact_name VARCHAR(200) NOT NULL,
+      signal_type VARCHAR(100) NOT NULL,
+      value FLOAT DEFAULT 1,
+      context TEXT,
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS relationship_health (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      contact_name VARCHAR(200) NOT NULL,
+      health_score FLOAT DEFAULT 1.0,
+      drift_alert BOOLEAN DEFAULT FALSE,
+      last_interaction TIMESTAMP,
+      computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, contact_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_rel_signals_user ON relationship_signals(user_id, contact_name, recorded_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_rel_health_user ON relationship_health(user_id);
+  `);
+
+  console.log('[TIMPs] All 17 tool tables initialized');
+}
