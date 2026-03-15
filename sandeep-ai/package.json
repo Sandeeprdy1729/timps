@@ -1,35 +1,42 @@
 {
   "name": "timps",
-  "version": "1.0.3",
+  "version": "2.0.0",
+  "description": "TIMPs — The AI memory layer that gets smarter the longer you use it. 17 intelligence tools built on persistent memory.",
+  "main": "dist/main.js",
   "bin": {
-  "timps": "./sandeep-ai/main.js"
+    "timps": "./dist/main.js"
   },
-  "preferGlobal": true,
+  "scripts": {
+    "build":   "tsc",
+    "start":   "node dist/main.js server",
+    "dev":     "ts-node main.ts server",
+    "server":  "ts-node main.ts server",
+    "cli":     "ts-node main.ts cli",
+    "tui":     "ts-node main.ts cli --tui",
+    "seed":    "ts-node seed.ts",
+    "seed:reset": "ts-node seed.ts --reset",
+    "test":    "npx ts-node test_tool5.ts",
+    "typecheck": "tsc --noEmit",
+    "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
+  },
   "engines": {
     "node": ">=18.0.0"
   },
-  "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
-  "main": "dist/main.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/main.js",
-    "dev": "ts-node main.ts",
-    "cli": "ts-node main.ts cli",
-    "tui": "ts-node main.ts cli --tui",
-    "server": "ts-node main.ts server",
-    "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
-  },
   "keywords": [
-    "ai",
-    "agent",
-    "memory",
-    "llm",
-    "gpt",
-    "gemini",
-    "ollama"
+    "ai", "agent", "memory", "llm", "gpt", "gemini", "ollama",
+    "openrouter", "persistent-memory", "contradiction-detection",
+    "burnout-detection", "relationship-intelligence", "developer-tools"
   ],
-  "author": "",
+  "author": "Sandeeprdy1729",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
+  "homepage": "https://github.com/Sandeeprdy1729/timps",
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+  },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.9.0",
     "blessed": "^0.1.81",
