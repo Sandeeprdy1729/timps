@@ -7,6 +7,10 @@
 
 **A professional memory system that understands, recalls, and evolves with you.**
 
+<p align="center">
+  <img src="https://api.star-history.com/svg?repos=Sandeeprdy1729/timps&type=Date" />
+</p>
+
 [Quick Start](#quick-start) • [Features](#features) • [17 Tools](#17-intelligence-tools-new-in-v20) • [Commands](#commands) • [TUI Guide](TUI_README.md) • [Dashboard](#dashboard-new) • [Roadmap](#roadmap)
 
 </div>
