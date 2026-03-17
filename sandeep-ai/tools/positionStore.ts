@@ -173,8 +173,11 @@ export class PositionStore {
         [ids]
       );
       return positions;
-    } catch (err) {
-      console.error('[ArgumentDNA] Similarity search failed:', err);
+    } catch (err: any) {
+      // Silent fallback to SQL when Ollama is not running (ECONNREFUSED)
+      if (!err?.message?.includes('ECONNREFUSED')) {
+        console.error('[ArgumentDNA] Similarity search failed:', err);
+      }
       return query<Position>(
         `SELECT * FROM positions WHERE user_id = $1 AND project_id = $2
          ORDER BY created_at DESC LIMIT $3`,

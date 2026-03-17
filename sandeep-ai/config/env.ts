@@ -1,3 +1,4 @@
+import 'dotenv/config';
 export interface Config {
   port: number;
   nodeEnv: string;
@@ -106,8 +107,8 @@ export function loadConfig(): Config {
     },
     
     embeddings: {
-      provider: 'ollama',
-      model: 'nomic-embed-text',
+      provider: (process.env.EMBEDDINGS_PROVIDER || 'ollama') as 'ollama',
+      model: process.env.EMBEDDINGS_MODEL || 'nomic-embed-text',
       dimension: parseInt(process.env.EMBEDDINGS_DIMENSION || '768', 10),
     },
     

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import 'dotenv/config';
 import { startServer } from './api/server';
 import { runCLI, printHelp } from './interfaces/cli';
 import { initDatabase } from './db/postgres';
