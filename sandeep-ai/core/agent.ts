@@ -236,21 +236,24 @@ export class Agent {
     const conversationId = 'conv_' + Date.now();
     const messageId = 'msg_' + Date.now();
 
-    for (const memory of reflection.memories) {
-      await memoryIndex.storeMemory(
-        this.userId, this.projectId, memory.content,
-        memory.type === 'reflection' ? 'reflection' : 'explicit',
-        memory.importance, memory.tags || [], conversationId, messageId
-      );
+    // Guard against LLM returning non-array values
+    for (const memory of (Array.isArray(reflection.memories) ? reflection.memories : [])) {
+      try {
+        await memoryIndex.storeMemory(
+          this.userId, this.projectId, memory.content,
+          memory.type === 'reflection' ? 'reflection' : 'explicit',
+          memory.importance, memory.tags || [], conversationId, messageId
+        );
+      } catch { /* silent — vector store may be unavailable */ }
     }
-    for (const goal of reflection.goals) {
-      await memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority);
+    for (const goal of (Array.isArray(reflection.goals) ? reflection.goals : [])) {
+      try { await memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority); } catch { }
     }
-    for (const pref of reflection.preferences) {
-      await memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category);
+    for (const pref of (Array.isArray(reflection.preferences) ? reflection.preferences : [])) {
+      try { await memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category); } catch { }
     }
-    for (const project of reflection.projects) {
-      await memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack);
+    for (const project of (Array.isArray(reflection.projects) ? reflection.projects : [])) {
+      try { await memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack); } catch { }
     }
   }
 

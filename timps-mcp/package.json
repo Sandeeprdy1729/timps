@@ -1,0 +1,30 @@
+{
+  "name": "timps-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for TIMPs — 17 intelligence tools for Claude, Cursor, and any MCP agent",
+  "main": "dist/index.js",
+  "bin": {
+    "timps-mcp": "./dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["mcp", "ai", "memory", "timps", "claude", "cursor"],
+  "author": "Sandeeprdy1729",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -22,7 +22,7 @@ export class OpenRouterModel extends BaseModel {
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
         'HTTP-Referer': 'https://github.com/Sandeeprdy1729/timps',
-        'X-Title': 'TIMPs — Trustworthy Interactive Memory Partner System',
+        'X-Title': 'TIMPs',
       },
     });
   }

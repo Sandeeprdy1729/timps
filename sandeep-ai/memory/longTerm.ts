@@ -54,7 +54,7 @@ export interface Project {
 }
 
 export class LongTermMemoryStore {
-  private embeddingModel = createEmbeddingModel('ollama');
+  private embeddingModel = createEmbeddingModel();
   
 async storeMemory(
   memoryInput: Omit<Memory, 'id' | 'created_at' | 'updated_at'>
@@ -105,8 +105,10 @@ async storeMemory(
         [storedMemory.id!.toString(), storedMemory.id!]
       );
 
-    } catch (error) {
-      console.error('Failed to store vector embedding:', error);
+    } catch (error: any) {
+      if (!error?.message?.includes('ECONNREFUSED') && !error?.cause?.code?.includes('ECONNREFUSED')) {
+        console.error('Failed to store vector embedding:', error);
+      }
     }
   }
 
@@ -142,7 +144,9 @@ async storeMemory(
         [userId, projectId, memoryIds]
       );
     } catch (error) {
-      console.error('Vector search failed, falling back to DB:', error);
+      if (!(error as any)?.message?.includes('ECONNREFUSED')) {
+        console.error('Vector search failed, falling back to DB:', error);
+      }
       return this.getMemoriesFromDB(userId, projectId, limit);
     }
   }
