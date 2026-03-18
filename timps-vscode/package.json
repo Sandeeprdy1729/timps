@@ -1,0 +1,103 @@
+{
+  "name": "timps-vscode",
+  "displayName": "TIMPs \u2014 AI Memory Intelligence",
+  "description": "Inline warnings from your personal bug patterns, tech debt history, and API quirks. Memory that thinks.",
+  "version": "1.0.0",
+  "publisher": "TIMPs",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Linters"
+  ],
+  "keywords": [
+    "ai",
+    "memory",
+    "timps",
+    "bugs",
+    "tech-debt"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "timps.checkContradiction",
+        "title": "TIMPs: Check for Contradictions"
+      },
+      {
+        "command": "timps.lookupAPI",
+        "title": "TIMPs: Look Up API Quirks"
+      },
+      {
+        "command": "timps.checkBugPattern",
+        "title": "TIMPs: Check Bug Pattern Risk"
+      },
+      {
+        "command": "timps.openDashboard",
+        "title": "TIMPs: Open Intelligence Dashboard"
+      },
+      {
+        "command": "timps.showMemories",
+        "title": "TIMPs: Show My Memories"
+      }
+    ],
+    "configuration": {
+      "title": "TIMPs",
+      "properties": {
+        "timps.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "URL of your TIMPs server"
+        },
+        "timps.userId": {
+          "type": "number",
+          "default": 1,
+          "description": "Your TIMPs user ID"
+        },
+        "timps.enableInlineWarnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline bug pattern and tech debt warnings as you code"
+        },
+        "timps.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run pattern analysis when you save a file"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "timps.checkBugPattern",
+          "group": "timps",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "timps.lookupAPI",
+          "group": "timps"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps.git"
+  },
+  "license": "MIT"
+}

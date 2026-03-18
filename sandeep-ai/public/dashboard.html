@@ -1,320 +1,732 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>TIMPs — Intelligence Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#0c0c0c;--bg2:#111;--bg3:#161616;
-      --border:#222;--border2:#2a2a2a;
-      --text:#e8e4e0;--muted:#666660;--muted2:#333330;
-      --accent:#c8c0b8;--green:#6ee7b7;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--purple:#a78bfa;
-      --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
-    }
-    html,body{height:100%;overflow:hidden}
-    body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased}
-    .app{display:grid;grid-template-rows:48px 1fr;height:100vh}
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg)}
-    .topbar-left{display:flex;align-items:center;gap:16px}
-    .logo{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600}
-    .nav{display:flex;gap:4px}
-    .nav a{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:3px;transition:color .15s}
-    .nav a:hover{color:var(--text)}
-    .nav a.active{color:var(--accent);background:var(--bg3)}
-    .topbar-right{display:flex;align-items:center;gap:12px}
-    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);transition:background .3s}
-    .status-dot.ok{background:var(--green)}
-    .user-badge{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--border2);padding:3px 8px;border-radius:3px}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TIMPs — Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;--bg2:#0f0f0f;--bg3:#141414;--bg4:#1a1a1a;
+  --border:#1c1c1c;--border2:#242424;--border3:#2e2e2e;
+  --text:#e8e4df;--muted:#5a5a55;--muted2:#2a2a26;
+  --accent:#c4bab0;--green:#4ade80;--amber:#fbbf24;--red:#f87171;
+  --blue:#60a5fa;--purple:#a78bfa;--pink:#f472b6;--teal:#2dd4bf;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --r:6px;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:13px}
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:1fr;height:100vh}
 
-    .main{overflow-y:auto;padding:24px 24px}
-    .main::-webkit-scrollbar{width:4px}
-    .main::-webkit-scrollbar-thumb{background:var(--border2)}
+/* ── Sidebar ── */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-logo{padding:18px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-mark{width:24px;height:24px;border-radius:5px;background:linear-gradient(135deg,#c4bab0,#8a8078);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:600;color:#1a1a1a;flex-shrink:0}
+.logo-text{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent)}
+.logo-ver{font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto}
+.sidebar-nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-section{font-family:var(--mono);font-size:9px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;padding:10px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:5px;cursor:pointer;transition:all .15s;color:var(--muted);font-size:12px;user-select:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg4);color:var(--accent);border:1px solid var(--border2)}
+.nav-item .ni{width:14px;height:14px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+.nav-badge{font-family:var(--mono);font-size:9px;margin-left:auto;padding:1px 5px;border-radius:10px;background:var(--bg4);color:var(--muted)}
+.nav-badge.hot{background:#1a0a0a;color:var(--red);border:1px solid #3f1010}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+.conn-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);transition:background .3s;flex-shrink:0}
+.conn-dot.ok{background:var(--green)}
+.conn-dot.err{background:var(--red)}
+.conn-label{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.conn-val{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto}
 
-    .section-title{font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-    .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+/* ── Main ── */
+.main{overflow:hidden;display:grid;grid-template-rows:50px 1fr}
+.topbar{border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:var(--bg)}
+.topbar-title{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.btn{font-family:var(--mono);font-size:10px;color:var(--muted);background:transparent;border:1px solid var(--border2);padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .15s}
+.btn:hover{color:var(--text);border-color:var(--border3)}
+.btn.primary{background:var(--accent);color:#0a0a0a;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{opacity:.85}
+.live-badge{font-family:var(--mono);font-size:9px;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);padding:3px 8px;border-radius:10px;display:flex;align-items:center;gap:5px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.content{overflow:hidden;display:grid;grid-template-columns:1fr 340px}
+.panels{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.panels::-webkit-scrollbar{width:3px}
+.panels::-webkit-scrollbar-thumb{background:var(--border2)}
+.right-col{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 
-    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
-    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
-    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+/* ── Stat row ── */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;transition:border-color .2s}
+.stat:hover{border-color:var(--border3)}
+.stat-label{font-family:var(--mono);font-size:9px;color:var(--muted2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px}
+.stat-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);line-height:1}
+.stat-delta{font-family:var(--mono);font-size:9px;margin-top:3px}
+.stat-delta.up{color:var(--green)}
+.stat-delta.dn{color:var(--red)}
 
-    .card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px}
-    .card-label{font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
-    .card-value{font-size:26px;font-weight:500;color:var(--text);font-family:var(--mono)}
-    .card-sub{font-size:11px;color:var(--muted);margin-top:4px}
-    .card-trend{font-size:11px;margin-top:6px;font-family:var(--mono)}
-    .card-trend.up{color:var(--green)}
-    .card-trend.down{color:var(--red)}
-    .card-trend.warn{color:var(--amber)}
+/* ── Panel ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)}
+.panel-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.panel-icon{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.panel-title{font-family:var(--mono);font-size:11px;color:var(--accent);flex:1}
+.panel-count{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--bg3);padding:2px 7px;border-radius:10px}
+.panel-body{padding:12px 14px}
+.empty{font-family:var(--mono);font-size:11px;color:var(--muted2);text-align:center;padding:20px 0;line-height:2}
+.loading{color:var(--muted2);font-family:var(--mono);font-size:10px;text-align:center;padding:14px 0}
 
-    .panel{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
-    .panel-title{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-    .panel-dot{width:6px;height:6px;border-radius:50%}
-    .panel-dot.green{background:var(--green)}
-    .panel-dot.amber{background:var(--amber)}
-    .panel-dot.red{background:var(--red)}
-    .panel-dot.blue{background:var(--blue)}
-    .panel-dot.purple{background:var(--purple)}
+/* ── Rows ── */
+.item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);transition:background .1s}
+.item:last-child{border-bottom:none;padding-bottom:0}
+.item:first-child{padding-top:0}
+.tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-top:1px}
+.tag.blue{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.tag.purple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.tag.red{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.tag.green{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.tag.amber{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.2)}
+.item-text{font-size:12px;color:var(--muted);flex:1;line-height:1.55}
+.item-text strong{color:var(--text);font-weight:500}
+.item-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.conflict-badge{font-family:var(--mono);font-size:9px;color:var(--red);background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);padding:2px 6px;border-radius:3px}
+.status-badge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px}
+.status-badge.pending{background:rgba(251,191,36,.08);color:var(--amber);border:1px solid rgba(251,191,36,.2)}
+.status-badge.completed{background:rgba(74,222,128,.08);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.status-badge.broken{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.status-badge.in_progress{background:rgba(96,165,250,.08);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
 
-    .manifesto-text{font-size:13px;line-height:1.9;color:var(--muted);font-style:italic;border-left:2px solid var(--border2);padding-left:14px}
+/* ── Bar ── */
+.bar-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.bar-label{font-family:var(--mono);font-size:10px;color:var(--muted);width:130px;flex-shrink:0}
+.bar-track{flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.bar-val{font-family:var(--mono);font-size:10px;color:var(--muted);width:50px;text-align:right}
 
-    .position-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-    .position-row:last-child{border-bottom:none}
-    .pos-topic{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;background:#1a1a2e;color:#818cf8;flex-shrink:0;margin-top:2px}
-    .pos-claim{font-size:12.5px;color:var(--muted);line-height:1.5;flex:1}
-    .pos-conflicts{font-family:var(--mono);font-size:10px;color:var(--red);flex-shrink:0}
+/* ── Live feed (right col) ── */
+.feed-head{padding:12px 14px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.feed-body{flex:1;overflow-y:auto;padding:10px}
+.feed-body::-webkit-scrollbar{width:3px}
+.feed-body::-webkit-scrollbar-thumb{background:var(--border2)}
+.feed-item{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:8px;animation:slide-in .3s ease}
+@keyframes slide-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.feed-item.contradiction{border-left:2px solid var(--red)}
+.feed-item.burnout{border-left:2px solid var(--amber)}
+.feed-item.bug_warning{border-left:2px solid var(--red)}
+.feed-item.memory_stored{border-left:2px solid var(--blue)}
+.feed-item.commitment_added{border-left:2px solid var(--purple)}
+.feed-item.chat_message{border-left:2px solid var(--border3)}
+.feed-item.tool_activated{border-left:2px solid var(--teal)}
+.feed-type{font-family:var(--mono);font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.feed-content{font-size:11.5px;color:var(--muted);line-height:1.55}
+.feed-content strong{color:var(--text);font-weight:500}
+.feed-time{font-family:var(--mono);font-size:9px;color:var(--muted2)}
 
-    .signal-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
-    .signal-row:last-child{border-bottom:none}
-    .signal-name{font-family:var(--mono);font-size:11px;color:var(--text);width:140px;flex-shrink:0}
-    .signal-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
-    .signal-fill{height:100%;border-radius:2px;transition:width .6s ease}
-    .signal-val{font-family:var(--mono);font-size:10px;color:var(--muted);width:40px;text-align:right}
+/* ── Manifesto ── */
+.manifesto-text{font-size:12.5px;line-height:1.9;color:var(--muted);border-left:2px solid var(--border3);padding-left:12px;font-style:italic}
+.value-chip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:9px;background:var(--bg3);border:1px solid var(--border2);color:var(--accent);padding:3px 8px;border-radius:100px;margin:2px}
+.value-freq{color:var(--muted2);font-size:8px}
 
-    .rel-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-    .rel-row:last-child{border-bottom:none}
-    .rel-name{font-family:var(--mono);font-size:12px;color:var(--text);width:140px;flex-shrink:0}
-    .rel-bar{flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
-    .rel-fill{height:100%;border-radius:3px}
-    .rel-drift{font-size:10px;font-family:var(--mono);color:var(--red);flex-shrink:0}
-    .rel-healthy{font-size:10px;font-family:var(--mono);color:var(--green);flex-shrink:0}
+/* ── Mem grid ── */
+.mem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mem-card{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:10px;transition:border-color .15s}
+.mem-card:hover{border-color:var(--border3)}
+.mem-top{display:flex;gap:6px;margin-bottom:5px;align-items:center}
+.mem-id{font-family:var(--mono);font-size:8px;color:var(--muted2)}
+.mem-type{font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:2px}
+.mem-type.reflection{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.mem-type.explicit{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.mem-stars{font-size:8px;margin-left:auto;color:var(--amber)}
+.mem-text{font-size:11px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mem-date{font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:4px}
 
-    .commit-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-    .commit-row:last-child{border-bottom:none}
-    .commit-person{font-family:var(--mono);font-size:11px;color:var(--blue);width:110px;flex-shrink:0}
-    .commit-text{font-size:12px;color:var(--muted);flex:1;line-height:1.5}
-    .commit-status{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:2px;flex-shrink:0}
-    .commit-status.pending{background:#1c1000;color:var(--amber);border:1px solid #78350f}
-    .commit-status.completed{background:#0a1a0a;color:var(--green);border:1px solid #14532d}
-    .commit-status.broken{background:#1a0a0a;color:var(--red);border:1px solid #7f1d1d}
-
-    .bug-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
-    .bug-row:last-child{border-bottom:none}
-    .bug-type{font-family:var(--mono);font-size:11px;color:var(--text);flex:1}
-    .bug-freq{font-family:var(--mono);font-size:11px;color:var(--muted);width:60px}
-    .bug-bar{width:80px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
-    .bug-fill{height:100%;border-radius:2px;background:var(--red)}
-
-    .empty-state{font-family:var(--mono);font-size:11px;color:var(--muted2);text-align:center;padding:20px 0;line-height:1.8}
-
-    .refresh-btn{font-family:var(--mono);font-size:10px;color:var(--muted);background:transparent;border:1px solid var(--border2);padding:3px 8px;border-radius:3px;cursor:pointer;transition:color .15s}
-    .refresh-btn:hover{color:var(--text)}
-    .loading{color:var(--muted2);font-family:var(--mono);font-size:11px;text-align:center;padding:12px}
-
-    @media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr 1fr}}
-  </style>
+/* ── New event highlight ── */
+.new-flash{animation:flash .6s ease}
+@keyframes flash{0%,100%{background:var(--bg2)}50%{background:rgba(74,222,128,.06)}}
+</style>
 </head>
 <body>
 <div class="app">
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="logo">◆ TIMPs</span>
-      <nav class="nav">
-        <a href="index.html">Home</a>
-        <a href="chat.html">Chat</a>
-        <a href="dashboard.html" class="active">Dashboard</a>
-      </nav>
+
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">T</div>
+    <span class="logo-text">TIMPs</span>
+    <span class="logo-ver">v2.0</span>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Intelligence</div>
+    <div class="nav-item active" onclick="showView('overview')">
+      <span class="ni" style="background:rgba(196,186,176,.1)">◈</span>Overview
     </div>
-    <div class="topbar-right">
-      <span class="status-dot" id="statusDot"></span>
-      <span class="user-badge" id="userBadge">user #1</span>
-      <button class="refresh-btn" onclick="loadAll()">refresh</button>
+    <div class="nav-item" onclick="showView('positions')">
+      <span class="ni" style="background:rgba(96,165,250,.1);color:var(--blue)">⊕</span>Argument DNA
+      <span class="nav-badge" id="nb-pos">—</span>
+    </div>
+    <div class="nav-item" onclick="showView('burnout')">
+      <span class="ni" style="background:rgba(251,191,36,.1);color:var(--amber)">◉</span>Burnout
+    </div>
+    <div class="nav-item" onclick="showView('relationships')">
+      <span class="ni" style="background:rgba(74,222,128,.1);color:var(--green)">⬡</span>Relationships
+      <span class="nav-badge hot" id="nb-drift" style="display:none">drift</span>
+    </div>
+    <div class="nav-item" onclick="showView('commitments')">
+      <span class="ni" style="background:rgba(248,113,113,.1);color:var(--red)">◷</span>Commitments
+      <span class="nav-badge" id="nb-com">—</span>
+    </div>
+    <div class="nav-section">Developer</div>
+    <div class="nav-item" onclick="showView('bugs')">
+      <span class="ni" style="background:rgba(248,113,113,.1);color:var(--red)">⚡</span>Bug Patterns
+      <span class="nav-badge" id="nb-bug">—</span>
+    </div>
+    <div class="nav-item" onclick="showView('manifesto')">
+      <span class="ni" style="background:rgba(167,139,250,.1);color:var(--purple)">◎</span>Manifesto
+    </div>
+    <div class="nav-item" onclick="showView('memories')">
+      <span class="ni" style="background:rgba(45,212,191,.1);color:var(--teal)">▦</span>Memory Log
+      <span class="nav-badge" id="nb-mem">—</span>
+    </div>
+    <div class="nav-section">Navigate</div>
+    <div class="nav-item" onclick="location.href='chat.html'">
+      <span class="ni" style="background:rgba(196,186,176,.1)">✦</span>Chat
+    </div>
+    <div class="nav-item" onclick="location.href='index.html'">
+      <span class="ni" style="background:rgba(196,186,176,.1)">⌂</span>Home
     </div>
   </div>
-
-  <div class="main">
-    <!-- Stat cards -->
-    <div class="section-title">Intelligence overview</div>
-    <div class="grid-4" id="statCards">
-      <div class="card"><div class="card-label">Memories</div><div class="card-value" id="statMemories">—</div><div class="card-sub">stored facts</div></div>
-      <div class="card"><div class="card-label">Positions</div><div class="card-value" id="statPositions">—</div><div class="card-sub">tracked stances</div></div>
-      <div class="card"><div class="card-label">Commitments</div><div class="card-value" id="statCommits">—</div><div class="card-sub">pending actions</div></div>
-      <div class="card"><div class="card-label">Relationships</div><div class="card-value" id="statRelations">—</div><div class="card-sub">tracked contacts</div></div>
+  <div class="sidebar-footer">
+    <div class="conn-row">
+      <span class="conn-dot" id="srv-dot"></span>
+      <span class="conn-label">TIMPs Server</span>
+      <span class="conn-val" id="srv-val">checking...</span>
     </div>
-
-    <div class="grid-2">
-      <!-- Living Manifesto -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot purple"></span>Living Manifesto</div>
-        <div id="manifestoContent"><div class="loading">Loading manifesto...</div></div>
-      </div>
-
-      <!-- Burnout Seismograph -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot amber"></span>Burnout Seismograph</div>
-        <div id="burnoutContent"><div class="loading">Loading signals...</div></div>
-      </div>
+    <div class="conn-row">
+      <span class="conn-dot" id="sse-dot"></span>
+      <span class="conn-label">Live Events</span>
+      <span class="conn-val" id="sse-val">connecting...</span>
     </div>
-
-    <div class="grid-2">
-      <!-- Argument DNA — Positions -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot blue"></span>Argument DNA — Stored Positions</div>
-        <div id="positionsContent"><div class="loading">Loading positions...</div></div>
-      </div>
-
-      <!-- Relationship Map -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot green"></span>Relationship Map</div>
-        <div id="relationshipsContent"><div class="loading">Loading relationships...</div></div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <!-- Meeting Ghost -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot red"></span>Meeting Ghost — Pending Commitments</div>
-        <div id="commitmentsContent"><div class="loading">Loading commitments...</div></div>
-      </div>
-
-      <!-- Bug Pattern Prophet -->
-      <div class="panel">
-        <div class="panel-title"><span class="panel-dot amber"></span>Bug Pattern Prophet</div>
-        <div id="bugsContent"><div class="loading">Loading bug patterns...</div></div>
-      </div>
-    </div>
-
-    <!-- Memory log -->
-    <div class="section-title">Recent memory log</div>
-    <div class="panel">
-      <div id="memoryLog"><div class="loading">Loading memories...</div></div>
+    <div class="conn-row" style="margin-top:4px">
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">user #<span id="user-id-label">1</span></span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-left:auto" id="event-count">0 events</span>
     </div>
   </div>
 </div>
 
+<!-- ── Main ── -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="view-title">Overview</span>
+    <div class="topbar-actions">
+      <div class="live-badge"><span class="live-dot"></span>Live</div>
+      <button class="btn" onclick="refreshAll()">↻ Refresh</button>
+      <button class="btn primary" onclick="location.href='chat.html'">Open Chat →</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Left panels -->
+    <div class="panels" id="panels-container">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Right: live feed -->
+    <div class="right-col">
+      <div class="feed-head">
+        <span class="live-dot" style="flex-shrink:0"></span>
+        Live Event Feed
+      </div>
+      <div class="feed-body" id="feed">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center;padding:20px 0">
+          Waiting for events...<br/><br/>
+          Start a chat session to see<br/>real-time intelligence events
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <script>
-var state = {
+var S = {
   userId: parseInt(localStorage.getItem('timps_userId') || '1'),
   apiBase: (localStorage.getItem('timps_apiBase') || 'http://localhost:3000').replace(/\/$/, ''),
+  view: 'overview',
+  eventCount: 0,
+  es: null,
 };
-document.getElementById('userBadge').textContent = 'user #' + state.userId;
 
+document.getElementById('user-id-label').textContent = S.userId;
+
+// ── API ────────────────────────────────────────────────────────────────────────
 async function api(path) {
   try {
-    var r = await fetch(state.apiBase + '/api' + path, { signal: AbortSignal.timeout(5000) });
+    var r = await fetch(S.apiBase + '/api' + path, { signal: AbortSignal.timeout(6000) });
     if (!r.ok) return null;
     return r.json();
   } catch { return null; }
 }
 
-async function apiPost(path, body) {
-  try {
-    var r = await fetch(state.apiBase + '/api' + path, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body), signal: AbortSignal.timeout(5000)
-    });
-    if (!r.ok) return null;
-    return r.json();
-  } catch { return null; }
+// ── SSE connection ─────────────────────────────────────────────────────────────
+function connectSSE() {
+  if (S.es) S.es.close();
+  var url = S.apiBase + '/api/events/' + S.userId;
+  S.es = new EventSource(url);
+
+  S.es.onopen = function() {
+    document.getElementById('sse-dot').className = 'conn-dot ok';
+    document.getElementById('sse-val').textContent = 'connected';
+  };
+
+  S.es.onerror = function() {
+    document.getElementById('sse-dot').className = 'conn-dot err';
+    document.getElementById('sse-val').textContent = 'reconnecting...';
+    setTimeout(connectSSE, 3000);
+  };
+
+  S.es.onmessage = function(e) {
+    try {
+      var evt = JSON.parse(e.data);
+      if (evt.type === 'connected') return;
+      handleEvent(evt);
+    } catch {}
+  };
 }
 
-async function loadAll() {
-  var health = await api('/health');
-  document.getElementById('statusDot').className = 'status-dot' + (health ? ' ok' : '');
-  await Promise.all([
-    loadStats(), loadManifesto(), loadBurnout(),
-    loadPositions(), loadRelationships(),
-    loadCommitments(), loadBugs(), loadMemories()
+function handleEvent(evt) {
+  S.eventCount++;
+  document.getElementById('event-count').textContent = S.eventCount + ' events';
+  addToFeed(evt);
+
+  // Refresh relevant panel when event comes in
+  switch (evt.type) {
+    case 'contradiction': loadPositions(); loadStats(); break;
+    case 'burnout': loadBurnout(); break;
+    case 'bug_warning': loadBugs(); break;
+    case 'memory_stored': loadMemories(); loadStats(); break;
+    case 'commitment_added': loadCommitments(); loadStats(); break;
+    case 'relationship_drift': loadRelationships(); loadStats(); break;
+    case 'chat_message': loadStats(); break;
+    case 'tool_activated': loadStats(); break;
+  }
+}
+
+// ── Feed ───────────────────────────────────────────────────────────────────────
+var eventMeta = {
+  contradiction: { icon: '⚠', label: 'Contradiction Detected', col: 'red' },
+  burnout: { icon: '◉', label: 'Burnout Signal', col: 'amber' },
+  bug_warning: { icon: '⚡', label: 'Bug Pattern Warning', col: 'red' },
+  memory_stored: { icon: '▦', label: 'Memory Stored', col: 'blue' },
+  commitment_added: { icon: '◷', label: 'Commitment Tracked', col: 'purple' },
+  relationship_drift: { icon: '⬡', label: 'Relationship Drift', col: 'amber' },
+  regret_warning: { icon: '◎', label: 'Regret Warning', col: 'amber' },
+  tool_activated: { icon: '✦', label: 'Tool Activated', col: 'teal' },
+  chat_message: { icon: '◈', label: 'Chat Message', col: 'muted' },
+};
+
+function addToFeed(evt) {
+  var feed = document.getElementById('feed');
+  var meta = eventMeta[evt.type] || { icon: '·', label: evt.type, col: 'muted' };
+  var time = new Date(evt.timestamp).toLocaleTimeString();
+
+  var content = '';
+  if (evt.type === 'contradiction') {
+    var score = Math.round((evt.payload.score || 0) * 100);
+    content = '<strong>' + score + '% confidence</strong> — ' + esc(evt.payload.new_text || '');
+    if (evt.payload.claim) content += '<br/><span style="color:var(--muted2)">Conflicts: "' + esc(evt.payload.claim.slice(0,60)) + '"</span>';
+  } else if (evt.type === 'tool_activated') {
+    content = '<strong>' + esc(evt.payload.tool || '') + '</strong> activated';
+  } else if (evt.type === 'chat_message') {
+    content = esc((evt.payload.userMessage || '').slice(0, 80));
+    if (evt.payload.toolsActivated && evt.payload.toolsActivated.length) {
+      content += '<br/><span style="color:var(--teal)">→ ' + evt.payload.toolsActivated.join(', ') + '</span>';
+    }
+  } else {
+    content = esc(JSON.stringify(evt.payload).slice(0, 100));
+  }
+
+  var el = document.createElement('div');
+  el.className = 'feed-item ' + evt.type;
+  el.innerHTML = '<div class="feed-type"><span>' + meta.icon + ' ' + meta.label + '</span><span class="feed-time">' + time + '</span></div><div class="feed-content">' + content + '</div>';
+
+  // Prepend — newest at top
+  feed.insertBefore(el, feed.firstChild);
+
+  // Keep only last 50 events
+  while (feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────────
+var viewTitles = {
+  overview: 'Overview',
+  positions: 'Argument DNA — Stored Positions',
+  burnout: 'Burnout Seismograph',
+  relationships: 'Relationship Map',
+  commitments: 'Meeting Ghost — Commitments',
+  bugs: 'Bug Pattern Prophet',
+  manifesto: 'Living Manifesto',
+  memories: 'Memory Log',
+};
+
+function showView(v) {
+  S.view = v;
+  document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('active'); });
+  event.currentTarget.classList.add('active');
+  document.getElementById('view-title').textContent = viewTitles[v] || v;
+  renderView();
+}
+
+function renderView() {
+  switch (S.view) {
+    case 'overview': renderOverview(); break;
+    case 'positions': renderPositions(); break;
+    case 'burnout': renderBurnout(); break;
+    case 'relationships': renderRelationships(); break;
+    case 'commitments': renderCommitments(); break;
+    case 'bugs': renderBugs(); break;
+    case 'manifesto': renderManifesto(); break;
+    case 'memories': renderMemories(); break;
+  }
+}
+
+// ── Overview ───────────────────────────────────────────────────────────────────
+async function renderOverview() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading overview...</div>';
+
+  var [stats, pos, comms, rels] = await Promise.all([
+    api('/dashboard/stats/' + S.userId),
+    api('/positions/' + S.userId),
+    api('/dashboard/commitments/' + S.userId),
+    api('/dashboard/relationships/' + S.userId),
   ]);
+
+  var html = '';
+
+  // Stats row
+  html += '<div class="stats-row">';
+  var st = stats || {};
+  html += statCard('Memories', st.memories, 'stored facts', 'var(--teal)');
+  html += statCard('Positions', st.positions, 'tracked stances', 'var(--blue)');
+  html += statCard('Pending', st.commitments, 'commitments', 'var(--amber)');
+  html += statCard('Contacts', st.relationships, 'tracked', 'var(--green)');
+  html += statCard('Bug Patterns', st.bugs, 'personal triggers', 'var(--red)');
+  html += statCard('Decisions', st.decisions, 'regret oracle', 'var(--purple)');
+  html += '</div>';
+
+  // Top positions
+  var positions = (pos && pos.positions) ? pos.positions.slice(0, 6) : [];
+  html += panel('⊕', 'blue', 'Recent Positions', positions.length, positions.length === 0
+    ? empty('No positions yet. State any opinion in chat.')
+    : positions.map(function(p) {
+        return itemRow(
+          tag(p.topic_cluster || 'general', 'blue'),
+          esc((p.extracted_claim || '').slice(0, 70)),
+          p.contradiction_count > 0 ? '<span class="conflict-badge">'+p.contradiction_count+' conflict'+(p.contradiction_count!==1?'s':'')+'</span>' : ''
+        );
+      }).join(''));
+
+  // Top commitments
+  var commits = (comms && comms.commitments) ? comms.commitments.slice(0, 5) : [];
+  html += panel('◷', 'red', 'Pending Commitments', commits.length, commits.length === 0
+    ? empty('No commitments. Paste meeting notes in chat.')
+    : commits.map(function(c) {
+        return itemRow(
+          tag(c.person_name || '?', 'purple'),
+          esc((c.commitment || '').slice(0, 65)),
+          '<span class="status-badge '+(c.status||'pending')+'">'+(c.status||'pending')+'</span>'
+        );
+      }).join(''));
+
+  // Relationship health
+  var rels2 = (rels && rels.relationships) ? rels.relationships : [];
+  html += panel('⬡', 'green', 'Relationship Map', rels2.length, rels2.length === 0
+    ? empty('No relationships tracked. Mention people in chat.')
+    : rels2.map(function(r) {
+        var score = Math.round((parseFloat(r.health_score)||0) * 100);
+        var col = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--amber)' : 'var(--red)';
+        return '<div class="bar-row"><span class="bar-label">' + esc(r.contact_name) + (r.drift_alert ? ' <span style="color:var(--red);font-size:9px">⚠</span>' : '') + '</span><div class="bar-track"><div class="bar-fill" style="width:'+score+'%;background:'+col+'"></div></div><span class="bar-val" style="color:'+col+'">'+score+'%</span></div>';
+      }).join(''));
+
+  c.innerHTML = html;
+  updateBadges(stats, pos, comms, rels);
 }
 
-async function loadStats() {
-  var [mem, pos, commits, rels] = await Promise.all([
-    api('/memory/' + state.userId),
-    api('/positions/' + state.userId),
-    apiPost('/contradiction/check', {userId: state.userId, text: '_stat_check_', autoStore: false}),
-    null
-  ]);
-  document.getElementById('statMemories').textContent = (mem && mem.memories) ? mem.memories.length : '0';
-  document.getElementById('statPositions').textContent = (pos && pos.total !== undefined) ? pos.total : '0';
-
-  // Pending commitments count
-  var r = await fetch(state.apiBase + '/api/health');
-  document.getElementById('statCommits').textContent = '—';
-  document.getElementById('statRelations').textContent = '—';
+// ── Positions ─────────────────────────────────────────────────────────────────
+async function renderPositions() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading positions...</div>';
+  var d = await api('/positions/' + S.userId);
+  var positions = (d && d.positions) ? d.positions : [];
+  c.innerHTML = panel('⊕', 'blue', 'All Stored Positions', positions.length,
+    positions.length === 0 ? empty('No positions yet.\nState any opinion in chat to build your Argument DNA.\n\nExample: "I think TypeScript is essential for any serious project"') :
+    positions.map(function(p) {
+      return itemRow(
+        tag(p.topic_cluster || 'general', 'blue'),
+        '<strong>' + esc((p.extracted_claim || '').slice(0, 100)) + '</strong>' +
+        (p.created_at ? '<br/><span style="font-size:10px;color:var(--muted2)">'+new Date(p.created_at).toLocaleDateString()+'</span>' : ''),
+        p.contradiction_count > 0 ? '<span class="conflict-badge">'+p.contradiction_count+' conflict'+(p.contradiction_count!==1?'s':'')+'</span>' : '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">clean</span>'
+      );
+    }).join('')
+  );
 }
 
-async function loadManifesto() {
-  var el = document.getElementById('manifestoContent');
-  var r = await apiPost('/contradiction/check', {userId: state.userId, text: '_manifesto_', autoStore: false});
-  // Manifesto requires a dedicated endpoint — show stored memories as proxy
-  var mem = await api('/memory/' + state.userId);
-  if (!mem || !mem.memories || !mem.memories.length) {
-    el.innerHTML = '<div class="empty-state">No manifesto yet.<br/>Chat more and I will derive your values from behavior.</div>';
+// ── Burnout ────────────────────────────────────────────────────────────────────
+async function renderBurnout() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading burnout signals...</div>';
+  var d = await api('/dashboard/burnout/' + S.userId);
+  var signals = (d && d.signals) ? d.signals : [];
+
+  if (!signals.length) {
+    c.innerHTML = panel('◉', 'amber', 'Burnout Seismograph', 0,
+      empty('No signals yet.\nChat naturally and TIMPs will track your burnout signals.\n\nExample: "I\'ve been working 12-hour days and feel drained"'));
     return;
   }
-  var reflections = mem.memories.filter(function(m) { return m.memory_type === 'reflection'; }).slice(0, 3);
-  if (!reflections.length) reflections = mem.memories.slice(0, 2);
-  el.innerHTML = reflections.map(function(r) {
-    return '<p class="manifesto-text">' + r.content + '</p><br/>';
-  }).join('') || '<div class="empty-state">Still learning your patterns...</div>';
-}
 
-async function loadBurnout() {
-  var el = document.getElementById('burnoutContent');
-  el.innerHTML = '<div class="empty-state">No burnout signals recorded yet.<br/>Use !dna or chat naturally to build signal history.</div>';
-}
+  // Latest per signal type
+  var byType = {};
+  signals.forEach(function(s) { if (!byType[s.signal_type]) byType[s.signal_type] = s; });
 
-async function loadPositions() {
-  var el = document.getElementById('positionsContent');
-  var data = await api('/positions/' + state.userId);
-  if (!data || !data.positions || !data.positions.length) {
-    el.innerHTML = '<div class="empty-state">No positions stored yet.<br/>State opinions in chat to build your argument DNA.</div>';
-    return;
-  }
-  el.innerHTML = data.positions.slice(0, 8).map(function(p) {
-    return '<div class="position-row">'
-      + '<span class="pos-topic">' + (p.topic_cluster || 'general') + '</span>'
-      + '<span class="pos-claim">' + p.extracted_claim + '</span>'
-      + (p.contradiction_count > 0 ? '<span class="pos-conflicts">' + p.contradiction_count + ' conflict' + (p.contradiction_count !== 1 ? 's' : '') + '</span>' : '')
-      + '</div>';
+  var bars = Object.keys(byType).map(function(type) {
+    var s = byType[type];
+    var val = parseFloat(s.value) || 0;
+    var base = parseFloat(s.baseline_value) || 10;
+    var pct = Math.min(100, Math.round((val / base) * 100));
+    var col = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+    var dev = s.deviation_pct ? Math.round(s.deviation_pct) : null;
+    var devStr = dev !== null ? ' <span style="color:'+(dev < 0 ? 'var(--red)' : 'var(--green)')+'">('+(dev > 0 ? '+' : '')+dev+'%)</span>' : '';
+    return '<div class="bar-row"><span class="bar-label">' + esc(type.replace(/_/g,' ')) + '</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><span class="bar-val">'+val.toFixed(1)+devStr+'</span></div>';
   }).join('');
+
+  c.innerHTML = panel('◉', 'amber', 'Burnout Seismograph', signals.length, bars);
 }
 
-async function loadRelationships() {
-  var el = document.getElementById('relationshipsContent');
-  el.innerHTML = '<div class="empty-state">No relationships tracked yet.<br/>Mention people in chat to start tracking relationship health.</div>';
-}
+// ── Relationships ──────────────────────────────────────────────────────────────
+async function renderRelationships() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading relationships...</div>';
+  var d = await api('/dashboard/relationships/' + S.userId);
+  var rels = (d && d.relationships) ? d.relationships : [];
 
-async function loadCommitments() {
-  var el = document.getElementById('commitmentsContent');
-  el.innerHTML = '<div class="empty-state">No meeting commitments tracked yet.<br/>Paste meeting notes in chat: "Extract commitments from: [notes]"</div>';
-}
-
-async function loadBugs() {
-  var el = document.getElementById('bugsContent');
-  el.innerHTML = '<div class="empty-state">No bug patterns recorded yet.<br/>Tell TIMPs about bugs you find: "I just found a race condition in [context]"</div>';
-}
-
-async function loadMemories() {
-  var el = document.getElementById('memoryLog');
-  var data = await api('/memory/' + state.userId);
-  if (!data || !data.memories || !data.memories.length) {
-    el.innerHTML = '<div class="empty-state">No memories yet. Start chatting.</div>';
+  if (!rels.length) {
+    c.innerHTML = panel('⬡', 'green', 'Relationship Map', 0,
+      empty('No relationships tracked yet.\nMention people in chat to start tracking.\n\nExample: "I haven\'t heard from Arjun in a while"'));
     return;
   }
-  var recent = data.memories.slice().reverse().slice(0, 12);
-  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
-    + recent.map(function(m) {
-        var stars = '★'.repeat(Math.min(m.importance || 1, 5));
-        var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
-        return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px">'
-          + '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'
-          + '<span style="font-family:var(--mono);font-size:9px;color:#93c5fd66">#' + m.id + '</span>'
-          + '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + (m.memory_type || 'MEM').toUpperCase() + '</span>'
-          + '<span style="font-size:9px;margin-left:auto;color:var(--muted2)">' + stars + '</span>'
-          + '</div>'
-          + '<div style="font-size:11.5px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + m.content + '</div>'
-          + (date ? '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:6px">' + date + '</div>' : '')
-          + '</div>';
-      }).join('')
-    + '</div>';
+
+  var rows = rels.map(function(r) {
+    var score = Math.round((parseFloat(r.health_score)||0) * 100);
+    var col = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--amber)' : 'var(--red)';
+    var drift = r.drift_alert ? tag('drift', 'red') : tag('healthy', 'green');
+    var last = r.last_interaction ? new Date(r.last_interaction).toLocaleDateString() : 'no data';
+    return '<div class="bar-row">' +
+      '<span class="bar-label">' + drift + ' ' + esc(r.contact_name) + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+score+'%;background:'+col+'"></div></div>' +
+      '<span class="bar-val" style="color:'+col+'">' + score + '%</span>' +
+      '</div><div style="padding:0 0 4px 130px;font-size:10px;color:var(--muted2)">Last interaction: ' + last + '</div>';
+  }).join('');
+
+  c.innerHTML = panel('⬡', 'green', 'Relationship Map', rels.length, rows);
 }
 
-loadAll();
-setInterval(function() { api('/health').then(function(h) { document.getElementById('statusDot').className = 'status-dot' + (h ? ' ok' : ''); }); }, 15000);
+// ── Commitments ───────────────────────────────────────────────────────────────
+async function renderCommitments() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading commitments...</div>';
+  var d = await api('/dashboard/commitments/' + S.userId);
+  var commits = (d && d.commitments) ? d.commitments : [];
+
+  if (!commits.length) {
+    c.innerHTML = panel('◷', 'red', 'Meeting Ghost — Commitments', 0,
+      empty('No commitments tracked.\nPaste meeting notes in chat.\n\nExample: "Extract commitments: [paste your meeting notes]"'));
+    return;
+  }
+
+  var rows = commits.map(function(cm) {
+    var due = cm.due_date ? new Date(cm.due_date).toLocaleDateString() : '';
+    return itemRow(
+      tag(cm.person_name || '?', 'purple'),
+      '<strong>' + esc(cm.person_name || '') + '</strong> — ' + esc((cm.commitment||'').slice(0,70)) +
+      (due ? '<br/><span style="font-size:10px;color:var(--muted2)">Due: ' + due + '</span>' : '') +
+      (cm.meeting_title ? '<br/><span style="font-size:10px;color:var(--muted2)">' + esc(cm.meeting_title) + '</span>' : ''),
+      '<span class="status-badge '+(cm.status||'pending')+'">'+(cm.status||'pending')+'</span>'
+    );
+  }).join('');
+
+  c.innerHTML = panel('◷', 'red', 'Meeting Ghost — Commitments', commits.length, rows);
+}
+
+// ── Bugs ──────────────────────────────────────────────────────────────────────
+async function renderBugs() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading bug patterns...</div>';
+  var d = await api('/dashboard/bugs/' + S.userId);
+  var bugs = (d && d.bugs) ? d.bugs : [];
+
+  if (!bugs.length) {
+    c.innerHTML = panel('⚡', 'red', 'Bug Pattern Prophet', 0,
+      empty('No bug patterns yet.\nTell TIMPs about bugs you encounter.\n\nExample: "I just introduced a race condition — I was under deadline pressure"'));
+    return;
+  }
+
+  var max = Math.max(...bugs.map(function(b){ return b.frequency || 1; }));
+  var rows = bugs.map(function(b) {
+    var pct = Math.round(((b.frequency || 1) / max) * 100);
+    return '<div class="bar-row">' +
+      '<span class="bar-label">' + tag(b.bug_type || 'unknown', 'red') + '</span>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--red)"></div></div>' +
+      '<span class="bar-val" style="color:var(--amber)">×' + (b.frequency||1) + '</span>' +
+      '</div>' +
+      (b.trigger_context ? '<div style="padding:0 0 4px 130px;font-size:10px;color:var(--muted2)">trigger: ' + esc(b.trigger_context) + '</div>' : '');
+  }).join('');
+
+  c.innerHTML = panel('⚡', 'red', 'Bug Pattern Prophet', bugs.length, rows);
+}
+
+// ── Manifesto ─────────────────────────────────────────────────────────────────
+async function renderManifesto() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading manifesto...</div>';
+  var d = await api('/dashboard/manifesto/' + S.userId);
+
+  var content = '';
+  if (d && d.manifesto) {
+    content += '<p class="manifesto-text">' + esc(d.manifesto) + '</p>';
+    if (d.updated_at) content += '<p style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:10px">Last updated: ' + new Date(d.updated_at).toLocaleDateString() + '</p>';
+  } else {
+    content = empty('No manifesto yet.\nUse !dna in chat or state opinions regularly.\nTIMPs will derive your actual values from behavior.');
+  }
+
+  if (d && d.values && d.values.length) {
+    content += '<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px"><div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em">Inferred Values</div>';
+    d.values.forEach(function(v) {
+      content += '<span class="value-chip">' + esc(v.inferred_value) + '<span class="value-freq">×' + v.frequency + '</span></span>';
+    });
+    content += '</div>';
+  }
+
+  c.innerHTML = panel('◎', 'purple', 'Living Manifesto', d && d.values ? d.values.length : 0, content);
+}
+
+// ── Memories ──────────────────────────────────────────────────────────────────
+async function renderMemories() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading memories...</div>';
+  var d = await api('/memory/' + S.userId);
+  var memories = (d && d.memories) ? d.memories.slice().reverse().slice(0, 20) : [];
+
+  if (!memories.length) {
+    c.innerHTML = panel('▦', 'teal', 'Memory Log', 0,
+      empty('No memories yet.\nStart chatting and TIMPs will remember what matters.'));
+    return;
+  }
+
+  var grid = '<div class="mem-grid">';
+  memories.forEach(function(m) {
+    var stars = '★'.repeat(Math.min(m.importance || 1, 5));
+    var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
+    grid += '<div class="mem-card">';
+    grid += '<div class="mem-top"><span class="mem-id">#'+m.id+'</span><span class="mem-type '+(m.memory_type||'')+'">'+(m.memory_type||'').toUpperCase()+'</span><span class="mem-stars">'+stars+'</span></div>';
+    grid += '<div class="mem-text">'+esc(m.content||'')+'</div>';
+    if (date) grid += '<div class="mem-date">'+date+'</div>';
+    grid += '</div>';
+  });
+  grid += '</div>';
+
+  c.innerHTML = panel('▦', 'teal', 'Memory Log', memories.length, grid);
+}
+
+// ── Load data ──────────────────────────────────────────────────────────────────
+async function loadStats() {
+  var d = await api('/dashboard/stats/' + S.userId);
+  if (!d) return;
+  document.getElementById('nb-mem').textContent = d.memories || '0';
+  document.getElementById('nb-pos').textContent = d.positions || '0';
+  document.getElementById('nb-com').textContent = d.commitments || '0';
+  document.getElementById('nb-bug').textContent = d.bugs || '0';
+}
+
+async function loadPositions() { if (S.view === 'positions' || S.view === 'overview') renderView(); }
+async function loadBurnout() { if (S.view === 'burnout') renderView(); }
+async function loadRelationships() {
+  if (S.view === 'relationships' || S.view === 'overview') {
+    var d = await api('/dashboard/relationships/' + S.userId);
+    var hasDrift = d && d.relationships && d.relationships.some(function(r){ return r.drift_alert; });
+    var badge = document.getElementById('nb-drift');
+    badge.style.display = hasDrift ? 'flex' : 'none';
+    renderView();
+  }
+}
+async function loadCommitments() { if (S.view === 'commitments' || S.view === 'overview') renderView(); }
+async function loadBugs() { if (S.view === 'bugs') renderView(); }
+async function loadMemories() { if (S.view === 'memories') renderView(); }
+
+async function refreshAll() {
+  await loadStats();
+  renderView();
+}
+
+// ── Health check ──────────────────────────────────────────────────────────────
+async function checkHealth() {
+  var h = await api('/health');
+  var dot = document.getElementById('srv-dot');
+  var val = document.getElementById('srv-val');
+  dot.className = 'conn-dot' + (h ? ' ok' : ' err');
+  val.textContent = h ? 'online' : 'offline';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function statCard(label, val, sub, col) {
+  return '<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+col+'">'+(val !== undefined && val !== null ? val : '—')+'</div><div class="stat-delta">'+sub+'</div></div>';
+}
+
+function panel(icon, col, title, count, body) {
+  return '<div class="panel">' +
+    '<div class="panel-head"><div class="panel-icon" style="background:rgba(var(--col-'+col+'),0.1)">'+icon+'</div>' +
+    '<span class="panel-title">'+title+'</span>' +
+    '<span class="panel-count">'+count+'</span></div>' +
+    '<div class="panel-body">'+body+'</div></div>';
+}
+
+function itemRow(left, center, right) {
+  return '<div class="item"><div style="flex-shrink:0;margin-top:2px">'+left+'</div><div class="item-text">'+center+'</div><div class="item-right">'+right+'</div></div>';
+}
+
+function tag(text, col) {
+  return '<span class="tag '+col+'">'+esc(String(text).slice(0,14))+'</span>';
+}
+
+function empty(msg) {
+  return '<div class="empty">'+msg.replace(/\n/g,'<br/>')+'</div>';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateBadges(stats, pos, comms, rels) {
+  if (stats) {
+    document.getElementById('nb-mem').textContent = stats.memories || '0';
+    document.getElementById('nb-pos').textContent = stats.positions || '0';
+    document.getElementById('nb-com').textContent = stats.commitments || '0';
+    document.getElementById('nb-bug').textContent = stats.bugs || '0';
+  }
+  if (rels && rels.relationships) {
+    var hasDrift = rels.relationships.some(function(r){ return r.drift_alert; });
+    document.getElementById('nb-drift').style.display = hasDrift ? 'flex' : 'none';
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+checkHealth();
+setInterval(checkHealth, 15000);
+connectSSE();
+renderView();
 </script>
 </body>
 </html>
