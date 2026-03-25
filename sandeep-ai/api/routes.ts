@@ -5,6 +5,7 @@ import { memoryIndex } from '../memory/memoryIndex';
 import { query, execute } from '../db/postgres';
 import { ContradictionTool } from '../tools/contradictionTool';
 import { positionStore } from '../tools/positionStore';
+import { logger } from '../logger';
 
 const router = Router();
 const contradictionTool = new ContradictionTool();
@@ -27,7 +28,7 @@ async function ensureUser(userId: number, username?: string): Promise<void> {
     }
   } catch (err) {
     // Non-fatal: log and continue — agent can still run without DB user row
-    console.warn('[ensureUser] Could not upsert user:', err);
+    logger.warn('[ensureUser] Could not upsert user:', err);
   }
 }
 
@@ -89,7 +90,7 @@ router.post('/chat', async (req: Request, res: Response) => {
       planExecuted: response.planExecuted || false,
     });
   } catch (error: any) {
-    console.error('Chat error:', error);
+    logger.error('Chat error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -109,7 +110,7 @@ router.get('/memory/:userId', async (req: Request, res: Response) => {
       projects: context.projects,
     });
   } catch (error: any) {
-    console.error('Memory retrieval error:', error);
+    logger.error('Memory retrieval error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -127,7 +128,7 @@ router.get('/goals/:userId', async (req: Request, res: Response) => {
     );
     res.json({ goals });
   } catch (error: any) {
-    console.error('Goals retrieval error:', error);
+    logger.error('Goals retrieval error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -147,7 +148,7 @@ router.post('/goals/:userId', async (req: Request, res: Response) => {
     );
     res.json({ goal });
   } catch (error: any) {
-    console.error('Goal creation error:', error);
+    logger.error('Goal creation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -166,7 +167,7 @@ router.put('/goals/:goalId', async (req: Request, res: Response) => {
     );
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Goal update error:', error);
+    logger.error('Goal update error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -184,7 +185,7 @@ router.get('/preferences/:userId', async (req: Request, res: Response) => {
     );
     res.json({ preferences });
   } catch (error: any) {
-    console.error('Preferences retrieval error:', error);
+    logger.error('Preferences retrieval error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -201,7 +202,7 @@ router.post('/preferences/:userId', async (req: Request, res: Response) => {
     const preference = await memoryIndex.storePreference(userId, key, value, category);
     res.json({ preference });
   } catch (error: any) {
-    console.error('Preference creation error:', error);
+    logger.error('Preference creation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -219,7 +220,7 @@ router.get('/projects/:userId', async (req: Request, res: Response) => {
     );
     res.json({ projects });
   } catch (error: any) {
-    console.error('Projects retrieval error:', error);
+    logger.error('Projects retrieval error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -239,7 +240,7 @@ router.post('/conversations/:userId', async (req: Request, res: Response) => {
     );
     res.json({ conversation: conversation[0] });
   } catch (error: any) {
-    console.error('Conversation creation error:', error);
+    logger.error('Conversation creation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -284,7 +285,7 @@ router.post('/contradiction/check', async (req: Request, res: Response) => {
     }
     res.json(result);
   } catch (error: any) {
-    console.error('Contradiction check error:', error);
+    logger.error('Contradiction check error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -300,7 +301,7 @@ router.get('/positions/:userId', async (req: Request, res: Response) => {
     const positions = await positionStore.getUserPositions(userId, projectId);
     res.json({ positions, total: positions.length });
   } catch (error: any) {
-    console.error('Positions list error:', error);
+    logger.error('Positions list error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -322,7 +323,7 @@ router.post('/positions/:userId', async (req: Request, res: Response) => {
     });
     res.json(JSON.parse(raw));
   } catch (error: any) {
-    console.error('Position store error:', error);
+    logger.error('Position store error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -342,7 +343,7 @@ router.delete('/positions/:userId/:positionId', async (req: Request, res: Respon
     });
     res.json(JSON.parse(raw));
   } catch (error: any) {
-    console.error('Position delete error:', error);
+    logger.error('Position delete error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -357,7 +358,7 @@ router.get('/contradiction/history/:positionId', async (req: Request, res: Respo
     const history = await positionStore.getContradictionHistory(positionId);
     res.json({ history, total: history.length });
   } catch (error: any) {
-    console.error('Contradiction history error:', error);
+    logger.error('Contradiction history error:', error);
     res.status(500).json({ error: error.message });
   }
 });

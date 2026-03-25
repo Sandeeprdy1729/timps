@@ -59,6 +59,8 @@ export interface Config {
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
   };
+
+  apiKey?: string;
 }
 
 export function loadConfig(): Config {
@@ -122,6 +124,8 @@ export function loadConfig(): Config {
     logging: {
       level: (process.env.LOG_LEVEL as any) || 'info',
     },
+
+    apiKey: process.env.API_KEY || undefined,
   };
 }
 
