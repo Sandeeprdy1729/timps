@@ -7,17 +7,18 @@
     "timps": "./dist/main.js"
   },
   "scripts": {
-    "build":   "tsc",
-    "start":   "node dist/main.js server",
-    "dev":     "ts-node main.ts server",
-    "server":  "ts-node main.ts server",
-    "cli":     "ts-node main.ts cli",
-    "tui":     "ts-node main.ts cli --tui",
-    "seed":    "ts-node seed.ts",
-    "seed:reset": "ts-node seed.ts --reset",
-    "test":    "npx ts-node test_tool5.ts",
-    "typecheck": "tsc --noEmit",
-    "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
+    "build":       "tsc",
+    "build:start": "npm run build && npm start",
+    "start":       "node dist/main.js server",
+    "dev":         "ts-node main.ts server",
+    "server":      "ts-node main.ts server",
+    "cli":         "ts-node main.ts cli",
+    "tui":         "ts-node main.ts cli --tui",
+    "seed":        "ts-node seed.ts",
+    "seed:reset":  "ts-node seed.ts --reset",
+    "test":        "npx ts-node test_tool5.ts",
+    "typecheck":   "tsc --noEmit",
+    "init-db":     "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
   },
   "engines": {
     "node": ">=18.0.0"

@@ -28,7 +28,7 @@
     "gemini",
     "ollama"
   ],
-  "author": "",
+  "author": "Sandeeprdy1729",
   "license": "MIT",
   "dependencies": {
     "@qdrant/js-client-rest": "^1.9.0",

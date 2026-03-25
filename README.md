@@ -140,22 +140,13 @@ sandeep-ai/
 │   ├── shortTerm.ts
 │   └── memoryIndex.ts
 │
-<<<<<<< HEAD
-├── models/                 LLM providers
-│   ├── baseModel.ts       # Interface
-│   ├── openaiModel.ts     # OpenAI adapter
-│   ├── geminiModel.ts     # Gemini adapter
-│   ├── ollamaModel.ts     # Ollama adapter
-│   └── index.ts           # Provider factory
-=======
 ├── models/
-│   ├── baseModel.ts
-│   ├── openaiModel.ts
-│   ├── geminiModel.ts
-│   ├── ollamaModel.ts
-│   ├── openRouterModel.ts    ← NEW
-│   └── index.ts             ← UPDATED
->>>>>>> c1af365 (Changed the timps v2.0)
+│   ├── baseModel.ts          # Interface
+│   ├── openaiModel.ts        # OpenAI adapter
+│   ├── geminiModel.ts        # Gemini adapter
+│   ├── ollamaModel.ts        # Ollama adapter
+│   ├── openRouterModel.ts    # OpenRouter adapter
+│   └── index.ts              # Provider factory
 │
 ├── tools/
 │   ├── baseTool.ts
@@ -374,14 +365,11 @@ curl http://localhost:3000/api/health
 | `POSTGRES_USER` | Database user | postgres |
 | `POSTGRES_PASSWORD` | Database password | — |
 | `QDRANT_URL` | Vector store URL | http://localhost:6333 |
-<<<<<<< HEAD
 | `NODE_ENV` | Environment | development |
-| `PORT` | API server port | 3000 
-=======
 | `EMBEDDINGS_MODEL` | Embedding model | nomic-embed-text |
 | `EMBEDDINGS_DIMENSION` | Embedding dimensions | 768 |
 | `PORT` | API server port | 3000 |
->>>>>>> c1af365 (Changed the timps v2.0)
+| `API_KEY` | Optional API key for authentication | — |
 
 ### Database Schema
 
@@ -482,7 +470,7 @@ railway up
 # render.yaml is included — import repo in Render dashboard
 ```
 
-### Docker (coming soon)
+### Docker
 ```bash
 docker compose up
 ```
@@ -500,7 +488,7 @@ docker compose up
 - [ ] npm package (`npx timps start`)
 - [ ] VS Code extension (Tools 9+10 in-editor)
 - [ ] Slack integration (Tool 15 auto-extracts commitments)
-- [ ] Docker Compose one-command setup
+- [x] Docker Compose one-command setup
 - [ ] TIMPS Team — shared engineering team memory
 - [ ] TIMPS Guard — security pattern prevention
 - [ ] TIMPS Docs — automated documentation
@@ -513,7 +501,7 @@ Pull requests welcome!
 
 - [x] TUI (v1.0)
 - [x] 17 intelligence tools (v2.0)
-- [ ] Docker Compose setup
+- [x] Docker Compose setup
 - [ ] VS Code extension
 - [ ] Additional LLM providers
 - [ ] Performance optimizations
