@@ -2,6 +2,7 @@ import { BaseTool, InternalToolDefinition, ToolResult } from './baseTool';
 import { FileTool } from './fileTool';
 import { WebSearchTool, WebFetchTool } from './webSearchTool';
 import { ContradictionTool } from './contradictionTool';
+import { EchoForgeTool } from './echoForgeTool';
 import {
   TemporalMirrorTool,
   RegretOracleTool,
@@ -24,6 +25,7 @@ import {
 export { BaseTool } from './baseTool';
 export { InternalToolDefinition, ToolResult } from './baseTool';
 export { ContradictionTool } from './contradictionTool';
+export { EchoForgeTool } from './echoForgeTool';
 export { positionStore } from './positionStore';
 
 export function getAllTools(): BaseTool[] {
@@ -55,6 +57,8 @@ export function getAllTools(): BaseTool[] {
     new CollectiveWisdomTool(),
     // Tool 17: Relationship Intelligence
     new RelationshipIntelligenceTool(),
+    // Tool 18: EchoForge Predictive Memory Engine
+    new EchoForgeTool(),
   ];
 }
 

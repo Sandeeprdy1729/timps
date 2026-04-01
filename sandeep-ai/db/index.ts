@@ -8,3 +8,4 @@ export {
   deleteUserVectors,
   VectorPoint 
 } from './vector';
+export { initEchoForgeTables } from './echoForgeDb';

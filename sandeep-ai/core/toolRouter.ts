@@ -77,6 +77,14 @@ const KEYWORD_ROUTES: Array<{ patterns: RegExp[]; route: Omit<ToolRoute, 'reason
     patterns: [/\bwhy did\b|\bwho decided\b|\bhistory of\b|\boriginal reason\b|\bwhy was this\b|\bwhy did we\b/i],
     route: { tool_name: 'codebase_anthropologist', operation: 'query', priority: 'immediate', params_hint: {} },
   },
+  {
+    patterns: [/\bpredict\b|\bforecast\b|\btrajectory\b|\bripple\b|\bechoforge\b|\bwhat.if\b|\banticipate\b|\bproactive\b/i],
+    route: { tool_name: 'echoforge_engine', operation: 'predictions', priority: 'immediate', params_hint: {} },
+  },
+  {
+    patterns: [/\bconsolidate\b.*\bmemor/i],
+    route: { tool_name: 'echoforge_engine', operation: 'consolidate', priority: 'background', params_hint: {} },
+  },
 ];
 
 export class ToolRouter {
@@ -139,6 +147,7 @@ Available tools (use EXACT names):
 - meeting_ghost (meeting commitments)
 - collective_wisdom (crowd wisdom)
 - relationship_intelligence (relationship health)
+- echoforge_engine (predictive memory, temporal DAG, ripple simulation)
 
 Message: "${message}"
 
