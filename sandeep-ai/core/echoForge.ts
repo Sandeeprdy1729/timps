@@ -6,7 +6,7 @@ import {
   getNeighborNodes,
   getOutgoingEdges,
   getDAGNodeCount,
-  getUnconslidatedNodes,
+  getUnconsolidatedNodes,
   updateDAGNodeType,
   upsertTrajectory,
   getActiveTrajectories,
@@ -430,7 +430,7 @@ export class EchoForge {
     let episodicNodesCreated = 0;
 
     // Step 1: Get unconsolidated raw nodes
-    const rawNodes = await getUnconslidatedNodes(userId, this.config.consolidationBatchSize);
+    const rawNodes = await getUnconsolidatedNodes(userId, this.config.consolidationBatchSize);
     if (rawNodes.length < 3) {
       return { nodesProcessed: 0, episodicNodesCreated: 0, nodesDecayed: 0, nodesPruned: 0 };
     }

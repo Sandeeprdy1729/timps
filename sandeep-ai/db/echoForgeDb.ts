@@ -213,7 +213,7 @@ export async function getDAGNodeCount(userId: number): Promise<number> {
   return row ? parseInt(row.count, 10) : 0;
 }
 
-export async function getUnconslidatedNodes(
+export async function getUnconsolidatedNodes(
   userId: number,
   limit: number = 100
 ): Promise<DAGNode[]> {
