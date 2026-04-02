@@ -47,6 +47,37 @@ You can solve complex multi-step coding tasks autonomously.
 6. Keep explanations concise. Show what you did, not what you plan to do.
 7. For bash commands, prefer non-interactive. Never use sudo without asking.
 8. When multiple files need changes, plan the order to avoid breakage.
+9. For casual messages, greetings, or questions that don't need file/code operations, respond naturally in text WITHOUT using any tools. Only use tools when they provide concrete value.
+`;
+
+// Compact prompt for local/small models — avoids overwhelming 7B models
+const LOCAL_SYSTEM_PROMPT = `You are TIMPS Code, a friendly and capable AI coding assistant running in the user's terminal.
+
+You help users build websites, apps, scripts, and any coding project.
+
+## How to respond:
+- If the user says hi, asks a question, or chats: respond naturally in plain text. Be friendly and helpful.
+- If the user asks you to CREATE, BUILD, or WRITE code: use write_file tool to create the files.
+- If the user asks you to CHANGE or FIX existing code: first use read_file, then use edit_file.
+- If the user asks to RUN something: use the bash tool.
+
+## Tool usage:
+When you need to use a tool, output EXACTLY this XML format (do NOT wrap in markdown code blocks):
+
+<tool_call>
+<name>TOOL_NAME</name>
+<arguments>{"param": "value"}</arguments>
+</tool_call>
+
+IMPORTANT: Output the <tool_call> tags directly. Do NOT put them inside \`\`\` code fences.
+
+Example — creating a file:
+<tool_call>
+<name>write_file</name>
+<arguments>{"path": "index.html", "content": "<!DOCTYPE html>\\n<html>\\n<body>Hello</body>\\n</html>"}</arguments>
+</tool_call>
+
+You can use multiple tool calls in one response. Always explain what you're doing briefly.
 `;
 
 export class Agent {
@@ -84,7 +115,22 @@ export class Agent {
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
   }
 
+  /** Whether the provider is a local/small model that needs a simpler prompt */
+  private get isLocalModel(): boolean {
+    return this.provider.name === 'ollama' || this.provider.name === 'opencode';
+  }
+
   private buildSystemPrompt(): string {
+    // Use compact prompt for local/small models to avoid overwhelming them
+    if (this.isLocalModel) {
+      let prompt = LOCAL_SYSTEM_PROMPT;
+      if (this.customInstructions) {
+        prompt += `\nUser instructions: ${this.customInstructions}\n`;
+      }
+      prompt += `\nWorking directory: ${this.cwd}\n`;
+      return prompt;
+    }
+
     let prompt = SYSTEM_PROMPT;
     
     // Add memory context
@@ -193,7 +239,7 @@ export class Agent {
     let turns = 0;
     while (turns < this.maxTurns) {
       turns++;
-      const tools = getToolDefinitions();
+      const tools = getToolDefinitions(this.isLocalModel);
       const toolCalls: ToolCall[] = [];
       let fullText = '';
       let currentToolArgs = new Map<string, string>();

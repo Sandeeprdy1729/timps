@@ -15,9 +15,9 @@ import { createProvider, POPULAR_MODELS } from './models/index.js';
 import { t, icons, SMALL_LOGO, panel } from './theme.js';
 import {
   renderAgentEvent, renderLandingPage, renderHelp,
-  renderPrompt, renderError, flushText,
+  renderPrompt, renderError, flushText, renderChatReady,
 } from './renderer.js';
-import { ensureOllamaReady, getLocalModels } from './ollamaSetup.js';
+import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from './ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from './skills.js';
 import { formatCost } from './utils.js';
 
@@ -31,31 +31,98 @@ export interface AppOptions {
 export async function startApp(opts: AppOptions): Promise<void> {
   const cwd = opts.cwd || process.cwd();
   const config = loadConfig();
-
-  // Setup if no API keys configured
-  let providerName = opts.provider || config.defaultProvider;
-
-  // Ollama auto-setup: ensure server + model is ready
   let ollamaModels: string[] = [];
-  if (providerName === 'ollama') {
-    const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-    const status = await ensureOllamaReady(modelName);
-    ollamaModels = status.availableModels;
 
-    if (!status.installed || !status.running) {
-      // Ollama failed — offer provider selection
-      console.log(`\n  ${t.dim('Ollama is unavailable. Choose a cloud provider instead:')}\n`);
+  // ── Step 1: Show the TIMPS banner immediately ──
+  console.log();
+  const bannerLines = SMALL_LOGO.split('\n');
+  for (const line of bannerLines) console.log(line);
+  console.log();
+
+  // ── Step 2: Provider selection ──
+  // Always ask on first run (no keys set), or use CLI flag / saved config
+  let providerName: ProviderName;
+
+  if (opts.provider) {
+    // CLI flag overrides
+    providerName = opts.provider;
+  } else {
+    const hasAnyKey = Object.values(config.keys).some(k => !!k);
+    const isFirstRun = !hasAnyKey && config.defaultProvider === 'ollama';
+
+    if (isFirstRun) {
+      // First launch — always show provider picker
+      console.log(`  ${t.brandBold('Welcome to TIMPS Code!')} ${t.dim('Choose your AI provider to get started.')}\n`);
       const picked = await pickProvider(config);
       if (!picked) {
         console.log(`\n  ${t.dim('No provider selected. Exiting.')}\n`);
         process.exit(1);
       }
       providerName = picked;
+    } else {
+      providerName = config.defaultProvider;
     }
   }
 
-  // For cloud providers, check API key
-  if (providerName !== 'ollama' && !getApiKey(config, providerName)) {
+  // ── Step 3: Provider-specific setup ──
+  if (providerName === 'ollama') {
+    // Auto-install Ollama if not present, auto-start, auto-pull qwen coder
+    const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+
+    if (!isOllamaInstalled()) {
+      console.log(`\n  ${t.accent('⚡ Setting up Ollama (local AI)...')}`);
+      const installed = await installOllama();
+      if (!installed) {
+        console.log(`\n  ${t.dim('Ollama install failed. Choose another provider:')}\n`);
+        const picked = await pickProvider(config);
+        if (!picked) process.exit(1);
+        providerName = picked;
+      }
+    }
+
+    if (providerName === 'ollama') {
+      // Start Ollama if not running
+      let running = await isOllamaRunning(config.ollamaUrl);
+      if (!running) {
+        console.log(`  ${t.dim('Starting Ollama...')}`);
+        tryStartOllama();
+        for (let i = 0; i < 15; i++) {
+          await new Promise(r => setTimeout(r, 1000));
+          running = await isOllamaRunning(config.ollamaUrl);
+          if (running) break;
+        }
+        if (!running) {
+          console.log(`  ${t.error('Could not start Ollama.')}`);
+          console.log(`  ${t.dim('Try manually:')} ${t.accent('ollama serve')}\n`);
+          const picked = await pickProvider(config);
+          if (!picked) process.exit(1);
+          providerName = picked;
+        } else {
+          console.log(`  ${t.success(`${icons.success} Ollama running`)}`);
+        }
+      }
+    }
+
+    if (providerName === 'ollama') {
+      // Auto-pull qwen coder if no models available
+      ollamaModels = await getLocalModels(config.ollamaUrl);
+      const modelName2 = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+      const hasModel = ollamaModels.some(m => m === modelName2 || m.startsWith(modelName2.split(':')[0]));
+      if (!hasModel) {
+        console.log(`\n  ${t.accent(`📦 Pulling ${modelName2} (first time only)...`)}`);
+        const pulled = await pullModel(modelName2, config.ollamaUrl);
+        if (pulled) {
+          ollamaModels = await getLocalModels(config.ollamaUrl);
+        } else {
+          console.log(`  ${t.warning('Could not pull model. Using available models or switch provider.')}`);
+        }
+      }
+    }
+  }
+
+  // ── Step 4: For cloud providers, ensure API key ──
+  const localProviders: ProviderName[] = ['ollama', 'opencode'];
+  if (!localProviders.includes(providerName) && !getApiKey(config, providerName)) {
     console.log(`\n  ${t.warning(`${icons.key} No API key for ${providerName}`)}`);
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const key = await new Promise<string>(resolve => {
@@ -483,7 +550,7 @@ async function handleSlashCommand(
         try {
           const newProvider = createProvider(picked);
           agent.switchProvider(newProvider);
-          console.log(`  ${t.success(`${icons.success} Now using ${newProvider.model}`)}\n`);
+          renderChatReady(newProvider.model, picked);
         } catch (err) {
           renderError((err as Error).message);
         }
@@ -817,6 +884,7 @@ const PROVIDER_MENU: { name: ProviderName; label: string; desc: string }[] = [
   { name: 'gemini',     label: '🔵 Google Gemini',        desc: 'Gemini 2.5 Pro/Flash — free tier available' },
   { name: 'ollama',     label: '⚪ Ollama (local)',        desc: 'Qwen, DeepSeek, Llama — runs on your machine' },
   { name: 'openrouter', label: '🟡 OpenRouter',           desc: '100+ models, pay-per-token routing' },
+  { name: 'opencode',   label: '🔶 OpenCode (local)',      desc: 'Local models via Ollama — no API key needed' },
 ];
 
 async function pickProvider(config: import('./types.js').TimpsConfig): Promise<ProviderName | null> {
@@ -832,7 +900,7 @@ async function pickProvider(config: import('./types.js').TimpsConfig): Promise<P
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const answer = await new Promise<string>(resolve => {
-    rl.question(`\n  ${t.prompt('Select [1-5]:')} `, a => { rl.close(); resolve(a.trim()); });
+    rl.question(`\n  ${t.prompt('Select [1-6]:')} `, a => { rl.close(); resolve(a.trim()); });
   });
 
   const idx = parseInt(answer) - 1;
@@ -845,3 +913,4 @@ async function pickProvider(config: import('./types.js').TimpsConfig): Promise<P
   console.log(`\n  ${t.success(`${icons.success} Switched to ${PROVIDER_MENU[idx].label}`)}`);
   return chosen;
 }
+

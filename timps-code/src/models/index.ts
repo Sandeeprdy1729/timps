@@ -34,8 +34,13 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       if (!key) throw new Error('Missing OpenRouter API key. Set OPENROUTER_API_KEY or run timps --config');
       return createOpenRouterProvider(key, model || config.defaultModel);
     }
+    case 'opencode': {
+      // OpenCode runs locally via Ollama
+      const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
+      return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:latest');
+    }
     default:
-      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter`);
+      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter, opencode`);
   }
 }
 
@@ -45,6 +50,7 @@ export const POPULAR_MODELS: Record<ProviderName, string[]> = {
   gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
   ollama: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:13b', 'llama3.1:8b', 'mistral:7b'],
   openrouter: ['anthropic/claude-sonnet-4-20250514', 'google/gemini-2.5-flash', 'meta-llama/llama-3.1-405b-instruct'],
+  opencode: ['qwen2.5-coder:latest', 'llama3.1:8b', 'mistral:latest', 'gemma3:1b', 'llama3.2:latest'],
 };
 
 export { createClaudeProvider } from './claude.js';

@@ -42,6 +42,7 @@ export function getApiKey(config: TimpsConfig, provider: ProviderName): string |
     gemini: 'GEMINI_API_KEY',
     ollama: '',
     openrouter: 'OPENROUTER_API_KEY',
+    opencode: '',
   };
   const envKey = envMap[provider];
   return envKey ? process.env[envKey] : undefined;
@@ -53,6 +54,7 @@ const PROVIDERS: Record<ProviderName, { label: string; needsKey: boolean; free: 
   gemini:     { label: 'Google Gemini',      needsKey: true,  free: 'gemini-2.0-flash (15 RPM free)' },
   ollama:     { label: 'Ollama (local)',     needsKey: false, free: 'deepseek-r1, qwen2.5-coder, codellama' },
   openrouter: { label: 'OpenRouter',         needsKey: true,  free: 'deepseek-r1:free, gemini-flash:free' },
+  opencode:   { label: 'OpenCode (local)',    needsKey: false, free: 'Runs locally — no API key needed' },
 };
 
 const DEFAULT_MODELS: Record<ProviderName, string> = {
@@ -61,6 +63,7 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
   gemini: 'gemini-2.0-flash',
   ollama: 'qwen2.5-coder:latest',
   openrouter: 'google/gemini-2.0-flash-exp:free',
+  opencode: 'qwen2.5-coder:latest',
 };
 
 export function getDefaultModel(provider: ProviderName): string {
@@ -86,8 +89,8 @@ export async function runSetupWizard(existing?: TimpsConfig): Promise<TimpsConfi
     if (info.free) console.log(`     ${t.dim(`Free: ${info.free}`)}`);
   });
 
-  const choice = await rl.question(t.prompt('\n  Select [1-5] (default 4=ollama): '));
-  const idx = Math.max(0, Math.min(4, parseInt(choice || '4') - 1));
+  const choice = await rl.question(t.prompt('\n  Select [1-6] (default 4=ollama): '));
+  const idx = Math.max(0, Math.min(5, parseInt(choice || '4') - 1));
   config.defaultProvider = providerKeys[idx];
 
   const prov = PROVIDERS[config.defaultProvider];

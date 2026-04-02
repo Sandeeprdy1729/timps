@@ -862,7 +862,18 @@ export const ALL_TOOLS: RegisteredTool[] = [
   gitDiff, gitLog, gitStash,
 ];
 
-export function getToolDefinitions(): ToolDefinition[] {
+// Essential tools for local/small models — keeps prompt manageable
+const LOCAL_ESSENTIAL_TOOLS = [
+  'read_file', 'write_file', 'edit_file', 'list_directory',
+  'bash', 'search_code', 'find_files',
+];
+
+export function getToolDefinitions(localMode = false): ToolDefinition[] {
+  if (localMode) {
+    return ALL_TOOLS
+      .filter(t => LOCAL_ESSENTIAL_TOOLS.includes(t.definition.name))
+      .map(t => t.definition);
+  }
   return ALL_TOOLS.map(t => t.definition);
 }
 
