@@ -70,14 +70,50 @@ export function truncate(text: string, maxLen: number): string {
 
 export function parseXmlToolCalls(text: string): { name: string; arguments: Record<string, unknown> }[] {
   const calls: { name: string; arguments: Record<string, unknown> }[] = [];
-  const regex = /<tool_call>\s*(\{[\s\S]*?\})\s*<\/tool_call>/g;
+
+  // Strip markdown code fences — models sometimes wrap tool calls in ```xml ... ```
+  const stripped = text.replace(/```(?:xml|tool_call|text)?\s*\n?([\s\S]*?)```/g, '$1');
+
+  // Format 1: <tool_call>{"name":"...","arguments":{...}}</tool_call>  (JSON inside tags)
+  const jsonRegex = /<tool_call>\s*(\{[\s\S]*?\})\s*<\/tool_call>/g;
   let match;
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = jsonRegex.exec(stripped)) !== null) {
     try {
       const parsed = JSON.parse(match[1]);
       if (parsed.name && parsed.arguments) calls.push(parsed);
     } catch { /* skip */ }
   }
+  if (calls.length > 0) return calls;
+
+  // Format 2: <tool_call><name>...</name><arguments>{...}</arguments></tool_call>  (XML-nested)
+  const xmlNestedRegex = /<tool_call>\s*<name>\s*([\w]+)\s*<\/name>\s*<arguments>\s*([\s\S]*?)\s*<\/arguments>\s*<\/tool_call>/g;
+  while ((match = xmlNestedRegex.exec(stripped)) !== null) {
+    try {
+      const args = JSON.parse(match[2]);
+      calls.push({ name: match[1], arguments: args });
+    } catch { /* skip */ }
+  }
+  if (calls.length > 0) return calls;
+
+  // Format 3: <name>...</name><arguments>{...}</arguments>  (no wrapper — common with small models)
+  const bareRegex = /<name>\s*([\w]+)\s*<\/name>\s*<arguments>\s*([\s\S]*?)\s*<\/arguments>/g;
+  while ((match = bareRegex.exec(stripped)) !== null) {
+    try {
+      const args = JSON.parse(match[2]);
+      calls.push({ name: match[1], arguments: args });
+    } catch { /* skip */ }
+  }
+  if (calls.length > 0) return calls;
+
+  // Format 4: raw JSON tool call {"name":"write_file","arguments":{...}} (fallback)
+  const jsonCallRegex = /\{\s*"name"\s*:\s*"(\w+)"\s*,\s*"arguments"\s*:\s*(\{[\s\S]*?\})\s*\}/g;
+  while ((match = jsonCallRegex.exec(stripped)) !== null) {
+    try {
+      const args = JSON.parse(match[2]);
+      calls.push({ name: match[1], arguments: args });
+    } catch { /* skip */ }
+  }
+
   return calls;
 }
 

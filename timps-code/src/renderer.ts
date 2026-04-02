@@ -245,7 +245,22 @@ export function renderError(message: string): void {
 // ═══════════════════════════════════════
 
 export function renderPrompt(): void {
-  process.stdout.write(`\n  ${t.prompt(icons.prompt)} `);
+  console.log();
+  console.log(`  ${chalk.hex('#7C3AED')('╭')}${chalk.hex('#7C3AED').dim('─'.repeat(52))}${chalk.hex('#7C3AED')('╮')}`);
+  process.stdout.write(`  ${chalk.hex('#7C3AED')('│')} ${chalk.hex('#7C3AED').bold(icons.prompt)} `);
+}
+
+export function renderChatReady(model: string, provider: string): void {
+  console.log();
+  console.log(`  ${chalk.hex('#7C3AED')('╭')}${chalk.hex('#7C3AED').dim('─'.repeat(52))}${chalk.hex('#7C3AED')('╮')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}                                                      ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}  ${chalk.hex('#10B981').bold('✓ Ready to chat')}                                      ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}  ${t.dim('Model:')} ${chalk.hex('#8B5CF6')(model)}  ${t.dim('·')}  ${t.dim('Provider:')} ${chalk.hex('#06B6D4')(provider)}${' '.repeat(Math.max(0, 20 - model.length - provider.length))}${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}                                                      ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}  ${t.dim('Type your message below to start a conversation.')}    ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}  ${t.dim('Use')} ${chalk.hex('#8B5CF6')('/help')} ${t.dim('for commands ·')} ${chalk.hex('#8B5CF6')('Ctrl+C')} ${t.dim('to cancel')}          ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('│')}                                                      ${chalk.hex('#7C3AED')('│')}`);
+  console.log(`  ${chalk.hex('#7C3AED')('╰')}${chalk.hex('#7C3AED').dim('─'.repeat(52))}${chalk.hex('#7C3AED')('╯')}`);
 }
 
 // ═══════════════════════════════════════
@@ -302,6 +317,10 @@ export function renderLandingPage(
       return isActive ? t.accent(m) : t.dim(m);
     }).join(t.dim(' · '))}`);
   }
+
+  // Choose Model button
+  console.log();
+  console.log(`  ${chalk.bgHex('#7C3AED').white.bold(' 🔀 Choose Model ')} ${t.dim('→ type')} ${t.accent('/provider')} ${t.dim('to switch AI providers')}`);
 
   // Hints
   console.log(`\n  ${t.dim('Type a message to start coding, or')} ${t.accent('/help')} ${t.dim('for commands')}`);
