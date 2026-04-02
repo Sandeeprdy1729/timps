@@ -12,6 +12,7 @@
 
 import { initDatabase, execute, query } from './db/postgres';
 import { initToolsTables } from './tools/toolsDb';
+import { initGateWeaveTables } from './db/gateWeaveDb';
 
 const USER_ID = parseInt(process.argv.find(a => a.startsWith('--user-id='))?.split('=')[1] || '1');
 const RESET = process.argv.includes('--reset');
@@ -307,6 +308,7 @@ async function main(): Promise<void> {
 
   await initDatabase();
   await initToolsTables();
+  await initGateWeaveTables();
   await ensureUser();
 
   if (RESET) await reset();

@@ -77,6 +77,10 @@ const KEYWORD_ROUTES: Array<{ patterns: RegExp[]; route: Omit<ToolRoute, 'reason
     patterns: [/\bwhy did\b|\bwho decided\b|\bhistory of\b|\boriginal reason\b|\bwhy was this\b|\bwhy did we\b/i],
     route: { tool_name: 'codebase_anthropologist', operation: 'query', priority: 'immediate', params_hint: {} },
   },
+  {
+    patterns: [/\bgateweave\b|\bmemory stats\b|\badmission\b|\bbelief version\b|\bbelief history\b|\bmemory gat/i],
+    route: { tool_name: 'gateweave', operation: 'stats', priority: 'immediate', params_hint: {} },
+  },
 ];
 
 export class ToolRouter {
@@ -139,6 +143,7 @@ Available tools (use EXACT names):
 - meeting_ghost (meeting commitments)
 - collective_wisdom (crowd wisdom)
 - relationship_intelligence (relationship health)
+- gateweave (memory admission stats, versioned beliefs)
 
 Message: "${message}"
 
