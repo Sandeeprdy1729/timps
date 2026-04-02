@@ -81,6 +81,14 @@ const TOOL_RELEVANT_TAGS = new Set([
   'goal', 'project', 'learning', 'skill',
 ]);
 
+// Temporal thresholds for proactive propagation
+const BASELINE_REFRESH_THRESHOLD_DAYS = 31;
+const RELATIONSHIP_REFRESH_THRESHOLD_DAYS = 8;
+
+// Baseline utility score when actual Qdrant similarity scores are unavailable
+// (our VectorPoint interface doesn't expose raw Qdrant scores)
+const DEFAULT_NEIGHBOR_UTILITY = 0.7;
+
 // ── GateWeave Service ───────────────────────────────────────────────────────
 
 export class GateWeave {
@@ -228,9 +236,9 @@ export class GateWeave {
         [userId]
       );
       if (hasBaseline) {
-        // Flag baseline for refresh
+        // Flag baseline for refresh by aging computed_at beyond its validity window
         await execute(
-          `UPDATE burnout_baseline SET computed_at = NOW() - INTERVAL '31 days' WHERE user_id = $1`,
+          `UPDATE burnout_baseline SET computed_at = NOW() - INTERVAL '${BASELINE_REFRESH_THRESHOLD_DAYS} days' WHERE user_id = $1`,
           [userId]
         );
         propagated.push('burnout_baseline_refresh_flagged');
@@ -246,7 +254,7 @@ export class GateWeave {
       );
       if (contacts.length > 0) {
         await execute(
-          `UPDATE relationship_health SET computed_at = NOW() - INTERVAL '8 days' WHERE user_id = $1`,
+          `UPDATE relationship_health SET computed_at = NOW() - INTERVAL '${RELATIONSHIP_REFRESH_THRESHOLD_DAYS} days' WHERE user_id = $1`,
           [userId]
         );
         propagated.push('relationship_health_refresh_flagged');
@@ -397,11 +405,8 @@ export class GateWeave {
 
       // Average similarity to recent relevant memories
       // Higher similarity = more relevant to current context = higher utility
-      const avgSim = recent.reduce((sum, r) => {
-        // Qdrant search results have a score field in the raw response
-        // but our VectorPoint interface doesn't expose it;
-        // approximate via payload presence
-        return sum + 0.7; // baseline for having relevant neighbors
+      const avgSim = recent.reduce((sum) => {
+        return sum + DEFAULT_NEIGHBOR_UTILITY;
       }, 0) / recent.length;
 
       return Math.min(1.0, avgSim);
@@ -579,8 +584,9 @@ export class GateWeave {
           JSON.stringify(score),
         ]
       );
-    } catch {
+    } catch (err) {
       // Non-critical — don't fail memory storage for logging errors
+      console.error('[GateWeave] Decision logging failed:', err);
     }
   }
 

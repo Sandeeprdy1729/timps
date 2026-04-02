@@ -174,8 +174,9 @@ export class MemoryIndex {
     }
 
     return stored;
-  } catch {
-    // If GateWeave fails, fall back to unconditional storage
+  } catch (err) {
+    // GateWeave failure — fall back to unconditional storage
+    console.error('[GateWeave] Admission evaluation failed, storing unconditionally:', err);
     return userMemory.longTerm.storeMemory({
       user_id: userId,
       project_id: projectId,
