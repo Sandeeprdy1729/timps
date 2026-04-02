@@ -44,7 +44,7 @@ export interface Config {
   };
   
   embeddings: {
-    provider: 'ollama';
+    provider: 'ollama' | 'gemini';
     model: string;
     dimension: number;
   };
@@ -107,7 +107,7 @@ export function loadConfig(): Config {
     },
     
     embeddings: {
-      provider: (process.env.EMBEDDINGS_PROVIDER || 'ollama') as 'ollama',
+      provider: (process.env.EMBEDDINGS_PROVIDER || 'ollama') as 'ollama' | 'gemini',
       model: process.env.EMBEDDINGS_MODEL || 'nomic-embed-text',
       dimension: parseInt(process.env.EMBEDDINGS_DIMENSION || '768', 10),
     },

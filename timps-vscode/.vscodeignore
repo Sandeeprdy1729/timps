@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+src/**
+!src/extension.ts
+**/*.ts
+!out/**
+node_modules/**
+.gitignore
+tsconfig.json
+icon.svg
+generate-icon.js

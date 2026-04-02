@@ -1,25 +1,30 @@
-# TIMPs VS Code Extension
+# TIMPs — AI Memory Intelligence
 
-Memory-backed inline warnings directly in your editor.
+Memory-backed inline warnings directly in your editor, powered by a free cloud backend.
 
 ## What it does
 
-- **Bug Pattern Warnings** — inline highlights when your code matches your personal bug-writing triggers
+- **Bug Pattern Warnings** — inline highlights when your code matches personal bug-writing triggers
 - **Tech Debt Alerts** — warns when patterns match past production incidents in your codebase
 - **API Quirk Lookup** — instantly see known gotchas for any API you're working with
 - **Contradiction Detection** — check if a decision contradicts your past positions
-- **Status Bar** — live connection status to your TIMPs server
+- **Status Bar** — live connection status to TIMPs cloud
 
-## Requirements
+## Quick Start
 
-TIMPs server must be running: `cd sandeep-ai && npm run server`
+1. Install this extension from the VS Code Marketplace
+2. Done! It connects to the **free TIMPs cloud** automatically
+3. Start coding — inline warnings appear on save
 
-## Setup
+> No server setup required. The extension connects to the free hosted backend at `https://timps-api.onrender.com`.
 
-1. Install this extension
-2. Open VS Code Settings → search "TIMPs"
-3. Set `timps.serverUrl` to your TIMPs server URL (default: `http://localhost:3000`)
-4. Set `timps.userId` to your user ID (default: `1`)
+### (Optional) Self-hosted mode
+
+If you prefer to run your own server:
+
+1. Clone the repo: `git clone https://github.com/Sandeeprdy1729/timps.git`
+2. Run: `docker compose up -d`
+3. Set `timps.serverUrl` to `http://localhost:3000` in VS Code settings
 
 ## Commands
 
@@ -35,7 +40,7 @@ TIMPs server must be running: `cd sandeep-ai && npm run server`
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `timps.serverUrl` | `http://localhost:3000` | TIMPs server URL |
+| `timps.serverUrl` | `https://timps-api.onrender.com` | TIMPs server URL (cloud by default) |
 | `timps.userId` | `1` | Your TIMPs user ID |
 | `timps.enableInlineWarnings` | `true` | Show inline code warnings |
 | `timps.checkOnSave` | `true` | Analyze file on save |

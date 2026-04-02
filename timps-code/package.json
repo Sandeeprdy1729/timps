@@ -1,0 +1,35 @@
+{
+  "name": "timps-code",
+  "version": "1.0.0",
+  "description": "TIMPS Code — Next-gen AI coding agent with persistent memory, multi-model support, and beautiful CLI",
+  "type": "module",
+  "bin": {
+    "timps": "./dist/bin/timps.js",
+    "timps-code": "./dist/bin/timps.js"
+  },
+  "main": "./dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/bin/timps.ts",
+    "start": "node dist/bin/timps.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["ai", "coding-agent", "cli", "claude", "openai", "gemini", "ollama", "deepseek", "persistent-memory"],
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "ora": "^8.1.0",
+    "commander": "^12.1.0",
+    "glob": "^10.4.0",
+    "diff": "^5.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
+    "@types/diff": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

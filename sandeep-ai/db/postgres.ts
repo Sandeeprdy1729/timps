@@ -1,18 +1,29 @@
 import { Pool } from 'pg';
 import { config } from '../config/env';
 
-console.log("POSTGRES CONFIG:", config.postgres);
+console.log("POSTGRES CONFIG:", process.env.DATABASE_URL ? '(using DATABASE_URL)' : config.postgres);
 
-export const pool = new Pool({
-  host: config.postgres.host,
-  port: config.postgres.port,
-  database: config.postgres.database,
-  user: config.postgres.user,
-  password: config.postgres.password,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
+// Prefer DATABASE_URL (Neon/Supabase connection string) over individual vars
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    }
+  : {
+      host: config.postgres.host,
+      port: config.postgres.port,
+      database: config.postgres.database,
+      user: config.postgres.user,
+      password: config.postgres.password,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+
+export const pool = new Pool(poolConfig);
 
 
 pool.on('error', (err) => {

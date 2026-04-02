@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="20" fill="#0c0c0c"/>
+  <rect x="8" y="8" width="112" height="112" rx="16" fill="#161616" stroke="#2a2a2a" stroke-width="1"/>
+  <text x="64" y="82" text-anchor="middle" font-family="monospace" font-size="60" font-weight="bold" fill="#c4bab0">T</text>
+  <text x="64" y="108" text-anchor="middle" font-family="monospace" font-size="14" fill="#666">TIMPs</text>
+</svg>

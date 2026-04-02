@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import routes from './routes';
@@ -11,9 +12,22 @@ import { initToolsTables } from '../tools/toolsDb';
 
 export function createApp(): Express {
   const app = express();
+
+  // Trust proxy for rate limiting behind Render/Railway reverse proxy
+  app.set('trust proxy', 1);
   
   app.use(cors());
   app.use(express.json());
+
+  // Rate limiting — generous for free tier, prevents abuse
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,                  // 100 requests per window per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please wait a few minutes.' },
+  });
+  app.use('/api', apiLimiter);
   app.use(express.urlencoded({ extended: true }));
   
   app.use((req, _res, next) => {
