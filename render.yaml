@@ -2,6 +2,7 @@ services:
   - type: web
     name: timps-api
     runtime: node
+    plan: free
     buildCommand: cd sandeep-ai && npm install && npm run build
     startCommand: cd sandeep-ai && node dist/main.js server
     healthCheckPath: /api/health
@@ -10,25 +11,25 @@ services:
         value: production
       - key: PORT
         value: 3000
+      # --- LLM (Gemini free tier — no cost, no expiry) ---
       - key: DEFAULT_MODEL_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: POSTGRES_HOST
-        sync: false
-      - key: POSTGRES_PORT
-        value: 5432
-      - key: POSTGRES_DB
-        sync: false
-      - key: POSTGRES_USER
-        sync: false
-      - key: POSTGRES_PASSWORD
-        sync: false
-      - key: QDRANT_URL
-        sync: false
+      - key: GEMINI_DEFAULT_MODEL
+        value: gemini-2.0-flash
+      # --- Embeddings (Gemini embedding-001 — free forever, 1500 RPM) ---
+      - key: EMBEDDINGS_PROVIDER
+        value: gemini
+      - key: EMBEDDINGS_MODEL
+        value: embedding-001
       - key: EMBEDDINGS_DIMENSION
         value: 768
-
-databases:
-  - name: timps-postgres
-    plan: free
+      # --- PostgreSQL (Neon.tech — free forever, 0.5 GB) ---
+      - key: DATABASE_URL
+        sync: false
+      # --- Vector DB (Qdrant Cloud — free forever, 1 GB) ---
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false

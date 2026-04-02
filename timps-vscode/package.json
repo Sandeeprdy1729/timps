@@ -3,7 +3,8 @@
   "displayName": "TIMPs \u2014 AI Memory Intelligence",
   "description": "Inline warnings from your personal bug patterns, tech debt history, and API quirks. Memory that thinks.",
   "version": "1.0.0",
-  "publisher": "TIMPs",
+  "publisher": "Sandeeprdy1729",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -50,8 +51,8 @@
       "properties": {
         "timps.serverUrl": {
           "type": "string",
-          "default": "http://localhost:3000",
-          "description": "URL of your TIMPs server"
+          "default": "https://timps-api.onrender.com",
+          "description": "URL of the TIMPs server (cloud default — or set to http://localhost:3000 for local)"
         },
         "timps.userId": {
           "type": "number",

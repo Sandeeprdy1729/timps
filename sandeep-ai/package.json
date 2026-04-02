@@ -7,15 +7,15 @@
     "timps": "./dist/main.js"
   },
   "scripts": {
-    "build":   "tsc",
-    "start":   "node dist/main.js server",
-    "dev":     "ts-node main.ts server",
-    "server":  "ts-node main.ts server",
-    "cli":     "ts-node main.ts cli",
-    "tui":     "ts-node main.ts cli --tui",
-    "seed":    "ts-node seed.ts",
+    "build": "tsc",
+    "start": "node dist/main.js server",
+    "dev": "ts-node main.ts server",
+    "server": "ts-node main.ts server",
+    "cli": "ts-node main.ts cli",
+    "tui": "ts-node main.ts cli --tui",
+    "seed": "ts-node seed.ts",
     "seed:reset": "ts-node seed.ts --reset",
-    "test":    "npx ts-node test_tool5.ts",
+    "test": "npx ts-node test_tool5.ts",
     "typecheck": "tsc --noEmit",
     "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
   },
@@ -23,9 +23,19 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "ai", "agent", "memory", "llm", "gpt", "gemini", "ollama",
-    "openrouter", "persistent-memory", "contradiction-detection",
-    "burnout-detection", "relationship-intelligence", "developer-tools"
+    "ai",
+    "agent",
+    "memory",
+    "llm",
+    "gpt",
+    "gemini",
+    "ollama",
+    "openrouter",
+    "persistent-memory",
+    "contradiction-detection",
+    "burnout-detection",
+    "relationship-intelligence",
+    "developer-tools"
   ],
   "author": "Sandeeprdy1729",
   "license": "MIT",
@@ -43,6 +53,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.3.2",
     "openai": "^4.63.0",
     "pg": "^8.12.0"
   },

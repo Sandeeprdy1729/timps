@@ -42,7 +42,7 @@ const https = __importStar(require("https"));
 function getConfig() {
     const cfg = vscode.workspace.getConfiguration('timps');
     return {
-        serverUrl: cfg.get('serverUrl', 'http://localhost:3000'),
+        serverUrl: cfg.get('serverUrl', 'https://timps-api.onrender.com'),
         userId: cfg.get('userId', 1),
         enableInlineWarnings: cfg.get('enableInlineWarnings', true),
         checkOnSave: cfg.get('checkOnSave', true),
