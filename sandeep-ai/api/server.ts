@@ -7,6 +7,7 @@ import routes from './routes';
 import { config } from '../config/env';
 import { initDatabase } from '../db/postgres';
 import { initVectorStore } from '../db/vector';
+import { initGateWeaveTables } from '../db/gateWeaveDb';
 import { positionStore } from '../tools/positionStore';
 import { initToolsTables } from '../tools/toolsDb';
 import { logger } from '../logger';
@@ -85,7 +86,8 @@ export async function startServer(): Promise<void> {
   try {
     await initDatabase();
     await initToolsTables();
-    logger.info('PostgreSQL initialized (core + all 17 tool tables)');
+    await initGateWeaveTables();
+    logger.info('PostgreSQL initialized (core + all 17 tool tables + GateWeave)');
   } catch (error) {
     logger.warn('PostgreSQL initialization failed, continuing without DB:', error);
   }

@@ -2,6 +2,7 @@ import { ShortTermMemoryStore, ShortTermMemory } from './shortTerm';
 import { LongTermMemoryStore, Memory, Goal, Preference, Project } from './longTerm';
 import { Message } from '../models/baseModel';
 import { config } from '../config/env';
+import { gateWeave } from '../core/gateWeave';
 
 export interface UserMemory {
   shortTerm: ShortTermMemoryStore;
@@ -133,21 +134,61 @@ export class MemoryIndex {
   tags: string[] = [],
   sourceConversationId: string,
   sourceMessageId: string
-): Promise<Memory> {
+): Promise<Memory | null> {
 
   const userMemory = this.getOrCreateUserMemory(userId,"default");
 
-  return userMemory.longTerm.storeMemory({
-    user_id: userId,
-    project_id: projectId,
-    content,
-    memory_type: memoryType,
-    importance,
-    retrieval_count: 0,
-    source_conversation_id: sourceConversationId,
-    source_message_id: sourceMessageId,
-    tags,
-  });
+  // ── GateWeave: Evaluate admission before storing ──────────────────────
+  try {
+    const admission = await gateWeave.evaluateMemory(
+      userId, projectId, content, memoryType, importance, tags
+    );
+
+    if (admission.decision === 'discard') {
+      // Low-value memory — skip storage entirely
+      return null;
+    }
+
+    if (admission.decision === 'summarize') {
+      // Medium-value — compress into a summary instead of full storage
+      await gateWeave.summarizeAndLink(userId, projectId, content, tags);
+      return null;
+    }
+
+    // admission.decision === 'admit' — store normally
+    const stored = await userMemory.longTerm.storeMemory({
+      user_id: userId,
+      project_id: projectId,
+      content,
+      memory_type: memoryType,
+      importance,
+      retrieval_count: 0,
+      source_conversation_id: sourceConversationId,
+      source_message_id: sourceMessageId,
+      tags,
+    });
+
+    // Proactive propagation for high-impact belief changes
+    if (admission.beliefVersionCreated) {
+      await gateWeave.propagateToTools(userId, content, tags);
+    }
+
+    return stored;
+  } catch (err) {
+    // GateWeave failure — fall back to unconditional storage
+    console.error('[GateWeave] Admission evaluation failed, storing unconditionally:', err);
+    return userMemory.longTerm.storeMemory({
+      user_id: userId,
+      project_id: projectId,
+      content,
+      memory_type: memoryType,
+      importance,
+      retrieval_count: 0,
+      source_conversation_id: sourceConversationId,
+      source_message_id: sourceMessageId,
+      tags,
+    });
+  }
 }
   
   async storeGoal(
