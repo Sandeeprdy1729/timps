@@ -6,6 +6,7 @@ import { config } from '../config/env';
 import { toolRouter } from './toolRouter';
 import { Planner } from './planner';
 import { Executor } from './executor';
+import { echoForge } from './echoForge';
 
 export interface AgentConfig {
   userId: number;
@@ -46,16 +47,16 @@ TOOL REFERENCE:
 15. meeting_ghost — extract and track meeting commitments
 16. collective_wisdom — anonymized cross-user decision intelligence
 17. relationship_intelligence — track relationship health and detect drift
-18. gateweave — adaptive memory admission control: view admission stats, versioned beliefs, belief history
+18. echoforge_engine — temporal predictive memory with causal ripple simulation
 
 STANDARD TOOLS: file_operations, web_search, web_fetch
 
 RULES:
 - When ACTIVE TOOL DIRECTIVES appear below, execute them FIRST before responding
 - Always pass user_id to every tool call
-- When tools return warnings (contradictions, burnout risk, regrets), surface them explicitly
-- After each conversation, use temporal_mirror(record) to log behavioral signals
-- GateWeave automatically gates memories at write-time — only high-value items are stored fully`;
+- When tools return warnings (contradictions, burnout risk, regrets, EchoForge alerts), surface them explicitly
+- When EchoForge proactive insights appear in context, acknowledge and act on predictions
+- After each conversation, use temporal_mirror(record) to log behavioral signals`;
 
 export class Agent {
   private userId: number;
@@ -110,7 +111,8 @@ export class Agent {
     // ── Step 3: Execute — standard agentic loop with focused tool set ─────────
     const context = await memoryIndex.retrieveContext(this.userId, this.projectId, userMessage);
     const contextString = memoryIndex.formatContextForPrompt(context);
-    let messages = this.buildMessages(userMessage, contextString, routingHint);
+    const echoForgeContext = await this.getEchoForgeContext();
+    let messages = this.buildMessages(userMessage, contextString + echoForgeContext, routingHint);
 
     let iterations = 0;
     const toolResults: ToolResult[] = [];
@@ -215,6 +217,22 @@ export class Agent {
     ];
   }
 
+  /**
+   * Retrieve EchoForge proactive insights and append to context.
+   * Non-blocking: returns empty string on failure.
+   */
+  private async getEchoForgeContext(): Promise<string> {
+    try {
+      const insights = await echoForge.getProactiveInsights(this.userId);
+      if (insights.length > 0) {
+        return '\n\n### EchoForge Proactive Insights\n' + insights.join('\n');
+      }
+    } catch {
+      // Silent: EchoForge context is supplementary
+    }
+    return '';
+  }
+
   private async executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
     const tool = getToolByName(toolCall.function.name);
     if (!tool) {
@@ -241,11 +259,24 @@ export class Agent {
     // Guard against LLM returning non-array values
     for (const memory of (Array.isArray(reflection.memories) ? reflection.memories : [])) {
       try {
-        await memoryIndex.storeMemory(
+        const stored = await memoryIndex.storeMemory(
           this.userId, this.projectId, memory.content,
           memory.type === 'reflection' ? 'reflection' : 'explicit',
           memory.importance, memory.tags || [], conversationId, messageId
         );
+
+        // EchoForge: Ingest into temporal DAG for predictive consolidation
+        try {
+          await echoForge.ingest(
+            this.userId,
+            stored.id ?? null,
+            memory.content,
+            memory.tags || [],
+            memory.importance
+          );
+        } catch {
+          // Silent: EchoForge ingestion is supplementary
+        }
       } catch { /* silent — vector store may be unavailable */ }
     }
     for (const goal of (Array.isArray(reflection.goals) ? reflection.goals : [])) {

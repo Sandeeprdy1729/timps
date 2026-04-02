@@ -78,8 +78,12 @@ const KEYWORD_ROUTES: Array<{ patterns: RegExp[]; route: Omit<ToolRoute, 'reason
     route: { tool_name: 'codebase_anthropologist', operation: 'query', priority: 'immediate', params_hint: {} },
   },
   {
-    patterns: [/\bgateweave\b|\bmemory stats\b|\badmission\b|\bbelief version\b|\bbelief history\b|\bmemory gat/i],
-    route: { tool_name: 'gateweave', operation: 'stats', priority: 'immediate', params_hint: {} },
+    patterns: [/\bpredict\b|\bforecast\b|\btrajectory\b|\bripple\b|\bechoforge\b|\bwhat.if\b|\banticipate\b|\bproactive\b/i],
+    route: { tool_name: 'echoforge_engine', operation: 'predictions', priority: 'immediate', params_hint: {} },
+  },
+  {
+    patterns: [/\bconsolidate\b.*\bmemor/i],
+    route: { tool_name: 'echoforge_engine', operation: 'consolidate', priority: 'background', params_hint: {} },
   },
 ];
 
@@ -143,7 +147,7 @@ Available tools (use EXACT names):
 - meeting_ghost (meeting commitments)
 - collective_wisdom (crowd wisdom)
 - relationship_intelligence (relationship health)
-- gateweave (memory admission stats, versioned beliefs)
+- echoforge_engine (predictive memory, temporal DAG, ripple simulation)
 
 Message: "${message}"
 
