@@ -1,5 +1,6 @@
-// tools/toolsDb.ts — runs additional CREATE TABLE migrations for all 17 tools
+// tools/toolsDb.ts — runs additional CREATE TABLE migrations for all 18 tools
 import { execute } from '../db/postgres';
+import { initCurateTierTables } from '../db/curateTierDb';
 
 export async function initToolsTables(): Promise<void> {
   // ── Tool 1: Temporal Mirror ──────────────────────────────────────────────
@@ -272,5 +273,8 @@ export async function initToolsTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_rel_health_user ON relationship_health(user_id);
   `);
 
-  console.log('[TIMPs] All 17 tool tables initialized');
+  // ── Tool 18: CurateTier (Agent-Native Hierarchical Curation) ──────────────
+  await initCurateTierTables();
+
+  console.log('[TIMPs] All 18 tool tables initialized');
 }
