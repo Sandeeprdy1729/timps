@@ -31,6 +31,7 @@ async function ensureUser(): Promise<void> {
 async function reset(): Promise<void> {
   console.log('🗑  Resetting seed data...');
   const tables = [
+    'curate_tier_decisions', 'curate_tier_summaries',
     'contradiction_history', 'positions',
     'behavioral_events', 'decisions',
     'value_observations', 'manifestos',
@@ -298,6 +299,33 @@ async function seedMemories(): Promise<void> {
   console.log('✓  Core memories — 8 memories seeded');
 }
 
+// ── Tool 18: CurateTier ──────────────────────────────────────────────────────
+async function seedCurateTier(): Promise<void> {
+  const decisions = [
+    { tier: 'semantic', score: 0.92, relevance: 0.95, utility: 0.80, novelty: 0.85, recency: 1.0, gated: false, source: 'reflection', propagated: ['value_observations'] },
+    { tier: 'episodic', score: 0.71, relevance: 0.70, utility: 0.65, novelty: 0.60, recency: 1.0, gated: false, source: 'coding', propagated: ['workflow_patterns', 'code_incidents'] },
+    { tier: 'episodic', score: 0.68, relevance: 0.75, utility: 0.55, novelty: 0.50, recency: 1.0, gated: false, source: 'tool-output', propagated: ['bug_patterns'] },
+    { tier: 'raw', score: 0.45, relevance: 0.40, utility: 0.30, novelty: 0.55, recency: 1.0, gated: false, source: 'reflection', propagated: [] },
+    { tier: 'raw', score: 0.22, relevance: 0.20, utility: 0.15, novelty: 0.10, recency: 1.0, gated: true, source: 'reflection', propagated: [] },
+    { tier: 'semantic', score: 0.88, relevance: 0.90, utility: 0.85, novelty: 0.70, recency: 1.0, gated: false, source: 'reflection', propagated: ['behavioral_events'] },
+  ];
+  for (const d of decisions) {
+    await execute(
+      `INSERT INTO curate_tier_decisions
+       (user_id, tier, curation_score, relevance_score, utility_score, novelty_score, recency_score, gated, source_type, propagated_to)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [USER_ID, d.tier, d.score, d.relevance, d.utility, d.novelty, d.recency, d.gated, d.source, d.propagated]
+    );
+  }
+  // Seed tier summaries
+  await execute(
+    `INSERT INTO curate_tier_summaries (user_id, tier, memory_count, avg_score)
+     VALUES ($1,'raw', 2, 0.34), ($1,'episodic', 2, 0.70), ($1,'semantic', 2, 0.90)`,
+    [USER_ID]
+  );
+  console.log('✓  Tool 18: CurateTier — 6 curation decisions + 3 tier summaries seeded');
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
   console.log('\n╔══════════════════════════════════════════════════╗');
@@ -311,7 +339,7 @@ async function main(): Promise<void> {
 
   if (RESET) await reset();
 
-  console.log('\nSeeding all 17 tool data...\n');
+  console.log('\nSeeding all 18 tool data...\n');
 
   await seedMemories();
   await seedTemporalMirror();
@@ -324,12 +352,13 @@ async function main(): Promise<void> {
   await seedAPIArchaeologist();
   await seedMeetingGhost();
   await seedRelationshipIntelligence();
+  await seedCurateTier();
 
   console.log('\n╔══════════════════════════════════════════════════╗');
   console.log('║  Seeding complete!                               ║');
   console.log('║                                                  ║');
   console.log('║  Open http://localhost:3000/dashboard            ║');
-  console.log('║  to see all 17 tools with live data.             ║');
+  console.log('║  to see all 18 tools with live data.             ║');
   console.log('╚══════════════════════════════════════════════════╝\n');
 
   process.exit(0);

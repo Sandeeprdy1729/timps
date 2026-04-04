@@ -1,5 +1,6 @@
 import { createModel, BaseModel } from '../models';
 import { memoryIndex } from '../memory/memoryIndex';
+import { curateTier, CurationInput } from './curateTier';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -92,7 +93,7 @@ Only include entries if there is meaningful information to extract. Be concise b
 ): Promise<void> {
 
   for (const memory of knowledge.memories) {
-    await memoryIndex.storeMemory(
+    const stored = await memoryIndex.storeMemory(
       userId,
       projectId,
       memory.content,
@@ -102,6 +103,21 @@ Only include entries if there is meaningful information to extract. Be concise b
       "reflection-analysis",
       "llm-extracted"
     );
+
+    // CurateTier: curate each reflected memory into hierarchical tiers
+    try {
+      const curationInput: CurationInput = {
+        content: memory.content,
+        tags: memory.tags || [],
+        importance: memory.importance,
+        memoryType: memory.type,
+        source: 'reflection',
+        memoryId: stored?.id,
+      };
+      await curateTier.curate(curationInput, userId);
+    } catch {
+      // CurateTier is best-effort — never block reflection
+    }
   }
 
   for (const goal of knowledge.goals) {
@@ -164,7 +180,7 @@ Return JSON array:
       const insights = JSON.parse(jsonMatch[0]);
 
       for (const insight of insights) {
-        await memoryIndex.storeMemory(
+        const stored = await memoryIndex.storeMemory(
           userId,
           projectId,
           insight.content,
@@ -174,6 +190,21 @@ Return JSON array:
           "session-reflection",
           "session"
         );
+
+        // CurateTier: curate session insights into hierarchical tiers
+        try {
+          const curationInput: CurationInput = {
+            content: insight.content,
+            tags: insight.tags || [],
+            importance: insight.importance || 1,
+            memoryType: insight.type || 'general',
+            source: 'reflection',
+            memoryId: stored?.id,
+          };
+          await curateTier.curate(curationInput, userId);
+        } catch {
+          // CurateTier is best-effort
+        }
       }
     }
   } catch (error) {
