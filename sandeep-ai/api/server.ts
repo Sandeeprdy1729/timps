@@ -73,7 +73,7 @@ export async function startServer(): Promise<void> {
   try {
     await initDatabase();
     await initToolsTables();
-    console.log('PostgreSQL initialized (core + all 17 tool tables)');
+    console.log('PostgreSQL initialized (core + all 18 tool tables)');
   } catch (error) {
     console.warn('PostgreSQL initialization failed, continuing without DB:', error);
   }
