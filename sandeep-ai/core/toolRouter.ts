@@ -77,6 +77,10 @@ const KEYWORD_ROUTES: Array<{ patterns: RegExp[]; route: Omit<ToolRoute, 'reason
     patterns: [/\bwhy did\b|\bwho decided\b|\bhistory of\b|\boriginal reason\b|\bwhy was this\b|\bwhy did we\b/i],
     route: { tool_name: 'codebase_anthropologist', operation: 'query', priority: 'immediate', params_hint: {} },
   },
+  {
+    patterns: [/\bcurate\b|\btier\b|\bhierarch\b|\bcuration\b|\borganize memor\b|\bmemory tier\b|\bmemory hierarchy\b/i],
+    route: { tool_name: 'curate_tier', operation: 'curate', priority: 'background', params_hint: {} },
+  },
 ];
 
 export class ToolRouter {
@@ -139,6 +143,7 @@ Available tools (use EXACT names):
 - meeting_ghost (meeting commitments)
 - collective_wisdom (crowd wisdom)
 - relationship_intelligence (relationship health)
+- curate_tier (hierarchical memory curation)
 
 Message: "${message}"
 
