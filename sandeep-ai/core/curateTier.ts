@@ -196,20 +196,8 @@ export class CurateTier {
       }
     }
 
-    // Log propagation context (lightweight — no direct inserts into tool tables,
-    // that is handled by tool-specific flows; this records the linkage)
-    if (propagated.length > 0) {
-      try {
-        await execute(
-          `INSERT INTO curate_tier_decisions (user_id, memory_id, tier, curation_score, source_type, propagated_to)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT DO NOTHING`,
-          [userId, memory.memoryId || null, tier, 0, 'propagation', propagated]
-        );
-      } catch {
-        // Propagation logging is best-effort
-      }
-    }
+    // Record propagation targets for the decision log
+    // (actual propagation logging happens in logDecision; no duplicate insert needed)
 
     return propagated;
   }
