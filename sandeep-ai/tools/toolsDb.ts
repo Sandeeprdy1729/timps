@@ -278,6 +278,37 @@ export async function initToolsTables(): Promise<void> {
   await initCurateTierTables();
 
   console.log('[TIMPs] All 18 tool tables initialized');
+  
+  // ── ProvenForge: Temporal Version Control ──────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS versioned_memories (
+      version_id VARCHAR(255) PRIMARY KEY,
+      parent_version_id VARCHAR(255),
+      tier VARCHAR(50) NOT NULL,
+      provenance JSONB,
+      content TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS provenance_edges (
+      id SERIAL PRIMARY KEY,
+      source_version_id VARCHAR(255) REFERENCES versioned_memories(version_id) ON DELETE CASCADE,
+      target_version_id VARCHAR(255) REFERENCES versioned_memories(version_id) ON DELETE CASCADE,
+      edge_type VARCHAR(50) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    DO $$
+    DECLARE
+      tname text;
+    BEGIN
+      FOR tname IN (SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE')
+      LOOP
+        IF tname NOT IN ('versioned_memories', 'provenance_edges') THEN
+          EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS version_id VARCHAR(255)', tname);
+        END IF;
+      END LOOP;
+    END $$;
+  `);
 
   // ── ForgeLink: Typed Relationship Edges ──────────────────────────────────
   await execute(`

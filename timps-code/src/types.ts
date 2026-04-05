@@ -51,7 +51,13 @@ export type StreamEvent =
 export type AgentEvent =
   | { type: 'text'; content: string }
   | { type: 'thinking'; content: string }
-  | { type: 'plan'; steps: PlanStep[] }
+  | { type: 'status'; message: string }
+  | { type: 'plan'; plan: any }
+  | { type: 'plan_complete'; plan: any }
+  | { type: 'step_start'; step: string; description: string }
+  | { type: 'step_complete'; step: string; result?: string }
+  | { type: 'step_failed'; step: string; error: string }
+  | { type: 'step_retry'; step: string; attempt: number }
   | { type: 'plan_step_start'; stepIndex: number; description: string }
   | { type: 'plan_step_done'; stepIndex: number; success: boolean }
   | { type: 'tool_start'; tool: string; args: Record<string, unknown> }
@@ -61,7 +67,8 @@ export type AgentEvent =
   | { type: 'context_compacted'; before: number; after: number }
   | { type: 'error'; message: string }
   | { type: 'done'; usage?: TokenUsage }
-  | { type: 'memory_saved'; summary: string };
+  | { type: 'memory_saved'; summary: string }
+  | { type: 'ask_user'; question: string; callId: string };
 
 export interface TokenUsage {
   inputTokens: number;
@@ -86,16 +93,20 @@ export interface StreamOptions {
   signal?: AbortSignal;
 }
 
-export type ProviderName = 'claude' | 'openai' | 'gemini' | 'ollama' | 'openrouter' | 'opencode';
+export type ProviderName = 'claude' | 'openai' | 'gemini' | 'ollama' | 'openrouter' | 'opencode' | 'hybrid';
 
 // ═══════════════════════════════════════
 // Planning
 // ═══════════════════════════════════════
 
 export interface PlanStep {
+  id?: string;
   description: string;
   status: 'pending' | 'running' | 'done' | 'failed' | 'skipped';
   result?: string;
+  dependsOn?: string[];
+  verification?: string;
+  attempts?: number;
 }
 
 // ═══════════════════════════════════════

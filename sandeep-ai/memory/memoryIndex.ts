@@ -2,6 +2,8 @@ import { ShortTermMemoryStore, ShortTermMemory } from './shortTerm';
 import { LongTermMemoryStore, Memory, Goal, Preference, Project } from './longTerm';
 import { Message } from '../models/baseModel';
 import { config } from '../config/env';
+import { provenForge } from '../core/provenForge';
+import { VersionSelection } from '../core/toolRouter';
 
 export interface UserMemory {
   shortTerm: ShortTermMemoryStore;
@@ -57,6 +59,31 @@ export class MemoryIndex {
     ]);
     
     return { memories, goals, preferences, projects };
+  }
+
+  async retrieveContextWithVersion(
+    userId: number,
+    projectId: string,
+    query: string,
+    versionSelection?: VersionSelection
+  ): Promise<{
+    memories: Memory[];
+    goals: Goal[];
+    preferences: Preference[];
+    projects: Project[];
+    versionContext: string;
+  }> {
+    const baseContext = await this.retrieveContext(userId, projectId, query);
+    
+    let versionContext = '';
+    if (versionSelection) {
+      versionContext = await provenForge.buildVersionContext(
+        versionSelection.branch,
+        versionSelection.tier
+      );
+    }
+    
+    return { ...baseContext, versionContext };
   }
   
   formatContextForPrompt(context: {

@@ -5,7 +5,7 @@
 import chalk from 'chalk';
 import {
   t, icons, panel, box, statusBar, divider,
-  LOGO_LARGE, LOGO_SMALL, DOT_FRAMES, stripAnsi,
+  LOGO_LARGE, DOT_FRAMES, stripAnsi,
 } from './theme.js';
 import type { AgentEvent, PlanStep, TokenUsage, MemoryEntry, WorkingMemory } from './types.js';
 import { getInstalledSkills } from './skills.js';
@@ -260,7 +260,7 @@ export function renderAgentEvent(event: AgentEvent): void {
 
     case 'plan':
       flushText();
-      renderPlan(event.steps);
+      renderPlan(event.plan?.steps || []);
       break;
 
     case 'plan_step_start':
@@ -287,7 +287,7 @@ export function renderAgentEvent(event: AgentEvent): void {
 
     case 'snapshot_created':
       flushText();
-      console.log(`\n  ${t.info(icons.snapshot)} snapshot ${t.dim(event.id)} — ${event.fileCount} files`);
+      console.log(`\n  ${t.info(icons.snap)} snapshot ${t.dim(event.id)} — ${event.fileCount} files`);
       break;
 
     case 'context_compacted':
@@ -614,8 +614,12 @@ export function renderHelp(): void {
     ['/clear', 'clear screen', 'c'],
     ['/cost', 'show session cost breakdown'],
     ['/doctor', 'run system health check'],
+    ['/think <question>', 'reasoning mode'],
+    ['/plan <task>', 'enter planning mode'],
+    ['/context', 'show context usage'],
 
     // Model
+    ['/provider', 'switch AI provider'],
     ['/model <provider> [model]', 'switch model', 'm'],
     ['/models', 'list available models'],
 
@@ -651,17 +655,31 @@ export function renderHelp(): void {
     ['/skills', 'show installed skills'],
     ['/skills search <name>', 'search skill marketplace'],
     ['/skills install <name>', 'install a skill'],
+
+    // Forge (version control)
+    ['/forge', 'show forge commands'],
+    ['/forge branches', 'list memory branches'],
+    ['/forge log', 'show version history'],
+    ['/forge stats', 'show forge statistics'],
+
+    // Team
+    ['/team join <proj> <name>', 'join/create team'],
+    ['/team status', 'show team info'],
+    ['/team share <fact>', 'share knowledge with team'],
   ];
 
   let lastGroup = '';
   for (const [cmd, desc, alias] of commands) {
-    const group = cmd.startsWith('/model') ? 'model' :
+    const group = cmd.startsWith('/provider') ? 'model' :
+      cmd.startsWith('/model') ? 'model' :
       cmd.startsWith('/memory') || cmd.startsWith('/mem') ? 'memory' :
       cmd.startsWith('/todo') ? 'todo' :
       cmd.startsWith('/git') ? 'git' :
       cmd.startsWith('/snap') ? 'snapshots' :
       cmd.startsWith('/skill') ? 'skills' :
-      cmd.startsWith('/save') || cmd.startsWith('/compact') || cmd.startsWith('/undo') ? 'session' :
+      cmd.startsWith('/forge') ? 'forge' :
+      cmd.startsWith('/team') ? 'team' :
+      cmd.startsWith('/save') || cmd.startsWith('/compact') || cmd.startsWith('/undo') || cmd.startsWith('/plan') || cmd.startsWith('/think') || cmd.startsWith('/context') ? 'session' :
       'general';
 
     if (group !== lastGroup) {

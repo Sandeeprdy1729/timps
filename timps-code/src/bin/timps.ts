@@ -16,6 +16,8 @@ program
   .option('-m, --model <model>', 'Model name (e.g., gpt-4o, claude-sonnet-4-20250514)')
   .option('-d, --dir <path>', 'Working directory')
   .option('-c, --config', 'Run setup wizard')
+  .option('-b, --branch <name>', 'Branch current memory state into a proven context')
+  .option('--merge <target>', 'Merge a branch into the current semantic context')
   .argument('[message...]', 'One-shot message (non-interactive)')
   .action(async (messageParts: string[], opts: Record<string, string>) => {
     if (opts.config) {
@@ -32,6 +34,8 @@ program
       model: opts.model,
       cwd: opts.dir || process.cwd(),
       oneLine,
+      branch: opts.branch,
+      merge: opts.merge,
     });
   });
 
