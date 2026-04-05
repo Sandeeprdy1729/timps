@@ -273,8 +273,32 @@ export async function initToolsTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_rel_health_user ON relationship_health(user_id);
   `);
 
+
   // ── Tool 18: CurateTier (Agent-Native Hierarchical Curation) ──────────────
   await initCurateTierTables();
 
   console.log('[TIMPs] All 18 tool tables initialized');
+
+  // ── ForgeLink: Typed Relationship Edges ──────────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS typed_edges (
+      id SERIAL PRIMARY KEY,
+      source_memory_id INTEGER NOT NULL,
+      target_memory_id INTEGER NOT NULL,
+      edge_type VARCHAR(50) NOT NULL CHECK (edge_type IN ('causal', 'dependency', 'temporal', 'influence', 'contradiction', 'evolution')),
+      weight FLOAT DEFAULT 1.0,
+      confidence FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100) NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_typed_edges_source ON typed_edges(source_memory_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_typed_edges_target ON typed_edges(target_memory_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_typed_edges_type ON typed_edges(edge_type, confidence DESC);
+    CREATE INDEX IF NOT EXISTS idx_typed_edges_provenance ON typed_edges(provenance_module);
+  `);
+
+  console.log('[TIMPs] All 17 tool tables + ForgeLink edges initialized');
+
 }

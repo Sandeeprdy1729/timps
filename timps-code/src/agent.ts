@@ -13,6 +13,7 @@ import { Memory } from './memory.js';
 import { getSkillContext } from './skills.js';
 import { estimateTokens, generateId, estimateCost } from './utils.js';
 import type { TeamMemory } from './teamMemory.js';
+import { TodoStore } from './todo.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -32,52 +33,68 @@ export interface AgentOptions {
   teamMemory?: TeamMemory;
 }
 
-const SYSTEM_PROMPT = `You are TIMPS Code, an expert AI coding agent running in the user's terminal.
+export const TIMPS_SYSTEM_PROMPT = `You are TIMPS Code — a highly capable AI coding agent running in the user's terminal.
+TIMPS stands for Trustworthy Interactive Memory Partner System.
+
+## Core Identity
+- You have persistent memory across sessions (3-layer: working, episodic, semantic)
+- You learn from every session — your knowledge grows over time
+- You support Claude, GPT-4, Gemini, and local models (Ollama)
+- You are the open-source, memory-first alternative to Claude Code
 
 ## Capabilities
-You have tools for reading, writing, editing files, running shell commands, searching code, and git operations.
-You can solve complex multi-step coding tasks autonomously.
+Tools available: read_file, write_file, edit_file, list_directory, run_bash,
+find_files, search_code, get_git_status, multi_edit, patch_file, run_tests, think
 
-## Rules
-1. ALWAYS read files before editing them. Never guess file contents.
-2. Use edit_file for surgical changes, write_file only for new files or complete rewrites.
-3. After making changes, verify by running tests or type-checking if available.
-4. When you encounter errors, analyze the root cause before retrying.
-5. Use the think tool for complex reasoning before acting.
-6. Keep explanations concise. Show what you did, not what you plan to do.
-7. For bash commands, prefer non-interactive. Never use sudo without asking.
-8. When multiple files need changes, plan the order to avoid breakage.
-9. For casual messages, greetings, or questions that don't need file/code operations, respond naturally in text WITHOUT using any tools. Only use tools when they provide concrete value.
+## Rules (non-negotiable)
+1. ALWAYS read files before editing — never guess file contents
+2. Use edit_file for surgical edits, write_file only for new files or rewrites
+3. After code changes, verify: run type checks or tests if available
+4. Analyze root cause before retrying on errors
+5. Use think tool for non-trivial reasoning before acting
+6. For greetings/questions needing no file ops: respond in text WITHOUT tools
+7. Prefer non-interactive bash commands; never sudo without explicit permission
+8. For multi-file changes, plan order to minimize breakage
+9. When you identify TODO items in the task, list them clearly as "- [ ] item" format
+
+## Memory Protocol
+- Reference memory context when it's relevant to the task
+- If you discover architectural decisions, patterns, or conventions: state them explicitly
+- If you find bugs/errors, explain the root cause clearly (this gets saved to memory)
+- End complex tasks with: "Remembered: [what was learned]"
+
+## Output Style
+- Be direct and concise — code over prose
+- Show results, not plans
+- Use tool results to confirm changes, not just say "done"
 `;
 
 // Compact prompt for local/small models — avoids overwhelming 7B models
-const LOCAL_SYSTEM_PROMPT = `You are TIMPS Code, a friendly and capable AI coding assistant running in the user's terminal.
-
-You help users build websites, apps, scripts, and any coding project.
+const LOCAL_SYSTEM_PROMPT = `You are TIMPS Code, a friendly AI coding assistant running in the user's terminal.
 
 ## How to respond:
-- If the user says hi, asks a question, or chats: respond naturally in plain text. Be friendly and helpful.
-- If the user asks you to CREATE, BUILD, or WRITE code: use write_file tool to create the files.
-- If the user asks you to CHANGE or FIX existing code: first use read_file, then use edit_file.
-- If the user asks to RUN something: use the bash tool.
+- For greetings and questions: reply in plain text.
+- For coding tasks (create, build, fix): use tools DIRECTLY. Do NOT show code in markdown code blocks.
 
-## Tool usage:
-When you need to use a tool, output EXACTLY this XML format (do NOT wrap in markdown code blocks):
+## CRITICAL RULE:
+When asked to create a file, use write_file IMMEDIATELY. Do NOT display the code first — just call the tool.
 
+## Tool format:
 <tool_call>
 <name>TOOL_NAME</name>
 <arguments>{"param": "value"}</arguments>
 </tool_call>
 
-IMPORTANT: Output the <tool_call> tags directly. Do NOT put them inside \`\`\` code fences.
+## Example:
+User: "create a landing page as index.html"
+You: I'll create a landing page for you.
 
-Example — creating a file:
 <tool_call>
 <name>write_file</name>
-<arguments>{"path": "index.html", "content": "<!DOCTYPE html>\\n<html>\\n<body>Hello</body>\\n</html>"}</arguments>
+<arguments>{"path": "index.html", "content": "<!DOCTYPE html>\\n<html>\\n<head><title>Landing</title></head>\\n<body><h1>Welcome</h1></body>\\n</html>"}</arguments>
 </tool_call>
 
-You can use multiple tool calls in one response. Always explain what you're doing briefly.
+NEVER show code in \`\`\` blocks. Always use write_file to create files directly.
 `;
 
 export class Agent {
@@ -95,6 +112,7 @@ export class Agent {
   private autoCorrect: boolean;
   private techStack?: import('./types.js').TechStack;
   private teamMemory?: TeamMemory;
+  private todoStore: TodoStore | null = null;
   private abortController: AbortController | null = null;
 
   constructor(opts: AgentOptions) {
@@ -131,48 +149,41 @@ export class Agent {
       return prompt;
     }
 
-    let prompt = SYSTEM_PROMPT;
-    
-    // Add memory context
-    const memories = this.memory.query('', 10);
-    if (memories.length > 0) {
-      prompt += '\n## Project Knowledge (from memory)\n';
-      for (const m of memories) {
-        prompt += `- ${m.content}\n`;
-      }
+    let prompt = TIMPS_SYSTEM_PROMPT;
+
+    // ── Memory injection ──
+    const memCtx = this.memory.getContextString();
+    if (memCtx) {
+      prompt += `\n## Memory Context\n${memCtx}\n`;
     }
 
-    // Add custom instructions
-    if (this.customInstructions) {
-      prompt += `\n## User Instructions\n${this.customInstructions}\n`;
-    }
-
-    // ── Tech Stack Enforcement (CRITICAL — must follow) ──
-    if (this.techStack) {
-      const ts = this.techStack;
-      prompt += `\n## REQUIRED Technology Stack (MUST use these — team mandate)\n`;
-      prompt += `You are working on a project with strict technology requirements. ALL code you write MUST use ONLY these technologies:\n`;
-      if (ts.languages.length > 0) prompt += `**Languages:** ${ts.languages.join(', ')}\n`;
-      if (ts.frameworks.length > 0) prompt += `**Frameworks:** ${ts.frameworks.join(', ')}\n`;
-      if (ts.libraries.length > 0) prompt += `**Libraries:** ${ts.libraries.join(', ')}\n`;
-      if (ts.patterns.length > 0) prompt += `**Architecture/Patterns:** ${ts.patterns.join(', ')}\n`;
-      if (ts.rules.length > 0) {
-        prompt += `**Coding Rules:**\n`;
-        for (const r of ts.rules) prompt += `  - ${r}\n`;
-      }
-      prompt += `\nIMPORTANT: If the user asks you to write code, you MUST use the technologies listed above. `;
-      prompt += `If they ask for something in a technology NOT in this list, explain the required stack and offer to implement it using the approved technologies instead.\n`;
-      prompt += `When you learn something new about these technologies during the session, proactively teach the user best practices and idiomatic patterns.\n`;
-    }
-
-    // ── Team Memory (shared across all team members) ──
+    // ── Team memory injection ──
     if (this.teamMemory) {
       try {
         const teamCtx = this.teamMemory.getContextString();
         if (teamCtx) {
-          prompt += `\n## Team Context (shared memory — all members see this)\n${teamCtx}\n`;
+          prompt += `\n## Team Knowledge\n${teamCtx}\n`;
         }
       } catch { /* team memory might be locked */ }
+    }
+
+    // ── Tech stack enforcement ──
+    if (this.techStack) {
+      const ts = this.techStack;
+      prompt += '\n## TECH STACK (STRICT — always follow these)\n';
+      if (ts.languages.length > 0) prompt += `Languages: ${ts.languages.join(', ')}\n`;
+      if (ts.frameworks.length > 0) prompt += `Frameworks: ${ts.frameworks.join(', ')}\n`;
+      if (ts.libraries.length > 0) prompt += `Libraries: ${ts.libraries.join(', ')}\n`;
+      if (ts.patterns.length > 0) prompt += `Patterns: ${ts.patterns.join(', ')}\n`;
+      if (ts.rules.length > 0) {
+        prompt += 'Rules:\n';
+        for (const r of ts.rules) prompt += `- ${r}\n`;
+      }
+    }
+
+    // ── Custom instructions ──
+    if (this.customInstructions) {
+      prompt += `\n## User Instructions\n${this.customInstructions}\n`;
     }
 
     // Add skill context from SkillGalaxy
@@ -181,34 +192,7 @@ export class Agent {
       prompt += `\n${skillCtx}\n`;
     }
 
-    // Add working memory
-    const working = this.memory.workingMemory;
-    if (working.activeFiles.length > 0) {
-      prompt += `\n## Active Files\n${working.activeFiles.join(', ')}\n`;
-    }
-    if (working.recentErrors.length > 0) {
-      prompt += `\n## Recent Errors to Avoid\n${working.recentErrors.slice(-3).join('\n')}\n`;
-    }
-
-    // Inject discovered patterns for consistency — agent MUST reuse these
-    if (working.discoveredPatterns.length > 0) {
-      prompt += `\n## Established Patterns (MUST follow for consistency)\n`;
-      prompt += `When creating or modifying code, follow these discovered conventions:\n`;
-      for (const p of working.discoveredPatterns) {
-        prompt += `- ${p}\n`;
-      }
-    }
-
-    // Inject convention-type memories — project's coding standards
-    const conventions = this.memory.query('convention', 20)
-      .filter(m => m.type === 'convention' || m.type === 'pattern');
-    if (conventions.length > 0) {
-      prompt += `\n## Project Conventions\n`;
-      for (const c of conventions) {
-        prompt += `- ${c.content}\n`;
-      }
-    }
-
+    prompt += `\nWorking directory: ${this.cwd}\n`;
     return prompt;
   }
 
@@ -322,12 +306,16 @@ export class Agent {
 
       // If no tool calls, we're done — extract memories and finish
       if (!hasToolCalls || toolCalls.length === 0) {
-        if (fullText) this.memory.extractFacts(userMessage, fullText);
+        if (fullText) {
+          this.memory.extractFacts(userMessage, fullText);
+          const saved = await this.saveMemoryFromSession(userMessage, fullText);
+          if (saved) yield { type: 'memory_saved', summary: saved };
+        }
         yield { type: 'done', usage: this.totalUsage };
         return;
       }
 
-      // Execute tool calls
+      // Execute tool calls (parallel for read-only, sequential for mutating)
       yield* this.executeToolCalls(toolCalls);
     }
 
@@ -434,6 +422,102 @@ export class Agent {
   }
 
   // ═══════════════════════════════════════
+  // Parallel tool execution
+  // ═══════════════════════════════════════
+
+  private async executeToolsInParallel(
+    toolCalls: ToolCall[],
+  ): Promise<Array<{ id: string; result: string; success: boolean; tool: string; durationMs: number }>> {
+    const readOnlyTools = new Set(['read_file', 'list_directory', 'find_files', 'search_code', 'think']);
+
+    // Split into parallel (read-only) and sequential (mutating) groups
+    const parallelCalls = toolCalls.filter(tc => readOnlyTools.has(tc.name));
+    const sequentialCalls = toolCalls.filter(tc => !readOnlyTools.has(tc.name));
+
+    const results: Array<{ id: string; result: string; success: boolean; tool: string; durationMs: number }> = [];
+
+    // Run read-only tools in parallel
+    if (parallelCalls.length > 1) {
+      const parallelResults = await Promise.all(
+        parallelCalls.map(tc => this.executeSingleTool(tc))
+      );
+      results.push(...parallelResults);
+    } else {
+      for (const tc of parallelCalls) {
+        results.push(await this.executeSingleTool(tc));
+      }
+    }
+
+    // Run mutating tools sequentially (order matters)
+    for (const tc of sequentialCalls) {
+      results.push(await this.executeSingleTool(tc));
+    }
+
+    return results;
+  }
+
+  private async executeSingleTool(tc: ToolCall): Promise<{
+    id: string; result: string; success: boolean; tool: string; durationMs: number;
+  }> {
+    const start = Date.now();
+    const registered = getTool(tc.name);
+    if (!registered) {
+      return { id: tc.id, result: `Unknown tool: ${tc.name}`, success: false, tool: tc.name, durationMs: 0 };
+    }
+
+    // Permission check
+    const risk = getToolRisk(tc.name);
+    const allowed = await this.permissions.check(tc.name, tc.arguments, risk);
+    if (!allowed) {
+      return { id: tc.id, result: `Permission denied for ${tc.name}`, success: false, tool: tc.name, durationMs: 0 };
+    }
+
+    const res = await registered.execute(tc.arguments, this.cwd);
+    const durationMs = Date.now() - start;
+
+    // Track file changes for memory and snapshots
+    if (res.filesModified && res.filesModified.length > 0) {
+      for (const f of res.filesModified) this.memory.trackFile(f);
+    }
+
+    return { id: tc.id, result: res.content, success: !res.isError, tool: tc.name, durationMs };
+  }
+
+  // ═══════════════════════════════════════
+  // Memory auto-save from agent output
+  // ═══════════════════════════════════════
+
+  private async saveMemoryFromSession(userMessage: string, assistantResponse: string): Promise<string | null> {
+    // Extract facts from the conversation
+    this.memory.extractFacts(userMessage, assistantResponse);
+
+    // Extract todos from agent output
+    if (this.todoStore) {
+      this.todoStore.extractFromText(assistantResponse);
+    }
+
+    // If response mentions key decisions, create a summary
+    const keyPhrases = [
+      /decided to use\s+([^.]{10,50})/i,
+      /implemented\s+([^.]{10,50})/i,
+      /fixed\s+([^.]{10,50})/i,
+      /the (architecture|pattern|convention|approach) is\s+([^.]{10,60})/i,
+      /remembered?:\s*([^.]{10,80})/i,
+    ];
+
+    for (const re of keyPhrases) {
+      const m = assistantResponse.match(re);
+      if (m) {
+        const fact = m[0].trim();
+        this.memory.storeFact(fact, 'architecture');
+        return fact;
+      }
+    }
+
+    return null;
+  }
+
+  // ═══════════════════════════════════════
   // Self-correction
   // ═══════════════════════════════════════
 
@@ -456,12 +540,11 @@ export class Agent {
     for (let attempt = 1; attempt <= this.maxCorrections; attempt++) {
       yield { type: 'selfcorrect', attempt, error: errorMsg };
 
-      // Inject correction hint
+      // Enhanced self-correction prompt — better diagnostics
       this.messages.push({
         role: 'user',
-        content: `The ${failedCall.name} tool failed: "${errorMsg.slice(0, 300)}". ` +
-          `Please analyze the error and fix your approach. ` +
-          (failedCall.name === 'edit_file' ? 'Re-read the file to get the correct content before editing.' : ''),
+        content: `The previous action failed with this error:\n\n<error>\n${errorMsg.slice(0, 300)}\n</error>\n\nAttempt ${attempt} of ${this.maxCorrections}. Think through:\n1. What exactly went wrong?\n2. What assumptions were incorrect?\n3. How to fix it definitively?\n\nThen take the corrective action.` +
+          (failedCall.name === 'edit_file' ? '\nRe-read the file to get the correct content before editing.' : ''),
       });
 
       // Re-run one iteration (will pick up from the loop in run())
@@ -470,60 +553,90 @@ export class Agent {
   }
 
   // ═══════════════════════════════════════
-  // Context compaction
+  // Context compaction — proactive summarization
   // ═══════════════════════════════════════
 
-  private async *compactContext(): AsyncGenerator<AgentEvent> {
-    const before = this.estimateContextSize();
+  public async *compactContext(): AsyncGenerator<AgentEvent> {
+    if (this.messages.length < 10) return;
 
-    // Keep system message and last 10 messages (not 6)
-    const systemMsg = this.messages[0];
-    const recent = this.messages.slice(-10);
+    const nonSystemMessages = this.messages.filter(m => m.role !== 'system');
+    if (nonSystemMessages.length < 6) return;
 
-    // Summarize middle messages
-    const middle = this.messages.slice(1, -10);
-    if (middle.length < 4) return; // not worth compacting
-
-    // NEVER silently destroy context — save full history to disk first
+    // Save full history to disk first — NEVER silently destroy context
     try {
       const historyDir = path.join(os.homedir(), '.timps', 'history');
       fs.mkdirSync(historyDir, { recursive: true });
       const histFile = path.join(historyDir, `compacted_${Date.now()}.json`);
-      fs.writeFileSync(histFile, JSON.stringify(middle, null, 2), 'utf-8');
+      fs.writeFileSync(histFile, JSON.stringify(nonSystemMessages.slice(0, -4), null, 2), 'utf-8');
     } catch { /* best effort */ }
 
-    const summary = this.summarizeMessages(middle);
+    // Build a summary prompt
+    const historyText = nonSystemMessages
+      .slice(0, -4) // keep last 4 messages fresh
+      .map(m => `${m.role.toUpperCase()}: ${typeof m.content === 'string' ? m.content.slice(0, 500) : '[tool]'}`)
+      .join('\n---\n');
 
-    this.messages = [
-      systemMsg,
-      { role: 'user', content: `[Previous conversation summary: ${summary}]`, timestamp: Date.now() },
-      ...recent,
+    const summaryPrompt = `Summarize this conversation compactly for context preservation.
+Focus on: decisions made, files changed, problems solved, current state.
+Keep under 300 words.
+
+CONVERSATION:
+${historyText}`;
+
+    // Quick summary call
+    const summaryMessages: Message[] = [
+      { role: 'user', content: summaryPrompt }
     ];
 
-    const after = this.estimateContextSize();
-    // Explicit notification — user always knows when compaction happens
-    yield { type: 'context_compacted', before, after };
-  }
-
-  private summarizeMessages(msgs: Message[]): string {
-    const parts: string[] = [];
-    const toolsUsed = new Set<string>();
-    const filesChanged = new Set<string>();
-
-    for (const m of msgs) {
-      if (m.role === 'user') parts.push(`User asked: ${m.content.slice(0, 100)}`);
-      if (m.toolCalls) {
-        for (const tc of m.toolCalls) {
-          toolsUsed.add(tc.name);
-          if (tc.arguments.path) filesChanged.add(String(tc.arguments.path));
-        }
-      }
+    let summary = '';
+    for await (const event of this.provider.stream(summaryMessages, [], { maxTokens: 400 })) {
+      if (event.type === 'text') summary += event.content;
     }
 
-    let summary = parts.slice(0, 3).join('. ');
-    if (toolsUsed.size > 0) summary += ` Tools used: ${[...toolsUsed].join(', ')}.`;
-    if (filesChanged.size > 0) summary += ` Files: ${[...filesChanged].join(', ')}.`;
-    return summary;
+    // Store episode
+    const filesChanged = [...new Set(
+      nonSystemMessages
+        .flatMap(m => {
+          const content = typeof m.content === 'string' ? m.content : '';
+          const matches = [...content.matchAll(/(?:read|edit|write|wrote|created|modified)\s+([\w./\-]+\.[a-z]{1,6})/g)];
+          return matches.map(match => match[1]);
+        })
+    )];
+
+    this.memory.storeEpisode({
+      timestamp: Date.now(),
+      summary,
+      filesChanged,
+      toolsUsed: [],
+      outcome: 'success',
+    });
+
+    const beforeTokens = this.estimateContextTokens();
+
+    // Trim to last 4 messages + system + fresh summary
+    const freshMessages = this.messages.filter(m => m.role === 'system');
+    freshMessages.push({
+      role: 'user',
+      content: `[Conversation summary from previous context]\n${summary}`,
+    });
+    freshMessages.push({
+      role: 'assistant',
+      content: 'Understood. Continuing with full context from the summary above.',
+    });
+
+    // Keep last 4 real messages
+    const recent = nonSystemMessages.slice(-4);
+    this.messages = [...freshMessages, ...recent];
+
+    const afterTokens = this.estimateContextTokens();
+    yield { type: 'context_compacted', before: beforeTokens, after: afterTokens };
+  }
+
+  private estimateContextTokens(): number {
+    return this.messages.reduce((acc, m) => {
+      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      return acc + Math.round(content.length / 4);
+    }, 0);
   }
 
   // ═══════════════════════════════════════
@@ -564,6 +677,10 @@ export class Agent {
   setTeamMemory(teamMemory: TeamMemory | undefined): void {
     this.teamMemory = teamMemory;
     this.updateSystemPrompt();
+  }
+
+  setTodoStore(store: TodoStore): void {
+    this.todoStore = store;
   }
 
   getTeamMemory(): TeamMemory | undefined {

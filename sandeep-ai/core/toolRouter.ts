@@ -203,6 +203,22 @@ If no tools needed return: {"routes":[],"needs_planning":false,"complexity":"sim
 
     return hints ? `\n\n### ACTIVE TOOL DIRECTIVES (execute these)\n${hints}` : '';
   }
+
+  // ForgeLink: detect whether a message has a specific intent for typed traversal
+  detectQueryIntent(message: string): string | null {
+    const intentPatterns: Array<{ pattern: RegExp; intent: string }> = [
+      { pattern: /\b(how did .* affect|impact of|caused by|led to)\b/i, intent: 'coding_impact' },
+      { pattern: /\b(burnout|stress|energy|workload)\b/i, intent: 'burnout_risk' },
+      { pattern: /\b(decision|chose|why did (i|we)|history of)\b/i, intent: 'decision_history' },
+      { pattern: /\b(skill|growth|improve|evolution|trajectory)\b/i, intent: 'skill_evolution' },
+      { pattern: /\b(relationship|team|drift|colleague)\b/i, intent: 'relationship' },
+    ];
+
+    for (const { pattern, intent } of intentPatterns) {
+      if (pattern.test(message)) return intent;
+    }
+    return null;
+  }
 }
 
 export const toolRouter = new ToolRouter();

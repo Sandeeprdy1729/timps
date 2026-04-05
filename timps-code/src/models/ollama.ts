@@ -61,8 +61,9 @@ export function createOllamaProvider(baseUrl?: string, modelId?: string): ModelP
       let inputTokens = 0, outputTokens = 0;
       let hasNativeToolCalls = false;
       const textBuffer: StreamEvent[] = [];
-      // Buffer text for both native-FC and XML-fallback models so we can strip tool markup
-      const shouldBuffer = useNativeTools || tools.length > 0;
+      // Only buffer text for native-FC models (they might output raw JSON instead of FC)
+      // For XML-fallback models, stream text immediately so user sees progress
+      const shouldBuffer = useNativeTools;
 
       for await (const raw of parseNDJSON(res.body!)) {
         const data = raw as Record<string, unknown>;
@@ -114,35 +115,41 @@ export function createOllamaProvider(baseUrl?: string, modelId?: string): ModelP
       }
 
       // For non-native FC models, parse XML tool calls from content
+      // Text was already streamed to user — just emit tool call events
       if (!useNativeTools && tools.length > 0) {
-        const parsed = parseXmlToolCalls(fullContent);
-        if (parsed.length > 0) {
-          // Strip XML/JSON tool call markup from text before yielding
-          let cleanText = fullContent;
-          // Strip various tool call patterns
-          cleanText = cleanText.replace(/```(?:xml|tool_call|text)?\s*\n?[\s\S]*?```/g, '');
-          cleanText = cleanText.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '');
-          cleanText = cleanText.replace(/<name>\s*[\w]+\s*<\/name>\s*<arguments>[\s\S]*?<\/arguments>/g, '');
-          cleanText = cleanText.replace(/\{\s*"name"\s*:\s*"\w+"[\s\S]*?"arguments"[\s\S]*?\}\s*\}/g, '');
-          cleanText = cleanText.replace(/To save this file.*$/gm, '');
-          cleanText = cleanText.trim();
-          // Yield the clean explanatory text (if any)
-          if (cleanText) {
-            yield { type: 'text', content: cleanText };
+        let parsed = parseXmlToolCalls(fullContent);
+
+        // Fallback: if model output code in markdown fences but no tool call,
+        // extract the code and synthesize a write_file tool call
+        if (parsed.length === 0 && tools.some(t => t.name === 'write_file')) {
+          const langDefaults: Record<string, string> = {
+            html: 'index.html', css: 'styles.css', js: 'script.js',
+            javascript: 'script.js', typescript: 'main.ts', python: 'main.py',
+            json: 'data.json', sh: 'script.sh', bash: 'script.sh',
+            tsx: 'App.tsx', jsx: 'App.jsx',
+          };
+          const fenceRe = /```(html|css|js|javascript|typescript|python|json|xml|yaml|sh|bash|tsx|jsx)\s*\n([\s\S]*?)```/;
+          const fenceMatch = fullContent.match(fenceRe);
+          if (fenceMatch) {
+            const lang = fenceMatch[1];
+            const code = fenceMatch[2].trim();
+            // Try to find a filename from the user's last message
+            const userMsg = messages.filter(m => m.role === 'user').pop();
+            const fileMatch = userMsg?.content?.match(/(?:as|into|to|called|named|save\s+(?:it\s+)?(?:as|to))\s+(\S+\.\w+)/i)
+              || userMsg?.content?.match(/(\w+\.\w{2,5})\b/);
+            const filename = fileMatch ? fileMatch[1] : (langDefaults[lang] || `output.${lang}`);
+            parsed = [{ name: 'write_file', arguments: { path: filename, content: code } }];
           }
-          // Yield the parsed tool calls
-          for (const tc of parsed) {
-            const validTool = tools.find(t => t.name === tc.name);
-            if (validTool) {
-              const tcId = `tc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-              yield { type: 'tool_start', id: tcId, name: tc.name };
-              yield { type: 'tool_delta', id: tcId, argumentsChunk: JSON.stringify(tc.arguments) };
-              yield { type: 'tool_end', id: tcId };
-            }
+        }
+
+        for (const tc of parsed) {
+          const validTool = tools.find(t => t.name === tc.name);
+          if (validTool) {
+            const tcId = `tc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            yield { type: 'tool_start', id: tcId, name: tc.name };
+            yield { type: 'tool_delta', id: tcId, argumentsChunk: JSON.stringify(tc.arguments) };
+            yield { type: 'tool_end', id: tcId };
           }
-        } else {
-          // No tool calls — flush all buffered text
-          for (const ev of textBuffer) yield ev;
         }
       }
 
