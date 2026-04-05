@@ -55,6 +55,13 @@ export interface Config {
     longTermTopResults: number;
     reflectionThreshold: number;
   };
+
+  forgeLink: {
+    enabled: boolean;
+    minEdgeConfidence: number;
+    maxEdgesPerProcess: number;
+    evolveIntervalHours: number;
+  };
   
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
@@ -117,6 +124,13 @@ export function loadConfig(): Config {
       shortTermMaxMessages: parseInt(process.env.SHORT_TERM_MAX_MESSAGES || '20', 10),
       longTermTopResults: parseInt(process.env.LONG_TERM_TOP_RESULTS || '5', 10),
       reflectionThreshold: parseInt(process.env.REFLECTION_THRESHOLD || '10', 10),
+    },
+
+    forgeLink: {
+      enabled: process.env.ENABLE_FORGELINK !== 'false',
+      minEdgeConfidence: parseFloat(process.env.FORGELINK_MIN_CONFIDENCE || '0.3'),
+      maxEdgesPerProcess: parseInt(process.env.FORGELINK_MAX_EDGES || '20', 10),
+      evolveIntervalHours: parseInt(process.env.FORGELINK_EVOLVE_INTERVAL || '24', 10),
     },
     
     logging: {

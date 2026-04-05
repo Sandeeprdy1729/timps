@@ -6,6 +6,7 @@ import { config } from '../config/env';
 import { toolRouter } from './toolRouter';
 import { Planner } from './planner';
 import { Executor } from './executor';
+import { forgeLink } from './forgeLink';
 
 export interface AgentConfig {
   userId: number;
@@ -79,6 +80,11 @@ export class Agent {
     this.planner = new Planner();
     this.executor = new Executor();
 
+    // Initialize ForgeLink module registry (idempotent)
+    if (forgeLink.isEnabled() || process.env.ENABLE_FORGELINK !== 'false') {
+      forgeLink.registerModules();
+    }
+
     const internalTools = getToolDefinitions();
     this.allToolDefinitions = internalTools.map(tool => ({
       type: 'function',
@@ -99,6 +105,19 @@ export class Agent {
     // ── Step 1: Route — decide which tools are relevant ──────────────────────
     const routing = await toolRouter.routeByLLM(userMessage, this.userId);
     const activeTools = toolRouter.filterToolDefinitions(this.allToolDefinitions, routing.routes);
+
+    // ForgeLink: intent-aware edge retrieval to enrich context
+    let forgeLinkContext = '';
+    if (forgeLink.isEnabled()) {
+      const intent = forgeLink.detectIntent(userMessage);
+      const relatedEdges = await forgeLink.intentAwareRetrieve(userMessage, intent, this.userId, 5);
+      if (relatedEdges.length > 0) {
+        const edgeSummary = relatedEdges.map(e =>
+          `${e.edge.provenanceModule} —[${e.edge.edgeType}]→ ${e.edge.metadata?.targetModule || 'unknown'} (conf=${e.relevance.toFixed(2)})`
+        ).join('\n');
+        forgeLinkContext = `\n\n### Linked Relationship Context (ForgeLink)\n${edgeSummary}`;
+      }
+    }
     const routingHint = toolRouter.buildRoutingHint(routing.routes, this.userId);
 
     // ── Step 2: Plan — for complex tasks, build a multi-step plan ─────────────
@@ -109,7 +128,7 @@ export class Agent {
     // ── Step 3: Execute — standard agentic loop with focused tool set ─────────
     const context = await memoryIndex.retrieveContext(this.userId, this.projectId, userMessage);
     const contextString = memoryIndex.formatContextForPrompt(context);
-    let messages = this.buildMessages(userMessage, contextString, routingHint);
+    let messages = this.buildMessages(userMessage, contextString, routingHint, forgeLinkContext);
 
     let iterations = 0;
     const toolResults: ToolResult[] = [];
@@ -142,6 +161,14 @@ export class Agent {
         const result = await this.executeToolCall(toolCall);
         toolResults.push(result);
         toolsActivated.push(toolCall.function.name);
+
+        // ForgeLink: process tool output for typed edge forging
+        if (forgeLink.isEnabled() && !result.error) {
+          try {
+            const outputData = JSON.parse(result.result);
+            await forgeLink.process(toolCall.function.name, outputData, this.userId, outputData.id);
+          } catch { /* result may not be JSON — skip edge forging */ }
+        }
 
         messages.push({
           role: 'assistant',
@@ -201,12 +228,13 @@ export class Agent {
     }
   }
 
-  private buildMessages(userMessage: string, contextString: string, routingHint: string = ''): Message[] {
+  private buildMessages(userMessage: string, contextString: string, routingHint: string = '', forgeLinkContext: string = ''): Message[] {
     const systemContent =
       this.systemPrompt +
       (contextString ? `\n\n### User Context\n${contextString}` : '') +
       `\n\n### Recent Conversation\n${memoryIndex.getShortTermContext(this.userId, this.projectId)}` +
-      routingHint;
+      routingHint +
+      (forgeLinkContext || '');
 
     return [
       { role: 'system', content: systemContent },

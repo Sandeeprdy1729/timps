@@ -2,20 +2,26 @@
 // Beautiful REPL with slash commands, streaming, and session management
 
 import * as readline from 'node:readline';
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import chalk from 'chalk';
 import type { ModelProvider, ProviderName, TokenUsage, TechStack } from './types.js';
 import { Agent } from './agent.js';
 import { Memory } from './memory.js';
 import { TeamMemory } from './teamMemory.js';
 import { SnapshotManager } from './snapshot.js';
 import { Permissions } from './permissions.js';
+import { TodoStore } from './todo.js';
 import { loadConfig, saveConfig, runSetupWizard, getProjectId, getApiKey, getDefaultModel } from './config.js';
 import { createProvider, POPULAR_MODELS } from './models/index.js';
 import { t, icons, SMALL_LOGO, panel } from './theme.js';
 import {
   renderAgentEvent, renderLandingPage, renderHelp,
   renderPrompt, renderError, flushText, renderChatReady,
+  renderMemoryPanel, renderTodoList, renderDoctorReport,
+  renderGitStatus, renderGitLog, renderModelsList, renderSkills,
 } from './renderer.js';
 import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from './ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from './skills.js';
@@ -150,6 +156,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   // Init subsystems
   const projectId = getProjectId(cwd);
   const memory = new Memory(projectId);
+  const todos = new TodoStore(projectId);
   const snapshots = new SnapshotManager(projectId);
   const permissions = new Permissions(config.trustLevel, config.pathRules);
 
@@ -165,6 +172,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
     autoCorrect: config.autoCorrect ?? true,
     techStack: config.techStack,
   });
+  agent.setTodoStore(todos);
 
   // If team config exists, auto-join team
   let teamMemory: TeamMemory | undefined;
@@ -219,7 +227,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
 
   // Interactive REPL — show landing page
   const memoryCount = memory.query('', 999).length;
-  renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels);
+  renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -241,7 +249,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
 
     // Slash commands
     if (input.startsWith('/')) {
-      await handleSlashCommand(input, agent, memory, snapshots, permissions, provider, cwd, sessionDir);
+      await handleSlashCommand(input, agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir);
       promptUser();
       return;
     }
@@ -253,6 +261,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
     try {
       for await (const event of agent.run(input)) {
         renderAgentEvent(event);
+        if (event.type === 'text') todos.extractFromText(event.content);
       }
       flushText();
     } catch (err) {
@@ -311,6 +320,7 @@ async function handleSlashCommand(
   input: string,
   agent: Agent,
   memory: Memory,
+  todos: TodoStore,
   snapshots: SnapshotManager,
   permissions: Permissions,
   provider: ModelProvider,
@@ -347,14 +357,65 @@ async function handleSlashCommand(
 
     case 'memory':
     case 'mem': {
-      const memories = memory.query(args || '', 20);
-      if (memories.length === 0) {
-        console.log(`\n  ${t.dim('No memories stored.')}\n`);
-      } else {
-        const lines = memories.map(m =>
-          `${t.dim(`[${m.type}]`)} ${m.content} ${t.dim(`(${Math.round(m.confidence * 100)}%)`)}`
-        );
-        console.log(`\n${panel('Memory', lines.join('\n'))}\n`);
+      if (!args) {
+        const entries = memory.loadSemanticEntries();
+        const working = memory.workingMemory;
+        renderMemoryPanel(entries, working, memory.episodeCount);
+        break;
+      }
+
+      const [sub2, ...rest2] = args.split(' ');
+      const subArg = rest2.join(' ').trim();
+
+      switch (sub2) {
+        case 'query':
+        case 'q': {
+          if (!subArg) { console.log(`\n  ${t.dim('Usage: /memory query <text>')}\n`); break; }
+          const results = memory.query(subArg, 20);
+          const working = memory.workingMemory;
+          renderMemoryPanel(results, working, memory.episodeCount, subArg);
+          break;
+        }
+
+        case 'forget':
+        case 'delete': {
+          memory.clearAll();
+          console.log(`\n  ${t.success(icons.success)} Memory cleared for this project\n`);
+          break;
+        }
+
+        case 'export': {
+          const data = memory.exportMemory();
+          const outFile = path.join(cwd, 'timps-memory-export.json');
+          fs.writeFileSync(outFile, JSON.stringify(data, null, 2), 'utf-8');
+          console.log(`\n  ${t.success(icons.success)} Memory exported to ${t.file('timps-memory-export.json')}\n`);
+          break;
+        }
+
+        case 'import': {
+          const importFile = subArg || path.join(cwd, 'timps-memory-export.json');
+          if (!fs.existsSync(importFile)) {
+            console.log(`\n  ${t.error('File not found:')} ${importFile}\n`);
+            break;
+          }
+          const data = JSON.parse(fs.readFileSync(importFile, 'utf-8'));
+          const count = memory.importMemory(data);
+          console.log(`\n  ${t.success(icons.success)} Imported ${count} memory entries\n`);
+          break;
+        }
+
+        case 'consolidate': {
+          const merged = memory.consolidate();
+          console.log(`\n  ${t.success(icons.success)} Merged ${merged} duplicate entries\n`);
+          break;
+        }
+
+        default: {
+          const entries = memory.loadSemanticEntries();
+          const working = memory.workingMemory;
+          renderMemoryPanel(entries, working, memory.episodeCount, args);
+          break;
+        }
       }
       break;
     }
@@ -408,9 +469,18 @@ async function handleSlashCommand(
     }
 
     case 'compact': {
-      console.log(`\n  ${t.dim('Context compaction will happen automatically when needed.')}`);
-      console.log(`  ${t.dim(`Messages: ${agent.getMessageCount()}`)}`);
-      console.log(`  ${t.dim('Full history is preserved to ~/.timps/history/ on compaction')}\n`);
+      const count = agent.getMessageCount();
+      if (count < 10) {
+        console.log(`\n  ${t.dim(`Only ${count} messages — no need to compact yet.`)}\n`);
+        break;
+      }
+      console.log(`\n  ${t.info('⚡')} Compacting context (${count} messages)...`);
+      for await (const ev of agent.compactContext()) {
+        if (ev.type === 'context_compacted') {
+          console.log(`  ${t.success(icons.success)} Compacted: ~${ev.before} → ~${ev.after} tokens`);
+        }
+      }
+      console.log(`  ${t.dim('Full history preserved to ~/.timps/history/')}\n`);
       break;
     }
 
@@ -848,6 +918,292 @@ async function handleSlashCommand(
 
         default:
           console.log(`\n  ${t.dim('Usage: /team [join|leave|status|progress|add-progress|done|share]')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /todo — persistent todo tracker
+    // ══════════════════════════════════
+    case 'todo':
+    case 't': {
+      if (!args) {
+        renderTodoList(todos.getAll());
+        break;
+      }
+
+      const [sub, ...restTodo] = args.split(' ');
+      const todoText = restTodo.join(' ').trim();
+
+      switch (sub) {
+        case 'add':
+        case 'a': {
+          if (!todoText) { console.log(`\n  ${t.dim('Usage: /todo add <text>')}\n`); break; }
+          const priority = todoText.startsWith('!!') ? 'high'
+            : todoText.startsWith('!') ? 'medium' : 'low';
+          const cleanText = todoText.replace(/^!+\s*/, '');
+          todos.add(cleanText, priority, 'user');
+          console.log(`\n  ${t.success(icons.success)} Todo added: ${t.accent(cleanText)}\n`);
+          break;
+        }
+
+        case 'done':
+        case 'check':
+        case 'd': {
+          if (!todoText) { console.log(`\n  ${t.dim('Usage: /todo done <text or id>')}\n`); break; }
+          const ok = todos.markDone(todoText);
+          if (ok) {
+            console.log(`\n  ${t.success('✓')} Marked done: ${t.dim(todoText)}\n`);
+          } else {
+            console.log(`\n  ${t.dim(`No open todo matching "${todoText}"`)}\n`);
+          }
+          break;
+        }
+
+        case 'remove':
+        case 'rm': {
+          if (!todoText) { console.log(`\n  ${t.dim('Usage: /todo remove <text or id>')}\n`); break; }
+          const okRm = todos.remove(todoText);
+          console.log(`\n  ${okRm ? t.success('✓ removed') : t.dim('not found')}: ${t.dim(todoText)}\n`);
+          break;
+        }
+
+        case 'clear': {
+          const removed = todos.clear(true);
+          console.log(`\n  ${t.success(icons.success)} Cleared ${removed} completed todo(s)\n`);
+          break;
+        }
+
+        case 'all': {
+          renderTodoList(todos.getAll());
+          break;
+        }
+
+        default:
+          renderTodoList(todos.getAll());
+          break;
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /git — git status, log, diff
+    // ══════════════════════════════════
+    case 'git':
+    case 'g': {
+      const gitCmd = args ? args : 'status';
+
+      const runGit = (gitArgs: string): string => {
+        try {
+          return childProcess.execSync(`git ${gitArgs}`, {
+            cwd,
+            encoding: 'utf-8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+        } catch (e: any) {
+          return e.stderr || e.message || 'git error';
+        }
+      };
+
+      switch (gitCmd) {
+        case 'status':
+        case 'st': {
+          const out = runGit('status --short --branch');
+          renderGitStatus(out);
+          break;
+        }
+
+        case 'log': {
+          const logCount = parseInt(args.split(' ')[1] ?? '') || 10;
+          const out = runGit(`log --oneline -${logCount}`);
+          renderGitLog(out);
+          break;
+        }
+
+        case 'diff': {
+          const out = runGit('diff --stat HEAD');
+          if (!out.trim()) {
+            console.log(`\n  ${t.dim('No uncommitted changes.')}\n`);
+          } else {
+            console.log(`\n  ${t.brandBold('◈ GIT DIFF (stat)')}`);
+            for (const line of out.split('\n')) {
+              if (line.includes('|')) {
+                const [file, change] = line.split('|');
+                const plusCount = (change?.match(/\+/g) ?? []).length;
+                const minusCount = (change?.match(/-/g) ?? []).length;
+                console.log(`  ${t.file(file?.trim() ?? '')} ${t.success('+'.repeat(plusCount))}${t.error('-'.repeat(minusCount))}`);
+              } else if (line.trim()) {
+                console.log(`  ${t.dim(line)}`);
+              }
+            }
+            console.log();
+          }
+          break;
+        }
+
+        case 'branch': {
+          const out = runGit('branch -a');
+          console.log(`\n  ${t.brandBold('◈ GIT BRANCHES')}`);
+          for (const line of out.split('\n')) {
+            if (!line.trim()) continue;
+            const isCurrent = line.startsWith('*');
+            console.log(`  ${isCurrent ? t.success('*') : t.dim('·')} ${isCurrent ? t.accent(line.slice(1).trim()) : t.dim(line.trim())}`);
+          }
+          console.log();
+          break;
+        }
+
+        default: {
+          const out = runGit(gitCmd);
+          if (out.trim()) console.log('\n' + out.split('\n').map(l => '  ' + t.dim(l)).join('\n') + '\n');
+          break;
+        }
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /doctor — system health check
+    // ══════════════════════════════════
+    case 'doctor': {
+      const checks: { name: string; ok: boolean; detail: string }[] = [];
+
+      const check = (name: string, fn: () => string | null): void => {
+        try {
+          const result = fn();
+          checks.push({ name, ok: result === null, detail: result ?? 'ok' });
+        } catch (e: any) {
+          checks.push({ name, ok: false, detail: e.message ?? 'error' });
+        }
+      };
+
+      check('Node.js ≥ 18', () => {
+        const v = process.versions.node.split('.').map(Number);
+        return v[0] >= 18 ? null : `found v${process.versions.node}, need v18+`;
+      });
+
+      check('git installed', () => {
+        try { childProcess.execSync('git --version', { stdio: 'pipe' }); return null; }
+        catch { return 'git not found in PATH'; }
+      });
+
+      check('project is git repo', () => {
+        return fs.existsSync(path.join(cwd, '.git')) ? null : 'no .git directory';
+      });
+
+      check('memory directory writable', () => {
+        const memDir = path.join(process.env.HOME ?? '~', '.timps');
+        try { fs.mkdirSync(memDir, { recursive: true }); return null; }
+        catch { return `cannot write to ${memDir}`; }
+      });
+
+      check(`API key for ${provider.name}`, () => {
+        const localProviders = ['ollama', 'opencode'];
+        if (localProviders.includes(provider.name)) return null;
+        const envKeys: Record<string, string> = {
+          claude: 'ANTHROPIC_API_KEY',
+          openai: 'OPENAI_API_KEY',
+          gemini: 'GEMINI_API_KEY',
+          openrouter: 'OPENROUTER_API_KEY',
+        };
+        const envKey = envKeys[provider.name];
+        return envKey && process.env[envKey] ? null : `${envKey} not set`;
+      });
+
+      if (provider.name === 'ollama') {
+        check('ollama running', () => {
+          try {
+            childProcess.execSync('curl -s http://localhost:11434/api/tags', { stdio: 'pipe', timeout: 2000 });
+            return null;
+          } catch { return 'ollama not running (try: ollama serve)'; }
+        });
+      }
+
+      const memStats = memory.stats();
+      checks.push({
+        name: 'memory health',
+        ok: true,
+        detail: `${memStats.facts} facts, ${memStats.episodes} sessions, ${memStats.patterns} patterns`,
+      });
+
+      const installed = getInstalledSkills();
+      checks.push({
+        name: 'skills installed',
+        ok: true,
+        detail: installed.length > 0 ? installed.map(s => s.name).join(', ') : 'none',
+      });
+
+      renderDoctorReport(checks);
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /think — force step-by-step thinking
+    // ══════════════════════════════════
+    case 'think': {
+      if (!args) {
+        console.log(`\n  ${t.dim('Usage: /think <your question>')}\n`);
+        break;
+      }
+      const thinkPrompt = `Think step by step about: ${args}\n\nBefore answering, reason through this carefully. Consider edge cases and potential issues.`;
+      console.log();
+      try {
+        for await (const event of agent.run(thinkPrompt)) {
+          if (event.type === 'text') process.stdout.write(event.content);
+          else if (event.type === 'thinking') {
+            console.log(`\n  ${t.dim('◈ reasoning...')}`);
+            for (const l of event.content.split('\n').slice(0, 8)) {
+              console.log(`    ${t.dim(l)}`);
+            }
+          }
+        }
+        console.log();
+      } catch (e: any) {
+        renderError((e as Error).message);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /context — show context window usage
+    // ══════════════════════════════════
+    case 'context':
+    case 'ctx': {
+      const usage = agent.getUsage();
+      const total = usage.inputTokens + usage.outputTokens;
+      const maxCtx = 200000;
+      const pct = Math.round((total / maxCtx) * 100);
+      const ctxBar = '█'.repeat(Math.round(pct / 5)) + '░'.repeat(20 - Math.round(pct / 5));
+      console.log(`\n  ${t.dim('context')} ${chalk.hex('#7C3AED')(ctxBar)} ${t.accent(`${(total / 1000).toFixed(1)}k`)} ${t.dim(`/ ${(maxCtx / 1000).toFixed(0)}k (${pct}%)`)}`);
+      console.log(`  ${t.dim('messages:')} ${agent.getMessageCount()}`);
+      if (pct > 70) {
+        console.log(`  ${t.warning('→ run /compact to free up context window')}`);
+      }
+      console.log();
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /plan — run agent in plan mode
+    // ══════════════════════════════════
+    case 'plan': {
+      if (!args) {
+        console.log(`\n  ${t.dim('Usage: /plan <task description>')}\n`);
+        break;
+      }
+      const planPrompt = `Before starting, create a detailed plan for: ${args}\n\nList each step clearly. Think about dependencies, potential issues, and the best order to proceed.`;
+      console.log();
+      try {
+        for await (const event of agent.run(planPrompt)) {
+          if (event.type === 'text') process.stdout.write(event.content);
+          else if (event.type === 'plan') {
+            renderAgentEvent(event);
+          }
+        }
+        console.log();
+      } catch (e: any) {
+        renderError((e as Error).message);
       }
       break;
     }
