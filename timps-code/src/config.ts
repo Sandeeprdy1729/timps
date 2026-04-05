@@ -43,6 +43,7 @@ export function getApiKey(config: TimpsConfig, provider: ProviderName): string |
     ollama: '',
     openrouter: 'OPENROUTER_API_KEY',
     opencode: '',
+    hybrid: ''
   };
   const envKey = envMap[provider];
   return envKey ? process.env[envKey] : undefined;
@@ -55,6 +56,7 @@ const PROVIDERS: Record<ProviderName, { label: string; needsKey: boolean; free: 
   ollama:     { label: 'Ollama (local)',     needsKey: false, free: 'deepseek-r1, qwen2.5-coder, codellama' },
   openrouter: { label: 'OpenRouter',         needsKey: true,  free: 'deepseek-r1:free, gemini-flash:free' },
   opencode:   { label: 'OpenCode (local)',    needsKey: false, free: 'Runs locally — no API key needed' },
+  hybrid:     { label: 'Hybrid Router',       needsKey: false, free: 'Routes to local if simple' },
 };
 
 const DEFAULT_MODELS: Record<ProviderName, string> = {
@@ -64,6 +66,7 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
   ollama: 'qwen2.5-coder:latest',
   openrouter: 'google/gemini-2.0-flash-exp:free',
   opencode: 'qwen2.5-coder:latest',
+  hybrid: 'auto',
 };
 
 export function getDefaultModel(provider: ProviderName): string {
@@ -89,8 +92,8 @@ export async function runSetupWizard(existing?: TimpsConfig): Promise<TimpsConfi
     if (info.free) console.log(`     ${t.dim(`Free: ${info.free}`)}`);
   });
 
-  const choice = await rl.question(t.prompt('\n  Select [1-6] (default 4=ollama): '));
-  const idx = Math.max(0, Math.min(5, parseInt(choice || '4') - 1));
+  const choice = await rl.question(t.prompt('\n  Select [1-7] (default 4=ollama): '));
+  const idx = Math.max(0, Math.min(6, parseInt(choice || '4') - 1));
   config.defaultProvider = providerKeys[idx];
 
   const prov = PROVIDERS[config.defaultProvider];

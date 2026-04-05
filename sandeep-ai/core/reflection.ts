@@ -1,6 +1,7 @@
 import { createModel, BaseModel } from '../models';
 import { memoryIndex } from '../memory/memoryIndex';
 import { curateTier, CurationInput } from './curateTier';
+import { provenForge } from './provenForge';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -115,8 +116,14 @@ Only include entries if there is meaningful information to extract. Be concise b
         memoryId: stored?.id,
       };
       await curateTier.curate(curationInput, userId);
+      
+      // ProvenForge: versioning
+      await provenForge.forge(
+        { content: memory.content, tags: memory.tags },
+        'reflection'
+      );
     } catch {
-      // CurateTier is best-effort — never block reflection
+      // CurateTier/ProvenForge is best-effort — never block reflection
     }
   }
 
@@ -202,8 +209,14 @@ Return JSON array:
             memoryId: stored?.id,
           };
           await curateTier.curate(curationInput, userId);
+          
+          // ProvenForge: versioning
+          await provenForge.forge(
+            { content: insight.content, tags: insight.tags },
+            'reflection_session'
+          );
         } catch {
-          // CurateTier is best-effort
+          // CurateTier/ProvenForge is best-effort
         }
       }
     }

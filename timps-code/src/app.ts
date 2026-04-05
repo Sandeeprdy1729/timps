@@ -3,6 +3,9 @@
 
 import * as readline from 'node:readline';
 import * as childProcess from 'node:child_process';
+import { render } from 'ink';
+import React from 'react';
+import { App } from './ui/App.js';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -32,6 +35,8 @@ export interface AppOptions {
   model?: string;
   cwd?: string;
   oneLine?: string;  // single-shot mode
+  branch?: string;   // ProvenForge lineage integration
+  merge?: string;    // ProvenForge state sync integration
 }
 
 export async function startApp(opts: AppOptions): Promise<void> {
@@ -171,8 +176,14 @@ export async function startApp(opts: AppOptions): Promise<void> {
     customInstructions: config.customInstructions,
     autoCorrect: config.autoCorrect ?? true,
     techStack: config.techStack,
+    branchName: opts.branch,
   });
   agent.setTodoStore(todos);
+  
+  if (opts.merge) {
+    // A signal to perform sync against provenForge when possible
+    agent.setPendingMergeTarget(opts.merge);
+  }
 
   // If team config exists, auto-join team
   let teamMemory: TeamMemory | undefined;
@@ -229,69 +240,17 @@ export async function startApp(opts: AppOptions): Promise<void> {
   const memoryCount = memory.query('', 999).length;
   renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: '',
-    terminal: true,
-  });
-
-  let isProcessing = false;
-
-  const promptUser = (): void => {
-    if (!isProcessing) renderPrompt();
-  };
-
-  rl.on('line', async (line) => {
-    const input = line.trim();
-    if (!input) { promptUser(); return; }
-    if (isProcessing) return;
-
-    // Slash commands
-    if (input.startsWith('/')) {
-      await handleSlashCommand(input, agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir);
-      promptUser();
-      return;
-    }
-
-    // Process user message
-    isProcessing = true;
-    console.log(); // blank line before response
-
-    try {
-      for await (const event of agent.run(input)) {
-        renderAgentEvent(event);
-        if (event.type === 'text') todos.extractFromText(event.content);
-      }
-      flushText();
-    } catch (err) {
-      renderError((err as Error).message);
-    }
-
-    isProcessing = false;
-    promptUser();
-  });
-
-  rl.on('close', () => {
+  // Interactive REPL — Handled by Ink UI
+  process.on('SIGINT', () => {
     agent.saveSession(sessionDir);
     agent.saveEpisode('success').catch(() => {});
-    console.log(`\n  ${t.dim('session saved · goodbye')}\n`);
     process.exit(0);
   });
 
-  // Handle Ctrl+C during processing
-  process.on('SIGINT', () => {
-    if (isProcessing) {
-      agent.abort();
-      isProcessing = false;
-      console.log(`\n  ${t.dim('cancelled')}`);
-      promptUser();
-    } else {
-      rl.close();
-    }
-  });
-
-  promptUser();
+  const { waitUntilExit } = render(React.createElement(App, {
+    agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir
+  }));
+  await waitUntilExit();
 }
 
 // ═══════════════════════════════════════
@@ -316,7 +275,7 @@ async function runSingleTurn(agent: Agent, message: string, model: string): Prom
 // Slash command handler
 // ═══════════════════════════════════════
 
-async function handleSlashCommand(
+export async function handleSlashCommand(
   input: string,
   agent: Agent,
   memory: Memory,
@@ -326,6 +285,7 @@ async function handleSlashCommand(
   provider: ModelProvider,
   cwd: string,
   sessionDir: string,
+  providerName?: string,
 ): Promise<void> {
   const [cmd, ...rest] = input.slice(1).split(' ');
   const args = rest.join(' ').trim();
@@ -335,6 +295,26 @@ async function handleSlashCommand(
     case 'h':
       renderHelp();
       break;
+
+    case 'provider': {
+      console.log(`\n  ${t.dim('Current provider:')} ${t.accent(providerName)}`);
+      console.log(`  ${t.dim('Current model:')} ${t.accent(provider.model)}`);
+      console.log(`\n  ${t.dim('Available providers:')}`);
+      const providers = [
+        { name: 'claude', models: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-haiku-4-5'] },
+        { name: 'openai', models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini'] },
+        { name: 'gemini', models: ['gemini-2.0-flash', 'gemini-1.5-pro'] },
+        { name: 'ollama', models: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:7b'] },
+        { name: 'deepseek', models: ['deepseek-chat', 'deepseek-coder'] },
+      ];
+      for (const p of providers) {
+        const isCurrent = p.name === providerName ? t.success('▶') : t.dim('·');
+        console.log(`  ${isCurrent} ${t.accent(p.name)}: ${p.models.join(', ')}`);
+      }
+      console.log(`\n  ${t.dim('Usage: /model')} ${t.dim('<provider> [model]')}`);
+      console.log(`  ${t.dim('Example:')} ${t.accent('/model ollama qwen2.5-coder:14b')}\n`);
+      break;
+    }
 
     case 'model':
     case 'm': {
@@ -620,7 +600,7 @@ async function handleSlashCommand(
         try {
           const newProvider = createProvider(picked);
           agent.switchProvider(newProvider);
-          renderChatReady(newProvider.model, picked);
+          renderChatReady();
         } catch (err) {
           renderError((err as Error).message);
         }
@@ -1181,6 +1161,122 @@ async function handleSlashCommand(
         console.log(`  ${t.warning('→ run /compact to free up context window')}`);
       }
       console.log();
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /forge — ProvenForge version control
+    // ══════════════════════════════════
+    case 'forge': {
+      const [forgeCmd, ...forgeArgs] = args.split(' ');
+      
+      const loadProvenForge = async () => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const pf = require('../../sandeep-ai/core/provenForge.js');
+          return pf.provenForge;
+        } catch {
+          const { provenForge } = await import('./provenForgeStub.js');
+          return provenForge;
+        }
+      };
+
+      switch (forgeCmd) {
+        case 'branch':
+        case 'branches': {
+          const pf = await loadProvenForge();
+          if (!pf) {
+            console.log(`\n  ${t.dim('ProvenForge not available (requires sandeep-ai connection)')}\n`);
+            break;
+          }
+          const versions = await pf.retrieveBy({ limit: 20 });
+          const branches: string[] = [];
+          for (const v of versions) {
+            branches.push((v as any).provenance?.branch || 'main');
+          }
+          const uniqueBranches = [...new Set(branches)];
+          console.log(`\n${panel('ProvenForge Branches', uniqueBranches.map(b => `  ${t.accent('*')} ${b}`).join('\n'))}\n`);
+          break;
+        }
+
+        case 'log': {
+          const pf = await loadProvenForge();
+          if (!pf) {
+            console.log(`\n  ${t.dim('ProvenForge not available')}\n`);
+            break;
+          }
+          const versions = await pf.retrieveBy({ limit: 10 });
+          console.log(`\n${panel('ProvenForge Versions', versions.map((v: any) => 
+            `${t.dim(v.created_at?.toISOString().slice(0, 10) || '?')} ${t.accent(v.version_id.slice(0, 8))} [${v.tier}] ${t.dim(v.provenance?.module || '?')}`
+          ).join('\n'))}\n`);
+          break;
+        }
+
+        case 'tier': {
+          const tierName = forgeArgs[0] || 'semantic';
+          if (!['raw', 'episodic', 'semantic'].includes(tierName)) {
+            console.log(`\n  ${t.dim('Tiers: raw, episodic, semantic')}\n`);
+            break;
+          }
+          const pf = await loadProvenForge();
+          if (!pf) {
+            console.log(`\n  ${t.dim('ProvenForge not available')}\n`);
+            break;
+          }
+          const versions = await pf.retrieveBy({ tier: tierName as any, limit: 10 });
+          console.log(`\n${panel(`${tierName} tier (${versions.length})`, versions.map((v: any) => 
+            `  ${t.accent(v.version_id.slice(0, 8))}: ${v.content?.slice(0, 60) || '(no content)'}...`
+          ).join('\n'))}\n`);
+          break;
+        }
+
+        case 'stats': {
+          const pf = await loadProvenForge();
+          if (!pf) {
+            console.log(`\n  ${t.dim('ProvenForge not available')}\n`);
+            break;
+          }
+          const stats = await pf.getStats();
+          const tierLines = Object.entries(stats.byTier).map(([tier, count]) => 
+            `  ${tier}: ${t.dim(String(count))}`
+          ).join('\n');
+          console.log(`\n${panel('ProvenForge Stats', [
+            `  Total versions: ${t.accent(String(stats.totalVersions))}`,
+            `  ${t.brandBold('By Tier:')}`,
+            tierLines || '  (none)',
+          ].join('\n'))}\n`);
+          break;
+        }
+
+        case 'lineage': {
+          const versionId = forgeArgs[0];
+          if (!versionId) {
+            console.log(`\n  ${t.dim('Usage: /forge lineage <version-id>')}\n`);
+            break;
+          }
+          const pf = await loadProvenForge();
+          if (!pf) {
+            console.log(`\n  ${t.dim('ProvenForge not available')}\n`);
+            break;
+          }
+          const lineage = await pf.getLineage(versionId, 10);
+          console.log(`\n${panel('Version Lineage', lineage.map((v: string, i: number) => 
+            `${'  '.repeat(i)}${i === 0 ? t.accent('*') : t.dim('│')} ${v.slice(0, 8)}`
+          ).join('\n'))}\n`);
+          break;
+        }
+
+        default: {
+          console.log(`\n${panel('ProvenForge Commands', [
+            `${t.accent('/forge branches')}    ${t.dim('List all branches')}`,
+            `${t.accent('/forge log')}         ${t.dim('Show recent versions')}`,
+            `${t.accent('/forge tier <name>')} ${t.dim('Show versions by tier (raw|episodic|semantic)')}`,
+            `${t.accent('/forge stats')}       ${t.dim('Show ProvenForge statistics')}`,
+            `${t.accent('/forge lineage <id>')} ${t.dim('Show version ancestry')}`,
+          ].join('\n'))}\n`);
+          break;
+        }
+      }
       break;
     }
 

@@ -18,6 +18,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
+const getProvenForge = async () => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pf = require('../../sandeep-ai/core/provenForge.js');
+    return pf.provenForge;
+  } catch {
+    const { provenForge } = await import('./provenForgeStub.js');
+    return provenForge;
+  }
+};
+
 export interface AgentOptions {
   provider: ModelProvider;
   cwd: string;
@@ -31,6 +42,7 @@ export interface AgentOptions {
   autoCorrect?: boolean;      // auto-retry on errors (default: true)
   techStack?: import('./types.js').TechStack;
   teamMemory?: TeamMemory;
+  branchName?: string;
 }
 
 export const TIMPS_SYSTEM_PROMPT = `You are TIMPS Code — a highly capable AI coding agent running in the user's terminal.
@@ -114,6 +126,8 @@ export class Agent {
   private teamMemory?: TeamMemory;
   private todoStore: TodoStore | null = null;
   private abortController: AbortController | null = null;
+  private branchName?: string;
+  private pendingMergeTarget?: string;
 
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
@@ -128,6 +142,7 @@ export class Agent {
     this.autoCorrect = opts.autoCorrect ?? true;
     this.techStack = opts.techStack;
     this.teamMemory = opts.teamMemory;
+    this.branchName = opts.branchName;
 
     // Initialize with system prompt
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
@@ -197,8 +212,43 @@ export class Agent {
   }
 
   // ═══════════════════════════════════════
+  // Architect Planning Mode
+  // ═══════════════════════════════════════
+
+  async *plan(userMessage: string): AsyncGenerator<AgentEvent> {
+    this.abortController = new AbortController();
+    const planPrompt = `You are the Lead Architect. The user asks: "${userMessage}".
+Do not write implementation code. Do not use tools.
+Draft a concise, bulleted implementation plan. Break the problem into 3-5 high-level steps.
+End your response with a confirmation question.`;
+    
+    const messages: Message[] = [{ role: 'system', content: planPrompt }, { role: 'user', content: userMessage }];
+    let fullText = '';
+    
+    try {
+      for await (const event of this.provider.stream(messages, [], { signal: this.abortController.signal })) {
+        if (event.type === 'text') {
+          fullText += event.content;
+          yield { type: 'text', content: event.content };
+        }
+      }
+    } catch (err) {
+      yield { type: 'error', message: `Planning failed: ${(err as Error).message}` };
+    }
+  }
+
+  // ═══════════════════════════════════════
   // Main execution loop
   // ═══════════════════════════════════════
+
+  private pendingUserAnswerResolver: ((ans: string) => void) | null = null;
+
+  public answerUserQuestion(answer: string) {
+    if (this.pendingUserAnswerResolver) {
+      this.pendingUserAnswerResolver(answer);
+      this.pendingUserAnswerResolver = null;
+    }
+  }
 
   async *run(userMessage: string): AsyncGenerator<AgentEvent> {
     this.abortController = new AbortController();
@@ -329,6 +379,22 @@ export class Agent {
 
   private async *executeToolCalls(toolCalls: ToolCall[]): AsyncGenerator<AgentEvent> {
     for (const tc of toolCalls) {
+      // Intercept the ask_user tool manually
+      if (tc.name === 'ask_user') {
+        const question = String(tc.arguments.question || 'Provide input:');
+        yield { type: 'ask_user', question, callId: tc.id };
+        const answer = await new Promise<string>(resolve => {
+          this.pendingUserAnswerResolver = resolve;
+        });
+        this.messages.push({
+          role: 'tool',
+          content: answer,
+          toolCallId: tc.id,
+          name: tc.name,
+        });
+        continue;
+      }
+
       const tool = getTool(tc.name);
       if (!tool) {
         this.messages.push({
@@ -480,6 +546,21 @@ export class Agent {
       for (const f of res.filesModified) this.memory.trackFile(f);
     }
 
+    try {
+      if (!res.isError) {
+        const pf = await getProvenForge();
+        if (pf) {
+          await pf.forge(
+            { content: res.content },
+            'timps-code-tool-' + tc.name,
+            this.branchName
+          );
+        }
+      }
+    } catch {
+      // Ignored if provenForge is not fully accessible
+    }
+
     return { id: tc.id, result: res.content, success: !res.isError, tool: tc.name, durationMs };
   }
 
@@ -510,6 +591,19 @@ export class Agent {
       if (m) {
         const fact = m[0].trim();
         this.memory.storeFact(fact, 'architecture');
+        
+        // Forge key decisions into ProvenForge with branch context
+        try {
+          const pf = await getProvenForge();
+          if (pf) {
+            await pf.forge(
+              { content: fact, tags: ['decision', 'architecture', 'key-insight'], branch: this.branchName },
+              'timps-code-decision',
+              this.branchName
+            );
+          }
+        } catch { /* best-effort */ }
+        
         return fact;
       }
     }
@@ -694,6 +788,16 @@ ${historyText}`;
   // ═══════════════════════════════════════
   // Session persistence — never lose history
   // ═══════════════════════════════════════
+
+  setPendingMergeTarget(target: string): void {
+    this.pendingMergeTarget = target;
+    if (this.branchName && this.pendingMergeTarget) {
+       console.log(`[ProvenForge] Initiating merge: ${this.pendingMergeTarget} -> ${this.branchName}`);
+       getProvenForge().then(pf => {
+         if (pf) pf.safeMerge(this.pendingMergeTarget!, this.branchName!, true).catch(()=>{});
+       });
+    }
+  }
 
   saveSession(sessionDir: string): void {
     fs.mkdirSync(sessionDir, { recursive: true });

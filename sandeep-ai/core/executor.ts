@@ -2,6 +2,7 @@ import { getToolByName, executeTool } from '../tools';
 import { Plan, PlanStep } from './planner';
 import { Message } from '../models/baseModel';
 import { createModel, BaseModel } from '../models';
+import { provenForge } from './provenForge';
 
 export interface ExecutionResult {
   success: boolean;
@@ -47,6 +48,19 @@ Otherwise, provide your direct response.`;
             ...toolCall.params,
             tool_call_id: step.id,
           });
+          
+          // ProvenForge: automatically branch tool output
+          if (!result.error) {
+            try {
+              await provenForge.forge(
+                { content: result.result },
+                toolCall.tool,
+                step.id
+              );
+            } catch {
+              // Best-effort tracking
+            }
+          }
           
           return {
             success: !result.error,

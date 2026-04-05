@@ -15,6 +15,13 @@ export interface RouterResult {
   complexity: 'simple' | 'moderate' | 'complex';
 }
 
+export interface VersionSelection {
+  tier?: 'raw' | 'episodic' | 'semantic';
+  branch?: string;
+  versionId?: string;
+  intent: 'latest' | 'lineage' | 'merge' | 'specific';
+}
+
 // Fast keyword map — zero LLM cost for obvious triggers
 const KEYWORD_ROUTES: Array<{ patterns: RegExp[]; route: Omit<ToolRoute, 'reason'> }> = [
   {
@@ -212,12 +219,75 @@ If no tools needed return: {"routes":[],"needs_planning":false,"complexity":"sim
       { pattern: /\b(decision|chose|why did (i|we)|history of)\b/i, intent: 'decision_history' },
       { pattern: /\b(skill|growth|improve|evolution|trajectory)\b/i, intent: 'skill_evolution' },
       { pattern: /\b(relationship|team|drift|colleague)\b/i, intent: 'relationship' },
+      { pattern: /\b(branch|merge|version|latest semantic|provenance)\b/i, intent: 'provenance_forge' },
     ];
 
     for (const { pattern, intent } of intentPatterns) {
       if (pattern.test(message)) return intent;
     }
     return null;
+  }
+
+  /**
+   * Detect version/tier selection intent from message.
+   * Enables routing to specific ProvenForge tiers/branches.
+   */
+  detectVersionIntent(message: string): VersionSelection {
+    const lower = message.toLowerCase();
+    
+    if (/\bmerge\b.*\bbranch\b|\bbranch\b.*\bmerge\b/i.test(lower)) {
+      const branchMatch = lower.match(/branch[:\s]+(\w+)/i);
+      return { intent: 'merge', branch: branchMatch?.[1] };
+    }
+    
+    if (/\blatest\b.*\bsemantic\b|\bsemantic\b.*\blatest\b/i.test(lower)) {
+      return { intent: 'latest', tier: 'semantic' };
+    }
+    
+    if (/\blatest\b.*\bepisodic\b|\bepisodic\b.*\blatest\b/i.test(lower)) {
+      return { intent: 'latest', tier: 'episodic' };
+    }
+    
+    if (/\bversion\s+[a-f0-9-]{8,}/i.test(lower) || /\bcommit\s+[a-f0-9-]{8,}/i.test(lower)) {
+      const vidMatch = lower.match(/([a-f0-9-]{36}|[a-f0-9]{8,})/i);
+      return { intent: 'specific', versionId: vidMatch?.[1] };
+    }
+    
+    if (/\bbranch\s+(\w+)/i.test(lower)) {
+      const branchMatch = lower.match(/branch\s+(\w+)/i);
+      return { intent: 'latest', branch: branchMatch?.[1] };
+    }
+    
+    if (/\b(lineage|history|ancestor|parent)\b/i.test(lower)) {
+      return { intent: 'lineage' };
+    }
+    
+    if (/\b(semantic|episodic|raw)\s+tier\b/i.test(lower)) {
+      const tierMatch = lower.match(/(semantic|episodic|raw)/i);
+      return { intent: 'latest', tier: tierMatch?.[1] as any };
+    }
+    
+    return { intent: 'latest' };
+  }
+
+  /**
+   * Build version-aware routing hint for the system prompt.
+   */
+  buildVersionHint(selection: VersionSelection): string {
+    const parts: string[] = ['[ProvenForge]'];
+    
+    if (selection.branch) {
+      parts.push(`Branch: ${selection.branch}`);
+    }
+    if (selection.tier) {
+      parts.push(`Tier: ${selection.tier}`);
+    }
+    if (selection.versionId) {
+      parts.push(`Version: ${selection.versionId.slice(0, 8)}`);
+    }
+    parts.push(`Intent: ${selection.intent}`);
+    
+    return parts.join(' | ');
   }
 }
 

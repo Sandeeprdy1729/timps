@@ -5,6 +5,7 @@ import { createClaudeProvider } from './claude.js';
 import { createOpenAIProvider, createOpenRouterProvider } from './openai.js';
 import { createGeminiProvider } from './gemini.js';
 import { createOllamaProvider } from './ollama.js';
+import { HybridProvider } from './hybrid.js';
 
 export function createProvider(provider?: ProviderName, model?: string): ModelProvider {
   const config = loadConfig();
@@ -39,8 +40,26 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
       return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:latest');
     }
+    case 'hybrid': {
+      const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
+      const fastP = createOllamaProvider(ollamaUrl, 'qwen2.5-coder:latest');
+      let heavyP: ModelProvider;
+      
+      const key = getApiKey(config, 'claude');
+      if (key) {
+        heavyP = createClaudeProvider(key, model || config.defaultModel);
+      } else {
+        const oApiKey = getApiKey(config, 'openai');
+        if (oApiKey) {
+           heavyP = createOpenAIProvider({ apiKey: oApiKey, model: model || config.defaultModel });
+        } else {
+           throw new Error('Hybrid mode requires a valid Claude or OpenAI key as the heavy provider.');
+        }
+      }
+      return new HybridProvider(fastP, heavyP);
+    }
     default:
-      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter, opencode`);
+      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter, opencode, hybrid`);
   }
 }
 
@@ -51,6 +70,7 @@ export const POPULAR_MODELS: Record<ProviderName, string[]> = {
   ollama: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:13b', 'llama3.1:8b', 'mistral:7b'],
   openrouter: ['anthropic/claude-sonnet-4-20250514', 'google/gemini-2.5-flash', 'meta-llama/llama-3.1-405b-instruct'],
   opencode: ['qwen2.5-coder:latest', 'llama3.1:8b', 'mistral:latest', 'gemma3:1b', 'llama3.2:latest'],
+  hybrid: ['auto']
 };
 
 export { createClaudeProvider } from './claude.js';

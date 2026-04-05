@@ -1,5 +1,7 @@
 import { createModel, BaseModel } from '../models';
 import { Message } from '../models/baseModel';
+import { provenForge } from './provenForge';
+import { VersionSelection } from './toolRouter';
 
 export interface PlanStep {
   id: string;
@@ -7,6 +9,7 @@ export interface PlanStep {
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   result?: string;
   dependsOn?: string[];
+  versionContext?: string;
 }
 
 export interface Plan {
@@ -22,11 +25,12 @@ export class Planner {
     this.model = createModel();
   }
   
-  async createPlan(goal: string, context?: string): Promise<Plan> {
+  async createPlan(goal: string, context?: string, versionContext?: string): Promise<Plan> {
     const planningPrompt = `You are a task planner. Break down the user's goal into clear, executable steps.
 
 Goal: ${goal}
 ${context ? `Context: ${context}` : ''}
+${versionContext ? `Version/Provenance: ${versionContext}` : ''}
 
 Return a JSON array of steps, where each step has:
 - id: unique identifier (e.g., "step_1", "step_2")
@@ -72,6 +76,35 @@ Create a practical plan with 2-8 steps maximum.`;
       }],
       status: 'planning',
     };
+  }
+  
+  async createVersionAwarePlan(
+    goal: string,
+    context?: string,
+    versionSelection?: VersionSelection
+  ): Promise<Plan> {
+    let versionContext = '';
+    
+    if (versionSelection) {
+      if (versionSelection.intent === 'lineage') {
+        if (versionSelection.branch) {
+          const latest = await provenForge.getLatestForBranch(versionSelection.branch, versionSelection.tier);
+          if (latest) {
+            const lineage = await provenForge.getLineage(latest.version_id, 5);
+            versionContext = `Lineage history: ${lineage.map(v => v.slice(0, 8)).join(' → ')}`;
+          }
+        }
+      } else if (versionSelection.intent === 'specific' && versionSelection.versionId) {
+        const lineage = await provenForge.getLineage(versionSelection.versionId, 5);
+        versionContext = `Viewing version ${versionSelection.versionId.slice(0, 8)} with lineage: ${lineage.map(v => v.slice(0, 8)).join(' → ')}`;
+      } else if (versionSelection.intent === 'latest') {
+        versionContext = await provenForge.buildVersionContext(versionSelection.branch, versionSelection.tier);
+      } else if (versionSelection.intent === 'merge') {
+        versionContext = `[ProvenForge] Merge intent for branch: ${versionSelection.branch}`;
+      }
+    }
+    
+    return this.createPlan(goal, context, versionContext);
   }
   
   async refinePlan(plan: Plan, feedback: string): Promise<Plan> {
@@ -139,6 +172,18 @@ Return the refined plan in the same JSON format.`;
       status: status === 'completed' && plan.steps.every(s => s.status === 'completed')
         ? 'completed'
         : 'executing',
+    };
+  }
+  
+  async injectVersionContext(plan: Plan, versionSelection: VersionSelection): Promise<Plan> {
+    const versionContext = await provenForge.buildVersionContext(versionSelection.branch, versionSelection.tier);
+    
+    return {
+      ...plan,
+      steps: plan.steps.map(step => ({
+        ...step,
+        versionContext: versionContext || undefined,
+      })),
     };
   }
 }

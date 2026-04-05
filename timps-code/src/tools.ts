@@ -853,14 +853,198 @@ const gitStash: RegisteredTool = {
 };
 
 // ══════════════════════════════════════════
+// TOOL 19: run_diagnostics
+// ══════════════════════════════════════════
+const runDiagnostics: RegisteredTool = {
+  definition: {
+    name: 'run_diagnostics',
+    description: 'Run project diagnostics/linting (tsc, eslint, pyright) in the workspace to automatically find code quality issues. Preferred over bash for checking correctness.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', description: 'ts, eslint, pyright - or leave empty to auto-detect based on workspace.' }
+      }
+    }
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      let cmd = '';
+      if (args.type === 'ts') cmd = 'npx tsc --noEmit';
+      else if (args.type === 'eslint') cmd = 'npx eslint .';
+      else if (args.type === 'pyright') cmd = 'npx pyright';
+      else {
+        // autodetect
+        if (fs.existsSync(path.join(cwd, 'tsconfig.json'))) cmd = 'npx tsc --noEmit';
+        else if (fs.existsSync(path.join(cwd, '.eslintrc.json'))) cmd = 'npx eslint .';
+        else cmd = 'echo "No supported diagnostic config found."';
+      }
+      
+      const result = childProcess.execSync(cmd, { cwd, encoding: 'utf-8', timeout: 20000 });
+      return { content: `Diagnostics passed:\n${result.trim().slice(0, 500)}`, isError: false };
+    } catch (e: unknown) {
+      const err = e as { stderr?: string; stdout?: string; message: string };
+      const out = [err.stdout?.toString().trim(), err.stderr?.toString().trim()].filter(Boolean).join('\n');
+      // Return as isError: false so the agent doesn't "fail" the tool call, but rather reads the diagnostics
+      return { content: `Diagnostics failed:\n${(out || err.message).slice(0, 3000)}`, isError: false };
+    }
+  }
+};
+
+// ══════════════════════════════════════════
 // Registry
 // ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+// TOOL 20: ask_user
+// ══════════════════════════════════════════
+const askUser: RegisteredTool = {
+  definition: {
+    name: 'ask_user',
+    description: 'Pause execution and ask the user a clarifying question. Use this when you encounter ambiguity and cannot safely proceed without human input. Returns the user\'s response.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'The question to ask the user' }
+      },
+      required: ['question']
+    }
+  },
+  risk: 'low',
+  async execute(args) {
+    // This tool is intercepted by the agent loop directly, so it natively bubbles up.
+    // We just return a marker. The agent will handle the UI block.
+    return { content: `[[ASK_USER]] ${args.question}`, isError: false };
+  }
+};
+
+// ══════════════════════════════════════════
+// Registry
+// ══════════════════════════════════════════
+
+import { mcpManager } from './mcp.js';
+
+// ══════════════════════════════════════════
+// TOOL 21: mcp_list_servers
+// ══════════════════════════════════════════
+const mcpListServers: RegisteredTool = {
+  definition: {
+    name: 'mcp_list_servers',
+    description: 'List available Model Context Protocol (MCP) servers configured by the user.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  risk: 'low',
+  async execute() {
+    const servers = mcpManager.getAvailableServers();
+    return { content: `Available MCP Servers:\n${servers.join('\n') || '(no servers configured)'}`, isError: false };
+  }
+};
+
+// ══════════════════════════════════════════
+// TOOL 22: mcp_list_tools
+// ══════════════════════════════════════════
+const mcpListTools: RegisteredTool = {
+  definition: {
+    name: 'mcp_list_tools',
+    description: 'List all tools available on a specific MCP server.',
+    inputSchema: {
+      type: 'object',
+      properties: { serverName: { type: 'string', description: 'The registered name of the MCP server' } },
+      required: ['serverName']
+    }
+  },
+  risk: 'low',
+  async execute(args) {
+    try {
+      const resp = await mcpManager.getToolsForServer(String(args.serverName));
+      return { content: JSON.stringify(resp.tools, null, 2), isError: false };
+    } catch (e: any) {
+      return { content: `Error: ${e.message}`, isError: true };
+    }
+  }
+};
+
+// ══════════════════════════════════════════
+// TOOL 23: mcp_call_tool
+// ══════════════════════════════════════════
+const mcpCallTool: RegisteredTool = {
+  definition: {
+    name: 'mcp_call_tool',
+    description: 'Call a function on an MCP server. Use mcp_list_tools first to see the required schema.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        serverName: { type: 'string', description: 'The registered name of the MCP server' },
+        toolName: { type: 'string', description: 'The name of the tool to execute' },
+        toolArgs: { type: 'object', description: 'The JSON arguments specifically required by the MCP tool' }
+      },
+      required: ['serverName', 'toolName', 'toolArgs']
+    }
+  },
+  risk: 'medium',
+  async execute(args) {
+    try {
+      const resp = await mcpManager.callTool(String(args.serverName), String(args.toolName), args.toolArgs);
+      return { content: JSON.stringify(resp, null, 2), isError: false };
+    } catch (e: any) {
+      return { content: `Error: ${e.message}`, isError: true };
+    }
+  }
+};
+
+// ══════════════════════════════════════════
+// TOOL 24: browser_automation
+// ══════════════════════════════════════════
+const browserAutomation: RegisteredTool = {
+  definition: {
+    name: 'browser_automation',
+    description: 'Launch or control a headless browser to visually test web applications running on localhost. Can retrieve HTML, access the console, take screenshots, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: 'goto, screenshot, html, eval' },
+        url: { type: 'string', description: 'URL to visit (for goto action)' },
+        script: { type: 'string', description: 'JavaScript to evaluate in the page (for eval action)' }
+      },
+      required: ['action']
+    }
+  },
+  risk: 'low',
+  async execute(args) {
+    try {
+      const { getBrowserPage } = await import('./browser.js');
+      const page = await getBrowserPage();
+      const action = String(args.action);
+      
+      if (action === 'goto') {
+        const url = String(args.url);
+        await page.goto(url, { waitUntil: 'networkidle2' });
+        return { content: `Navigated to ${url}. Title: ${await page.title()}`, isError: false };
+      } else if (action === 'screenshot') {
+        const pathStr = './screenshot.png';
+        await page.screenshot({ path: pathStr, fullPage: true });
+        return { content: `Screenshot saved to ${pathStr}. You can now view this and manually verify visual alignment, or pass it to a vision model.`, isError: false };
+      } else if (action === 'html') {
+        const html = await page.content();
+        return { content: html.slice(0, 10000) + '... (truncated)', isError: false };
+      } else if (action === 'eval') {
+        const result = await page.evaluate(String(args.script));
+        return { content: `Result: ${JSON.stringify(result)}`, isError: false };
+      } else {
+        return { content: `Unknown action: ${action}`, isError: true };
+      }
+    } catch (e: any) {
+      return { content: `Browser error: ${e.message}`, isError: true };
+    }
+  }
+};
 
 export const ALL_TOOLS: RegisteredTool[] = [
   readFile, writeFile, editFile, multiEdit, listDirectory,
   bash, searchCode, findFiles, gitStatus, gitCommit,
   patchFile, think, webSearch, fetchUrl, notebook,
-  gitDiff, gitLog, gitStash,
+  gitDiff, gitLog, gitStash, runDiagnostics, askUser,
+  mcpListServers, mcpListTools, mcpCallTool, browserAutomation
 ];
 
 // Essential tools for local/small models — keeps prompt manageable
