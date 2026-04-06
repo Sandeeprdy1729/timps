@@ -662,6 +662,13 @@ export function renderHelp(): void {
     ['/forge log', 'show version history'],
     ['/forge stats', 'show forge statistics'],
 
+    // Multimodal Memory
+    ['/vision store <path>', 'store image in memory'],
+    ['/vision search <query>', 'find similar images'],
+    ['/audio store <path>', 'store audio in memory'],
+    ['/recall <query>', 'search all memories (text+image+audio)'],
+    ['/visionstats', 'show multimodal memory stats'],
+
     // Team
     ['/team join <proj> <name>', 'join/create team'],
     ['/team status', 'show team info'],
@@ -679,6 +686,7 @@ export function renderHelp(): void {
       cmd.startsWith('/skill') ? 'skills' :
       cmd.startsWith('/forge') ? 'forge' :
       cmd.startsWith('/team') ? 'team' :
+      cmd.startsWith('/vision') || cmd.startsWith('/audio') || cmd.startsWith('/recall') || cmd.startsWith('/vstats') ? 'multimodal' :
       cmd.startsWith('/save') || cmd.startsWith('/compact') || cmd.startsWith('/undo') || cmd.startsWith('/plan') || cmd.startsWith('/think') || cmd.startsWith('/context') ? 'session' :
       'general';
 
