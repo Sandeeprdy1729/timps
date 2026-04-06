@@ -28,6 +28,9 @@ import {
 } from './renderer.js';
 import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from './ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from './skills.js';
+import { MultimodalMemory } from './multimodalMemory.js';
+import { handleMultimodalCommand } from './multimodalCommands.js';
+import { handleVoiceCommand, handleDocumentCommand, handleUploadCommand } from './inputCommands.js';
 import { formatCost } from './utils.js';
 
 export interface AppOptions {
@@ -164,6 +167,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   const todos = new TodoStore(projectId);
   const snapshots = new SnapshotManager(projectId);
   const permissions = new Permissions(config.trustLevel, config.pathRules);
+  const multimodalMemory = new MultimodalMemory(cwd);
 
   // Create agent
   const agent = new Agent({
@@ -248,7 +252,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   });
 
   const { waitUntilExit } = render(React.createElement(App, {
-    agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir
+    agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem: multimodalMemory
   }));
   await waitUntilExit();
 }
@@ -286,6 +290,7 @@ export async function handleSlashCommand(
   cwd: string,
   sessionDir: string,
   providerName?: string,
+  multimodalMem?: MultimodalMemory,
 ): Promise<void> {
   const [cmd, ...rest] = input.slice(1).split(' ');
   const args = rest.join(' ').trim();
@@ -1161,6 +1166,55 @@ export async function handleSlashCommand(
         console.log(`  ${t.warning('→ run /compact to free up context window')}`);
       }
       console.log();
+      break;
+    }
+
+    // ══════════════════════════════════
+    // Multimodal Memory Commands
+    // ══════════════════════════════════
+    case 'vision':
+    case 'vis':
+    case 'audio':
+    case 'sound':
+    case 'recall':
+    case 'remember':
+    case 'visionstats':
+    case 'vstats': {
+      if (multimodalMem) {
+        await handleMultimodalCommand(cmd, args, multimodalMem);
+      } else {
+        console.log(chalk.dim('\n Multimodal memory not available\n'));
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // Voice Input Commands
+    // ══════════════════════════════════
+    case 'voice': {
+      const result = await handleVoiceCommand(args);
+      if (result) {
+        console.log(`\n  ${t.dim('Use this as input or /ask <question>')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // Document Commands
+    // ══════════════════════════════════
+    case 'doc': {
+      const result = await handleDocumentCommand(args);
+      if (result) {
+        console.log(`\n  ${t.dim('Document parsed. Use /ask about it')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // Upload Commands
+    // ══════════════════════════════════
+    case 'upload': {
+      await handleUploadCommand(args);
       break;
     }
 

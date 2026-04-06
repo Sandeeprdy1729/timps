@@ -39,10 +39,13 @@
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",
     "marked": "^17.0.6",
+    "mic": "^2.1.2",
     "ora": "^8.1.0",
+    "pdf-parse": "^2.4.5",
     "puppeteer": "^24.40.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "speech-to-text": "^3.0.2"
   },
   "devDependencies": {
     "@types/diff": "^5.2.0",

@@ -18,9 +18,10 @@ interface AppProps {
   provider: any;
   cwd: string;
   sessionDir: string;
+  multimodalMem?: any;
 }
 
-export const App = ({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir }: AppProps) => {
+export const App = ({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem }: AppProps) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -109,7 +110,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
       } else {
         // Try using the slash command handler
         try {
-          await handleSlashCommand(query, agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, 'ollama');
+          await handleSlashCommand(query, agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, 'ollama', multimodalMem);
         } catch (err) {
           console.log(`\n  Unknown command: ${query}\n`);
         }
