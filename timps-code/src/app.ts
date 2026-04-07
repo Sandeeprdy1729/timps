@@ -1322,15 +1322,76 @@ export async function handleSlashCommand(
 
         default: {
           console.log(`\n${panel('ProvenForge Commands', [
-            `${t.accent('/forge branches')}    ${t.dim('List all branches')}`,
-            `${t.accent('/forge log')}         ${t.dim('Show recent versions')}`,
-            `${t.accent('/forge tier <name>')} ${t.dim('Show versions by tier (raw|episodic|semantic)')}`,
-            `${t.accent('/forge stats')}       ${t.dim('Show ProvenForge statistics')}`,
-            `${t.accent('/forge lineage <id>')} ${t.dim('Show version ancestry')}`,
+            `  ${t.accent('/forge branches')}    List version branches`,
+            `  ${t.accent('/forge log')}         Recent versions`,
+            `  ${t.accent('/forge tier <raw|episodic|semantic>')}  Versions by tier`,
+            `  ${t.accent('/forge stats')}       Version statistics`,
+            `  ${t.accent('/forge lineage <id>')} Version lineage DAG`,
           ].join('\n'))}\n`);
-          break;
         }
       }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /govern — GovernTier policy governance
+    // ══════════════════════════════════
+    case 'govern': {
+      const loadGovernTier = async () => {
+        try {
+          const pf = require('../../sandeep-ai/core/governTier.js');
+          return pf.governTier;
+        } catch {
+          return null;
+        }
+      };
+
+      const gov = await loadGovernTier();
+      if (!gov) {
+        console.log(`\n  ${t.dim('GovernTier not available (requires sandeep-ai connection)')}\n`);
+        break;
+      }
+
+      if (!args || args === 'stats') {
+        const stats = await gov.getGovernanceStats();
+        const tierLines = Object.entries(stats.byTier).map(([tier, count]) =>
+          `  ${tier}: ${t.accent(String(count))}`
+        ).join('\n');
+        const statusLines = Object.entries(stats.byStatus).map(([status, count]) =>
+          `  ${status}: ${t.accent(String(count))}`
+        ).join('\n');
+        console.log(`\n${panel('GovernTier Stats', [
+          `  ${t.brandBold('Total Governed:')} ${t.accent(String(stats.totalGoverned))}`,
+          `  ${t.brandBold('By Tier:')}`,
+          tierLines || '  (none)',
+          `  ${t.brandBold('By Status:')}`,
+          statusLines || '  (none)',
+          `  Conflicts Resolved: ${t.accent(String(stats.conflictsResolved))}`,
+        ].join('\n'))}\n`);
+        break;
+      }
+
+      if (args === 'policies') {
+        const policies = Array.from((gov as any).policies?.values?.() || []);
+        console.log(`\n${panel('Governance Policies', policies.map((p: any) =>
+          `  ${t.accent(p.name)} [${p.policy_type}] v${p.version}`
+        ).join('\n') || '  (none)')}\n`);
+        break;
+      }
+
+      if (args === 'evolve') {
+        console.log(`\n  ${t.info('Evolving policies...')}`);
+        await gov.evolvePolicies();
+        console.log(`  ${t.success(icons.success)} Policy evolution complete\n`);
+        break;
+      }
+
+      console.log(`\n${panel('GovernTier Commands', [
+        `  ${t.accent('/govern')}           Governance statistics`,
+        `  ${t.accent('/govern stats')}     Detailed statistics`,
+        `  ${t.accent('/govern policies')}  List active policies`,
+        `  ${t.accent('/govern evolve')}    Trigger policy evolution`,
+      ].join('\n'))}\n`);
       break;
     }
 
