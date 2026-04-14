@@ -93,7 +93,7 @@ export interface StreamOptions {
   signal?: AbortSignal;
 }
 
-export type ProviderName = 'claude' | 'openai' | 'gemini' | 'ollama' | 'openrouter' | 'opencode' | 'hybrid';
+export type ProviderName = 'claude' | 'openai' | 'gemini' | 'ollama' | 'openrouter' | 'opencode' | 'hybrid' | 'timps' | 'timps-coder';
 
 // ═══════════════════════════════════════
 // Planning

@@ -18,34 +18,44 @@ import { SnapshotManager } from './snapshot.js';
 import { Permissions } from './permissions.js';
 import { TodoStore } from './todo.js';
 import { loadConfig, saveConfig, runSetupWizard, getProjectId, getApiKey, getDefaultModel } from './config.js';
-import { createProvider, POPULAR_MODELS } from './models/index.js';
+import { runDataPipeline, type DataPipelineConfig } from './data-pipeline.js';
 import { t, icons, SMALL_LOGO, panel } from './theme.js';
-import {
-  renderAgentEvent, renderLandingPage, renderHelp,
-  renderPrompt, renderError, flushText, renderChatReady,
-  renderMemoryPanel, renderTodoList, renderDoctorReport,
-  renderGitStatus, renderGitLog, renderModelsList, renderSkills,
-} from './renderer.js';
+import { renderAgentEvent, renderLandingPage, renderHelp, renderPrompt, renderError, flushText, renderChatReady, renderMemoryPanel, renderTodoList, renderDoctorReport, renderGitStatus, renderGitLog, renderModelsList, renderSkills } from './renderer.js';
 import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from './ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from './skills.js';
 import { MultimodalMemory } from './multimodalMemory.js';
 import { handleMultimodalCommand } from './multimodalCommands.js';
 import { handleVoiceCommand, handleDocumentCommand, handleUploadCommand } from './inputCommands.js';
 import { formatCost } from './utils.js';
+import { createProvider } from './models/index.js';
 
 export interface AppOptions {
   provider?: ProviderName;
   model?: string;
   cwd?: string;
-  oneLine?: string;  // single-shot mode
-  branch?: string;   // ProvenForge lineage integration
-  merge?: string;    // ProvenForge state sync integration
+  oneLine?: string;
+  branch?: string;
+  merge?: string;
+  grpo?: boolean;
+  grpoModel?: string;
+  mineBugs?: boolean;
+  bugSource?: string;
+  warRoom?: boolean;
+  binarySynth?: boolean;
+  binaryArch?: string;
+  binaryOptimizer?: string;
 }
 
 export async function startApp(opts: AppOptions): Promise<void> {
   const cwd = opts.cwd || process.cwd();
   const config = loadConfig();
   let ollamaModels: string[] = [];
+
+  // Hardcore mode flags
+  if (opts.grpo) console.log(`${t.accent('🧠')} GRPO training loop enabled`);
+  if (opts.mineBugs) console.log(`${t.accent('🔍')} Human mistake mining enabled`);
+  if (opts.warRoom) console.log(`${t.warning('🔥')} WAR ROOM MODE - 19hr sessions`);
+  if (opts.binarySynth) console.log(`${t.warning('⚡')} DIRECT BINARY SYNTHESIS enabled`);
 
   // ── Step 1: Show the TIMPS banner immediately ──
   console.log();
@@ -1151,6 +1161,59 @@ export async function handleSlashCommand(
     }
 
     // ══════════════════════════════════
+    // /optimus — sentence-to-product pipeline
+    // ══════════════════════════════════
+    case 'optimus': {
+      if (!args) {
+        console.log(`\n  ${t.brandBold('🚀 Digital Optimus')}`);
+        console.log(`  ${t.dim('Sentence-to-Product pipeline')}`);
+        console.log(`\n  ${t.dim('Usage:')} ${t.accent('/optimus <product description>')}`);
+        console.log(`  ${t.dim('Example:')} ${t.accent('/optimus a high-frequency trading bot in Rust')}`);
+        console.log(`\n  ${t.dim('Options:')}`);
+        console.log(`    ${t.accent('--war-room')}     19h sessions, max iterations`);
+        console.log(`    ${t.accent('--binary-synth')} Direct binary compilation`);
+        console.log(`    ${t.accent('--arch <arch>')}   Target: x86_64, aarch64, wasm\n`);
+        break;
+      }
+
+      const { DigitalOptimus } = await import('./optimus.js');
+      const { NavigatorAgent } = await import('./agent/navigator.js');
+      
+      const isWarRoom = args.includes('--war-room');
+      const isBinary = args.includes('--binary-synth');
+      const archMatch = args.match(/--arch\s+(\S+)/);
+      const cleanArgs = args.replace(/--war-room|--binary-synth|--arch\s+\S+/g, '').trim();
+
+      console.log(`\n  ${t.brandBold('🚀 Digital Optimus')}`);
+      console.log(`  ${t.dim('Building:')} ${t.accent(cleanArgs)}`);
+      if (isWarRoom) console.log(`  ${t.warning('🔥 War Room Mode')}`);
+      if (isBinary) console.log(`  ${t.warning('⚡ Binary Synthesis')}`);
+      console.log();
+
+      const optimus = new DigitalOptimus(cwd, {
+        warRoom: isWarRoom,
+        binarySynth: isBinary,
+        targetArch: archMatch ? archMatch[1] : 'x86_64',
+        grpoEnabled: true,
+      });
+
+      const navigator = new NavigatorAgent(provider, cwd, ['coder', 'debugger', 'reviewer', 'architect']);
+      optimus.setNavigator(navigator);
+
+      try {
+        for await (const event of optimus.execute(cleanArgs)) {
+          if (event.type === 'text') process.stdout.write(event.content);
+          else if (event.type === 'status') console.log(`  ${event.message}`);
+          else if (event.type === 'error') console.log(`  ${t.error(event.message)}`);
+        }
+        console.log();
+      } catch (e: any) {
+        renderError((e as Error).message);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
     // /context — show context window usage
     // ══════════════════════════════════
     case 'context':
@@ -1480,4 +1543,7 @@ async function pickProvider(config: import('./types.js').TimpsConfig): Promise<P
   console.log(`\n  ${t.success(`${icons.success} Switched to ${PROVIDER_MENU[idx].label}`)}`);
   return chosen;
 }
+
+export { runDataPipeline };
+export type { DataPipelineConfig } from './data-pipeline.js';
 

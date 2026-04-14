@@ -1,50 +1,183 @@
-# TIMPs — AI Memory Intelligence
+# TIMPs — AI Coding Agent
 
-Memory-backed inline warnings directly in your editor, powered by a free cloud backend.
+A powerful AI coding agent for VS Code, like Claude Code and OpenCode.
 
-## What it does
+[![Install](https://img.shields.io/badge/VS%20Code-Install-blue)](https://marketplace.visualstudio.com/items?itemName=sandeeprdy1729.timps-vscode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **Bug Pattern Warnings** — inline highlights when your code matches personal bug-writing triggers
-- **Tech Debt Alerts** — warns when patterns match past production incidents in your codebase
-- **API Quirk Lookup** — instantly see known gotchas for any API you're working with
-- **Contradiction Detection** — check if a decision contradicts your past positions
-- **Status Bar** — live connection status to TIMPs cloud
+---
 
-## Quick Start
+## ⌨️ Keyboard Shortcuts
 
-1. Install this extension from the VS Code Marketplace
-2. Done! It connects to the **free TIMPs cloud** automatically
-3. Start coding — inline warnings appear on save
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+Esc` | Open TIMPs terminal |
+| `Cmd+Shift+Esc` | New TIMPs session |
+| `Cmd+Shift+C` | Open TIMPs chat |
+| `Cmd+Option+K` | Insert file reference |
+| `Cmd+Option+E` | Explain selected code |
+| `Cmd+Option+R` | Refactor selected code |
+| `Cmd+Option+T` | Write tests |
+| `Cmd+Option+F` | Fix bugs |
 
-> No server setup required. The extension connects to the free hosted backend at `https://timps-api.onrender.com`.
+---
 
-### (Optional) Self-hosted mode
+## 🚀 Features
 
-If you prefer to run your own server:
+### Terminal Agent (like OpenCode)
+- Press **Cmd+Esc** to open TIMPs in a terminal
+- Natural language commands: `/explain`, `/refactor`, `/test`, `/fix`
+- Full project context awareness
+- Terminal integration - works like you're using CLI
 
-1. Clone the repo: `git clone https://github.com/Sandeeprdy1729/timps.git`
-2. Run: `docker compose up -d`
-3. Set `timps.serverUrl` to `http://localhost:3000` in VS Code settings
+### Chat Interface (like Claude Code)
+- Press **Cmd+Shift+C** to open chat panel
+- Conversation-style AI assistance
+- Side-by-side view while coding
+- Code snippets and explanations
 
-## Commands
+### Context Awareness
+- Automatically shares current file/selection with TIMPs
+- Right-click context menu for selected code
+- File reference shortcuts: `@file.ts#L42`
 
-| Command | What it does |
-|---------|-------------|
-| `TIMPs: Check for Contradictions` | Check selected text against your stored positions |
-| `TIMPs: Look Up API Quirks` | Look up known undocumented behavior for any API |
-| `TIMPs: Check Bug Pattern Risk` | Check current coding context against your bug triggers |
-| `TIMPs: Open Intelligence Dashboard` | Open TIMPs dashboard in browser |
-| `TIMPs: Show My Memories` | View all stored memories in a panel |
+### AI-Powered Actions
+- **Explain**: Understand any code selection
+- **Refactor**: Improve code structure
+- **Test**: Generate test cases
+- **Fix**: Debug and fix issues
 
-## Settings
+### Memory That Learns
+TIMPs remembers your coding patterns, past bugs, and decisions to provide smarter assistance over time.
+
+---
+
+## 📦 Installation
+
+### Automatic Setup (Recommended)
+1. Install the extension
+2. TIMPs auto-detects Ollama and downloads your model
+3. Press **Cmd+Esc** to start!
+
+### Manual Setup
+
+**Install Ollama:**
+```bash
+# macOS
+brew install ollama
+
+# Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Windows
+# Download from https://ollama.com
+```
+
+**Pull your model:**
+```bash
+ollama pull sandeeprdy1729/timps-coder
+```
+
+---
+
+## ⚙️ Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `timps.serverUrl` | `https://timps-api.onrender.com` | TIMPs server URL (cloud by default) |
-| `timps.userId` | `1` | Your TIMPs user ID |
-| `timps.enableInlineWarnings` | `true` | Show inline code warnings |
-| `timps.checkOnSave` | `true` | Analyze file on save |
+| `timps.agentMode` | `terminal` | `terminal`, `chat`, or `inline` |
+| `timps.useLocalAgent` | `true` | Use local Ollama AI |
+| `timps.localModel` | `sandeeprdy1729/timps-coder` | Ollama model |
+| `timps.ollamaUrl` | `http://localhost:11434` | Ollama URL |
+| `timps.autoInstall` | `true` | Auto-install dependencies |
+| `timps.enableDiagnostics` | `true` | Show inline hints |
 
-## License
+---
 
-MIT — github.com/Sandeeprdy1729/timps
+## 🎯 Usage
+
+### From Terminal
+1. Press **Cmd+Esc**
+2. Type natural language commands:
+```
+/explain this function
+/refactor to use async/await
+/test write unit tests for this
+/fix handle the error case
+```
+
+### From Chat
+1. Press **Cmd+Shift+C**
+2. Ask questions about your code
+
+### From Context Menu
+1. Select code in editor
+2. Right-click → TIMPs
+3. Choose action (Explain, Refactor, Test, Fix)
+
+### File References
+1. Press **Cmd+Option+K**
+2. Inserts `@filename#Lline`
+
+---
+
+## 💡 Tips
+
+- Use `/help` in terminal for all commands
+- TIMPs has memory - it learns from your patterns
+- Combine with git for best results
+- Works with any Ollama model
+
+---
+
+## 🤖 Supported Models
+
+- `sandeeprdy1729/timps-coder` (recommended - your custom model)
+- `qwen2.5-coder:7b` - General coding
+- `deepseek-r1:7b` - Reasoning
+- `codellama:13b` - Meta's model
+
+---
+
+## 🏗️ Architecture
+
+```
+┌──────────────┐     Terminal     ┌─────────────┐
+│ VS Code      │ ────────────────→│ TIMPs CLI    │
+│ Extension    │                  │ (Node.js)    │
+└──────────────┘                  └──────┬──────┘
+       │                                  │
+       │ Chat                             ▼
+       ▼                          ┌─────────────┐
+┌──────────────┐                  │ Ollama      │
+│ Webview     │                  │ (Local AI) │
+│ Panel       │                  └─────────────┘
+└──────────────┘
+```
+
+---
+
+## 🛠️ Development
+
+```bash
+# Clone and setup
+git clone https://github.com/Sandeeprdy1729/timps.git
+cd timps/timps-vscode
+
+# Install
+npm install
+
+# Test (F5 to launch debug)
+npm run watch
+
+# Build
+npm run compile
+
+# Package
+npx vsce package
+```
+
+---
+
+## 📄 License
+
+MIT - [github.com/Sandeeprdy1729/timps](https://github.com/Sandeeprdy1729/timps)

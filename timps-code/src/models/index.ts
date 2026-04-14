@@ -40,6 +40,13 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
       return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:latest');
     }
+    case 'timps':
+    case 'timps-coder': {
+      // TIMPs custom coding model via Ollama
+      const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
+      const timpsModel = model || config.defaultModel || 'sandeeprdy1729/timps-coder';
+      return createOllamaProvider(ollamaUrl, timpsModel);
+    }
     case 'hybrid': {
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
       const fastP = createOllamaProvider(ollamaUrl, 'qwen2.5-coder:latest');
@@ -59,17 +66,18 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       return new HybridProvider(fastP, heavyP);
     }
     default:
-      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter, opencode, hybrid`);
+      throw new Error(`Unknown provider: ${name}. Use: claude, openai, gemini, ollama, openrouter, opencode, timps, hybrid`);
   }
 }
 
-export const POPULAR_MODELS: Record<ProviderName, string[]> = {
+export const POPULAR_MODELS: Record<string, string[]> = {
   claude: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-opus-4-20250514'],
   openai: ['gpt-4o', 'gpt-4o-mini', 'o3-mini', 'gpt-4-turbo'],
   gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
   ollama: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:13b', 'llama3.1:8b', 'mistral:7b'],
   openrouter: ['anthropic/claude-sonnet-4-20250514', 'google/gemini-2.5-flash', 'meta-llama/llama-3.1-405b-instruct'],
   opencode: ['qwen2.5-coder:latest', 'llama3.1:8b', 'mistral:latest', 'gemma3:1b', 'llama3.2:latest'],
+  timps: ['sandeeprdy1729/timps-coder', 'sandeeprdy1729/timps-coder:latest'],
   hybrid: ['auto']
 };
 

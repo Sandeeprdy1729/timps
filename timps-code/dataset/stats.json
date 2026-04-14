@@ -1,0 +1,87 @@
+{
+  "total": 2324,
+  "mined": 2324,
+  "synthetic": 0,
+  "sft_examples": 2324,
+  "grpo_pairs": 2324,
+  "rlef_examples": 2324,
+  "source_breakdown": {
+    "stackoverflow": 2324
+  },
+  "language_breakdown": {
+    "Java": 1311,
+    "C#": 36,
+    "C": 17,
+    "unknown": 34,
+    "Go": 21,
+    "Ruby": 2,
+    "JavaScript": 13,
+    "C++": 396,
+    "Scala": 1,
+    "SQL": 6,
+    "Python": 478,
+    "Objective-C": 1,
+    "PHP": 3,
+    "Shell": 3,
+    "Assembly": 2
+  },
+  "error_distribution": {
+    "null_pointer": 581,
+    "race_condition": 260,
+    "concurrency": 1432,
+    "deadlock": 20,
+    "crash": 6,
+    "timeout": 12,
+    "buffer_overflow": 1,
+    "infinite_loop": 5,
+    "segfault": 4,
+    "memory_leak": 3
+  },
+  "year_distribution": {
+    "2010": 160,
+    "2011": 259,
+    "2012": 384,
+    "2013": 435,
+    "2014": 311,
+    "2015": 194,
+    "2016": 173,
+    "2017": 126,
+    "2018": 104,
+    "2019": 52,
+    "2020": 52,
+    "2021": 48,
+    "2022": 26
+  },
+  "unique_questions": 2220,
+  "target": 1000000,
+  "date_range": {
+    "start": "2010-01-01",
+    "end": "2022-11-30"
+  },
+  "data_sources": {
+    "stackexchange": {
+      "api": "https://api.stackexchange.com/2.3",
+      "note": "All real Stack Overflow Q&A with code edits. Every entry has a real question URL, real code blocks, real answer, real vote scores."
+    }
+  },
+  "verification": {
+    "all_real_data": true,
+    "no_synthetic": true,
+    "sft_with_real_code": true,
+    "grpo_with_real_code_pairs": 2285,
+    "grpo_with_real_urls": 2324,
+    "rlef_with_real_reasoning": true,
+    "every_entry_has_real_question_url": true,
+    "every_entry_has_real_vote_scores": true,
+    "date_range_verified": true
+  },
+  "scaling_notes": {
+    "current": "2324 trajectories mined with ~300 API calls (no API key)",
+    "with_so_api_key": "Register at https://stackapps.com for 10,000 requests/day (~500K trajectories/day)",
+    "with_github_token": "Create PAT at github.com/settings/tokens for 5,000 requests/hour",
+    "full_so_dump": "Download from https://archive.org/details/stackexchange for unlimited offline processing",
+    "full_github_dump": "Use GH Archive (https://www.gharchive.org/) + The Stack dataset (https://huggingface.co/datasets/bigcode/the-stack)",
+    "estimated_1m_time": "~2 days with SO API key + GitHub token, or ~4 hours with full data dumps on a decent machine"
+  },
+  "timestamp": 1775669487364
+}

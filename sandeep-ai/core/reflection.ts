@@ -2,6 +2,7 @@ import { createModel, BaseModel } from '../models';
 import { memoryIndex } from '../memory/memoryIndex';
 import { curateTier, CurationInput } from './curateTier';
 import { provenForge } from './provenForge';
+import { governTier, GovernanceEvent } from './governTier';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -124,6 +125,29 @@ Only include entries if there is meaningful information to extract. Be concise b
       );
     } catch {
       // CurateTier/ProvenForge is best-effort — never block reflection
+    }
+
+    // GovernTier: policy-driven governance
+    if (governTier.isEnabled()) {
+      try {
+        const event: GovernanceEvent = {
+          source_module: 'reflection',
+          content: memory.content,
+          metadata: {
+            importance: memory.importance,
+            type: memory.type,
+            tags: memory.tags || [],
+            retrieval_count: 0,
+          },
+          provenance: 'llm-extracted',
+          user_id: userId,
+          project_id: projectId,
+          event_type: 'memory_reflection',
+        };
+        await governTier.enforce(event, 'reflection');
+      } catch {
+        // GovernTier is best-effort — never block reflection
+      }
     }
   }
 
