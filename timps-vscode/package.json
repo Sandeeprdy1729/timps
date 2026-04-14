@@ -1,23 +1,31 @@
 {
   "name": "timps-vscode",
-  "displayName": "TIMPs \u2014 AI Memory Intelligence",
-  "description": "Inline warnings from your personal bug patterns, tech debt history, and API quirks. Memory that thinks.",
-  "version": "1.0.0",
-  "publisher": "Sandeeprdy1729",
-  "icon": "icon.png",
+  "displayName": "TIMPs — AI Coding Agent",
+  "description": "AI coding agent like Claude Code & OpenCode. Press Cmd+Esc to open TIMPs terminal, use /commands, and get AI-powered code assistance with persistent memory that learns from your patterns.",
+  "version": "1.1.0",
+  "publisher": "TIMPs",
+  "icon": "logo.ico",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other",
-    "Linters"
+    "AI",
+    "Programming Languages",
+    "Machine Learning"
   ],
   "keywords": [
     "ai",
+    "claude-code",
+    "opencode",
+    "coding",
+    "agent",
     "memory",
     "timps",
-    "bugs",
-    "tech-debt"
+    "ollama",
+    "assistant",
+    "cursor",
+    "codex",
+    "github-copilot"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -26,70 +34,206 @@
   "contributes": {
     "commands": [
       {
-        "command": "timps.checkContradiction",
-        "title": "TIMPs: Check for Contradictions"
+        "command": "timps.open",
+        "title": "TIMPs: Open Agent",
+        "shortTitle": "Open TIMPs"
       },
       {
-        "command": "timps.lookupAPI",
-        "title": "TIMPs: Look Up API Quirks"
+        "command": "timps.newSession",
+        "title": "TIMPs: New Session",
+        "shortTitle": "New Session"
       },
       {
-        "command": "timps.checkBugPattern",
-        "title": "TIMPs: Check Bug Pattern Risk"
+        "command": "timps.chat",
+        "title": "TIMPs: Open Chat",
+        "shortTitle": "Chat View"
       },
       {
-        "command": "timps.openDashboard",
-        "title": "TIMPs: Open Intelligence Dashboard"
+        "command": "timps.share",
+        "title": "TIMPs: Share Selection",
+        "shortTitle": "Share"
       },
       {
-        "command": "timps.showMemories",
-        "title": "TIMPs: Show My Memories"
+        "command": "timps.ref",
+        "title": "TIMPs: Insert File Reference",
+        "shortTitle": "File Ref"
+      },
+      {
+        "command": "timps.explain",
+        "title": "TIMPs: Explain Code",
+        "shortTitle": "Explain"
+      },
+      {
+        "command": "timps.refactor",
+        "title": "TIMPs: Refactor Code",
+        "shortTitle": "Refactor"
+      },
+      {
+        "command": "timps.test",
+        "title": "TIMPs: Write Tests",
+        "shortTitle": "Write Tests"
+      },
+      {
+        "command": "timps.fix",
+        "title": "TIMPs: Fix Bug",
+        "shortTitle": "Fix Bug"
+      },
+      {
+        "command": "timps.status",
+        "title": "TIMPs: Status",
+        "shortTitle": "Status"
+      },
+      {
+        "command": "timps.setup",
+        "title": "TIMPs: Setup",
+        "shortTitle": "Setup"
       }
     ],
     "configuration": {
-      "title": "TIMPs",
+      "title": "TIMPs AI Agent",
       "properties": {
+        "timps.agentMode": {
+          "type": "string",
+          "enum": ["terminal", "chat", "inline"],
+          "default": "terminal",
+          "description": "How TIMPs interacts: terminal (OpenCode style), chat (Claude Code style), or inline"
+        },
+        "timps.useLocalAgent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use local Ollama AI (recommended). Disable for cloud API."
+        },
+        "timps.localModel": {
+          "type": "string",
+          "default": "sandeeprdy1729/timps-coder",
+          "description": "Ollama model for local AI. Your custom TIMPs-Coder or any coding model."
+        },
+        "timps.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama server URL"
+        },
+        "timps.autoInstall": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check and install Ollama and model"
+        },
+        "timps.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline hints for common issues"
+        },
         "timps.serverUrl": {
           "type": "string",
           "default": "https://timps-api.onrender.com",
-          "description": "URL of the TIMPs server (cloud default — or set to http://localhost:3000 for local)"
-        },
-        "timps.userId": {
-          "type": "number",
-          "default": 1,
-          "description": "Your TIMPs user ID"
-        },
-        "timps.enableInlineWarnings": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show inline bug pattern and tech debt warnings as you code"
-        },
-        "timps.checkOnSave": {
-          "type": "boolean",
-          "default": true,
-          "description": "Run pattern analysis when you save a file"
+          "description": "TIMPs API server (used when useLocalAgent is false)"
         }
       }
     },
     "menus": {
       "editor/context": [
         {
-          "command": "timps.checkBugPattern",
-          "group": "timps",
+          "command": "timps.share",
+          "group": "timps@1",
           "when": "editorHasSelection"
         },
         {
-          "command": "timps.lookupAPI",
-          "group": "timps"
+          "command": "timps.explain",
+          "group": "timps@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "timps.refactor",
+          "group": "timps@3",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "timps.fix",
+          "group": "timps@4",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "timps.test",
+          "group": "timps@5",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "timps.ref",
+          "group": "timps@6"
+        },
+        {
+          "command": "timps.chat",
+          "group": "timps@7"
         }
+      ],
+      "commandPalette": [
+        { "command": "timps.open", "when": "true" },
+        { "command": "timps.newSession", "when": "true" },
+        { "command": "timps.chat", "when": "true" },
+        { "command": "timps.share", "when": "editorHasSelection" },
+        { "command": "timps.explain", "when": "editorHasSelection" },
+        { "command": "timps.refactor", "when": "editorHasSelection" },
+        { "command": "timps.test", "when": "editorHasSelection" },
+        { "command": "timps.fix", "when": "editorHasSelection" },
+        { "command": "timps.status", "when": "true" },
+        { "command": "timps.setup", "when": "true" }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "timps.open",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "timps.newSession",
+        "key": "cmd+shift+escape",
+        "mac": "cmd+shift+escape",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "timps.chat",
+        "key": "cmd+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "timps.ref",
+        "key": "cmd+option+k",
+        "mac": "cmd+option+k",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "timps.explain",
+        "key": "cmd+option+e",
+        "mac": "cmd+option+e",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "timps.refactor",
+        "key": "cmd+option+r",
+        "mac": "cmd+option+r",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "timps.test",
+        "key": "cmd+option+t",
+        "mac": "cmd+option+t",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "timps.fix",
+        "key": "cmd+option+f",
+        "mac": "cmd+option+f",
+        "when": "editorHasSelection"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
@@ -100,5 +244,14 @@
     "type": "git",
     "url": "https://github.com/Sandeeprdy1729/timps.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+  },
+  "homepage": "https://timps-website.vercel.app/",
+  "galleryBanner": {
+    "color": "#4ec9b0",
+    "theme": "dark"
+  },
+  "pricing": "Free"
 }

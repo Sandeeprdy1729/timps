@@ -22,6 +22,8 @@ export interface AgentConfig {
   autoCorrect?: boolean;
   enableSelfCorrection?: boolean;
   enableMemorySync?: boolean;
+  completionPromise?: () => boolean;  // Exit code hook - agent can't exit until this returns true
+  minSuccessRate?: number;  // Force iterations until success rate >= this
 }
 
 export interface ExecutionContext {
@@ -32,49 +34,20 @@ export interface ExecutionContext {
   startTime: number;
 }
 
-const SYSTEM_PROMPT = `You are TIMPS Code, an elite AI coding agent with persistent memory and self-correction capabilities.
+const SYSTEM_PROMPT = `TIMPS Code. Execution only. No prose.
 
-## Core Identity
-- Expert programmer with knowledge of all major languages and frameworks
-- Memory-first: you learn from every session and remember patterns/conventions
-- Self-correcting: you analyze errors and fix them systematically
-- Benchmark-optimized for coding tasks
+## State
+- Memory: synced, patterns stored
+- Context: compact, tokens managed
+- Goal: deliver working code
 
-## Capabilities
-- File operations: read, write, edit with surgical precision
-- Code execution: run tests, builds, linting
-- Search: find files, grep patterns, understand codebases
-- Git: commit, diff, log with full history awareness
-- Web: search docs, fetch references
-
-## Operating Principles
-1. ALWAYS read before editing - never guess file contents
-2. Use edit_file for modifications, write_file for new files
-3. After code changes, verify with tests/linting
-4. Root cause analysis before retry on errors
-5. Use think tool for complex reasoning
-6. For greetings/simple questions: respond in text without tools
-7. Extract and remember key decisions, patterns, conventions
-
-## Memory Protocol
-- Check memory context at task start
-- Discover patterns? Store them for future sessions
-- Encounter errors? Note root causes
-- Make decisions? Record rationale
-- Complex task? Plan first, verify after
-
-## Self-Correction Pattern
-When something fails:
-1. Analyze the error - what exactly went wrong?
-2. Identify assumptions - what was incorrectly assumed?
-3. Form hypothesis - what's the root cause?
-4. Verify hypothesis - check the actual state
-5. Fix definitively - address root cause, not symptoms
-
-## Output Style
-- Be direct: code over prose, results over plans
-- Show working, not just "done"
-- Verify changes immediately
+## Rules
+1. Read before edit
+2. Test after change
+3. Fix root cause, not symptoms
+4. Loop until tests pass — never exit on failure
+5. Greetings -> minimal response
+6. Code over explanation
 `;
 
 export abstract class BaseAgent {
@@ -90,6 +63,10 @@ export abstract class BaseAgent {
   protected enableMemorySync: boolean;
   protected permissions: Permissions;
   protected abortController: AbortController | null = null;
+  protected completionPromise?: () => boolean;
+  protected minSuccessRate: number = 1.0;
+  private successCount: number = 0;
+  private failureCount: number = 0;
 
   constructor(config: AgentConfig) {
     this.provider = config.provider;
@@ -100,6 +77,8 @@ export abstract class BaseAgent {
     this.autoCorrect = config.autoCorrect ?? true;
     this.enableSelfCorrection = config.enableSelfCorrection ?? true;
     this.enableMemorySync = config.enableMemorySync ?? true;
+    this.completionPromise = config.completionPromise;
+    this.minSuccessRate = config.minSuccessRate ?? 1.0;
     this.permissions = new Permissions('normal', []);
   }
 
@@ -118,6 +97,8 @@ export abstract class BaseAgent {
     yield { type: 'status', message: 'Starting agent loop...' };
 
     let turn = 0;
+    let lastResult: { done: boolean; error?: string } = { done: false };
+    
     while (turn < this.maxTurns) {
       turn++;
       
@@ -127,15 +108,25 @@ export abstract class BaseAgent {
       }
 
       const tools = getToolDefinitions(this.isLocalModel);
-      const result = yield* this.executeTurn(tools);
+      lastResult = yield* this.executeTurn(tools);
       
-      if (result.done) {
+      if (lastResult.done) {
+        if (this.completionPromise && !this.completionPromise()) {
+          yield { type: 'status', message: 'Completion promise not met — continuing...' };
+          continue;
+        }
         yield* this.finalize();
         return;
       }
 
-      if (result.error) {
-        yield { type: 'error', message: result.error };
+      if (lastResult.error) {
+        this.failureCount++;
+        yield { type: 'error', message: lastResult.error };
+        
+        if (this.completionPromise && !this.completionPromise()) {
+          yield { type: 'status', message: 'Failure — retrying until completion promise satisfied...' };
+          continue;
+        }
         return;
       }
     }

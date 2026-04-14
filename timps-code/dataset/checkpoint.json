@@ -1,0 +1,39 @@
+{
+  "total": 2324,
+  "mined": 2324,
+  "synthetic": 0,
+  "source_breakdown": {
+    "stackoverflow": 2324
+  },
+  "language_breakdown": {
+    "Java": 1311,
+    "C#": 36,
+    "C": 17,
+    "unknown": 34,
+    "Go": 21,
+    "Ruby": 2,
+    "JavaScript": 13,
+    "C++": 396,
+    "Scala": 1,
+    "SQL": 6,
+    "Python": 478,
+    "Objective-C": 1,
+    "PHP": 3,
+    "Shell": 3,
+    "Assembly": 2
+  },
+  "error_distribution": {
+    "null_pointer": 581,
+    "race_condition": 260,
+    "concurrency": 1432,
+    "deadlock": 20,
+    "crash": 6,
+    "timeout": 12,
+    "buffer_overflow": 1,
+    "infinite_loop": 5,
+    "segfault": 4,
+    "memory_leak": 3
+  },
+  "last_flushed": 1775669487365,
+  "completed_queries": []
+}

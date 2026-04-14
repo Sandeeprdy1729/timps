@@ -330,6 +330,75 @@ export async function initToolsTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_typed_edges_provenance ON typed_edges(provenance_module);
   `);
 
-  console.log('[TIMPs] All 17 tool tables + ForgeLink edges initialized');
+  // ── GovernTier: Policy-Driven Governance Tables ─────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS governance_policies (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) UNIQUE NOT NULL,
+      policy_type VARCHAR(50) NOT NULL CHECK (policy_type IN ('decay', 'conflict', 'privacy', 'admission', 'evolution')),
+      config JSONB NOT NULL DEFAULT '{}',
+      version INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_governance_policies_type ON governance_policies(policy_type);
+    CREATE INDEX IF NOT EXISTS idx_governance_policies_name ON governance_policies(name);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS governance_events (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      content TEXT NOT NULL,
+      event_type VARCHAR(50) NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      provenance VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_governance_events_user ON governance_events(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_governance_events_module ON governance_events(source_module);
+    CREATE INDEX IF NOT EXISTS idx_governance_events_type ON governance_events(event_type);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS governed_memories (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER REFERENCES governance_events(id),
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      tier VARCHAR(20) NOT NULL CHECK (tier IN ('raw', 'episodic', 'semantic', 'wisdom')),
+      governance_score FLOAT NOT NULL,
+      policy_version INTEGER NOT NULL,
+      resolved_conflicts JSONB,
+      decay_applied BOOLEAN DEFAULT FALSE,
+      privacy_masked BOOLEAN DEFAULT FALSE,
+      admission_status VARCHAR(20) NOT NULL CHECK (admission_status IN ('admitted', 'decayed', 'flagged', 'rejected')),
+      linked_insights JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_governed_memories_user ON governed_memories(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_governed_memories_tier ON governed_memories(tier, governance_score DESC);
+    CREATE INDEX IF NOT EXISTS idx_governed_memories_status ON governed_memories(admission_status);
+    CREATE INDEX IF NOT EXISTS idx_governed_memories_policy ON governed_memories(policy_version DESC);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS tech_debt_incidents (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      incident_type VARCHAR(100) NOT NULL,
+      description TEXT NOT NULL,
+      severity VARCHAR(20) CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+      linked_memory_id INTEGER REFERENCES governed_memories(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tech_debt_user ON tech_debt_incidents(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_tech_debt_severity ON tech_debt_incidents(severity);
+  `);
+
+  console.log('[TIMPs] All 17 tool tables + ForgeLink edges + GovernTier initialized');
 
 }

@@ -43,6 +43,8 @@ export function getApiKey(config: TimpsConfig, provider: ProviderName): string |
     ollama: '',
     openrouter: 'OPENROUTER_API_KEY',
     opencode: '',
+    timps: '',
+    'timps-coder': '',
     hybrid: ''
   };
   const envKey = envMap[provider];
@@ -56,6 +58,8 @@ const PROVIDERS: Record<ProviderName, { label: string; needsKey: boolean; free: 
   ollama:     { label: 'Ollama (local)',     needsKey: false, free: 'deepseek-r1, qwen2.5-coder, codellama' },
   openrouter: { label: 'OpenRouter',         needsKey: true,  free: 'deepseek-r1:free, gemini-flash:free' },
   opencode:   { label: 'OpenCode (local)',    needsKey: false, free: 'Runs locally — no API key needed' },
+  timps:      { label: 'TIMPs Coder (local)', needsKey: false, free: 'Your custom coding model' },
+  'timps-coder': { label: 'TIMPs Coder (local)', needsKey: false, free: 'Your custom coding model' },
   hybrid:     { label: 'Hybrid Router',       needsKey: false, free: 'Routes to local if simple' },
 };
 
@@ -66,6 +70,8 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
   ollama: 'qwen2.5-coder:latest',
   openrouter: 'google/gemini-2.0-flash-exp:free',
   opencode: 'qwen2.5-coder:latest',
+  timps: 'sandeeprdy1729/timps-coder',
+  'timps-coder': 'sandeeprdy1729/timps-coder',
   hybrid: 'auto',
 };
 
