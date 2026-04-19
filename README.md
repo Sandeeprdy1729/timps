@@ -13,6 +13,16 @@ An AI-powered coding agent ecosystem with persistent memory, multi-model support
 
 </div>
 
+## Star Count
+
+<a href="https://www.star-history.com/?repos=Sandeeprdy1729%2Ftimps&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Sandeeprdy1729/timps&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Sandeeprdy1729/timps&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Sandeeprdy1729/timps&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ---
 
 ## Project Overview
