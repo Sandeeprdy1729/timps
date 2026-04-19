@@ -1,6 +1,8 @@
-# timps-mcp
+# TIMPS MCP — Model Context Protocol Server
 
-MCP server for TIMPs — connects Claude Code, Cursor, Windsurf, and any MCP-compatible agent to your TIMPs memory layer.
+MCP server for TIMPS — connects Claude Code, Cursor, Windsurf, and any MCP-compatible agent to your TIMPS memory layer.
+
+> **Note:** This connects to the full **sand-eep-ai** server which has the full 17-tool intelligence layer. For simpler CLI use, just install `timps-code` directly.
 
 ## What this unlocks
 

@@ -1,9 +1,18 @@
-# TIMPs — AI Coding Agent
+# TIMPS VSCode — AI Coding Agent
 
-A powerful AI coding agent for VS Code, like Claude Code and OpenCode.
+A powerful AI coding agent for VS Code, powered by TIMPS Code CLI.
 
 [![Install](https://img.shields.io/badge/VS%20Code-Install-blue)](https://marketplace.visualstudio.com/items?itemName=sandeeprdy1729.timps-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## What is TIMPS?
+
+TIMPS is an AI-powered coding agent ecosystem:
+- **TIMPS Code** — CLI agent (`npm install -g timps-code`)
+- **TIMPS VSCode** — VS Code extension (this)
+- **TIMPS MCP** — Model Context Protocol server
 
 ---
 
