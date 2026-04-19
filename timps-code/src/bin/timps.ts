@@ -2,10 +2,19 @@
 // ── TIMPS Code — CLI Entry Point ──
 // Dataset Pipeline: Mining + Synthetic + GRPO Training
 
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import * as os from 'os';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.join(__dirname, '..', '..');
+dotenv.config({ path: path.join(projectRoot, '.env') });
+
 import { Command } from 'commander';
-import { startApp, runDataPipeline } from '../app.js';
-import { LOGO, t } from '../theme.js';
-import type { ProviderName } from '../types.js';
+import { startApp, runDataPipeline } from '../core/app.js';
+import { LOGO, t } from '../config/theme.js';
+import type { ProviderName } from '../config/types.js';
 
 const program = new Command();
 
@@ -13,7 +22,7 @@ program
   .name('timps')
   .description('TIMPS Code — AI coding agent with persistent memory + dataset pipeline')
   .version('1.0.0')
-  .option('-p, --provider <name>', 'Model provider: claude, openai, gemini, ollama, openrouter')
+  .option('-p, --provider <name>', 'Model provider: claude, openai, gemini, ollama, openrouter, opencode, timps-coder, hybrid')
   .option('-m, --model <model>', 'Model name (e.g., gpt-4o, claude-sonnet-4-20250514)')
   .option('-d, --dir <path>', 'Working directory')
   .option('-c, --config', 'Run setup wizard')
@@ -124,7 +133,7 @@ program
 
     // Normal app mode
     if (opts.config) {
-      const { runSetupWizard } = await import('../config.js');
+      const { runSetupWizard } = await import('../config/config.js');
       console.log(LOGO);
       await runSetupWizard();
       return;
