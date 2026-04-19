@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "timps": {
+      "command": "node",
+      "args": ["/Users/sandeepreddy/Desktop/testbot/sandeep-ai/mcp/dist/index.js"],
+      "env": {
+        "TIMPS_DATA_DIR": "~/.timps"
+      }
+    }
+  }
+}

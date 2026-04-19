@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
 const server_1 = require("./api/server");
 const cli_1 = require("./interfaces/cli");
 const postgres_1 = require("./db/postgres");

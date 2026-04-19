@@ -3,6 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Reflection = void 0;
 const models_1 = require("../models");
 const memoryIndex_1 = require("../memory/memoryIndex");
+const curateTier_1 = require("./curateTier");
+const provenForge_1 = require("./provenForge");
+const governTier_1 = require("./governTier");
+const chronosVeil_1 = require("./chronosVeil");
+const weaveForge_1 = require("./weaveForge");
+const skillWeave_1 = require("./skillWeave");
+const atomChain_1 = require("./atomChain");
+const policyMetabol_1 = require("./policyMetabol");
+const layerForge_1 = require("./layerForge");
+const echoForge_1 = require("./echoForge");
 class Reflection {
     model;
     constructor() {
@@ -51,7 +61,48 @@ Only include entries if there is meaningful information to extract. Be concise b
     }
     async storeExtractedKnowledge(userId, projectId, knowledge) {
         for (const memory of knowledge.memories) {
-            await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, memory.content, "reflection", memory.importance, memory.tags || [], "reflection-analysis", "llm-extracted");
+            const stored = await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, memory.content, "reflection", memory.importance, memory.tags || [], "reflection-analysis", "llm-extracted");
+            // CurateTier: curate each reflected memory into hierarchical tiers
+            try {
+                const curationInput = {
+                    content: memory.content,
+                    tags: memory.tags || [],
+                    importance: memory.importance,
+                    memoryType: memory.type,
+                    source: 'reflection',
+                    memoryId: stored?.id,
+                };
+                await curateTier_1.curateTier.curate(curationInput, userId);
+                // ProvenForge: versioning
+                await provenForge_1.provenForge.forge({ content: memory.content, tags: memory.tags }, 'reflection');
+                await this.evolveMemoryLayers(userId, projectId, memory.content, memory.tags || [], memory.importance, 'reflection');
+            }
+            catch {
+                // Evolution layers are best-effort — never block reflection
+            }
+            // GovernTier: policy-driven governance
+            if (governTier_1.governTier.isEnabled()) {
+                try {
+                    const event = {
+                        source_module: 'reflection',
+                        content: memory.content,
+                        metadata: {
+                            importance: memory.importance,
+                            type: memory.type,
+                            tags: memory.tags || [],
+                            retrieval_count: 0,
+                        },
+                        provenance: 'llm-extracted',
+                        user_id: userId,
+                        project_id: projectId,
+                        event_type: 'memory_reflection',
+                    };
+                    await governTier_1.governTier.enforce(event, 'reflection');
+                }
+                catch {
+                    // GovernTier is best-effort — never block reflection
+                }
+            }
         }
         for (const goal of knowledge.goals) {
             await memoryIndex_1.memoryIndex.storeGoal(userId, goal.title, goal.description, goal.priority);
@@ -81,13 +132,52 @@ Return JSON array:
             if (jsonMatch) {
                 const insights = JSON.parse(jsonMatch[0]);
                 for (const insight of insights) {
-                    await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, insight.content, "reflection", insight.importance || 1, insight.tags || [], "session-reflection", "session");
+                    const stored = await memoryIndex_1.memoryIndex.storeMemory(userId, projectId, insight.content, "reflection", insight.importance || 1, insight.tags || [], "session-reflection", "session");
+                    // CurateTier: curate session insights into hierarchical tiers
+                    try {
+                        const curationInput = {
+                            content: insight.content,
+                            tags: insight.tags || [],
+                            importance: insight.importance || 1,
+                            memoryType: insight.type || 'general',
+                            source: 'reflection',
+                            memoryId: stored?.id,
+                        };
+                        await curateTier_1.curateTier.curate(curationInput, userId);
+                        // ProvenForge: versioning
+                        await provenForge_1.provenForge.forge({ content: insight.content, tags: insight.tags }, 'reflection_session');
+                        await this.evolveMemoryLayers(userId, projectId, insight.content, insight.tags || [], insight.importance || 1, 'reflection_session');
+                    }
+                    catch {
+                        // Evolution layers are best-effort
+                    }
                 }
             }
         }
         catch (error) {
             console.error('Session reflection failed:', error);
         }
+    }
+    async evolveMemoryLayers(userId, projectId, content, tags, importance, sourceModule) {
+        const outcomeScore = Math.max(0.1, Math.min(1.0, importance / 5));
+        const signal = {
+            userId,
+            projectId,
+            content,
+            tags,
+            confidence: outcomeScore,
+            outcomeScore,
+            metadata: { importance, source_module: sourceModule },
+        };
+        await Promise.allSettled([
+            chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule),
+            weaveForge_1.weaveForge.weaveSignal(signal, sourceModule, { userId, projectId, outcomeScore }),
+            skillWeave_1.skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
+            atomChain_1.atomChain.executeAtomic(signal, sourceModule, importance >= 4 ? 'consolidate' : 'create', outcomeScore),
+            policyMetabol_1.policyMetabol.runLoop(signal, sourceModule, outcomeScore),
+            layerForge_1.layerForge.forgeCompress(signal, sourceModule, sourceModule),
+            echoForge_1.echoForge.runReconstruction(signal, sourceModule, sourceModule),
+        ]);
     }
 }
 exports.Reflection = Reflection;

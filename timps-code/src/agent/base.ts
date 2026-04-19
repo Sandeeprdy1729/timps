@@ -4,11 +4,11 @@
 import type {
   Message, ToolCall, ToolDefinition, StreamEvent, AgentEvent,
   TokenUsage, PlanStep, ModelProvider,
-} from '../types.js';
-import { getTool, getToolRisk, getToolDefinitions } from '../tools.js';
-import type { ToolExecResult } from '../tools.js';
-import { Permissions } from '../permissions.js';
-import { estimateTokens, estimateCost } from '../utils.js';
+} from '../config/types.js';
+import { getTool, getToolRisk, getToolDefinitions } from '../tools/tools.js';
+import type { ToolExecResult } from '../tools/tools.js';
+import { Permissions } from '../utils/permissions.js';
+import { estimateTokens, estimateCost } from '../utils/utils.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';

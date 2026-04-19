@@ -1,5 +1,5 @@
 // ── Google Gemini Model Provider ──
-import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../types.js';
+import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../config/types.js';
 
 export function createGeminiProvider(apiKey: string, modelId?: string): ModelProvider {
   const model = modelId || 'gemini-2.5-flash';

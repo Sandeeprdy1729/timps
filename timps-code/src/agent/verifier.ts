@@ -1,9 +1,9 @@
 // agent/verifier.ts - Verification Agent
 // Validates code correctness through tests, linting, and static analysis
 
-import type { AgentEvent, Message } from '../types.js';
+import type { AgentEvent, Message } from '../config/types.js';
 import { createProvider } from '../models/index.js';
-import type { ModelProvider } from '../types.js';
+import type { ModelProvider } from '../config/types.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

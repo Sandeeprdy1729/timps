@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Text, Newline } from 'ink';
+import { Box, Text, Newline, useInput } from 'ink';
 
 interface ProviderOption {
   id: string;
@@ -12,23 +12,37 @@ interface ProviderOption {
 const PROVIDERS: ProviderOption[] = [
   {
     id: 'claude',
-    name: 'Claude Code',
+    name: 'Claude',
     description: 'Anthropic\'s Claude — best for complex reasoning and long context',
-    models: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-haiku-4-5'],
+    models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-3-5-haiku-20241022'],
     local: false,
   },
   {
-    id: 'codex',
-    name: 'Codex',
-    description: 'OpenAI\'s coding model — excellent for code generation',
+    id: 'openai',
+    name: 'OpenAI / GPT',
+    description: 'GPT and reasoning models via OPENAI_API_KEY',
     models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini'],
+    local: false,
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    description: 'Many hosted open and closed models via OPENROUTER_API_KEY',
+    models: ['google/gemini-2.0-flash-exp:free', 'anthropic/claude-sonnet-4-20250514', 'meta-llama/llama-3.1-405b-instruct'],
+    local: false,
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini',
+    description: 'Google Gemini models via GEMINI_API_KEY',
+    models: ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
     local: false,
   },
   {
     id: 'opencode',
     name: 'OpenCode',
     description: 'Open source coding agent — privacy first, fully local',
-    models: ['opencode/default'],
+    models: ['qwen2.5-coder:latest', 'deepseek-r1:7b', 'codellama:7b'],
     local: true,
   },
   {
@@ -36,6 +50,20 @@ const PROVIDERS: ProviderOption[] = [
     name: 'Ollama',
     description: 'Run open models locally — qwen, deepseek, codellama and more',
     models: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:7b', 'gemma3:1b'],
+    local: true,
+  },
+  {
+    id: 'timps-coder',
+    name: 'TIMPs Coder',
+    description: 'Your custom local TIMPs coding model through Ollama',
+    models: ['sandeeprdy1729/timps-coder', 'sandeeprdy1729/timps-coder:latest'],
+    local: true,
+  },
+  {
+    id: 'hybrid',
+    name: 'Hybrid',
+    description: 'Local fast model plus Claude/OpenAI for heavy reasoning',
+    models: ['auto'],
     local: true,
   },
 ];
@@ -52,6 +80,28 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
   onCancel,
 }) => {
   const [selected, setSelected] = useState(0);
+
+  useInput((_input, key) => {
+    if (key.upArrow) {
+      setSelected((value) => (value - 1 + PROVIDERS.length) % PROVIDERS.length);
+      return;
+    }
+
+    if (key.downArrow) {
+      setSelected((value) => (value + 1) % PROVIDERS.length);
+      return;
+    }
+
+    if (key.return) {
+      const provider = PROVIDERS[selected];
+      onSelect(provider.id, provider.models[0]);
+      return;
+    }
+
+    if (key.escape) {
+      onCancel();
+    }
+  });
 
   return (
     <Box flexDirection="column" padding={1}>

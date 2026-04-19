@@ -2,10 +2,10 @@
 // Coordinates specialized agents in parallel - emulates entire software company
 // Handles long-horizon tasks spanning hundreds of steps
 
-import type { AgentEvent, ModelProvider, Message } from '../types.js';
+import type { AgentEvent, ModelProvider, Message } from '../config/types.js';
 import type { AgentConfig } from './base.js';
 import { CoderAgent } from './coder.js';
-import { GRPOTrainer } from '../grpo.js';
+import { GRPOTrainer } from '../data-pipeline/grpo.js';
 
 export type AgentRole = 
   | 'coder' | 'debugger' | 'reviewer' | 'security' | 'architect'

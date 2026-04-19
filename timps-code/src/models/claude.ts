@@ -1,6 +1,6 @@
 // ── Claude (Anthropic) Model Provider ──
-import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../types.js';
-import { parseSSE } from '../utils.js';
+import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../config/types.js';
+import { parseSSE } from '../utils/utils.js';
 
 export function createClaudeProvider(apiKey: string, modelId?: string): ModelProvider {
   const model = modelId || 'claude-sonnet-4-20250514';

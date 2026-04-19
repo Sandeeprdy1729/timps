@@ -1,6 +1,6 @@
 // ── Model Factory ──
-import type { ModelProvider, ProviderName } from '../types.js';
-import { loadConfig, getApiKey } from '../config.js';
+import type { ModelProvider, ProviderName } from '../config/types.js';
+import { loadConfig, getApiKey } from '../config/config.js';
 import { createClaudeProvider } from './claude.js';
 import { createOpenAIProvider, createOpenRouterProvider } from './openai.js';
 import { createGeminiProvider } from './gemini.js';
@@ -36,13 +36,11 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       return createOpenRouterProvider(key, model || config.defaultModel);
     }
     case 'opencode': {
-      // OpenCode runs locally via Ollama
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
       return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:latest');
     }
     case 'timps':
     case 'timps-coder': {
-      // TIMPs custom coding model via Ollama
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
       const timpsModel = model || config.defaultModel || 'sandeeprdy1729/timps-coder';
       return createOllamaProvider(ollamaUrl, timpsModel);

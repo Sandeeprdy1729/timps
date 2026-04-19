@@ -6,7 +6,7 @@ const vector_1 = require("../db/vector");
 const models_1 = require("../models");
 const env_1 = require("../config/env");
 class LongTermMemoryStore {
-    embeddingModel = (0, models_1.createEmbeddingModel)('ollama');
+    embeddingModel = (0, models_1.createEmbeddingModel)();
     async storeMemory(memoryInput) {
         const result = await (0, postgres_1.query)(`INSERT INTO memories 
      (user_id, project_id, content, memory_type, importance, 
@@ -43,7 +43,9 @@ class LongTermMemoryStore {
                 await (0, postgres_1.execute)(`UPDATE memories SET embedding_id = $1 WHERE id = $2`, [storedMemory.id.toString(), storedMemory.id]);
             }
             catch (error) {
-                console.error('Failed to store vector embedding:', error);
+                if (!error?.message?.includes('ECONNREFUSED') && !error?.cause?.code?.includes('ECONNREFUSED')) {
+                    console.error('Failed to store vector embedding:', error);
+                }
             }
         }
         return storedMemory;
@@ -67,7 +69,9 @@ class LongTermMemoryStore {
             return (0, postgres_1.query)(`SELECT * FROM memories WHERE user_id = $1 AND project_id = $2 AND id = ANY($3) ORDER BY created_at DESC`, [userId, projectId, memoryIds]);
         }
         catch (error) {
-            console.error('Vector search failed, falling back to DB:', error);
+            if (!error?.message?.includes('ECONNREFUSED')) {
+                console.error('Vector search failed, falling back to DB:', error);
+            }
             return this.getMemoriesFromDB(userId, projectId, limit);
         }
     }

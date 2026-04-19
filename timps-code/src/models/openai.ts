@@ -1,6 +1,6 @@
 // ── OpenAI Model Provider (also powers OpenRouter) ──
-import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../types.js';
-import { parseSSE } from '../utils.js';
+import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../config/types.js';
+import { parseSSE } from '../utils/utils.js';
 
 interface OpenAIOptions {
   apiKey: string;

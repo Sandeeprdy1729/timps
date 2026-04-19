@@ -330,6 +330,372 @@ export async function initToolsTables(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_typed_edges_provenance ON typed_edges(provenance_module);
   `);
 
+  // ── WeaveForge: Hybrid graph/experience/passage memory ───────────────────
+  await execute(`
+    ALTER TABLE memories ADD COLUMN IF NOT EXISTS utility_weight FLOAT DEFAULT 0.5;
+    CREATE INDEX IF NOT EXISTS idx_memories_utility ON memories(user_id, project_id, utility_weight DESC);
+
+    CREATE TABLE IF NOT EXISTS weave_nodes (
+      node_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      memory_id INTEGER,
+      version_id VARCHAR(255),
+      content TEXT NOT NULL,
+      abstraction TEXT,
+      utility_weight FLOAT DEFAULT 0.5,
+      reward_score FLOAT DEFAULT 0,
+      layers TEXT[] DEFAULT ARRAY['semantic'],
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS weave_experiences (
+      id SERIAL PRIMARY KEY,
+      node_id VARCHAR(255) UNIQUE REFERENCES weave_nodes(node_id) ON DELETE CASCADE,
+      abstraction TEXT NOT NULL,
+      pattern_tags TEXT[],
+      utility_weight FLOAT DEFAULT 0.5,
+      source_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS weave_passages (
+      id SERIAL PRIMARY KEY,
+      node_id VARCHAR(255) UNIQUE REFERENCES weave_nodes(node_id) ON DELETE CASCADE,
+      evidence TEXT NOT NULL,
+      provenance_module VARCHAR(100),
+      raw_signal JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS weave_edges (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES weave_nodes(node_id) ON DELETE CASCADE,
+      target_node_id VARCHAR(255) REFERENCES weave_nodes(node_id) ON DELETE CASCADE,
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('semantic', 'temporal', 'causal', 'entity')),
+      edge_type VARCHAR(80) NOT NULL,
+      weight FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_node_id, layer, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_weave_nodes_user_project ON weave_nodes(user_id, project_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_weave_nodes_layers ON weave_nodes USING GIN(layers);
+    CREATE INDEX IF NOT EXISTS idx_weave_nodes_utility ON weave_nodes(utility_weight DESC, reward_score DESC);
+    CREATE INDEX IF NOT EXISTS idx_weave_nodes_source ON weave_nodes(source_module);
+    CREATE INDEX IF NOT EXISTS idx_weave_edges_layer ON weave_edges(layer, weight DESC);
+    CREATE INDEX IF NOT EXISTS idx_weave_edges_source ON weave_edges(source_node_id, layer);
+    CREATE INDEX IF NOT EXISTS idx_weave_edges_target ON weave_edges(target_node_id, layer);
+  `);
+
+  // ── SkillWeave: Evolvable memory skill policies ───────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS skill_policies (
+      id SERIAL PRIMARY KEY,
+      skill_id VARCHAR(160) NOT NULL,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      action VARCHAR(50) NOT NULL CHECK (action IN ('extract', 'consolidate', 'prune', 'route')),
+      utility FLOAT DEFAULT 0.5,
+      version INTEGER DEFAULT 1,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(skill_id, user_id, project_id)
+    );
+    CREATE TABLE IF NOT EXISTS skill_weave_events (
+      id SERIAL PRIMARY KEY,
+      skill_id VARCHAR(160) NOT NULL,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      selected_skills TEXT[],
+      action VARCHAR(50) NOT NULL,
+      content TEXT,
+      processed JSONB DEFAULT '{}',
+      outcome_score FLOAT DEFAULT 0.5,
+      utility FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_skill_policies_user_project ON skill_policies(user_id, project_id, utility DESC);
+    CREATE INDEX IF NOT EXISTS idx_skill_policies_skill ON skill_policies(skill_id);
+    CREATE INDEX IF NOT EXISTS idx_skill_events_user_project ON skill_weave_events(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_skill_events_skill ON skill_weave_events(skill_id, created_at DESC);
+  `);
+
+  // ── AtomChain: Atomic continuum and DAG-tag indexing ─────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS atomic_nodes (
+      node_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      op_type VARCHAR(50) NOT NULL CHECK (op_type IN ('create', 'read', 'update', 'delete', 'consolidate')),
+      tags TEXT[] DEFAULT ARRAY['general'],
+      content TEXT NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      utility FLOAT DEFAULT 0.5,
+      pruned BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS atomic_edges (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES atomic_nodes(node_id) ON DELETE CASCADE,
+      target_node_id VARCHAR(255) REFERENCES atomic_nodes(node_id) ON DELETE CASCADE,
+      edge_type VARCHAR(80) NOT NULL,
+      tags TEXT[],
+      weight FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_node_id, edge_type)
+    );
+    CREATE TABLE IF NOT EXISTS atomic_tag_index (
+      id SERIAL PRIMARY KEY,
+      tag VARCHAR(100) NOT NULL,
+      node_id VARCHAR(255) REFERENCES atomic_nodes(node_id) ON DELETE CASCADE,
+      weight FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(tag, node_id)
+    );
+    CREATE TABLE IF NOT EXISTS atomic_policy_utilities (
+      id SERIAL PRIMARY KEY,
+      op_type VARCHAR(50) NOT NULL CHECK (op_type IN ('create', 'read', 'update', 'delete', 'consolidate')),
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      utility FLOAT DEFAULT 0.5,
+      version INTEGER DEFAULT 1,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(op_type, user_id, project_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_atomic_nodes_user_project ON atomic_nodes(user_id, project_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_atomic_nodes_tags ON atomic_nodes USING GIN(tags);
+    CREATE INDEX IF NOT EXISTS idx_atomic_nodes_utility ON atomic_nodes(utility DESC, pruned);
+    CREATE INDEX IF NOT EXISTS idx_atomic_edges_source ON atomic_edges(source_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_atomic_edges_target ON atomic_edges(target_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_atomic_tag_index_tag ON atomic_tag_index(tag, weight DESC);
+    CREATE INDEX IF NOT EXISTS idx_atomic_policy_user_project ON atomic_policy_utilities(user_id, project_id, utility DESC);
+  `);
+
+  // ── Chronos Veil: Layered persistence + append-only entity graph ─────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS chronos_events (
+      event_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('knowledge', 'memory', 'wisdom', 'intelligence')),
+      entity_keys TEXT[] DEFAULT ARRAY['general'],
+      content TEXT NOT NULL,
+      raw_event JSONB DEFAULT '{}',
+      evidence TEXT,
+      confidence FLOAT DEFAULT 0.5,
+      supersedes_event_id VARCHAR(255),
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS chronos_layer_projections (
+      id SERIAL PRIMARY KEY,
+      event_id VARCHAR(255) REFERENCES chronos_events(event_id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('knowledge', 'memory', 'wisdom', 'intelligence')),
+      source_module VARCHAR(100) NOT NULL,
+      entity_keys TEXT[],
+      decay_weight FLOAT DEFAULT 1.0,
+      revision_gate_passed BOOLEAN DEFAULT TRUE,
+      content TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(event_id, layer)
+    );
+    CREATE TABLE IF NOT EXISTS chronos_entity_edges (
+      id SERIAL PRIMARY KEY,
+      source_event_id VARCHAR(255) REFERENCES chronos_events(event_id) ON DELETE CASCADE,
+      target_event_id VARCHAR(255) REFERENCES chronos_events(event_id) ON DELETE CASCADE,
+      edge_type VARCHAR(80) NOT NULL,
+      entity_keys TEXT[],
+      confidence FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_event_id, target_event_id, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_chronos_events_user_project ON chronos_events(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_chronos_events_layer ON chronos_events(layer, confidence DESC);
+    CREATE INDEX IF NOT EXISTS idx_chronos_events_entities ON chronos_events USING GIN(entity_keys);
+    CREATE INDEX IF NOT EXISTS idx_chronos_events_source ON chronos_events(source_module);
+    CREATE INDEX IF NOT EXISTS idx_chronos_events_supersedes ON chronos_events(supersedes_event_id);
+    CREATE INDEX IF NOT EXISTS idx_chronos_projections_user_layer ON chronos_layer_projections(user_id, project_id, layer, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_chronos_edges_source ON chronos_entity_edges(source_event_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_chronos_edges_target ON chronos_entity_edges(target_event_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_chronos_edges_entities ON chronos_entity_edges USING GIN(entity_keys);
+  `);
+
+  // ── PolicyMetabol: Runtime RL write-manage-read governor ─────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS metabol_nodes (
+      node_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      action_type VARCHAR(160) NOT NULL,
+      phase VARCHAR(50) NOT NULL CHECK (phase IN ('write', 'manage', 'read', 'govern', 'consolidate')),
+      content TEXT NOT NULL,
+      tags TEXT[] DEFAULT ARRAY['general'],
+      utility FLOAT DEFAULT 0.5,
+      governed BOOLEAN DEFAULT FALSE,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS metabol_policy_utilities (
+      id SERIAL PRIMARY KEY,
+      action_type VARCHAR(160) NOT NULL,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      phase VARCHAR(50) NOT NULL CHECK (phase IN ('write', 'manage', 'read', 'govern', 'consolidate')),
+      utility FLOAT DEFAULT 0.5,
+      version INTEGER DEFAULT 1,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(action_type, user_id, project_id)
+    );
+    CREATE TABLE IF NOT EXISTS metabol_episodes (
+      id SERIAL PRIMARY KEY,
+      node_id VARCHAR(255) REFERENCES metabol_nodes(node_id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      action_type VARCHAR(160) NOT NULL,
+      phase VARCHAR(50) NOT NULL,
+      outcome_score FLOAT DEFAULT 0.5,
+      utility FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS metabol_links (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES metabol_nodes(node_id) ON DELETE CASCADE,
+      target_node_id VARCHAR(255) REFERENCES metabol_nodes(node_id) ON DELETE CASCADE,
+      link_type VARCHAR(100) NOT NULL,
+      action_type VARCHAR(160),
+      utility FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_node_id, link_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_metabol_nodes_user_project ON metabol_nodes(user_id, project_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_metabol_nodes_tags ON metabol_nodes USING GIN(tags);
+    CREATE INDEX IF NOT EXISTS idx_metabol_nodes_utility ON metabol_nodes(utility DESC, governed);
+    CREATE INDEX IF NOT EXISTS idx_metabol_policy_user_project ON metabol_policy_utilities(user_id, project_id, utility DESC);
+    CREATE INDEX IF NOT EXISTS idx_metabol_episodes_action ON metabol_episodes(action_type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_metabol_links_source ON metabol_links(source_node_id, link_type);
+  `);
+
+  // ── LayerForge: Hierarchical semantic compression + intent gating ─────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS layer_units (
+      unit_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('working', 'episodic', 'semantic')),
+      density_score FLOAT DEFAULT 0.5,
+      intent_tags TEXT[] DEFAULT ARRAY['general'],
+      gist TEXT NOT NULL,
+      compressed JSONB DEFAULT '{}',
+      raw_content TEXT,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS layer_gates (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      content TEXT,
+      density_score FLOAT DEFAULT 0,
+      reason TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS layer_synthesis_edges (
+      id SERIAL PRIMARY KEY,
+      source_unit_id VARCHAR(255) REFERENCES layer_units(unit_id) ON DELETE CASCADE,
+      target_unit_id VARCHAR(255) REFERENCES layer_units(unit_id) ON DELETE CASCADE,
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('working', 'episodic', 'semantic')),
+      intent_tags TEXT[],
+      weight FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_unit_id, target_unit_id, layer)
+    );
+    CREATE INDEX IF NOT EXISTS idx_layer_units_user_project ON layer_units(user_id, project_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_layer_units_layer ON layer_units(layer, density_score DESC);
+    CREATE INDEX IF NOT EXISTS idx_layer_units_tags ON layer_units USING GIN(intent_tags);
+    CREATE INDEX IF NOT EXISTS idx_layer_units_source ON layer_units(source_module);
+    CREATE INDEX IF NOT EXISTS idx_layer_gates_user_project ON layer_gates(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_layer_edges_source ON layer_synthesis_edges(source_unit_id, layer);
+  `);
+
+  // ── EchoForge: Multi-agent episodic reconstruction + intent hierarchies ───
+  await execute(`
+    CREATE TABLE IF NOT EXISTS echo_segments (
+      segment_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      raw_context TEXT NOT NULL,
+      local_evidence TEXT,
+      intent_tags TEXT[] DEFAULT ARRAY['general'],
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS echo_hierarchies (
+      hierarchy_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      segment_id VARCHAR(255) REFERENCES echo_segments(segment_id) ON DELETE CASCADE,
+      intent_tags TEXT[] DEFAULT ARRAY['general'],
+      gist TEXT NOT NULL,
+      hierarchy JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS echo_edges (
+      id SERIAL PRIMARY KEY,
+      source_segment_id VARCHAR(255) REFERENCES echo_segments(segment_id) ON DELETE CASCADE,
+      target_segment_id VARCHAR(255) REFERENCES echo_segments(segment_id) ON DELETE CASCADE,
+      edge_type VARCHAR(100) NOT NULL,
+      intent_tags TEXT[],
+      confidence FLOAT DEFAULT 0.5,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_segment_id, target_segment_id, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_echo_segments_user_project ON echo_segments(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_echo_segments_tags ON echo_segments USING GIN(intent_tags);
+    CREATE INDEX IF NOT EXISTS idx_echo_hierarchies_user_project ON echo_hierarchies(user_id, project_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_echo_hierarchies_tags ON echo_hierarchies USING GIN(intent_tags);
+    CREATE INDEX IF NOT EXISTS idx_echo_edges_source ON echo_edges(source_segment_id, edge_type);
+  `);
+
   // ── GovernTier: Policy-Driven Governance Tables ─────────────────────────────
   await execute(`
     CREATE TABLE IF NOT EXISTS governance_policies (

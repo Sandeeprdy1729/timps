@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 exports.loadConfig = loadConfig;
+require("dotenv/config");
 function loadConfig() {
     return {
         port: parseInt(process.env.PORT || '3000', 10),
@@ -43,8 +44,8 @@ function loadConfig() {
             } : undefined,
         },
         embeddings: {
-            provider: 'ollama',
-            model: 'nomic-embed-text',
+            provider: (process.env.EMBEDDINGS_PROVIDER || 'ollama'),
+            model: process.env.EMBEDDINGS_MODEL || 'nomic-embed-text',
             dimension: parseInt(process.env.EMBEDDINGS_DIMENSION || '768', 10),
         },
         memory: {
@@ -52,6 +53,12 @@ function loadConfig() {
             shortTermMaxMessages: parseInt(process.env.SHORT_TERM_MAX_MESSAGES || '20', 10),
             longTermTopResults: parseInt(process.env.LONG_TERM_TOP_RESULTS || '5', 10),
             reflectionThreshold: parseInt(process.env.REFLECTION_THRESHOLD || '10', 10),
+        },
+        forgeLink: {
+            enabled: process.env.ENABLE_FORGELINK !== 'false',
+            minEdgeConfidence: parseFloat(process.env.FORGELINK_MIN_CONFIDENCE || '0.3'),
+            maxEdgesPerProcess: parseInt(process.env.FORGELINK_MAX_EDGES || '20', 10),
+            evolveIntervalHours: parseInt(process.env.FORGELINK_EVOLVE_INTERVAL || '24', 10),
         },
         logging: {
             level: process.env.LOG_LEVEL || 'info',

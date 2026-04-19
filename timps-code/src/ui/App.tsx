@@ -3,9 +3,11 @@ import { Box, Text, Newline } from 'ink';
 import TextInput from 'ink-text-input';
 import { MessageList } from './components/MessageList.js';
 import { ToolActivity } from './components/ToolActivity.js';
-import { ProviderName, ModelProvider } from '../types.js';
-import { handleSlashCommand } from '../app.js';
-import { renderModelsList, renderMemoryPanel } from '../renderer.js';
+import type { ProviderName, ModelProvider } from '../config/types.js';
+import { handleSlashCommand } from '../core/app.js';
+import { renderModelsList, renderMemoryPanel } from '../utils/renderer.js';
+import { createProvider } from '../models/index.js';
+import { getDefaultModel, loadConfig, saveConfig } from '../config/config.js';
 
 import { MemoryDashboard } from './panels/MemoryDashboard.js';
 import { HelpPanel } from './panels/HelpPanel.js';
@@ -24,6 +26,7 @@ interface AppProps {
 }
 
 export const App = ({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem }: AppProps) => {
+  const [currentProvider, setCurrentProvider] = useState<ModelProvider>(provider);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -36,16 +39,15 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
 
   useEffect(() => {
     const handleKeyPress = (data: any) => {
-      if ((showHelp || showProviderSelect) && data.toString() === '\r') {
+      if (showHelp && data.toString() === '\r') {
         setShowHelp(false);
-        setShowProviderSelect(false);
       }
     };
     process.stdin.on('keypress', handleKeyPress);
     return () => {
       process.stdin.off('keypress', handleKeyPress);
     };
-  }, [showHelp, showProviderSelect]);
+  }, [showHelp]);
 
   const handleSubmit = async (query: string) => {
     if (!query.trim()) return;
@@ -71,6 +73,27 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
 
       if (cmd === '/provider' || cmd === '/models' || cmd === '/model') {
         setShowProviderSelect(true);
+        return;
+      }
+
+      if (cmd.startsWith('/model ')) {
+        const [, providerArg, modelArg] = query.trim().split(/\s+/, 3);
+        try {
+          const providerName = providerArg as ProviderName;
+          const modelName = modelArg || getDefaultModel(providerName);
+          const nextProvider = createProvider(providerName, modelName);
+          agent.switchProvider(nextProvider);
+          setCurrentProvider(nextProvider);
+
+          const config = loadConfig();
+          config.defaultProvider = providerName;
+          config.defaultModel = nextProvider.model;
+          saveConfig(config);
+
+          process.stdout.write(`\n  Switched to ${nextProvider.name} / ${nextProvider.model}\n\n`);
+        } catch (err) {
+          process.stdout.write(`\n  Provider switch failed: ${(err as Error).message}\n\n`);
+        }
         return;
       }
 
@@ -120,7 +143,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
 
       // Pass all other commands to the handler
       try {
-        await handleSlashCommand(query, agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, 'ollama', multimodalMem);
+        await handleSlashCommand(query, agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem);
       } catch (err) {
         process.stdout.write(`\n  Unknown command: ${query}\n\n`);
       }
@@ -174,11 +197,26 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
       {showHelp ? (
         <HelpPanel onClose={() => setShowHelp(false)} />
       ) : showProviderSelect ? (
-        <ProviderSelect
-          currentProvider={provider?.name || 'ollama'}
-          onSelect={(id) => {
+          <ProviderSelect
+          currentProvider={currentProvider?.name || 'ollama'}
+          onSelect={(id, model) => {
+            try {
+              const providerName = id as ProviderName;
+              const modelName = model || getDefaultModel(providerName);
+              const nextProvider = createProvider(providerName, modelName);
+              agent.switchProvider(nextProvider);
+              setCurrentProvider(nextProvider);
+
+              const config = loadConfig();
+              config.defaultProvider = providerName;
+              config.defaultModel = nextProvider.model;
+              saveConfig(config);
+
+              process.stdout.write(`\n  Selected: ${nextProvider.name} / ${nextProvider.model}\n\n`);
+            } catch (err) {
+              process.stdout.write(`\n  Provider switch failed: ${(err as Error).message}\n\n`);
+            }
             setShowProviderSelect(false);
-            process.stdout.write(`\n  Selected: ${id}\n\n`);
           }}
           onCancel={() => setShowProviderSelect(false)}
         />
@@ -188,7 +226,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
           
           <Box marginBottom={1}>
             <Text color="cyan" bold>TIMPS Code</Text>
-            <Text dimColor> — {provider?.model || 'Local Agent'}</Text>
+            <Text dimColor> — {currentProvider?.name || 'agent'} / {currentProvider?.model || 'Local Agent'}</Text>
           </Box>
 
           <MessageList messages={messages} />

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 export interface Config {
     port: number;
     nodeEnv: string;
@@ -38,7 +39,7 @@ export interface Config {
         };
     };
     embeddings: {
-        provider: 'ollama';
+        provider: 'ollama' | 'gemini';
         model: string;
         dimension: number;
     };
@@ -47,6 +48,12 @@ export interface Config {
         shortTermMaxMessages: number;
         longTermTopResults: number;
         reflectionThreshold: number;
+    };
+    forgeLink: {
+        enabled: boolean;
+        minEdgeConfidence: number;
+        maxEdgesPerProcess: number;
+        evolveIntervalHours: number;
     };
     logging: {
         level: 'debug' | 'info' | 'warn' | 'error';

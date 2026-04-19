@@ -2,16 +2,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Planner = void 0;
 const models_1 = require("../models");
+const provenForge_1 = require("./provenForge");
+const chronosVeil_1 = require("./chronosVeil");
+const weaveForge_1 = require("./weaveForge");
+const skillWeave_1 = require("./skillWeave");
+const atomChain_1 = require("./atomChain");
+const policyMetabol_1 = require("./policyMetabol");
+const layerForge_1 = require("./layerForge");
+const echoForge_1 = require("./echoForge");
 class Planner {
     model;
     constructor() {
         this.model = (0, models_1.createModel)();
     }
-    async createPlan(goal, context) {
+    async createPlan(goal, context, versionContext) {
         const planningPrompt = `You are a task planner. Break down the user's goal into clear, executable steps.
 
 Goal: ${goal}
 ${context ? `Context: ${context}` : ''}
+${versionContext ? `Version/Provenance: ${versionContext}` : ''}
 
 Return a JSON array of steps, where each step has:
 - id: unique identifier (e.g., "step_1", "step_2")
@@ -52,6 +61,43 @@ Create a practical plan with 2-8 steps maximum.`;
                 }],
             status: 'planning',
         };
+    }
+    async createVersionAwarePlan(goal, context, versionSelection) {
+        let versionContext = '';
+        if (versionSelection) {
+            if (versionSelection.intent === 'lineage') {
+                if (versionSelection.branch) {
+                    const latest = await provenForge_1.provenForge.getLatestForBranch(versionSelection.branch, versionSelection.tier);
+                    if (latest) {
+                        const lineage = await provenForge_1.provenForge.getLineage(latest.version_id, 5);
+                        versionContext = `Lineage history: ${lineage.map(v => v.slice(0, 8)).join(' → ')}`;
+                    }
+                }
+            }
+            else if (versionSelection.intent === 'specific' && versionSelection.versionId) {
+                const lineage = await provenForge_1.provenForge.getLineage(versionSelection.versionId, 5);
+                versionContext = `Viewing version ${versionSelection.versionId.slice(0, 8)} with lineage: ${lineage.map(v => v.slice(0, 8)).join(' → ')}`;
+            }
+            else if (versionSelection.intent === 'latest') {
+                versionContext = await provenForge_1.provenForge.buildVersionContext(versionSelection.branch, versionSelection.tier);
+            }
+            else if (versionSelection.intent === 'merge') {
+                versionContext = `[ProvenForge] Merge intent for branch: ${versionSelection.branch}`;
+            }
+        }
+        return this.createPlan(goal, context, versionContext);
+    }
+    async createEvolutionAwarePlan(goal, userId, projectId = 'default', context, intent = 'general') {
+        const evolutionContext = [
+            await chronosVeil_1.chronosVeil.buildVeilContext(goal, userId, projectId, 5),
+            await weaveForge_1.weaveForge.buildWeaveContext(goal, intent, userId, projectId, 5),
+            await skillWeave_1.skillWeave.policyContext(goal, userId, projectId, 5),
+            await atomChain_1.atomChain.buildAtomicContext(goal, userId, projectId, 5),
+            await policyMetabol_1.policyMetabol.buildPolicyContext(goal, userId, projectId, 5),
+            await layerForge_1.layerForge.buildLayerContext(goal, userId, projectId, 5),
+            await echoForge_1.echoForge.buildEchoContext(goal, userId, projectId, 5),
+        ].join('');
+        return this.createPlan(goal, `${context || ''}${evolutionContext}`);
     }
     async refinePlan(plan, feedback) {
         const refinementPrompt = `Refine this plan based on the feedback.
@@ -108,6 +154,16 @@ Return the refined plan in the same JSON format.`;
             status: status === 'completed' && plan.steps.every(s => s.status === 'completed')
                 ? 'completed'
                 : 'executing',
+        };
+    }
+    async injectVersionContext(plan, versionSelection) {
+        const versionContext = await provenForge_1.provenForge.buildVersionContext(versionSelection.branch, versionSelection.tier);
+        return {
+            ...plan,
+            steps: plan.steps.map(step => ({
+                ...step,
+                versionContext: versionContext || undefined,
+            })),
         };
     }
 }

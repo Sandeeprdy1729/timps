@@ -3,6 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Executor = void 0;
 const tools_1 = require("../tools");
 const models_1 = require("../models");
+const provenForge_1 = require("./provenForge");
+const chronosVeil_1 = require("./chronosVeil");
+const weaveForge_1 = require("./weaveForge");
+const skillWeave_1 = require("./skillWeave");
+const atomChain_1 = require("./atomChain");
+const policyMetabol_1 = require("./policyMetabol");
+const layerForge_1 = require("./layerForge");
+const echoForge_1 = require("./echoForge");
 class Executor {
     model;
     constructor() {
@@ -31,6 +39,16 @@ Otherwise, provide your direct response.`;
                         ...toolCall.params,
                         tool_call_id: step.id,
                     });
+                    // ProvenForge: automatically branch tool output
+                    if (!result.error) {
+                        try {
+                            await provenForge_1.provenForge.forge({ content: result.result }, toolCall.tool, step.id);
+                            await this.evolveExecutionOutput(toolCall.tool, result.result, 0.7);
+                        }
+                        catch {
+                            // Best-effort tracking
+                        }
+                    }
                     return {
                         success: !result.error,
                         step,
@@ -72,6 +90,38 @@ Otherwise, provide your direct response.`;
             }
         }
         return results.join('\n\n') || 'No previous results.';
+    }
+    async evolveExecutionOutput(sourceModule, content, outcomeScore) {
+        const signal = {
+            userId: 1,
+            projectId: 'default',
+            content,
+            raw: content,
+            confidence: outcomeScore,
+            outcomeScore,
+            tags: this.tagsForSource(sourceModule, content),
+            metadata: { step_executor: true, source_module: sourceModule },
+        };
+        await Promise.allSettled([
+            chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule),
+            weaveForge_1.weaveForge.weaveSignal(signal, sourceModule, { userId: 1, projectId: 'default', outcomeScore }),
+            skillWeave_1.skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
+            atomChain_1.atomChain.executeAtomic(signal, sourceModule, 'consolidate', outcomeScore),
+            policyMetabol_1.policyMetabol.runLoop(signal, sourceModule, outcomeScore),
+            layerForge_1.layerForge.forgeCompress(signal, sourceModule, 'executor'),
+            echoForge_1.echoForge.runReconstruction(signal, sourceModule, 'executor'),
+        ]);
+    }
+    tagsForSource(sourceModule, content) {
+        const lower = `${sourceModule} ${content}`.toLowerCase();
+        const tags = new Set(['executor']);
+        if (/\b(code|bug|debt|api|repo|test|refactor)\b/.test(lower))
+            tags.add('code');
+        if (/\b(burnout|stress|energy|relationship|team)\b/.test(lower))
+            tags.add('longitudinal');
+        if (/\b(resolved|fixed|decision|fact)\b/.test(lower))
+            tags.add('knowledge');
+        return [...tags];
     }
     async executePlan(plan, maxIterations = 10) {
         let currentPlan = plan;
