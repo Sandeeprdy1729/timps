@@ -1,6 +1,7 @@
 import { ShortTermMemoryStore } from './shortTerm';
 import { LongTermMemoryStore, Memory, Goal, Preference, Project } from './longTerm';
 import { Message } from '../models/baseModel';
+import { VersionSelection } from '../core/toolRouter';
 export interface UserMemory {
     shortTerm: ShortTermMemoryStore;
     longTerm: LongTermMemoryStore;
@@ -19,6 +20,13 @@ export declare class MemoryIndex {
         goals: Goal[];
         preferences: Preference[];
         projects: Project[];
+    }>;
+    retrieveContextWithVersion(userId: number, projectId: string, query: string, versionSelection?: VersionSelection): Promise<{
+        memories: Memory[];
+        goals: Goal[];
+        preferences: Preference[];
+        projects: Project[];
+        versionContext: string;
     }>;
     formatContextForPrompt(context: {
         memories: Memory[];

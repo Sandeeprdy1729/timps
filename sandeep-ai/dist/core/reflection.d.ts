@@ -32,5 +32,6 @@ export declare class Reflection {
         role: string;
         content: string;
     }>): Promise<void>;
+    private evolveMemoryLayers;
 }
 //# sourceMappingURL=reflection.d.ts.map

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.positionStore = exports.ContradictionTool = exports.BaseTool = void 0;
+exports.positionStore = exports.CurateTierTool = exports.ContradictionTool = exports.BaseTool = void 0;
 exports.getAllTools = getAllTools;
 exports.getToolDefinitions = getToolDefinitions;
 exports.getToolByName = getToolByName;
@@ -8,11 +8,14 @@ exports.executeTool = executeTool;
 const fileTool_1 = require("./fileTool");
 const webSearchTool_1 = require("./webSearchTool");
 const contradictionTool_1 = require("./contradictionTool");
+const curateTierTool_1 = require("./curateTierTool");
 const allTools_1 = require("./allTools");
 var baseTool_1 = require("./baseTool");
 Object.defineProperty(exports, "BaseTool", { enumerable: true, get: function () { return baseTool_1.BaseTool; } });
 var contradictionTool_2 = require("./contradictionTool");
 Object.defineProperty(exports, "ContradictionTool", { enumerable: true, get: function () { return contradictionTool_2.ContradictionTool; } });
+var curateTierTool_2 = require("./curateTierTool");
+Object.defineProperty(exports, "CurateTierTool", { enumerable: true, get: function () { return curateTierTool_2.CurateTierTool; } });
 var positionStore_1 = require("./positionStore");
 Object.defineProperty(exports, "positionStore", { enumerable: true, get: function () { return positionStore_1.positionStore; } });
 function getAllTools() {
@@ -44,6 +47,8 @@ function getAllTools() {
         new allTools_1.CollectiveWisdomTool(),
         // Tool 17: Relationship Intelligence
         new allTools_1.RelationshipIntelligenceTool(),
+        // Tool 18: CurateTier (Agent-Native Hierarchical Curation)
+        new curateTierTool_1.CurateTierTool(),
     ];
 }
 function getToolDefinitions() {

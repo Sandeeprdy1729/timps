@@ -7,6 +7,7 @@ exports.createApp = createApp;
 exports.startServer = startServer;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const routes_1 = __importDefault(require("./routes"));
@@ -17,8 +18,19 @@ const positionStore_1 = require("../tools/positionStore");
 const toolsDb_1 = require("../tools/toolsDb");
 function createApp() {
     const app = (0, express_1.default)();
+    // Trust proxy for rate limiting behind Render/Railway reverse proxy
+    app.set('trust proxy', 1);
     app.use((0, cors_1.default)());
     app.use(express_1.default.json());
+    // Rate limiting — generous for free tier, prevents abuse
+    const apiLimiter = (0, express_rate_limit_1.default)({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 100, // 100 requests per window per IP
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: { error: 'Too many requests. Please wait a few minutes.' },
+    });
+    app.use('/api', apiLimiter);
     app.use(express_1.default.urlencoded({ extended: true }));
     app.use((req, _res, next) => {
         console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
@@ -55,7 +67,7 @@ async function startServer() {
     try {
         await (0, postgres_1.initDatabase)();
         await (0, toolsDb_1.initToolsTables)();
-        console.log('PostgreSQL initialized (core + all 17 tool tables)');
+        console.log('PostgreSQL initialized (core + all 18 tool tables)');
     }
     catch (error) {
         console.warn('PostgreSQL initialization failed, continuing without DB:', error);

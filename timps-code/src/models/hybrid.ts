@@ -1,4 +1,4 @@
-import { ModelProvider, StreamEvent, Message, ToolDefinition, StreamOptions } from '../types.js';
+import type { ModelProvider, StreamEvent, Message, ToolDefinition, StreamOptions } from '../config/types.js';
 
 export class HybridProvider implements ModelProvider {
   name = 'hybrid';

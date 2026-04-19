@@ -1,257 +1,228 @@
 {
-  "name": "timps-vscode",
-  "displayName": "TIMPs — AI Coding Agent",
-  "description": "AI coding agent like Claude Code & OpenCode. Press Cmd+Esc to open TIMPs terminal, use /commands, and get AI-powered code assistance with persistent memory that learns from your patterns.",
-  "version": "1.1.0",
+  "name": "timps-ai-coding-agent",
+  "displayName": "TIMPS \u2014 AI Coding Agent",
+  "description": "AI coding agent powered by TIMPS-Coder (local Ollama) or OpenAI / Gemini",
+  "version": "1.2.0",
   "publisher": "TIMPs",
-  "icon": "logo.ico",
+  "icon": "logo.png",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.115.0"
   },
   "categories": [
     "AI",
-    "Programming Languages",
-    "Machine Learning"
+    "Chat",
+    "Other"
   ],
   "keywords": [
     "ai",
-    "claude-code",
-    "opencode",
     "coding",
-    "agent",
-    "memory",
+    "assistant",
     "timps",
     "ollama",
-    "assistant",
-    "cursor",
-    "codex",
-    "github-copilot"
+    "llm"
   ],
   "activationEvents": [
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "timps-sidebar",
+          "title": "TIMPS AI",
+          "icon": "resources/timps-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "timps-sidebar": [
+        {
+          "type": "webview",
+          "id": "timps.chatView",
+          "name": "TIMPS Chat",
+          "icon": "resources/timps-icon.svg",
+          "contextualTitle": "TIMPS AI Coding Agent"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "timps.open",
-        "title": "TIMPs: Open Agent",
-        "shortTitle": "Open TIMPs"
+        "command": "timps.openChat",
+        "title": "Open TIMPS Chat",
+        "category": "TIMPS",
+        "icon": "$(comment-discussion)"
       },
       {
         "command": "timps.newSession",
-        "title": "TIMPs: New Session",
-        "shortTitle": "New Session"
+        "title": "New Session",
+        "category": "TIMPS",
+        "icon": "$(add)"
       },
       {
-        "command": "timps.chat",
-        "title": "TIMPs: Open Chat",
-        "shortTitle": "Chat View"
+        "command": "timps.clearHistory",
+        "title": "Clear Chat History",
+        "category": "TIMPS",
+        "icon": "$(trash)"
       },
       {
-        "command": "timps.share",
-        "title": "TIMPs: Share Selection",
-        "shortTitle": "Share"
+        "command": "timps.openSettings",
+        "title": "TIMPS Settings",
+        "category": "TIMPS",
+        "icon": "$(settings-gear)"
       },
       {
-        "command": "timps.ref",
-        "title": "TIMPs: Insert File Reference",
-        "shortTitle": "File Ref"
+        "command": "timps.askAboutSelection",
+        "title": "Ask TIMPS about Selection",
+        "category": "TIMPS"
       },
       {
-        "command": "timps.explain",
-        "title": "TIMPs: Explain Code",
-        "shortTitle": "Explain"
+        "command": "timps.explainCode",
+        "title": "Explain with TIMPS",
+        "category": "TIMPS"
       },
       {
-        "command": "timps.refactor",
-        "title": "TIMPs: Refactor Code",
-        "shortTitle": "Refactor"
+        "command": "timps.fixCode",
+        "title": "Fix with TIMPS",
+        "category": "TIMPS"
       },
       {
-        "command": "timps.test",
-        "title": "TIMPs: Write Tests",
-        "shortTitle": "Write Tests"
+        "command": "timps.generateTests",
+        "title": "Generate Tests with TIMPS",
+        "category": "TIMPS"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "timps.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "timps@1"
+        },
+        {
+          "command": "timps.explainCode",
+          "when": "editorHasSelection",
+          "group": "timps@2"
+        },
+        {
+          "command": "timps.fixCode",
+          "when": "editorHasSelection",
+          "group": "timps@3"
+        },
+        {
+          "command": "timps.generateTests",
+          "when": "editorHasSelection",
+          "group": "timps@4"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "timps.newSession",
+          "when": "view == timps.chatView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "timps.clearHistory",
+          "when": "view == timps.chatView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "timps.openSettings",
+          "when": "view == timps.chatView",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "timps.openChat",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
       },
       {
-        "command": "timps.fix",
-        "title": "TIMPs: Fix Bug",
-        "shortTitle": "Fix Bug"
-      },
-      {
-        "command": "timps.status",
-        "title": "TIMPs: Status",
-        "shortTitle": "Status"
-      },
-      {
-        "command": "timps.setup",
-        "title": "TIMPs: Setup",
-        "shortTitle": "Setup"
+        "command": "timps.askAboutSelection",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorHasSelection"
       }
     ],
     "configuration": {
-      "title": "TIMPs AI Agent",
+      "title": "TIMPS AI Coding Agent",
       "properties": {
-        "timps.agentMode": {
+        "timps.provider": {
           "type": "string",
-          "enum": ["terminal", "chat", "inline"],
-          "default": "terminal",
-          "description": "How TIMPs interacts: terminal (OpenCode style), chat (Claude Code style), or inline"
+          "enum": [
+            "ollama",
+            "openai",
+            "gemini"
+          ],
+          "default": "ollama",
+          "description": "AI provider to use"
         },
-        "timps.useLocalAgent": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use local Ollama AI (recommended). Disable for cloud API."
-        },
-        "timps.localModel": {
+        "timps.model": {
           "type": "string",
           "default": "sandeeprdy1729/timps-coder",
-          "description": "Ollama model for local AI. Your custom TIMPs-Coder or any coding model."
+          "description": "Model name (Ollama) or model ID (OpenAI/Gemini)"
         },
         "timps.ollamaUrl": {
           "type": "string",
           "default": "http://localhost:11434",
           "description": "Ollama server URL"
         },
-        "timps.autoInstall": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically check and install Ollama and model"
-        },
-        "timps.enableDiagnostics": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show inline hints for common issues"
-        },
-        "timps.serverUrl": {
+        "timps.openaiApiKey": {
           "type": "string",
-          "default": "https://timps-api.onrender.com",
-          "description": "TIMPs API server (used when useLocalAgent is false)"
+          "default": "",
+          "description": "OpenAI API key (if using OpenAI provider)"
+        },
+        "timps.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Google Gemini API key (if using Gemini provider)"
+        },
+        "timps.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "description": "Max tokens per response"
+        },
+        "timps.temperature": {
+          "type": "number",
+          "default": 0.2,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Model temperature (0 = deterministic, 2 = creative)"
+        },
+        "timps.systemPrompt": {
+          "type": "string",
+          "default": "You are TIMPS-Coder, an expert AI coding assistant built by Sandeep Reddy (TIMPS). You help with coding, debugging, architecture, and explanations. Be concise, accurate, and practical.",
+          "description": "System prompt sent with every request"
+        },
+        "timps.autoContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically include the current file as context"
+        },
+        "timps.theme": {
+          "type": "string",
+          "enum": [
+            "timps-dark",
+            "timps-light"
+          ],
+          "default": "timps-dark",
+          "description": "Chat panel theme"
         }
       }
-    },
-    "menus": {
-      "editor/context": [
-        {
-          "command": "timps.share",
-          "group": "timps@1",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "timps.explain",
-          "group": "timps@2",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "timps.refactor",
-          "group": "timps@3",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "timps.fix",
-          "group": "timps@4",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "timps.test",
-          "group": "timps@5",
-          "when": "editorHasSelection"
-        },
-        {
-          "command": "timps.ref",
-          "group": "timps@6"
-        },
-        {
-          "command": "timps.chat",
-          "group": "timps@7"
-        }
-      ],
-      "commandPalette": [
-        { "command": "timps.open", "when": "true" },
-        { "command": "timps.newSession", "when": "true" },
-        { "command": "timps.chat", "when": "true" },
-        { "command": "timps.share", "when": "editorHasSelection" },
-        { "command": "timps.explain", "when": "editorHasSelection" },
-        { "command": "timps.refactor", "when": "editorHasSelection" },
-        { "command": "timps.test", "when": "editorHasSelection" },
-        { "command": "timps.fix", "when": "editorHasSelection" },
-        { "command": "timps.status", "when": "true" },
-        { "command": "timps.setup", "when": "true" }
-      ]
-    },
-    "keybindings": [
-      {
-        "command": "timps.open",
-        "key": "cmd+escape",
-        "mac": "cmd+escape",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "timps.newSession",
-        "key": "cmd+shift+escape",
-        "mac": "cmd+shift+escape",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "timps.chat",
-        "key": "cmd+shift+c",
-        "mac": "cmd+shift+c",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "timps.ref",
-        "key": "cmd+option+k",
-        "mac": "cmd+option+k",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "timps.explain",
-        "key": "cmd+option+e",
-        "mac": "cmd+option+e",
-        "when": "editorHasSelection"
-      },
-      {
-        "command": "timps.refactor",
-        "key": "cmd+option+r",
-        "mac": "cmd+option+r",
-        "when": "editorHasSelection"
-      },
-      {
-        "command": "timps.test",
-        "key": "cmd+option+t",
-        "mac": "cmd+option+t",
-        "when": "editorHasSelection"
-      },
-      {
-        "command": "timps.fix",
-        "key": "cmd+option+f",
-        "mac": "cmd+option+f",
-        "when": "editorHasSelection"
-      }
-    ]
+    }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "@types/node": "^20.0.0",
-    "typescript": "^5.5.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Sandeeprdy1729/timps.git"
-  },
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/Sandeeprdy1729/timps/issues"
-  },
-  "homepage": "https://timps-website.vercel.app/",
-  "galleryBanner": {
-    "color": "#4ec9b0",
-    "theme": "dark"
-  },
-  "pricing": "Free"
+    "@types/node": "^20.19.39",
+    "@types/vscode": "^1.115.0",
+    "@vscode/vsce": "^2.32.0",
+    "typescript": "^5.9.3"
+  }
 }

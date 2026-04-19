@@ -2,6 +2,13 @@ import { createModel, BaseModel } from '../models';
 import { Message } from '../models/baseModel';
 import { provenForge } from './provenForge';
 import { VersionSelection } from './toolRouter';
+import { chronosVeil } from './chronosVeil';
+import { weaveForge } from './weaveForge';
+import { skillWeave } from './skillWeave';
+import { atomChain } from './atomChain';
+import { policyMetabol } from './policyMetabol';
+import { layerForge } from './layerForge';
+import { echoForge } from './echoForge';
 
 export interface PlanStep {
   id: string;
@@ -105,6 +112,26 @@ Create a practical plan with 2-8 steps maximum.`;
     }
     
     return this.createPlan(goal, context, versionContext);
+  }
+
+  async createEvolutionAwarePlan(
+    goal: string,
+    userId: number,
+    projectId: string = 'default',
+    context?: string,
+    intent: string = 'general'
+  ): Promise<Plan> {
+    const evolutionContext = [
+      await chronosVeil.buildVeilContext(goal, userId, projectId, 5),
+      await weaveForge.buildWeaveContext(goal, intent, userId, projectId, 5),
+      await skillWeave.policyContext(goal, userId, projectId, 5),
+      await atomChain.buildAtomicContext(goal, userId, projectId, 5),
+      await policyMetabol.buildPolicyContext(goal, userId, projectId, 5),
+      await layerForge.buildLayerContext(goal, userId, projectId, 5),
+      await echoForge.buildEchoContext(goal, userId, projectId, 5),
+    ].join('');
+
+    return this.createPlan(goal, `${context || ''}${evolutionContext}`);
   }
   
   async refinePlan(plan: Plan, feedback: string): Promise<Plan> {

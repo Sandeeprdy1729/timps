@@ -32,6 +32,9 @@ export declare class Agent {
     private runWithPlan;
     private buildMessages;
     private executeToolCall;
+    private evolveToolOutput;
+    private evolveReflectionMemory;
+    private tagsForSource;
     private reflectAndStore;
     private extractMemories;
     setSystemPrompt(prompt: string): void;

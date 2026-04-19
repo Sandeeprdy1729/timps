@@ -1,0 +1,33 @@
+{
+  "name": "@timps/sdk",
+  "version": "1.0.0",
+  "description": "TIMPs SDK - The heart of AI memory systems",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [
+    "ai",
+    "memory",
+    "timps",
+    "agent",
+    "langchain",
+    "crewai",
+    "rag"
+  ],
+  "author": "TIMPs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
+  "dependencies": {
+    "events": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  }
+}

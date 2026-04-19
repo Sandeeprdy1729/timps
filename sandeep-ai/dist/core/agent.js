@@ -8,7 +8,15 @@ const env_1 = require("../config/env");
 const toolRouter_1 = require("./toolRouter");
 const planner_1 = require("./planner");
 const executor_1 = require("./executor");
-const DEFAULT_SYSTEM_PROMPT = `You are TIMPs — a persistent cognitive partner with 17 specialized intelligence tools.
+const forgeLink_1 = require("./forgeLink");
+const weaveForge_1 = require("./weaveForge");
+const skillWeave_1 = require("./skillWeave");
+const atomChain_1 = require("./atomChain");
+const chronosVeil_1 = require("./chronosVeil");
+const policyMetabol_1 = require("./policyMetabol");
+const layerForge_1 = require("./layerForge");
+const echoForge_1 = require("./echoForge");
+const DEFAULT_SYSTEM_PROMPT = `You are TIMPs — a persistent cognitive partner with 18 specialized intelligence tools.
 
 TOOL REFERENCE:
 1. temporal_mirror — record/reflect behavioral patterns over time
@@ -28,6 +36,7 @@ TOOL REFERENCE:
 15. meeting_ghost — extract and track meeting commitments
 16. collective_wisdom — anonymized cross-user decision intelligence
 17. relationship_intelligence — track relationship health and detect drift
+18. curate_tier — agent-native hierarchical curation: organizes memories into raw/episodic/semantic tiers with adaptive gating
 
 STANDARD TOOLS: file_operations, web_search, web_fetch
 
@@ -57,6 +66,10 @@ class Agent {
         this.maxIterations = agentConfig.maxIterations || 15;
         this.planner = new planner_1.Planner();
         this.executor = new executor_1.Executor();
+        // Initialize ForgeLink module registry (idempotent)
+        if (forgeLink_1.forgeLink.isEnabled() || process.env.ENABLE_FORGELINK !== 'false') {
+            forgeLink_1.forgeLink.registerModules();
+        }
         const internalTools = (0, tools_1.getToolDefinitions)();
         this.allToolDefinitions = internalTools.map(tool => ({
             type: 'function',
@@ -75,6 +88,25 @@ class Agent {
         // ── Step 1: Route — decide which tools are relevant ──────────────────────
         const routing = await toolRouter_1.toolRouter.routeByLLM(userMessage, this.userId);
         const activeTools = toolRouter_1.toolRouter.filterToolDefinitions(this.allToolDefinitions, routing.routes);
+        // ForgeLink/WeaveForge/SkillWeave/AtomChain: intent-aware memory policy context
+        let forgeLinkContext = '';
+        let evolutionContext = '';
+        const intent = toolRouter_1.toolRouter.detectQueryIntent(userMessage) || forgeLink_1.forgeLink.detectIntent(userMessage);
+        if (forgeLink_1.forgeLink.isEnabled()) {
+            const relatedEdges = await forgeLink_1.forgeLink.intentAwareRetrieve(userMessage, intent, this.userId, 5);
+            if (relatedEdges.length > 0) {
+                const edgeSummary = relatedEdges.map(e => `${e.edge.provenanceModule} —[${e.edge.edgeType}]→ ${e.edge.metadata?.targetModule || 'unknown'} (conf=${e.relevance.toFixed(2)})`).join('\n');
+                forgeLinkContext = `\n\n### Linked Relationship Context (ForgeLink)\n${edgeSummary}`;
+            }
+        }
+        evolutionContext =
+            await chronosVeil_1.chronosVeil.buildVeilContext(userMessage, this.userId, this.projectId, 4) +
+                await weaveForge_1.weaveForge.buildWeaveContext(userMessage, intent, this.userId, this.projectId, 4) +
+                await skillWeave_1.skillWeave.policyContext(userMessage, this.userId, this.projectId, 4) +
+                await atomChain_1.atomChain.buildAtomicContext(userMessage, this.userId, this.projectId, 4) +
+                await policyMetabol_1.policyMetabol.buildPolicyContext(userMessage, this.userId, this.projectId, 4) +
+                await layerForge_1.layerForge.buildLayerContext(userMessage, this.userId, this.projectId, 4) +
+                await echoForge_1.echoForge.buildEchoContext(userMessage, this.userId, this.projectId, 4);
         const routingHint = toolRouter_1.toolRouter.buildRoutingHint(routing.routes, this.userId);
         // ── Step 2: Plan — for complex tasks, build a multi-step plan ─────────────
         if (routing.needs_planning && routing.complexity === 'complex') {
@@ -83,7 +115,7 @@ class Agent {
         // ── Step 3: Execute — standard agentic loop with focused tool set ─────────
         const context = await memoryIndex_1.memoryIndex.retrieveContext(this.userId, this.projectId, userMessage);
         const contextString = memoryIndex_1.memoryIndex.formatContextForPrompt(context);
-        let messages = this.buildMessages(userMessage, contextString, routingHint);
+        let messages = this.buildMessages(userMessage, contextString, routingHint, forgeLinkContext + evolutionContext);
         let iterations = 0;
         const toolResults = [];
         const toolsActivated = [];
@@ -110,6 +142,17 @@ class Agent {
                 const result = await this.executeToolCall(toolCall);
                 toolResults.push(result);
                 toolsActivated.push(toolCall.function.name);
+                // ForgeLink: process tool output for typed edge forging
+                if (forgeLink_1.forgeLink.isEnabled() && !result.error) {
+                    try {
+                        const outputData = JSON.parse(result.result);
+                        await forgeLink_1.forgeLink.process(toolCall.function.name, outputData, this.userId, outputData.id);
+                    }
+                    catch { /* result may not be JSON — skip edge forging */ }
+                }
+                if (!result.error) {
+                    await this.evolveToolOutput(toolCall.function.name, result.result, 0.65);
+                }
                 messages.push({
                     role: 'assistant',
                     content: '',
@@ -137,10 +180,14 @@ class Agent {
             const contextString = memoryIndex_1.memoryIndex.formatContextForPrompt(context);
             const plan = await this.planner.createPlan(userMessage, contextString);
             const { plan: executedPlan, results } = await this.executor.executePlan(plan);
+            const successRate = results.length > 0
+                ? results.filter(r => r.success).length / results.length
+                : 0.5;
             const summary = results
                 .filter(r => r.success)
                 .map(r => `${r.step.description}: ${r.output.slice(0, 200)}`)
                 .join('\n\n');
+            await this.evolveToolOutput('planner_executor', summary || userMessage, successRate);
             // Final synthesis pass
             const synthMessages = [
                 { role: 'system', content: this.systemPrompt },
@@ -161,11 +208,12 @@ class Agent {
             return this.run(userMessage);
         }
     }
-    buildMessages(userMessage, contextString, routingHint = '') {
+    buildMessages(userMessage, contextString, routingHint = '', forgeLinkContext = '') {
         const systemContent = this.systemPrompt +
             (contextString ? `\n\n### User Context\n${contextString}` : '') +
             `\n\n### Recent Conversation\n${memoryIndex_1.memoryIndex.getShortTermContext(this.userId, this.projectId)}` +
-            routingHint;
+            routingHint +
+            (forgeLinkContext || '');
         return [
             { role: 'system', content: systemContent },
             { role: 'user', content: userMessage },
@@ -188,23 +236,96 @@ class Agent {
             return { toolCallId: toolCall.id, result: '', error: error.message };
         }
     }
+    async evolveToolOutput(sourceModule, content, outcomeScore) {
+        const signal = {
+            userId: this.userId,
+            projectId: this.projectId,
+            content,
+            raw: content,
+            outcomeScore,
+            confidence: outcomeScore,
+            tags: this.tagsForSource(sourceModule, content),
+            metadata: { source_module: sourceModule },
+        };
+        await Promise.allSettled([
+            chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule),
+            weaveForge_1.weaveForge.weaveSignal(signal, sourceModule, { userId: this.userId, projectId: this.projectId, outcomeScore }),
+            skillWeave_1.skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
+            atomChain_1.atomChain.executeAtomic(signal, sourceModule, outcomeScore >= 0.6 ? 'consolidate' : 'create', outcomeScore),
+            policyMetabol_1.policyMetabol.runLoop(signal, sourceModule, outcomeScore),
+            layerForge_1.layerForge.forgeCompress(signal, sourceModule, sourceModule),
+            echoForge_1.echoForge.runReconstruction(signal, sourceModule, sourceModule),
+        ]);
+    }
+    async evolveReflectionMemory(memory, importance) {
+        const outcomeScore = Math.max(0.1, Math.min(1.0, importance / 5));
+        const signal = {
+            userId: this.userId,
+            projectId: this.projectId,
+            content: memory.content,
+            confidence: outcomeScore,
+            tags: memory.tags || [],
+            metadata: { memory_type: memory.type, importance },
+            outcomeScore,
+        };
+        await Promise.allSettled([
+            chronosVeil_1.chronosVeil.ingestEvent(signal, 'reflection'),
+            weaveForge_1.weaveForge.weaveSignal(signal, 'reflection', { userId: this.userId, projectId: this.projectId, outcomeScore }),
+            skillWeave_1.skillWeave.evolveAndApply(signal, 'reflection', outcomeScore),
+            atomChain_1.atomChain.executeAtomic(signal, 'reflection', importance >= 4 ? 'consolidate' : 'create', outcomeScore),
+            policyMetabol_1.policyMetabol.runLoop(signal, 'reflection', outcomeScore),
+            layerForge_1.layerForge.forgeCompress(signal, 'reflection', memory.type),
+            echoForge_1.echoForge.runReconstruction(signal, 'reflection', memory.type),
+        ]);
+    }
+    tagsForSource(sourceModule, content) {
+        const tags = new Set();
+        const lower = `${sourceModule} ${content}`.toLowerCase();
+        if (/\b(code|bug|debt|api|repo|test|refactor)\b/.test(lower))
+            tags.add('code');
+        if (/\b(burnout|stress|energy|tired)\b/.test(lower))
+            tags.add('burnout');
+        if (/\b(team|relationship|colleague|handoff)\b/.test(lower))
+            tags.add('relationship');
+        if (/\b(plan|step|executor|planner)\b/.test(lower))
+            tags.add('planning');
+        if (/\b(fact|decision|resolved|supersede|contract)\b/.test(lower))
+            tags.add('knowledge');
+        if (tags.size === 0)
+            tags.add(sourceModule);
+        return [...tags];
+    }
     async reflectAndStore(userMessage, assistantResponse) {
         if (this.memoryMode === 'ephemeral')
             return;
         const reflection = await this.extractMemories(userMessage, assistantResponse);
         const conversationId = 'conv_' + Date.now();
         const messageId = 'msg_' + Date.now();
-        for (const memory of reflection.memories) {
-            await memoryIndex_1.memoryIndex.storeMemory(this.userId, this.projectId, memory.content, memory.type === 'reflection' ? 'reflection' : 'explicit', memory.importance, memory.tags || [], conversationId, messageId);
+        // Guard against LLM returning non-array values
+        for (const memory of (Array.isArray(reflection.memories) ? reflection.memories : [])) {
+            try {
+                await memoryIndex_1.memoryIndex.storeMemory(this.userId, this.projectId, memory.content, memory.type === 'reflection' ? 'reflection' : 'explicit', memory.importance, memory.tags || [], conversationId, messageId);
+                await this.evolveReflectionMemory(memory, memory.importance || 1);
+            }
+            catch { /* silent — vector store may be unavailable */ }
         }
-        for (const goal of reflection.goals) {
-            await memoryIndex_1.memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority);
+        for (const goal of (Array.isArray(reflection.goals) ? reflection.goals : [])) {
+            try {
+                await memoryIndex_1.memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority);
+            }
+            catch { }
         }
-        for (const pref of reflection.preferences) {
-            await memoryIndex_1.memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category);
+        for (const pref of (Array.isArray(reflection.preferences) ? reflection.preferences : [])) {
+            try {
+                await memoryIndex_1.memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category);
+            }
+            catch { }
         }
-        for (const project of reflection.projects) {
-            await memoryIndex_1.memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack);
+        for (const project of (Array.isArray(reflection.projects) ? reflection.projects : [])) {
+            try {
+                await memoryIndex_1.memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack);
+            }
+            catch { }
         }
     }
     async extractMemories(userMessage, assistantResponse) {

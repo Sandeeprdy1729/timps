@@ -3,6 +3,13 @@ import { memoryIndex } from '../memory/memoryIndex';
 import { curateTier, CurationInput } from './curateTier';
 import { provenForge } from './provenForge';
 import { governTier, GovernanceEvent } from './governTier';
+import { chronosVeil } from './chronosVeil';
+import { weaveForge } from './weaveForge';
+import { skillWeave } from './skillWeave';
+import { atomChain } from './atomChain';
+import { policyMetabol } from './policyMetabol';
+import { layerForge } from './layerForge';
+import { echoForge } from './echoForge';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -119,13 +126,14 @@ Only include entries if there is meaningful information to extract. Be concise b
       await curateTier.curate(curationInput, userId);
       
       // ProvenForge: versioning
-      await provenForge.forge(
-        { content: memory.content, tags: memory.tags },
-        'reflection'
-      );
-    } catch {
-      // CurateTier/ProvenForge is best-effort — never block reflection
-    }
+	      await provenForge.forge(
+	        { content: memory.content, tags: memory.tags },
+	        'reflection'
+	      );
+	      await this.evolveMemoryLayers(userId, projectId, memory.content, memory.tags || [], memory.importance, 'reflection');
+	    } catch {
+	      // Evolution layers are best-effort — never block reflection
+	    }
 
     // GovernTier: policy-driven governance
     if (governTier.isEnabled()) {
@@ -235,17 +243,55 @@ Return JSON array:
           await curateTier.curate(curationInput, userId);
           
           // ProvenForge: versioning
-          await provenForge.forge(
-            { content: insight.content, tags: insight.tags },
-            'reflection_session'
-          );
-        } catch {
-          // CurateTier/ProvenForge is best-effort
-        }
+	          await provenForge.forge(
+	            { content: insight.content, tags: insight.tags },
+	            'reflection_session'
+	          );
+	          await this.evolveMemoryLayers(
+	            userId,
+	            projectId,
+	            insight.content,
+	            insight.tags || [],
+	            insight.importance || 1,
+	            'reflection_session'
+	          );
+	        } catch {
+	          // Evolution layers are best-effort
+	        }
       }
     }
   } catch (error) {
     console.error('Session reflection failed:', error);
-  }
-}
+	  }
+	}
+
+	private async evolveMemoryLayers(
+	  userId: number,
+	  projectId: string,
+	  content: string,
+	  tags: string[],
+	  importance: number,
+	  sourceModule: string
+	): Promise<void> {
+	  const outcomeScore = Math.max(0.1, Math.min(1.0, importance / 5));
+	  const signal = {
+	    userId,
+	    projectId,
+	    content,
+	    tags,
+	    confidence: outcomeScore,
+	    outcomeScore,
+	    metadata: { importance, source_module: sourceModule },
+	  };
+
+	  await Promise.allSettled([
+	    chronosVeil.ingestEvent(signal, sourceModule),
+	    weaveForge.weaveSignal(signal, sourceModule, { userId, projectId, outcomeScore }),
+	    skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
+	    atomChain.executeAtomic(signal, sourceModule, importance >= 4 ? 'consolidate' : 'create', outcomeScore),
+	    policyMetabol.runLoop(signal, sourceModule, outcomeScore),
+	    layerForge.forgeCompress(signal, sourceModule, sourceModule),
+	    echoForge.runReconstruction(signal, sourceModule, sourceModule),
+	  ]);
+	}
 }

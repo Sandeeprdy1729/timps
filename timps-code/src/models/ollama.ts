@@ -1,7 +1,7 @@
 // ── Ollama Model Provider ──
 // Supports: DeepSeek R1, Qwen 2.5 Coder, CodeLlama, Llama 3.1, Mistral, etc.
-import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../types.js';
-import { parseNDJSON, parseXmlToolCalls } from '../utils.js';
+import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../config/types.js';
+import { parseNDJSON, parseXmlToolCalls } from '../utils/utils.js';
 
 // Models known to support native function calling via Ollama
 // Note: qwen2.5-coder outputs tool calls as raw JSON text, NOT native FC — use XML fallback

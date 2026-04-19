@@ -4,6 +4,7 @@ exports.memoryIndex = exports.MemoryIndex = void 0;
 const shortTerm_1 = require("./shortTerm");
 const longTerm_1 = require("./longTerm");
 const env_1 = require("../config/env");
+const provenForge_1 = require("../core/provenForge");
 class MemoryIndex {
     userMemories = new Map();
     longTermStore;
@@ -39,6 +40,14 @@ class MemoryIndex {
             userMemory.longTerm.getProjects(userId),
         ]);
         return { memories, goals, preferences, projects };
+    }
+    async retrieveContextWithVersion(userId, projectId, query, versionSelection) {
+        const baseContext = await this.retrieveContext(userId, projectId, query);
+        let versionContext = '';
+        if (versionSelection) {
+            versionContext = await provenForge_1.provenForge.buildVersionContext(versionSelection.branch, versionSelection.tier);
+        }
+        return { ...baseContext, versionContext };
     }
     formatContextForPrompt(context) {
         const parts = [];

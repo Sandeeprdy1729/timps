@@ -2,9 +2,9 @@
 // Specialized for code tasks with benchmark optimizations and TIMPs memory integration
 
 import { BaseAgent, AgentConfig } from './base.js';
-import type { AgentEvent, ToolDefinition } from '../types.js';
-import { Memory } from '../memory.js';
-import { SnapshotManager } from '../snapshot.js';
+import type { AgentEvent, ToolDefinition } from '../config/types.js';
+import { Memory } from '../memory/memory.js';
+import { SnapshotManager } from '../memory/snapshot.js';
 
 const CODER_SYSTEM_PROMPT = `TIMPS Coder. Benchmark-optimized.
 

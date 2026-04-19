@@ -7,17 +7,27 @@ exports.queryOne = queryOne;
 exports.execute = execute;
 const pg_1 = require("pg");
 const env_1 = require("../config/env");
-console.log("POSTGRES CONFIG:", env_1.config.postgres);
-exports.pool = new pg_1.Pool({
-    host: env_1.config.postgres.host,
-    port: env_1.config.postgres.port,
-    database: env_1.config.postgres.database,
-    user: env_1.config.postgres.user,
-    password: env_1.config.postgres.password,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-});
+console.log("POSTGRES CONFIG:", process.env.DATABASE_URL ? '(using DATABASE_URL)' : env_1.config.postgres);
+// Prefer DATABASE_URL (Neon/Supabase connection string) over individual vars
+const poolConfig = process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+    }
+    : {
+        host: env_1.config.postgres.host,
+        port: env_1.config.postgres.port,
+        database: env_1.config.postgres.database,
+        user: env_1.config.postgres.user,
+        password: env_1.config.postgres.password,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+    };
+exports.pool = new pg_1.Pool(poolConfig);
 exports.pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
 });

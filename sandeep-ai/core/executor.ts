@@ -3,6 +3,13 @@ import { Plan, PlanStep } from './planner';
 import { Message } from '../models/baseModel';
 import { createModel, BaseModel } from '../models';
 import { provenForge } from './provenForge';
+import { chronosVeil } from './chronosVeil';
+import { weaveForge } from './weaveForge';
+import { skillWeave } from './skillWeave';
+import { atomChain } from './atomChain';
+import { policyMetabol } from './policyMetabol';
+import { layerForge } from './layerForge';
+import { echoForge } from './echoForge';
 
 export interface ExecutionResult {
   success: boolean;
@@ -57,6 +64,7 @@ Otherwise, provide your direct response.`;
                 toolCall.tool,
                 step.id
               );
+              await this.evolveExecutionOutput(toolCall.tool, result.result, 0.7);
             } catch {
               // Best-effort tracking
             }
@@ -105,6 +113,38 @@ Otherwise, provide your direct response.`;
     }
     
     return results.join('\n\n') || 'No previous results.';
+  }
+
+  private async evolveExecutionOutput(sourceModule: string, content: string, outcomeScore: number): Promise<void> {
+    const signal = {
+      userId: 1,
+      projectId: 'default',
+      content,
+      raw: content,
+      confidence: outcomeScore,
+      outcomeScore,
+      tags: this.tagsForSource(sourceModule, content),
+      metadata: { step_executor: true, source_module: sourceModule },
+    };
+
+    await Promise.allSettled([
+      chronosVeil.ingestEvent(signal, sourceModule),
+      weaveForge.weaveSignal(signal, sourceModule, { userId: 1, projectId: 'default', outcomeScore }),
+      skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
+      atomChain.executeAtomic(signal, sourceModule, 'consolidate', outcomeScore),
+      policyMetabol.runLoop(signal, sourceModule, outcomeScore),
+      layerForge.forgeCompress(signal, sourceModule, 'executor'),
+      echoForge.runReconstruction(signal, sourceModule, 'executor'),
+    ]);
+  }
+
+  private tagsForSource(sourceModule: string, content: string): string[] {
+    const lower = `${sourceModule} ${content}`.toLowerCase();
+    const tags = new Set<string>(['executor']);
+    if (/\b(code|bug|debt|api|repo|test|refactor)\b/.test(lower)) tags.add('code');
+    if (/\b(burnout|stress|energy|relationship|team)\b/.test(lower)) tags.add('longitudinal');
+    if (/\b(resolved|fixed|decision|fact)\b/.test(lower)) tags.add('knowledge');
+    return [...tags];
   }
   
   async executePlan(plan: Plan, maxIterations: number = 10): Promise<{

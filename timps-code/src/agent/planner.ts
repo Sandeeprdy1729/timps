@@ -1,7 +1,7 @@
 // agent/planner.ts - Planning Agent
 // Multi-step planning with verification checkpoints and plan persistence
 
-import type { Message } from '../types.js';
+import type { Message } from '../config/types.js';
 
 export interface Plan {
   id: string;

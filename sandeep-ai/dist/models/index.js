@@ -29,15 +29,19 @@ function createModel(provider) {
             throw new Error(`Unknown model provider: ${selectedProvider}`);
     }
 }
-function createEmbeddingModel(provider = 'ollama') {
-    // Embeddings always use Ollama's nomic-embed-text regardless of chat provider
-    // OpenRouter does not offer an embeddings API
-    switch (provider) {
+function createEmbeddingModel(provider) {
+    const selected = provider || env_1.config.embeddings.provider || 'ollama';
+    switch (selected) {
         case 'openai':
             return new openaiModel_1.OpenAIModel();
         case 'gemini':
+            // Gemini embedding-001: 768 dimensions, free forever (1500 RPM)
             return new geminiModel_1.GeminiModel();
         case 'openrouter':
+            // OpenRouter has no embeddings API — fall back to Gemini if key available, else Ollama
+            if (env_1.config.models.gemini?.apiKey)
+                return new geminiModel_1.GeminiModel();
+            return new ollamaModel_1.OllamaModel('nomic-embed-text');
         case 'ollama':
         default:
             return new ollamaModel_1.OllamaModel('nomic-embed-text');

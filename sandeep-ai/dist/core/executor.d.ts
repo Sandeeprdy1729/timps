@@ -10,6 +10,8 @@ export declare class Executor {
     constructor();
     executeStep(plan: Plan, step: PlanStep): Promise<ExecutionResult>;
     private injectDependencies;
+    private evolveExecutionOutput;
+    private tagsForSource;
     executePlan(plan: Plan, maxIterations?: number): Promise<{
         plan: Plan;
         results: ExecutionResult[];

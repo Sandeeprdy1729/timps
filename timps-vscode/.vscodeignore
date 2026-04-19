@@ -1,11 +1,7 @@
 .vscode/**
-.vscode-test/**
-src/**
-!src/extension.ts
-**/*.ts
-!out/**
 node_modules/**
+src/**
 .gitignore
 tsconfig.json
-icon.svg
-generate-icon.js
+*.ts
+!out/**

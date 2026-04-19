@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const eventBus_1 = require("../core/eventBus");
 const agent_1 = require("../core/agent");
 const memoryIndex_1 = require("../memory/memoryIndex");
 const postgres_1 = require("../db/postgres");
@@ -41,11 +42,32 @@ router.post('/chat', async (req, res) => {
             agent.clearConversation();
         }
         const response = await agent.run(message);
+        // Emit real-time events for each activated tool
+        const activated = response.toolsActivated || [];
+        activated.forEach(toolName => {
+            eventBus_1.eventBus.emit({
+                type: 'tool_activated',
+                userId,
+                payload: { tool: toolName, message: message.slice(0, 100) },
+                timestamp: new Date().toISOString(),
+            });
+        });
+        // Emit chat message event for live feed
+        eventBus_1.eventBus.emit({
+            type: 'chat_message',
+            userId,
+            payload: {
+                userMessage: message.slice(0, 200),
+                response: response.content.slice(0, 300),
+                toolsActivated: activated,
+            },
+            timestamp: new Date().toISOString(),
+        });
         res.json({
             response: response.content,
             toolResults: response.toolResults,
             iterations: response.iterations,
-            toolsActivated: response.toolsActivated || [],
+            toolsActivated: activated,
             planExecuted: response.planExecuted || false,
         });
     }
@@ -207,7 +229,22 @@ router.post('/contradiction/check', async (req, res) => {
             project_id: projectId || 'default',
             auto_store: autoStore !== false,
         });
-        res.json(JSON.parse(raw));
+        const result = JSON.parse(raw);
+        // Emit real-time event if contradiction detected
+        if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
+            eventBus_1.eventBus.emit({
+                type: 'contradiction',
+                userId: req.body.userId,
+                payload: {
+                    score: result.contradiction_score,
+                    verdict: result.verdict,
+                    claim: result.conflicting_position?.extracted_claim,
+                    new_text: req.body.text?.slice(0, 100),
+                },
+                timestamp: new Date().toISOString(),
+            });
+        }
+        res.json(result);
     }
     catch (error) {
         console.error('Contradiction check error:', error);
@@ -286,6 +323,127 @@ router.get('/contradiction/history/:positionId', async (req, res) => {
         console.error('Contradiction history error:', error);
         res.status(500).json({ error: error.message });
     }
+});
+// ─── Dashboard API endpoints ──────────────────────────────────────────────────
+router.get('/dashboard/burnout/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const signals = await (0, postgres_1.query)(`SELECT signal_type, value, baseline_value, deviation_pct, recorded_at
+       FROM burnout_signals WHERE user_id=$1
+       ORDER BY recorded_at DESC LIMIT 30`, [userId]);
+        const baseline = await (0, postgres_1.query)(`SELECT baseline_data FROM burnout_baseline WHERE user_id=$1`, [userId]);
+        const analysis = await (0, postgres_1.query)(`SELECT signal_type, AVG(value) as avg_val, AVG(baseline_value) as avg_base
+       FROM burnout_signals WHERE user_id=$1 AND recorded_at > NOW() - INTERVAL '6 weeks'
+       GROUP BY signal_type`, [userId]);
+        res.json({ signals, baseline: baseline[0]?.baseline_data || null, analysis });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/dashboard/commitments/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const pending = await (0, postgres_1.query)(`SELECT id, person_name, commitment, due_date, status, meeting_title, meeting_date
+       FROM meeting_commitments WHERE user_id=$1
+       ORDER BY status ASC, due_date ASC NULLS LAST LIMIT 20`, [userId]);
+        const counts = await (0, postgres_1.query)(`SELECT status, COUNT(*) as count FROM meeting_commitments WHERE user_id=$1 GROUP BY status`, [userId]);
+        res.json({ commitments: pending, counts });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/dashboard/relationships/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const health = await (0, postgres_1.query)(`SELECT contact_name, health_score, drift_alert, last_interaction, computed_at
+       FROM relationship_health WHERE user_id=$1 ORDER BY health_score ASC`, [userId]);
+        res.json({ relationships: health, total: health.length });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/dashboard/bugs/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const bugs = await (0, postgres_1.query)(`SELECT bug_type, trigger_context, frequency, last_occurrence
+       FROM bug_patterns WHERE user_id=$1 ORDER BY frequency DESC`, [userId]);
+        res.json({ bugs, total: bugs.length });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/dashboard/manifesto/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const manifesto = await (0, postgres_1.query)(`SELECT content, updated_at FROM manifestos WHERE user_id=$1`, [userId]);
+        const values = await (0, postgres_1.query)(`SELECT inferred_value, frequency FROM value_observations WHERE user_id=$1
+       ORDER BY frequency DESC LIMIT 8`, [userId]);
+        res.json({
+            manifesto: manifesto[0]?.content || null,
+            updated_at: manifesto[0]?.updated_at || null,
+            values
+        });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/dashboard/stats/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId, 10);
+        const [memories, positions, commitments, relationships, bugs, decisions] = await Promise.all([
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM memories WHERE user_id=$1`, [userId]),
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM positions WHERE user_id=$1`, [userId]),
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM meeting_commitments WHERE user_id=$1 AND status='pending'`, [userId]),
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM relationship_health WHERE user_id=$1`, [userId]),
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM bug_patterns WHERE user_id=$1`, [userId]),
+            (0, postgres_1.query)(`SELECT COUNT(*) as count FROM decisions WHERE user_id=$1`, [userId]),
+        ]);
+        res.json({
+            memories: parseInt(memories[0].count),
+            positions: parseInt(positions[0].count),
+            commitments: parseInt(commitments[0].count),
+            relationships: parseInt(relationships[0].count),
+            bugs: parseInt(bugs[0].count),
+            decisions: parseInt(decisions[0].count),
+        });
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+// ─── Real-time SSE endpoint ───────────────────────────────────────────────────
+router.get('/events/:userId', (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId)) {
+        res.status(400).json({ error: 'Invalid userId' });
+        return;
+    }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.flushHeaders();
+    // Send connected confirmation
+    res.write(`data: ${JSON.stringify({ type: 'connected', userId, timestamp: new Date().toISOString() })}\n\n`);
+    // Send heartbeat every 20s to keep connection alive
+    const heartbeat = setInterval(() => {
+        try {
+            res.write(`: heartbeat\n\n`);
+        }
+        catch {
+            clearInterval(heartbeat);
+        }
+    }, 20000);
+    eventBus_1.eventBus.subscribe(userId, res);
+    req.on('close', () => {
+        clearInterval(heartbeat);
+        eventBus_1.eventBus.unsubscribe(userId, res);
+    });
 });
 exports.default = router;
 //# sourceMappingURL=routes.js.map

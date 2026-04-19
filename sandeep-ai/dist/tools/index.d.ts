@@ -2,6 +2,7 @@ import { BaseTool, InternalToolDefinition, ToolResult } from './baseTool';
 export { BaseTool } from './baseTool';
 export { InternalToolDefinition, ToolResult } from './baseTool';
 export { ContradictionTool } from './contradictionTool';
+export { CurateTierTool } from './curateTierTool';
 export { positionStore } from './positionStore';
 export declare function getAllTools(): BaseTool[];
 export declare function getToolDefinitions(): InternalToolDefinition[];
