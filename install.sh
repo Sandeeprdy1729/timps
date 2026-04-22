@@ -100,7 +100,7 @@ done
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  TIMPs v2.0 installed successfully!              ║${NC}"
+echo -e "${GREEN}║  TIMPs v1.0 installed successfully!              ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 echo
 echo -e "  ${BLUE}Start server:${NC}    npm run server"
