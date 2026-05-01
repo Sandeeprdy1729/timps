@@ -49,6 +49,7 @@ export interface SpreadingResult {
   confidence: number;
   auditLog: string[];
   activationPath: string[];
+  refusal?: boolean;
 }
 
 export interface CycleResult {

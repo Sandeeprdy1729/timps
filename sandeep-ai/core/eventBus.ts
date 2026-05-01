@@ -4,7 +4,7 @@ import { Response } from 'express';
 export interface TIMPsEvent {
   type: 'contradiction' | 'burnout' | 'bug_warning' | 'memory_stored' |
         'commitment_added' | 'relationship_drift' | 'regret_warning' |
-        'tool_activated' | 'chat_message' | 'chronos_event';
+        'tool_activated' | 'chat_message' | 'chronos_event' | 'nexus_event' | 'synapse_event';
   userId: number;
   payload: Record<string, any>;
   timestamp: string;
