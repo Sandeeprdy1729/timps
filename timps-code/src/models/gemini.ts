@@ -1,44 +1,40 @@
-// ── Google Gemini Model Provider ──
 import type { Message, ModelProvider, StreamEvent, StreamOptions, ToolDefinition } from '../config/types.js';
 
 export function createGeminiProvider(apiKey: string, modelId?: string): ModelProvider {
-  const model = modelId || 'gemini-2.5-flash';
+  const model = modelId || 'gemini-2.0-flash';
+  const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   return {
     name: 'gemini',
     model,
     supportsFunctionCalling: true,
+    async *stream(messages, tools, options): AsyncGenerator<StreamEvent> {
+      const geminiMessages = convertMessages(messages);
+      const sysMsg = messages.find(m => m.role === 'system');
 
-    async *stream(messages: Message[], tools: ToolDefinition[], options?: StreamOptions): AsyncGenerator<StreamEvent> {
       const body: Record<string, unknown> = {
-        contents: convertMessages(messages),
+        contents: geminiMessages,
         generationConfig: {
           maxOutputTokens: options?.maxTokens || 8192,
+          ...(options?.temperature !== undefined && { temperature: options.temperature }),
         },
       };
 
-      if (options?.temperature !== undefined) {
-        (body.generationConfig as Record<string, unknown>).temperature = options.temperature;
+      if (sysMsg) {
+        body.systemInstruction = { parts: [{ text: sysMsg.content }] };
       }
 
-      // System instruction
-      const sysMsg = messages.find(m => m.role === 'system');
-      if (sysMsg) body.system_instruction = { parts: [{ text: sysMsg.content }] };
-
-      // Tools
       if (tools.length > 0) {
         body.tools = [{
-          function_declarations: tools.map(t => ({
+          functionDeclarations: tools.map(t => ({
             name: t.name,
             description: t.description,
-            parameters: convertSchema(t.inputSchema),
+            parameters: t.inputSchema,
           })),
         }];
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
-      const res = await fetch(url, {
+      const res = await fetch(baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -56,30 +52,32 @@ export function createGeminiProvider(apiKey: string, modelId?: string): ModelPro
       const decoder = new TextDecoder();
       let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw || raw === '[DONE]') continue;
+            let data: any;
+            try { data = JSON.parse(raw); } catch { continue; }
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
             const candidate = data.candidates?.[0];
+            if (!candidate) continue;
 
-            if (candidate?.content?.parts) {
-              for (const part of candidate.content.parts) {
-                if (part.text) {
-                  yield { type: 'text', content: part.text };
-                } else if (part.functionCall) {
-                  const id = `fc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-                  yield { type: 'tool_start', id, name: part.functionCall.name };
-                  yield { type: 'tool_delta', id, argumentsChunk: JSON.stringify(part.functionCall.args || {}) };
-                  yield { type: 'tool_end', id };
-                }
+            const parts = candidate.content?.parts || [];
+            for (const part of parts) {
+              if (part.text) yield { type: 'text', content: part.text };
+              if (part.functionCall) {
+                const id = `fc_${Date.now()}`;
+                yield { type: 'tool_start', id, name: part.functionCall.name };
+                yield { type: 'tool_delta', id, argumentsChunk: JSON.stringify(part.functionCall.args || {}) };
+                yield { type: 'tool_end', id };
               }
             }
 
@@ -88,62 +86,41 @@ export function createGeminiProvider(apiKey: string, modelId?: string): ModelPro
               outputTokens = data.usageMetadata.candidatesTokenCount || 0;
             }
 
-            if (candidate?.finishReason) {
-              yield { type: 'done', stopReason: candidate.finishReason, usage: { inputTokens, outputTokens } };
+            if (candidate.finishReason && candidate.finishReason !== 'STOP' && candidate.finishReason !== 'MAX_TOKENS') {
+              // keep going
             }
-          } catch {
-            // skip bad JSON
           }
         }
+      } finally {
+        reader.releaseLock();
       }
+
+      yield { type: 'done', usage: { inputTokens, outputTokens } };
     },
   };
 }
 
 function convertMessages(messages: Message[]): unknown[] {
-  const result: unknown[] = [];
-  for (const msg of messages) {
-    if (msg.role === 'system') continue; // handled separately
-
-    const geminiRole = msg.role === 'assistant' ? 'model' : 'user';
-
-    if (msg.role === 'assistant' && msg.toolCalls?.length) {
-      const parts: unknown[] = [];
-      if (msg.content) parts.push({ text: msg.content });
-      for (const tc of msg.toolCalls) {
-        parts.push({ functionCall: { name: tc.name, args: tc.arguments } });
+  return messages
+    .filter(m => m.role !== 'system')
+    .map(m => {
+      if (m.role === 'tool') {
+        return {
+          role: 'user',
+          parts: [{ functionResponse: { name: m.name || 'tool', response: { result: m.content } } }],
+        };
       }
-      result.push({ role: 'model', parts });
-    } else if (msg.role === 'tool') {
-      result.push({
-        role: 'user',
-        parts: [{
-          functionResponse: {
-            name: msg.name || 'tool',
-            response: { content: msg.content },
-          },
-        }],
-      });
-    } else {
-      result.push({ role: geminiRole, parts: [{ text: msg.content }] });
-    }
-  }
-  return result;
-}
-
-function convertSchema(schema: Record<string, unknown>): Record<string, unknown> {
-  const converted: Record<string, unknown> = { type: 'OBJECT' };
-  const props = schema.properties as Record<string, { type: string; description?: string; enum?: string[] }>;
-  if (props) {
-    converted.properties = {};
-    for (const [key, val] of Object.entries(props)) {
-      (converted.properties as Record<string, unknown>)[key] = {
-        type: val.type.toUpperCase(),
-        description: val.description,
-        ...(val.enum ? { enum: val.enum } : {}),
+      if (m.role === 'assistant' && m.toolCalls?.length) {
+        const parts: unknown[] = [];
+        if (m.content) parts.push({ text: m.content });
+        for (const tc of m.toolCalls) {
+          parts.push({ functionCall: { name: tc.name, args: tc.arguments } });
+        }
+        return { role: 'model', parts };
+      }
+      return {
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
       };
-    }
-  }
-  if (schema.required) converted.required = schema.required;
-  return converted;
+    });
 }

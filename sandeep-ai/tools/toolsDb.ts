@@ -767,4 +767,104 @@ export async function initToolsTables(): Promise<void> {
 
   console.log('[TIMPs] All 17 tool tables + ForgeLink edges + GovernTier initialized');
 
+  // ── NexusForge: Episodic Sub-Agent Trinity Tables ────────────────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS nexus_episodic_nodes (
+      node_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      gist TEXT NOT NULL,
+      facts JSONB DEFAULT '[]',
+      entity_keys TEXT[] DEFAULT ARRAY['general'],
+      content TEXT NOT NULL,
+      raw_signal JSONB DEFAULT '{}',
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_user_project ON nexus_episodic_nodes(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_gist ON nexus_episodic_nodes USING GIN(gist);
+    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_entities ON nexus_episodic_nodes USING GIN(entity_keys);
+    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_source ON nexus_episodic_nodes(source_module);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS nexus_temporal_edges (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES nexus_episodic_nodes(node_id) ON DELETE CASCADE,
+      target_node_id VARCHAR(255) REFERENCES nexus_episodic_nodes(node_id) ON DELETE CASCADE,
+      edge_type VARCHAR(80) NOT NULL,
+      confidence FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_node_id, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_nexus_temporal_source ON nexus_temporal_edges(source_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_nexus_temporal_target ON nexus_temporal_edges(target_node_id, edge_type);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS nexus_causal_edges (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES nexus_episodic_nodes(node_id) ON DELETE CASCADE,
+      target_tool VARCHAR(100) NOT NULL,
+      edge_type VARCHAR(80) NOT NULL,
+      confidence FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_tool, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_nexus_causal_source ON nexus_causal_edges(source_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_nexus_causal_tool ON nexus_causal_edges(target_tool);
+  `);
+
+  console.log('[TIMPs] NexusForge sub-agent trinity tables initialized');
+
+  // ── SynapseMetabolon: Spreading Activation Metabolic Graph ─────────────────
+  await execute(`
+    CREATE TABLE IF NOT EXISTS metabolic_nodes (
+      node_id VARCHAR(255) PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id),
+      project_id TEXT DEFAULT 'default',
+      source_module VARCHAR(100) NOT NULL,
+      source_record_id VARCHAR(255),
+      layer VARCHAR(50) NOT NULL CHECK (layer IN ('interaction', 'reasoning', 'audit')),
+      entity_keys TEXT[] DEFAULT ARRAY['general'],
+      content TEXT NOT NULL,
+      raw_signal JSONB DEFAULT '{}',
+      activation FLOAT DEFAULT 0.5,
+      utility FLOAT DEFAULT 0.5,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_metabolic_nodes_user_project ON metabolic_nodes(user_id, project_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_nodes_layer ON metabolic_nodes(layer, activation DESC);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_nodes_entities ON metabolic_nodes USING GIN(entity_keys);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_nodes_source ON metabolic_nodes(source_module);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_nodes_utility ON metabolic_nodes(utility DESC, activation DESC);
+  `);
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS metabolic_edges (
+      id SERIAL PRIMARY KEY,
+      source_node_id VARCHAR(255) REFERENCES metabolic_nodes(node_id) ON DELETE CASCADE,
+      target_node_id VARCHAR(255) REFERENCES metabolic_nodes(node_id) ON DELETE CASCADE,
+      edge_type VARCHAR(80) NOT NULL,
+      entity_keys TEXT[],
+      weight FLOAT DEFAULT 0.5,
+      confidence FLOAT DEFAULT 0.5,
+      provenance_module VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_node_id, target_node_id, edge_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_metabolic_edges_source ON metabolic_edges(source_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_edges_target ON metabolic_edges(target_node_id, edge_type);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_edges_entities ON metabolic_edges USING GIN(entity_keys);
+    CREATE INDEX IF NOT EXISTS idx_metabolic_edges_weight ON metabolic_edges(weight DESC);
+  `);
+
+  console.log('[TIMPs] SynapseMetabolon spreading activation tables initialized');
 }

@@ -1,13 +1,33 @@
-// core/chronosVeil.ts - Layered persistence oracle with append-only entity graph
+// core/chronosVeil.ts - AetherForge: Four-Layer Persistence Oracle with 
+// Ontology-Driven Append-Only Property Graph and Query-Time Adaptive Multi-Agent Veil
 //
-// Chronos Veil separates persistence semantics so facts are superseded with
-// provenance, experiences decay, wisdom revises only with evidence, and
-// intelligence stays ephemeral. Ingestion is append-only; conflict resolution
-// happens at query time through a bounded temporal/entity traversal.
+// Implementation of arXiv 2604.11364 (Missing Knowledge Layer), 
+// arXiv 2604.14362 (APEX-MEM), and arXiv 2604.12285 (GAM) concepts:
+//
+// Four-Layer Oracle: Distinct persistence semantics
+//   - knowledge: supersession with history intact (not decayed)
+//   - memory: decay over time (experiences fade)  
+//   - wisdom: gated revision only with compelling evidence
+//   - intelligence: ephemeral inference (transient thoughts dissipate)
+//
+// Ontology-Driven Append-Only Graph:
+//   - Entity-centric temporal/causal/property edges
+//   - Preserves full temporal evolution
+//
+// Adaptive Multi-Agent Veil (Constructor/Retriever/Judge/Refresher):
+//   - Constructor: projection mapping on ingest
+//   - Retriever: graph traversal at query time
+//   - Judge: conflict resolution with delta-only updates
+//   - Refresher: compact summarization
+//
+// Coding Ecosystem Integration: 
+//   - timps-code/VS/MCP outputs trigger entity forging with 
+//     supersession/causal links to burnout, relationship, contradiction tools
 
 import * as crypto from 'crypto';
 import { execute, query } from '../db/postgres';
 import { upsertVectors } from '../db/vector';
+import { config } from '../config/env';
 
 export type PersistenceLayer = 'knowledge' | 'memory' | 'wisdom' | 'intelligence';
 
@@ -46,13 +66,61 @@ export interface VeilResolution {
   }>;
   conflicts: string[];
   confidence: number;
+  refusal: boolean;
+  agentTrace: {
+    constructor: string;
+    retriever: string;
+    judge: string;
+    refresher: string;
+  };
+}
+
+export interface VeilAgentResult {
+  content: string;
+  confidence: number;
+  action: 'project' | 'traverse' | 'resolve_delta' | 'summarize' | 'refuse';
+  reasoning: string;
+  entities?: string[];
+  deltas?: Array<{ oldEventId: string; newEventId: string; delta: string }>;
 }
 
 const CODE_SOURCES = ['code', 'cli', 'bug', 'debt', 'api', 'codebase', 'timps-code'];
 
+interface VeilAgentConfig {
+  maxTraverseSteps: number;
+  confidenceThreshold: number;
+  refusalThreshold: number;
+  maxSummaryLength: number;
+}
+
+const DEFAULT_VEIL_CONFIG: VeilAgentConfig = {
+  maxTraverseSteps: 8,
+  confidenceThreshold: 0.65,
+  refusalThreshold: 0.15,
+  maxSummaryLength: 500,
+};
+
 export class ChronosVeil {
+  private config: VeilAgentConfig;
+  private aetherConfig = (config as any).aetherForge || {};
+
+  constructor(config: Partial<VeilAgentConfig> = {}) {
+    this.config = { 
+      ...DEFAULT_VEIL_CONFIG, 
+      ...config,
+      maxTraverseSteps: this.aetherConfig.maxTraverseSteps || config.maxTraverseSteps || DEFAULT_VEIL_CONFIG.maxTraverseSteps,
+      confidenceThreshold: this.aetherConfig.confidenceThreshold || config.confidenceThreshold || DEFAULT_VEIL_CONFIG.confidenceThreshold,
+      refusalThreshold: this.aetherConfig.refusalThreshold || config.refusalThreshold || DEFAULT_VEIL_CONFIG.refusalThreshold,
+      maxSummaryLength: this.aetherConfig.maxSummaryLength || config.maxSummaryLength || DEFAULT_VEIL_CONFIG.maxSummaryLength,
+    };
+  }
+
   isEnabled(): boolean {
-    return process.env.ENABLE_CHRONOSVEIL !== 'false';
+    return process.env.ENABLE_CHRONOSVEIL !== 'false' && (this.aetherConfig.enabled !== false);
+  }
+
+  isAetherForgeEnabled(): boolean {
+    return process.env.ENABLE_AETHERFORGE !== 'false' && this.isEnabled();
   }
 
   async ingestEvent(signal: ChronosSignal, sourceModule: string): Promise<ChronosEventResult> {
@@ -134,37 +202,79 @@ export class ChronosVeil {
     limit: number = 8
   ): Promise<VeilResolution> {
     if (!this.isEnabled()) {
-      return { summary: '', resolvedEvents: [], conflicts: [], confidence: 0 };
+      return { 
+        summary: '', 
+        resolvedEvents: [], 
+        conflicts: [], 
+        confidence: 0, 
+        refusal: true,
+        agentTrace: { constructor: 'disabled', retriever: 'disabled', judge: 'disabled', refresher: 'disabled' }
+      };
     }
 
     const queryEntities = this.extractEntities({ content: queryText }, 'query');
     const preferredLayers = this.layersForQuery(queryText);
 
-    try {
-      const rows = await query<any>(
-        `SELECT event_id, layer, source_module, entity_keys, content, supersedes_event_id,
-                confidence, created_at
-         FROM chronos_events
-         WHERE user_id = $1
-           AND project_id = $2
-           AND (entity_keys && $3::text[] OR layer = ANY($4))
-         ORDER BY
-           CASE WHEN supersedes_event_id IS NULL THEN 1 ELSE 0 END DESC,
-           confidence DESC,
-           created_at DESC
-         LIMIT $5`,
-        [userId, projectId, queryEntities, preferredLayers, limit * 3]
-      );
+    const agentTrace = {
+      constructor: '',
+      retriever: '',
+      judge: '',
+      refresher: '',
+    };
 
-      const resolved = this.resolveSupersession(rows).slice(0, limit);
-      const conflicts = this.detectConflicts(rows);
-      const confidence = resolved.length
-        ? resolved.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / resolved.length
+    try {
+      // ───────────────────────────────────────────────────────────────
+      // RETRIEVER AGENT: Graph traversal to fetch candidate events
+      // ───────────────────────────────────────────────────────────────
+      const rows = await this.agentRetriever(queryText, userId, projectId, queryEntities, preferredLayers, limit * 3);
+      agentTrace.retriever = `retrieved ${rows.length} candidates via entity/layer traversal`;
+
+      // ───────────────────────────────────────────────────────────────
+      // JUDGE AGENT: Conflict resolution with delta-only updates  
+      // ───────────────────────────────────────────────────────────────
+      const { resolved, conflicts, deltas } = await this.agentJudge(rows, queryEntities);
+      agentTrace.judge = deltas.length > 0 
+        ? `resolved ${deltas.length} conflicts via delta-only supersession` 
+        : 'no conflicts detected';
+
+      // Handle refusal threshold
+      if (resolved.length === 0 || resolved.length < 2) {
+        const lowConfidence = resolved.length > 0 
+          ? resolved.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / resolved.length
+          : 0;
+          
+        if (lowConfidence < this.config.refusalThreshold) {
+          return {
+            summary: '',
+            resolvedEvents: [],
+            conflicts: [],
+            confidence: 0,
+            refusal: true,
+            agentTrace: { 
+              constructor: 'no events to project', 
+              retriever: agentTrace.retriever, 
+              judge: 'insufficient candidates',
+              refresher: 'refused: low confidence'
+            },
+          };
+        }
+      }
+
+      const finalResolved = resolved.slice(0, limit);
+
+      // ───────────────────────────────────────────────────────────────
+      // REFRESHER AGENT: Compact summarization
+      // ───────────────────────────────────────────────────────────────
+      const summary = await this.agentRefresher(finalResolved, conflicts, queryText);
+      agentTrace.refresher = `produced ${summary.length} char summary`;
+
+      const confidence = finalResolved.length
+        ? finalResolved.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / finalResolved.length
         : 0;
 
       return {
-        summary: this.produceTemporalSummary(resolved, conflicts),
-        resolvedEvents: resolved.map(row => ({
+        summary,
+        resolvedEvents: finalResolved.map(row => ({
           eventId: row.event_id,
           layer: row.layer,
           sourceModule: row.source_module,
@@ -176,17 +286,168 @@ export class ChronosVeil {
         })),
         conflicts,
         confidence,
+        refusal: false,
+        agentTrace,
       };
-    } catch {
-      return { summary: '', resolvedEvents: [], conflicts: [], confidence: 0 };
+    } catch (err) {
+      console.warn('[ChronosVeil] Query failed:', err);
+      return { 
+        summary: '', 
+        resolvedEvents: [], 
+        conflicts: [], 
+        confidence: 0, 
+        refusal: true,
+        agentTrace,
+      };
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // CONSTRUCTOR AGENT: Projection mapping on ingest (already in ingestEvent)
+  // ─────────────────────────────────────────────────────────────────
+  private async agentConstructor(signal: ChronosSignal, sourceModule: string): Promise<VeilAgentResult> {
+    const layer = this.determineLayer(signal, sourceModule);
+    const confidence = this.clamp(signal.confidence ?? this.defaultConfidence(layer, signal), 0.05, 1);
+    
+    let reasoning = `projected to ${layer} layer`;
+    if (layer === 'wisdom' && confidence < 0.7) {
+      reasoning += ' (gated: below revision threshold)';
+    } else if (layer === 'memory') {
+      reasoning += ` (decay weight: ${(0.72).toFixed(2)})`;
+    }
+
+    return {
+      content: layer,
+      confidence,
+      action: 'project',
+      reasoning,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // RETRIEVER AGENT: Entity/layer-aware graph traversal  
+  // ─────────────────────────────────────────────────────────────────
+  private async agentRetriever(
+    queryText: string,
+    userId: number,
+    projectId: string,
+    queryEntities: string[],
+    preferredLayers: PersistenceLayer[],
+    limit: number
+  ): Promise<any[]> {
+    return query<any>(
+      `SELECT event_id, layer, source_module, entity_keys, content, supersedes_event_id,
+              confidence, created_at
+       FROM chronos_events
+       WHERE user_id = $1
+         AND project_id = $2
+         AND (entity_keys && $3::text[] OR layer = ANY($4))
+       ORDER BY
+         CASE WHEN supersedes_event_id IS NULL THEN 1 ELSE 0 END DESC,
+         confidence DESC,
+         created_at DESC
+       LIMIT $5`,
+      [userId, projectId, queryEntities, preferredLayers, limit]
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // JUDGE AGENT: Conflict resolution with delta-only updates
+  // ─────────────────────────────────────────────────────────────────
+  private async agentJudge(rows: any[], queryEntities: string[]): Promise<{
+    resolved: any[];
+    conflicts: string[];
+    deltas: Array<{ oldEventId: string; newEventId: string; delta: string }>;
+  }> {
+    const resolved = this.resolveSupersession(rows);
+    const conflicts = this.detectConflicts(rows);
+    
+    const deltas: Array<{ oldEventId: string; newEventId: string; delta: string }> = [];
+    for (const row of resolved) {
+      if (row.supersedes_event_id) {
+        deltas.push({
+          oldEventId: row.supersedes_event_id,
+          newEventId: row.event_id,
+          delta: 'superseded',
+        });
+      }
+    }
+
+    return { resolved, conflicts, deltas };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // REFRESHER AGENT: Compact summarization with context awareness
+  // ─────────────────────────────────────────────────────────────────
+  private async agentRefresher(
+    resolved: any[],
+    conflicts: string[],
+    queryText: string
+  ): Promise<string> {
+    if (resolved.length === 0) return '';
+
+    const lower = queryText.toLowerCase();
+    const wantsLongitudinal = /\b(over time|history|pattern|burnout|relationship|trajectory)\b/.test(lower);
+    const wantsLatest = /\b(current|latest|resolved|recent)\b/.test(lower);
+    const wantsTimeline = /\b(when|timeline|evolution)\b/.test(lower);
+
+    const lines: string[] = [];
+    
+    if (wantsTimeline) {
+      for (const row of resolved.slice(0, 8)) {
+        const entity = (row.entity_keys || [])[0] || 'general';
+        const date = new Date(row.created_at).toISOString().split('T')[0];
+        lines.push(`- ${date} ${entity}/${row.layer}: ${String(row.content).slice(0, 140)}`);
+      }
+    } else if (wantsLatest) {
+      for (const row of resolved.slice(0, 4)) {
+        const entity = (row.entity_keys || [])[0] || 'general';
+        const supersession = row.supersedes_event_id ? ' (supersedes prior)' : '';
+        lines.push(`- ${entity}/${row.layer}: ${String(row.content).slice(0, 180)}${supersession}`);
+      }
+    } else if (wantsLongitudinal) {
+      for (const row of resolved.slice(0, 6)) {
+        const entity = (row.entity_keys || [])[0] || 'general';
+        const conf = Number(row.confidence || 0).toFixed(2);
+        const age = this.computeEventAge(row.created_at);
+        lines.push(`- ${entity}/${row.layer} [${conf}] (${age}): ${String(row.content).slice(0, 120)}`);
+      }
+    } else {
+      for (const row of resolved.slice(0, 5)) {
+        const entity = (row.entity_keys || [])[0] || 'general';
+        const supersession = row.supersedes_event_id ? ` supersedes ${String(row.supersedes_event_id).slice(0, 8)}` : '';
+        lines.push(`- ${entity}/${row.layer}: ${String(row.content).slice(0, 180)}${supersession}`);
+      }
+    }
+
+    if (conflicts.length > 0) {
+      lines.push(`- unresolved conflicts: ${conflicts.join('; ')}`);
+    }
+
+    let summary = lines.join('\n');
+    if (summary.length > this.config.maxSummaryLength) {
+      summary = summary.slice(0, this.config.maxSummaryLength) + '\n- (truncated)';
+    }
+
+    return summary;
+  }
+
+  private computeEventAge(createdAt: string | Date): string {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const days = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'today';
+    if (days === 1) return '1d ago';
+    if (days < 30) return `${days}d ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}y ago`;
   }
 
   async buildVeilContext(queryText: string, userId: number, projectId: string = 'default', limit: number = 5): Promise<string> {
     const resolved = await this.queryWithVeil(queryText, userId, projectId, limit);
-    if (!resolved.summary) return '';
+    if (!resolved.summary || resolved.refusal) return '';
 
-    return `\n\n### Chronos Veil Resolution\n${resolved.summary}\nConfidence: ${resolved.confidence.toFixed(2)}`;
+    return `\n\n### AetherForge Resolution\n${resolved.summary}\nConfidence: ${resolved.confidence.toFixed(2)}\nAgent Trace: constructor=${resolved.agentTrace.constructor}, retriever=${resolved.agentTrace.retriever}, judge=${resolved.agentTrace.judge}, refresher=${resolved.agentTrace.refresher}`;
   }
 
   private async projectToLayer(

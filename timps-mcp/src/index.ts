@@ -271,6 +271,262 @@ async function main() {
     content: [{ type: 'text' as const, text: await chat('Show my Living Manifesto.') }],
   }));
 
+  // ── Chronos Veil (Temporal Apex Veil) ─────────────────────────────────────
+
+  server.registerTool('timps_chronos_ingest', {
+    description: 'Ingest a signal into Chronos Veil with layered persistence. Auto-classifies into knowledge/memory/wisdom/intelligence with entity linking.',
+    inputSchema: {
+      content: z.string().describe('The signal or event to ingest'),
+      source_module: z.string().describe('Source: timps-code, timps-vscode, timps-mcp, reflection, etc.'),
+      tags: z.array(z.string()).optional().describe('Entity tags: code, bug, tech-debt, api, burnout, relationship'),
+      entity: z.string().optional().describe('Primary entity identifier'),
+    },
+  }, async ({ content, source_module, tags, entity }) => {
+    const data = await timpsAPI('/chronos/ingest', 'POST', {
+      content,
+      sourceModule: source_module,
+      tags: tags || [],
+      entity,
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+    });
+    return { content: [{ type: 'text' as const, text: `✓ Event ${data.eventId} → layer: ${data.layer}, entities: ${(data.entities || []).join(', ')}` }] };
+  });
+
+  server.registerTool('timps_chronos_query', {
+    description: 'Query Chronos Veil with the multi-tool resolution agent. Resolves conflicts and produces compact temporal summaries.',
+    inputSchema: {
+      query: z.string().describe('Temporal query (e.g. "how has my bug patterns evolved?", "what API decisions were superseded?")'),
+      limit: z.number().optional().describe('Max events to return (default 8)'),
+    },
+  }, async ({ query, limit }) => {
+    const data = await timpsAPI('/chronos/query', 'POST', {
+      query,
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+      limit: limit || 8,
+    });
+    if (!data.resolvedEvents || data.resolvedEvents.length === 0) {
+      return { content: [{ type: 'text' as const, text: 'No temporal events found for this query.' }] };
+    }
+    const conf = (data.confidence || 0).toFixed(2);
+    const lines = [`**Chronos Veil Resolution (confidence: ${conf})**\n`];
+    for (const ev of data.resolvedEvents) {
+      const sup = ev.supersedes ? ' ←supersedes' : '';
+      lines.push(`- [${ev.layer}] ${(ev.content || '').slice(0, 80)}${sup} (conf: ${ev.confidence.toFixed(2)})`);
+    }
+    if (data.conflicts && data.conflicts.length > 0) {
+      lines.push(`\n⚠️ Unresolved conflicts: ${data.conflicts.join('; ')}`);
+    }
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  server.registerTool('timps_chronos_stats', {
+    description: 'Get Chronos Veil statistics: event counts by layer, recent events, and entity graph edges.',
+    inputSchema: {},
+  }, async () => {
+    const data = await timpsAPI(`/chronos/stats/${TIMPS_USER_ID}`);
+    const byLayer = data.byLayer || {};
+    const text = [
+      `**Chronos Veil Stats**`,
+      `Total events: ${data.total || 0}`,
+      `  Knowledge: ${byLayer.knowledge || 0} (facts, decisions, resolved positions)`,
+      `  Memory: ${byLayer.memory || 0} (experiences with decay)`,
+      `  Wisdom: ${byLayer.wisdom || 0} (evidence-gated insights)`,
+      `  Intelligence: ${byLayer.intelligence || 0} (ephemeral drafts)`,
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
+  // ── NexusForge (Episodic Sub-Agent Trinity) ─────────────────────────────
+
+  server.registerTool('timps_nexus_ingest', {
+    description: 'Ingest a signal into NexusForge episodic memory. Builds hybrid graph nodes with time-aware gists and factual links. Use after coding sessions, decisions, or notable events.',
+    inputSchema: {
+      content: z.string().describe('The signal or event to ingest'),
+      source_module: z.string().describe('Source: timps-code, timps-vscode, timps-mcp, cli, etc.'),
+      tags: z.array(z.string()).optional().describe('Entity tags: code, bug, tech-debt, api, burnout, relationship, regret'),
+    },
+  }, async ({ content, source_module, tags }) => {
+    const data = await timpsAPI('/nexus/ingest', 'POST', {
+      content,
+      sourceModule: source_module,
+      tags: tags || [],
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+    });
+    return { content: [{ type: 'text' as const, text: data.success ? `✓ Episodic node created: ${data.nodeId}` : 'NexusForge ingest failed or disabled' }] };
+  });
+
+  server.registerTool('timps_nexus_query', {
+    description: 'Query NexusForge episodic memory with agentic iterative retrieval. Returns episodic nodes with spatiotemporal context, refusal when evidence is insufficient.',
+    inputSchema: {
+      query: z.string().describe('Episodic query (e.g. "what coding sessions led to burnout signals?", "show my regret patterns around API decisions")'),
+    },
+  }, async ({ query }) => {
+    const data = await timpsAPI('/nexus/query', 'POST', {
+      query,
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+    });
+    if (data.refusal) {
+      return { content: [{ type: 'text' as const, text: `No episodic matches found (confidence: ${(data.confidence || 0).toFixed(2)})` }] };
+    }
+    if (!data.results || data.results.length === 0) {
+      return { content: [{ type: 'text' as const, text: 'No episodic results.' }] };
+    }
+    const conf = (data.confidence || 0).toFixed(2);
+    const lines = [`**NexusForge Results (confidence: ${conf})**\n`];
+    for (const r of data.results.slice(0, 8)) {
+      lines.push(`- [${r.source_module || 'unknown'}] ${(r.gist || r.content || '').slice(0, 120)} (${new Date(r.created_at).toLocaleDateString()})`);
+    }
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  server.registerTool('timps_nexus_stats', {
+    description: 'Get NexusForge episodic memory statistics: node counts, edge counts, and source breakdown.',
+    inputSchema: {},
+  }, async () => {
+    const data = await timpsAPI(`/nexus/stats/${TIMPS_USER_ID}`);
+    const sources = data.sources || {};
+    const srcLines = Object.entries(sources).map(([k, v]) => `  ${k}: ${v}`).join('\n');
+    const text = [
+      `**NexusForge Stats**`,
+      `Episodic nodes: ${data.totalNodes || 0}`,
+      `Temporal edges: ${data.totalEdges || 0}`,
+      `Causal edges: ${data.totalCausal || 0}`,
+      `Sources:\n${srcLines || '  none'}`,
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
+  server.registerTool('timps_nexus_graph', {
+    description: 'Get the episodic graph structure (nodes + edges) for visualization. Returns recent episodic nodes and their temporal/causal links.',
+    inputSchema: {
+      limit: z.number().optional().describe('Max nodes to return (default 30)'),
+    },
+  }, async ({ limit }) => {
+    const data = await timpsAPI(`/nexus/graph/${TIMPS_USER_ID}?limit=${limit || 30}`);
+    const nodes = data.nodes || [];
+    const edges = data.edges || [];
+    if (nodes.length === 0) {
+      return { content: [{ type: 'text' as const, text: 'No episodic graph data.' }] };
+    }
+    const text = [
+      `**Episodic Graph** (${nodes.length} nodes, ${edges.length} edges)`,
+      nodes.slice(0, 10).map((n: any) =>
+        `- ${n.isCoding ? '[code] ' : ''}${(n.gist || '').slice(0, 80)} (${n.source_module})`
+      ).join('\n'),
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
+  // ── SynapseMetabolon (Spreading Activation Metabolic Graph) ─────────────
+
+  server.registerTool('timps_synapse_ingest', {
+    description: 'Ingest a signal into SynapseMetabolon spreading activation graph. Classifies into interaction/reasoning/audit layers with automatic entity linking and activation spread.',
+    inputSchema: {
+      content: z.string().describe('The signal or event to ingest'),
+      source_module: z.string().describe('Source: timps-code, timps-vscode, timps-mcp, reflection, etc.'),
+      tags: z.array(z.string()).optional().describe('Entity tags: code, bug, tech-debt, api, burnout, relationship'),
+      entity: z.string().optional().describe('Primary entity identifier'),
+    },
+  }, async ({ content, source_module, tags, entity }) => {
+    const data = await timpsAPI('/synapse/ingest', 'POST', {
+      content,
+      sourceModule: source_module,
+      tags: tags || [],
+      entity,
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+    });
+    return { content: [{ type: 'text' as const, text: `✓ Node ${data.nodeId} → layer: ${data.layer}, activation: ${(data.activation || 0).toFixed(2)}, entities: ${(data.entities || []).join(', ')}` }] };
+  });
+
+  server.registerTool('timps_synapse_query', {
+    description: 'Query SynapseMetabolon with spreading activation. Spreads from seed nodes through relational edges, runs metabolic cycle, and returns activated nodes with confidence scores.',
+    inputSchema: {
+      query: z.string().describe('Metabolic graph query (e.g. "how do my coding sessions relate to burnout?", "show patterns around API decisions")'),
+      limit: z.number().optional().describe('Max activated nodes to return (default 10)'),
+    },
+  }, async ({ query, limit }) => {
+    const data = await timpsAPI('/synapse/query', 'POST', {
+      query,
+      userId: TIMPS_USER_ID,
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+      limit: limit || 10,
+    });
+    if (!data.activatedNodes || data.activatedNodes.length === 0) {
+      return { content: [{ type: 'text' as const, text: `No metabolic matches found (confidence: ${(data.confidence || 0).toFixed(2)})` }] };
+    }
+    const conf = (data.confidence || 0).toFixed(2);
+    const lines = [`**SynapseMetabolon Results (confidence: ${conf})**\n`];
+    for (const n of data.activatedNodes.slice(0, 8)) {
+      lines.push(`- [${n.layer}] (act:${(n.activation || 0).toFixed(2)}) ${(n.content || '').slice(0, 100)} [${n.sourceModule}]`);
+    }
+    if (data.summary) {
+      lines.push(`\n${data.summary}`);
+    }
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  server.registerTool('timps_synapse_stats', {
+    description: 'Get SynapseMetabolon statistics: node counts, edge counts, layer breakdown, and average activation.',
+    inputSchema: {},
+  }, async () => {
+    const data = await timpsAPI(`/synapse/stats/${TIMPS_USER_ID}`);
+    const layers = data.layers || {};
+    const layerLines = Object.entries(layers).map(([k, v]: [string, any]) =>
+      `  ${k}: ${v.count || 0} nodes (avg activation: ${(v.avgActivation || 0).toFixed(2)})`
+    ).join('\n');
+    const text = [
+      `**SynapseMetabolon Stats**`,
+      `Total nodes: ${data.totalNodes || 0}`,
+      `Total edges: ${data.totalEdges || 0}`,
+      `Avg activation: ${(data.avgActivation || 0).toFixed(2)}`,
+      `Layers:\n${layerLines || '  none'}`,
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
+  server.registerTool('timps_synapse_graph', {
+    description: 'Get the metabolic graph structure (nodes + edges) for visualization. Returns nodes with activation scores and layer information.',
+    inputSchema: {
+      limit: z.number().optional().describe('Max nodes to return (default 30)'),
+    },
+  }, async ({ limit }) => {
+    const data = await timpsAPI(`/synapse/graph/${TIMPS_USER_ID}?limit=${limit || 30}`);
+    const nodes = data.nodes || [];
+    const edges = data.edges || [];
+    if (nodes.length === 0) {
+      return { content: [{ type: 'text' as const, text: 'No metabolic graph data.' }] };
+    }
+    const text = [
+      `**Metabolic Graph** (${nodes.length} nodes, ${edges.length} edges)`,
+      nodes.slice(0, 10).map((n: any) =>
+        `- [${n.layer}] (act:${(n.activation || 0).toFixed(2)}) ${(n.content || '').slice(0, 60)} (${n.source_module})`
+      ).join('\n'),
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
+  server.registerTool('timps_synapse_consolidate', {
+    description: 'Run a metabolic consolidation cycle. Consolidates high-activation nodes, audits low-utility nodes, refreshes stale nodes, and decays inactive ones.',
+    inputSchema: {},
+  }, async () => {
+    const data = await timpsAPI(`/synapse/consolidate/${TIMPS_USER_ID}`, 'POST', {
+      projectId: process.env.TIMPS_PROJECT_ID || 'default',
+    });
+    const text = [
+      `**Consolidation Cycle Complete**`,
+      `Consolidated: ${data.consolidated || 0}`,
+      `Audited: ${data.audited || 0}`,
+      `Refreshed: ${data.refreshed || 0}`,
+      `Decayed: ${data.decayed || 0}`,
+    ].join('\n');
+    return { content: [{ type: 'text' as const, text }] };
+  });
+
   // ── Start ────────────────────────────────────────────────────────────────────
   const transport = new StdioServerTransport();
   await server.connect(transport);

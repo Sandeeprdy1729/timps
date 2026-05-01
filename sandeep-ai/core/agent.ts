@@ -14,6 +14,7 @@ import { chronosVeil } from './chronosVeil';
 import { policyMetabol } from './policyMetabol';
 import { layerForge } from './layerForge';
 import { echoForge } from './echoForge';
+import { nexusForge } from './nexusForge';
 
 export interface AgentConfig {
   userId: number;
@@ -133,7 +134,8 @@ export class Agent {
       await atomChain.buildAtomicContext(userMessage, this.userId, this.projectId, 4) +
       await policyMetabol.buildPolicyContext(userMessage, this.userId, this.projectId, 4) +
       await layerForge.buildLayerContext(userMessage, this.userId, this.projectId, 4) +
-      await echoForge.buildEchoContext(userMessage, this.userId, this.projectId, 4);
+      await echoForge.buildEchoContext(userMessage, this.userId, this.projectId, 4) +
+      await nexusForge.buildVeilContext(userMessage, this.userId, this.projectId, 4);
     const routingHint = toolRouter.buildRoutingHint(routing.routes, this.userId);
 
     // ── Step 2: Plan — for complex tasks, build a multi-step plan ─────────────
@@ -303,6 +305,8 @@ export class Agent {
       policyMetabol.runLoop(signal, sourceModule, outcomeScore),
       layerForge.forgeCompress(signal, sourceModule, sourceModule),
       echoForge.runReconstruction(signal, sourceModule, sourceModule),
+      nexusForge.episodicIndexer(signal, sourceModule),
+      nexusForge.evolutionOracle(signal, { projectId: this.projectId }),
     ]);
   }
 

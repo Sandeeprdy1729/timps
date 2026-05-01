@@ -1,56 +1,47 @@
-// agent/base.ts - Base Agent Framework
-// Generic async streaming agent with tool execution, self-correction, and memory integration
-
-import type {
-  Message, ToolCall, ToolDefinition, StreamEvent, AgentEvent,
-  TokenUsage, PlanStep, ModelProvider,
-} from '../config/types.js';
+import type { Message, ToolCall, ToolDefinition, AgentEvent, TokenUsage, ModelProvider } from '../config/types.js';
 import { getTool, getToolRisk, getToolDefinitions } from '../tools/tools.js';
 import type { ToolExecResult } from '../tools/tools.js';
 import { Permissions } from '../utils/permissions.js';
-import { estimateTokens, estimateCost } from '../utils/utils.js';
+import { estimateTokens, estimateCost, generateId, sleep } from '../utils/utils.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as readline from 'node:readline/promises';
+import { stdin, stdout } from 'node:process';
 
 export interface AgentConfig {
   provider: ModelProvider;
   cwd: string;
+  trustLevel?: import('../config/types.js').TrustLevel;
   maxContextTokens?: number;
   maxTurns?: number;
   maxCorrections?: number;
   autoCorrect?: boolean;
-  enableSelfCorrection?: boolean;
-  enableMemorySync?: boolean;
-  completionPromise?: () => boolean;  // Exit code hook - agent can't exit until this returns true
-  minSuccessRate?: number;  // Force iterations until success rate >= this
+  memoryEnabled?: boolean;
 }
 
-export interface ExecutionContext {
-  messages: Message[];
-  toolCalls: ToolCall[];
-  currentTurn: number;
-  totalUsage: TokenUsage;
-  startTime: number;
-}
+const SYSTEM_PROMPT = `You are TIMPS Code, a production-grade AI coding agent.
 
-const SYSTEM_PROMPT = `TIMPS Code. Execution only. No prose.
+## Core Rules
+1. Read files before editing them — never assume content
+2. Make surgical edits (edit_file) rather than full rewrites (write_file) when possible
+3. Run tests after making changes to verify correctness
+4. Fix root causes, not symptoms
+5. Loop until tests pass — never exit with failing tests
+6. Keep responses concise — prefer code over prose
+7. Use think tool for complex reasoning before acting
+8. Use todo_write/todo_read to track multi-step plans
 
-## State
-- Memory: synced, patterns stored
-- Context: compact, tokens managed
-- Goal: deliver working code
-
-## Rules
-1. Read before edit
-2. Test after change
-3. Fix root cause, not symptoms
-4. Loop until tests pass — never exit on failure
-5. Greetings -> minimal response
-6. Code over explanation
+## Tool Usage
+- Use read_file with line ranges for large files
+- Use search_code to find patterns before editing
+- Use run_diagnostics to check types/lint after changes
+- Use bash for running tests, installs, builds
+- Use web_search/fetch_url when you need documentation
+- Use memory_store to save important discoveries for future sessions
 `;
 
-export abstract class BaseAgent {
+export class BaseAgent {
   protected provider: ModelProvider;
   protected cwd: string;
   protected messages: Message[] = [];
@@ -59,74 +50,45 @@ export abstract class BaseAgent {
   protected maxTurns: number;
   protected maxCorrections: number;
   protected autoCorrect: boolean;
-  protected enableSelfCorrection: boolean;
-  protected enableMemorySync: boolean;
   protected permissions: Permissions;
   protected abortController: AbortController | null = null;
-  protected completionPromise?: () => boolean;
-  protected minSuccessRate: number = 1.0;
-  private successCount: number = 0;
-  private failureCount: number = 0;
 
   constructor(config: AgentConfig) {
     this.provider = config.provider;
     this.cwd = config.cwd;
-    this.maxContextTokens = config.maxContextTokens ?? 100000;
-    this.maxTurns = config.maxTurns ?? 25;
-    this.maxCorrections = config.maxCorrections ?? 3;
+    this.maxContextTokens = config.maxContextTokens ?? 100_000;
+    this.maxTurns = config.maxTurns ?? 30;
+    this.maxCorrections = config.maxCorrections ?? 5;
     this.autoCorrect = config.autoCorrect ?? true;
-    this.enableSelfCorrection = config.enableSelfCorrection ?? true;
-    this.enableMemorySync = config.enableMemorySync ?? true;
-    this.completionPromise = config.completionPromise;
-    this.minSuccessRate = config.minSuccessRate ?? 1.0;
-    this.permissions = new Permissions('normal', []);
+    this.permissions = new Permissions(config.trustLevel || 'normal');
+    this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
   }
 
   protected buildSystemPrompt(): string {
     return SYSTEM_PROMPT;
   }
 
-  async *run(initialMessage: string): AsyncGenerator<AgentEvent> {
+  async *run(userMessage: string): AsyncGenerator<AgentEvent> {
     this.abortController = new AbortController();
-    this.messages.push({ role: 'user', content: initialMessage, timestamp: Date.now() });
+    this.messages.push({ role: 'user', content: userMessage, timestamp: Date.now() });
+    yield { type: 'status', message: 'Thinking...' };
 
-    if (this.messages.length === 1) {
-      this.messages.unshift({ role: 'system', content: this.buildSystemPrompt() });
-    }
-
-    yield { type: 'status', message: 'Starting agent loop...' };
-
-    let turn = 0;
-    let lastResult: { done: boolean; error?: string } = { done: false };
-    
-    while (turn < this.maxTurns) {
-      turn++;
-      
-      const check = this.checkContextBudget();
-      if (check.needsCompaction) {
+    for (let turn = 0; turn < this.maxTurns; turn++) {
+      // Compact context if needed
+      if (this.estimateContextTokens() > this.maxContextTokens * 0.8) {
         yield* this.compactContext();
       }
 
-      const tools = getToolDefinitions(this.isLocalModel);
-      lastResult = yield* this.executeTurn(tools);
-      
-      if (lastResult.done) {
-        if (this.completionPromise && !this.completionPromise()) {
-          yield { type: 'status', message: 'Completion promise not met — continuing...' };
-          continue;
-        }
+      const isLocal = this.provider.name === 'ollama' || this.provider.name === 'hybrid';
+      const tools = getToolDefinitions(isLocal);
+      const result = yield* this.executeTurn(tools);
+
+      if (result.done) {
         yield* this.finalize();
         return;
       }
-
-      if (lastResult.error) {
-        this.failureCount++;
-        yield { type: 'error', message: lastResult.error };
-        
-        if (this.completionPromise && !this.completionPromise()) {
-          yield { type: 'status', message: 'Failure — retrying until completion promise satisfied...' };
-          continue;
-        }
+      if (result.error) {
+        yield { type: 'error', message: result.error };
         return;
       }
     }
@@ -135,82 +97,65 @@ export abstract class BaseAgent {
     yield { type: 'done', usage: this.totalUsage };
   }
 
-  protected abstract executeTurn(tools: ToolDefinition[]): AsyncGenerator<AgentEvent, { done: boolean; error?: string }>;
-
-  protected async *executeTurnWithTools(tools: ToolDefinition[]): AsyncGenerator<AgentEvent, { done: boolean; error?: string }> {
+  protected async *executeTurn(tools: ToolDefinition[]): AsyncGenerator<AgentEvent, { done: boolean; error?: string }> {
     let fullText = '';
     const toolCalls: ToolCall[] = [];
-    let currentToolArgs = new Map<string, string>();
-    let currentToolName = new Map<string, string>();
+    const pendingArgs = new Map<string, string>();
+    const pendingNames = new Map<string, string>();
 
     try {
-      for await (const event of this.provider.stream(this.messages, tools, { signal: this.abortController!.signal })) {
+      for await (const event of this.provider.stream(this.messages, tools, {
+        signal: this.abortController!.signal,
+        maxTokens: 8192,
+      })) {
         switch (event.type) {
           case 'text':
             fullText += event.content;
             yield { type: 'text', content: event.content };
             break;
-
           case 'thinking':
             yield { type: 'thinking', content: event.content };
             break;
-
           case 'tool_start':
-            currentToolArgs.set(event.id, '');
-            currentToolName.set(event.id, event.name);
+            pendingArgs.set(event.id, '');
+            pendingNames.set(event.id, event.name);
             break;
-
           case 'tool_delta':
-            currentToolArgs.set(event.id, (currentToolArgs.get(event.id) || '') + event.argumentsChunk);
+            pendingArgs.set(event.id, (pendingArgs.get(event.id) || '') + event.argumentsChunk);
             break;
-
           case 'tool_end': {
-            const argsStr = currentToolArgs.get(event.id) || '{}';
+            const argsStr = pendingArgs.get(event.id) || '{}';
             let args: Record<string, unknown>;
             try { args = JSON.parse(argsStr); } catch { args = { raw: argsStr }; }
-            
-            toolCalls.push({
-              id: event.id,
-              name: currentToolName.get(event.id) || 'unknown',
-              arguments: args,
-            });
+            toolCalls.push({ id: event.id, name: pendingNames.get(event.id) || 'unknown', arguments: args });
             break;
           }
-
           case 'done':
             if (event.usage) {
               this.totalUsage.inputTokens += event.usage.inputTokens;
               this.totalUsage.outputTokens += event.usage.outputTokens;
-              const turnCost = estimateCost(this.provider.model, event.usage.inputTokens, event.usage.outputTokens);
-              this.totalUsage.estimatedCost = (this.totalUsage.estimatedCost || 0) + turnCost;
+              this.totalUsage.estimatedCost = (this.totalUsage.estimatedCost || 0) +
+                estimateCost(this.provider.model, event.usage.inputTokens, event.usage.outputTokens);
             }
             break;
-
           case 'error':
             yield { type: 'error', message: event.message };
             break;
         }
       }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        yield { type: 'error', message: 'Cancelled' };
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        yield { type: 'status', message: 'Cancelled.' };
         return { done: true };
       }
-      yield { type: 'error', message: `Provider error: ${(err as Error).message}` };
-      return { done: false, error: (err as Error).message };
+      return { done: false, error: `Provider error: ${err.message}` };
     }
 
-    const assistantMsg: Message = {
-      role: 'assistant',
-      content: fullText,
-      timestamp: Date.now(),
-    };
+    const assistantMsg: Message = { role: 'assistant', content: fullText, timestamp: Date.now() };
     if (toolCalls.length > 0) assistantMsg.toolCalls = toolCalls;
     this.messages.push(assistantMsg);
 
-    if (toolCalls.length === 0) {
-      return { done: true };
-    }
+    if (toolCalls.length === 0) return { done: true };
 
     for (const tc of toolCalls) {
       yield* this.executeToolCall(tc);
@@ -220,152 +165,123 @@ export abstract class BaseAgent {
   }
 
   protected async *executeToolCall(tc: ToolCall): AsyncGenerator<AgentEvent> {
+    // Special: ask_user — pause and prompt
     if (tc.name === 'ask_user') {
-      const question = String(tc.arguments.question || 'Provide input:');
+      const question = String(tc.arguments.question || 'Please provide input:');
       yield { type: 'ask_user', question, callId: tc.id };
+      const answer = await this.promptUser(question);
+      this.messages.push({ role: 'tool', content: answer, toolCallId: tc.id, name: 'ask_user' });
+      yield { type: 'tool_result', tool: 'ask_user', result: answer, success: true };
       return;
     }
 
     const tool = getTool(tc.name);
     if (!tool) {
-      this.messages.push({ role: 'tool', content: `Unknown tool: ${tc.name}`, toolCallId: tc.id, name: tc.name });
-      yield { type: 'tool_result', tool: tc.name, result: `Unknown tool: ${tc.name}`, success: false };
+      const msg = `Unknown tool: ${tc.name}`;
+      this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
+      yield { type: 'tool_result', tool: tc.name, result: msg, success: false };
       return;
     }
 
     const risk = getToolRisk(tc.name);
     const allowed = await this.permissions.check(tc.name, tc.arguments, risk);
     if (!allowed) {
-      const msg = 'Permission denied';
+      const msg = `Permission denied for ${tc.name}`;
       this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
       yield { type: 'tool_result', tool: tc.name, result: msg, success: false };
       return;
     }
 
+    const startMs = Date.now();
     yield { type: 'tool_start', tool: tc.name, args: tc.arguments };
 
-    const result = await this.executeToolWithRetry(tool, tc.arguments);
-    
-    this.messages.push({
-      role: 'tool',
-      content: result.content,
-      toolCallId: tc.id,
-      name: tc.name,
-    });
+    const result = await this.executeWithRetry(tool, tc.arguments);
+    const durationMs = Date.now() - startMs;
 
-    yield { type: 'tool_result', tool: tc.name, result: result.content, success: !result.isError };
+    this.messages.push({ role: 'tool', content: result.content, toolCallId: tc.id, name: tc.name });
+    yield { type: 'tool_result', tool: tc.name, result: result.content, success: !result.isError, durationMs };
 
-    if (result.isError && this.autoCorrect && this.enableSelfCorrection) {
-      yield* this.attemptSelfCorrection(tc, result.content);
+    if (result.isError && this.autoCorrect) {
+      yield* this.selfCorrect(tc, result.content);
     }
   }
 
-  protected async executeToolWithRetry(
+  private async executeWithRetry(
     tool: { execute: (args: Record<string, unknown>, cwd: string) => Promise<ToolExecResult> },
     args: Record<string, unknown>
   ): Promise<ToolExecResult> {
-    const TRANSIENT_ERRORS = ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'fetch failed', 'AbortError', 'timeout'];
-    const MAX_RETRIES = 3;
-    let lastError = '';
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const TRANSIENT = ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'fetch failed', 'timeout'];
+    for (let attempt = 0; attempt <= 3; attempt++) {
       try {
         const result = await tool.execute(args, this.cwd);
-        if (!result.isError || !TRANSIENT_ERRORS.some(e => result.content.includes(e))) {
-          return result;
-        }
-        lastError = result.content;
-        if (attempt < MAX_RETRIES) {
-          const delay = Math.pow(2, attempt) * 1000;
-          await new Promise(r => setTimeout(r, delay));
-        }
-      } catch (err) {
-        lastError = (err as Error).message;
-        if (attempt < MAX_RETRIES) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
-        }
+        if (!result.isError || !TRANSIENT.some(e => result.content.includes(e))) return result;
+        if (attempt < 3) await sleep(Math.pow(2, attempt) * 1000);
+      } catch (err: any) {
+        if (attempt === 3) return { content: `Failed after retries: ${err.message}`, isError: true };
+        await sleep(Math.pow(2, attempt) * 1000);
       }
     }
-
-    return { content: `Failed after ${MAX_RETRIES} retries: ${lastError}`, isError: true };
+    return { content: 'Tool failed after retries', isError: true };
   }
 
-  protected async *attemptSelfCorrection(failedCall: ToolCall, errorMsg: string): AsyncGenerator<AgentEvent> {
+  protected async *selfCorrect(failedCall: ToolCall, errorMsg: string): AsyncGenerator<AgentEvent> {
     const recoverable = [
-      'oldString not found', 'No such file', 'ENOENT',
-      'Exit 1', 'Exit 2', 'found 0 times', 'must be unique',
+      'oldString not found', 'No such file', 'ENOENT', 'Exit 1', 'Exit 2',
+      'found 0 times', 'must be unique', 'AssertionError', 'Test failed',
     ];
-
     if (!recoverable.some(r => errorMsg.includes(r))) return;
 
-    for (let attempt = 1; attempt <= this.maxCorrections; attempt++) {
-      yield { type: 'selfcorrect', attempt, error: errorMsg };
-
-      this.messages.push({
-        role: 'user',
-        content: `Error: ${errorMsg.slice(0, 300)}
-
-Attempt ${attempt}/${this.maxCorrections}. Analyze and fix:
-1. What exactly failed?
-2. What assumption was wrong?
-3. How to fix definitively?` +
-          (failedCall.name === 'edit_file' ? '\nRe-read the file before editing.' : ''),
-      });
-
-      return;
-    }
+    yield { type: 'selfcorrect', attempt: 1, error: errorMsg };
+    this.messages.push({
+      role: 'user',
+      content: `Tool error: ${errorMsg.slice(0, 400)}\n\nAnalyze and fix:\n1. What exactly failed?\n2. What was the wrong assumption?\n3. Fix definitively.${failedCall.name === 'edit_file' ? '\nHint: re-read the file first to get the exact current content.' : ''}`,
+    });
   }
 
-  protected checkContextBudget(): { needsCompaction: boolean; currentTokens: number } {
-    const currentTokens = this.estimateContextTokens();
-    return {
-      needsCompaction: currentTokens > this.maxContextTokens * 0.8,
-      currentTokens,
-    };
+  private async promptUser(question: string): Promise<string> {
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    try {
+      return await rl.question(`  ${question}\n  > `);
+    } finally {
+      rl.close();
+    }
   }
 
   protected async *compactContext(): AsyncGenerator<AgentEvent> {
     if (this.messages.length < 10) return;
-
     yield { type: 'status', message: 'Compacting context...' };
 
-    const historyDir = path.join(os.homedir(), '.timps', 'history');
-    fs.mkdirSync(historyDir, { recursive: true });
-    
+    const before = this.estimateContextTokens();
     const nonSystem = this.messages.filter(m => m.role !== 'system');
-    if (nonSystem.length < 6) return;
+    const toSummarize = nonSystem.slice(0, -4);
+    if (toSummarize.length < 4) return;
 
-    const histFile = path.join(historyDir, `compacted_${Date.now()}.json`);
-    fs.writeFileSync(histFile, JSON.stringify(nonSystem.slice(0, -4), null, 2), 'utf-8');
+    // Save to history
+    const histDir = path.join(os.homedir(), '.timps', 'history');
+    fs.mkdirSync(histDir, { recursive: true });
+    fs.writeFileSync(path.join(histDir, `compacted_${Date.now()}.json`), JSON.stringify(toSummarize, null, 2));
 
-    const historyText = nonSystem.slice(0, -4)
-      .map(m => `${m.role.toUpperCase()}: ${typeof m.content === 'string' ? m.content.slice(0, 500) : '[tool]'}`)
+    const historyText = toSummarize
+      .map(m => `${m.role.toUpperCase()}: ${typeof m.content === 'string' ? m.content.slice(0, 300) : '[tool]'}`)
       .join('\n---\n');
 
     let summary = '';
     try {
-      const summaryMessages: Message[] = [
-        { role: 'user', content: `Summarize this conversation:\n\n${historyText}\n\nKeep under 300 words, focus on decisions and current state.` }
-      ];
-      for await (const event of this.provider.stream(summaryMessages, [])) {
-        if (event.type === 'text') summary += event.content;
+      for await (const ev of this.provider.stream([
+        { role: 'user', content: `Summarize this coding session in under 200 words. Focus on what was done, current state, and key decisions:\n\n${historyText}` },
+      ], [])) {
+        if (ev.type === 'text') summary += ev.content;
       }
-    } catch { /* best-effort */ }
+    } catch { summary = 'Previous context compacted.'; }
 
-    const before = this.estimateContextTokens();
-
-    const freshMessages = this.messages.filter(m => m.role === 'system');
-    freshMessages.push({
-      role: 'user',
-      content: `[Session summary]\n${summary || 'Previous context compacted.'}`,
-    });
-    freshMessages.push({
-      role: 'assistant',
-      content: 'Understood. Continuing with full context from summary.',
-    });
-
+    const sysMessages = this.messages.filter(m => m.role === 'system');
     const recent = nonSystem.slice(-4);
-    this.messages = [...freshMessages, ...recent];
+    this.messages = [
+      ...sysMessages,
+      { role: 'user', content: `[Session summary]\n${summary}` },
+      { role: 'assistant', content: 'Understood. Continuing.' },
+      ...recent,
+    ];
 
     const after = this.estimateContextTokens();
     yield { type: 'context_compacted', before, after };
@@ -373,55 +289,26 @@ Attempt ${attempt}/${this.maxCorrections}. Analyze and fix:
 
   protected estimateContextTokens(): number {
     return this.messages.reduce((acc, m) => {
-      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-      return acc + Math.round(content.length / 4);
+      const c = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      return acc + estimateTokens(c);
     }, 0);
   }
 
   protected async *finalize(): AsyncGenerator<AgentEvent> {
-    const userMsgs = this.messages.filter(m => m.role === 'user');
-    const toolsUsed = new Set<string>();
-    const filesChanged = new Set<string>();
-
-    for (const m of this.messages) {
-      if (m.toolCalls) {
-        for (const tc of m.toolCalls) {
-          toolsUsed.add(tc.name);
-          if (tc.arguments.path) filesChanged.add(String(tc.arguments.path));
-        }
-      }
-    }
-
     yield { type: 'done', usage: this.totalUsage };
   }
 
-  protected get isLocalModel(): boolean {
-    return this.provider.name === 'ollama' || this.provider.name === 'opencode';
-  }
+  abort(): void { this.abortController?.abort(); }
+  getUsage(): TokenUsage { return { ...this.totalUsage }; }
+  getMessages(): Message[] { return [...this.messages]; }
 
-  abort(): void {
-    this.abortController?.abort();
-  }
-
-  getUsage(): TokenUsage {
-    return { ...this.totalUsage };
-  }
-
-  getMessageCount(): number {
-    return this.messages.length;
+  addUserMessage(content: string): void {
+    this.messages.push({ role: 'user', content, timestamp: Date.now() });
   }
 
   clearHistory(): void {
-    const sysMsg = this.messages[0];
-    this.messages = sysMsg ? [sysMsg] : [];
+    const sys = this.messages.find(m => m.role === 'system');
+    this.messages = sys ? [sys] : [];
     this.totalUsage = { inputTokens: 0, outputTokens: 0 };
-  }
-
-  addMessage(role: 'user' | 'assistant', content: string): void {
-    this.messages.push({ role, content, timestamp: Date.now() });
-  }
-
-  addSystemMessage(content: string): void {
-    this.messages.unshift({ role: 'system', content, timestamp: Date.now() });
   }
 }

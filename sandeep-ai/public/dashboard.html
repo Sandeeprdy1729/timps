@@ -191,6 +191,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font
       <span class="ni" style="background:rgba(45,212,191,.1);color:var(--teal)">▦</span>Memory Log
       <span class="nav-badge" id="nb-mem">—</span>
     </div>
+    <div class="nav-section">Apex Veil</div>
+    <div class="nav-item" onclick="showView('veil')">
+      <span class="ni" style="background:rgba(255,180,0,.1);color:#ffb400)">◈</span>Chronos Veil
+      <span class="nav-badge" id="nb-veil">—</span>
+    </div>
+    <div class="nav-item" onclick="showView('nexusforge')">
+      <span class="ni" style="background:rgba(124,58,237,.1);color:#a78bfa">◆</span>NexusForge
+      <span class="nav-badge" id="nb-nexus">—</span>
+    </div>
+    <div class="nav-item" onclick="showView('synapse')">
+      <span class="ni" style="background:rgba(13,148,136,.1);color:var(--teal)">⬢</span>SynapseMetabolon
+      <span class="nav-badge" id="nb-synapse">—</span>
+    </div>
     <div class="nav-section">Navigate</div>
     <div class="nav-item" onclick="location.href='chat.html'">
       <span class="ni" style="background:rgba(196,186,176,.1)">✦</span>Chat
@@ -312,6 +325,9 @@ function handleEvent(evt) {
     case 'relationship_drift': loadRelationships(); loadStats(); break;
     case 'chat_message': loadStats(); break;
     case 'tool_activated': loadStats(); break;
+    case 'chronos_event': loadVeil(); break;
+    case 'nexus_event': loadNexusForge(); break;
+    case 'synapse_event': loadSynapseMetabolon(); break;
   }
 }
 
@@ -326,6 +342,9 @@ var eventMeta = {
   regret_warning: { icon: '◎', label: 'Regret Warning', col: 'amber' },
   tool_activated: { icon: '✦', label: 'Tool Activated', col: 'teal' },
   chat_message: { icon: '◈', label: 'Chat Message', col: 'muted' },
+  chronos_event: { icon: '◈', label: 'Chronos Event', col: 'amber' },
+  nexus_event: { icon: '◆', label: 'NexusForge Event', col: 'purple' },
+  synapse_event: { icon: '⬢', label: 'Synapse Activation', col: 'teal' },
 };
 
 function addToFeed(evt) {
@@ -370,6 +389,9 @@ var viewTitles = {
   bugs: 'Bug Pattern Prophet',
   manifesto: 'Living Manifesto',
   memories: 'Memory Log',
+  veil: 'Chronos Veil — Apex Persistence',
+  nexusforge: 'NexusForge — Episodic Sub-Agent Trinity',
+  synapse: 'SynapseMetabolon — Spreading Activation Graph',
 };
 
 function showView(v) {
@@ -390,6 +412,9 @@ function renderView() {
     case 'bugs': renderBugs(); break;
     case 'manifesto': renderManifesto(); break;
     case 'memories': renderMemories(); break;
+    case 'veil': renderVeil(); break;
+    case 'nexusforge': renderNexusForge(); break;
+    case 'synapse': renderSynapseMetabolon(); break;
   }
 }
 
@@ -641,7 +666,437 @@ async function renderMemories() {
   c.innerHTML = panel('▦', 'teal', 'Memory Log', memories.length, grid);
 }
 
-// ── Load data ──────────────────────────────────────────────────────────────────
+// ── Chronos Veil ───────────────────────────────────────────────────────────────
+var layerColors = { knowledge: 'var(--blue)', memory: 'var(--purple)', wisdom: 'var(--green)', intelligence: 'var(--amber)' };
+var layerLabels = { knowledge: 'Knowledge', memory: 'Memory', wisdom: 'Wisdom', intelligence: 'Intelligence' };
+
+async function renderVeil() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading Chronos Veil...</div>';
+
+  var [stats, edges] = await Promise.all([
+    api('/chronos/stats/' + S.userId),
+    api('/chronos/edges/' + S.userId),
+  ]);
+
+  var total = stats ? stats.total : 0;
+  var byLayer = stats ? (stats.byLayer || {}) : {};
+
+  var html = '';
+
+  html += '<div class="stats-row">';
+  html += statCard('Total Events', total, 'in veil', 'var(--amber)');
+  html += statCard('Knowledge', byLayer.knowledge || 0, 'facts/decisions', layerColors.knowledge);
+  html += statCard('Memory', byLayer.memory || 0, 'experiences', layerColors.memory);
+  html += statCard('Wisdom', byLayer.wisdom || 0, 'evidence-gated', layerColors.wisdom);
+  html += statCard('Intelligence', byLayer.intelligence || 0, 'ephemeral', layerColors.intelligence);
+  html += statCard('Edges', edges ? edges.total : 0, 'entity links', 'var(--teal)');
+  html += '</div>';
+
+  var layerInfo = '<div style="font-size:11px;color:var(--muted);line-height:1.7">'
+    + '<div style="margin-bottom:8px"><strong style="color:'+layerColors.knowledge+'">Knowledge</strong> — indefinite supersession with provenance (facts, decisions, resolved positions)</div>'
+    + '<div style="margin-bottom:8px"><strong style="color:'+layerColors.memory+'">Memory</strong> — Ebbinghaus decay (experiences, events that fade over time)</div>'
+    + '<div style="margin-bottom:8px"><strong style="color:'+layerColors.wisdom+'">Wisdom</strong> — evidence-gated revision (principles, lessons, insights requiring strong evidence)</div>'
+    + '<div style="margin-bottom:8px"><strong style="color:'+layerColors.intelligence+'">Intelligence</strong> — ephemeral inference (drafts, hypotheses, temporary thoughts)</div>'
+    + '</div>';
+  html += panel('◈', 'amber', 'Layer Semantics', 4, layerInfo);
+
+  var recent = stats && stats.recent ? stats.recent : [];
+  var recentHtml = recent.length === 0 ? empty('No events yet. Coding sessions and tool activations populate the veil.')
+    : recent.map(function(e) {
+        var layerCol = layerColors[e.layer] || 'var(--muted)';
+        var entities = (e.entity_keys || []).slice(0, 3).map(function(en) {
+          return tag(en, e.layer === 'knowledge' ? 'blue' : e.layer === 'memory' ? 'purple' : e.layer === 'wisdom' ? 'green' : 'amber');
+        }).join(' ');
+        var conf = Math.round((parseFloat(e.confidence) || 0) * 100);
+        return itemRow(
+          '<span style="color:'+layerCol+';font-size:10px">'+(layerLabels[e.layer]||e.layer)+'</span>',
+          entities + ' ' + esc((e.content||'').slice(0, 60)),
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">'+conf+'%</span>'
+        );
+      }).join('');
+  html += panel('▦', 'amber', 'Recent Events', recent.length, recentHtml);
+
+  var edgeList = edges && edges.edges ? edges.edges : [];
+  var edgesHtml = edgeList.length === 0 ? empty('No supersession chains yet. Resolved patterns and updated facts create entity edges.')
+    : edgeList.slice(0, 15).map(function(edge) {
+        var src = String(edge.source_event_id).slice(0, 8);
+        var tgt = String(edge.target_event_id).slice(0, 8);
+        return '<div class="bar-row">'
+          + '<span class="bar-label" style="font-size:10px">'+esc(edge.edge_type)+'</span>'
+          + '<div class="bar-track" style="flex:1"><div class="bar-fill" style="width:'+Math.round((edge.confidence||0.5)*100)+'%;background:var(--amber)"></div></div>'
+          + '<span class="bar-val">'+src+'→'+tgt+'</span>'
+          + '</div>';
+      }).join('');
+  html += panel('◈', 'amber', 'Entity Graph Edges (Supersession Chains)', edgeList.length, edgesHtml);
+
+  var queryHtml = '<div style="display:flex;gap:8px">'
+    + '<input type="text" id="veil-query" placeholder="Query temporal knowledge..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:11px" />'
+    + '<button class="btn primary" onclick="queryVeil()" style="flex-shrink:0">Resolve</button>'
+    + '</div>'
+    + '<div id="veil-results" style="margin-top:12px;display:none"></div>';
+  html += panel('◈', 'amber', 'Query with Veil Agent', 0, queryHtml);
+
+  c.innerHTML = html;
+
+  var qInput = document.getElementById('veil-query');
+  if (qInput) {
+    qInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') queryVeil();
+    });
+  }
+
+  if (stats) document.getElementById('nb-veil').textContent = total || '—';
+}
+
+async function queryVeil() {
+  var q = document.getElementById('veil-query');
+  if (!q || !q.value.trim()) return;
+  var results = document.getElementById('veil-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading">Resolving via veil agent...</div>';
+
+  try {
+    var d = await api('/chronos/query?' + new URLSearchParams({
+      query: q.value.trim(),
+      userId: String(S.userId),
+    }));
+
+    if (!d || !d.resolvedEvents || d.resolvedEvents.length === 0) {
+      results.innerHTML = '<div class="empty">No temporal events found for this query.</div>';
+      return;
+    }
+
+    var html = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:10px">'
+      + 'Confidence: <strong style="color:'+(d.confidence > 0.7 ? 'var(--green)' : 'var(--amber)')+'">'+(d.confidence || 0).toFixed(2)+'</strong> | '
+      + d.resolvedEvents.length + ' events resolved'
+      + '</div>';
+
+    d.resolvedEvents.forEach(function(ev) {
+      var layerCol = layerColors[ev.layer] || 'var(--muted)';
+      var sup = ev.supersedes ? '<span style="font-size:9px;color:var(--amber)"> ←superset</span>' : '';
+      html += '<div class="item">'
+        + '<div style="flex-shrink:0"><span style="color:'+layerCol+';font-size:10px">'+layerLabels[ev.layer]+'</span></div>'
+        + '<div class="item-text">'+esc((ev.content||'').slice(0,100))+sup+'</div>'
+        + '<div class="item-right"><span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">'+(ev.confidence||0).toFixed(2)+'</span></div>'
+        + '</div>';
+    });
+
+    if (d.conflicts && d.conflicts.length > 0) {
+      html += '<div style="margin-top:10px;padding:8px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:5px">'
+        + '<div style="font-family:var(--mono);font-size:9px;color:var(--red);margin-bottom:4px">Unresolved Conflicts:</div>'
+        + d.conflicts.map(function(c) { return '<div style="font-size:11px;color:var(--muted)">• '+esc(c)+'</div>'; }).join('')
+        + '</div>';
+    }
+
+    results.innerHTML = html;
+  } catch(e) {
+    results.innerHTML = '<div class="empty">Query failed. Check server connection.</div>';
+  }
+}
+
+// ── NexusForge ─────────────────────────────────────────────────────────────────
+async function renderNexusForge() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading NexusForge...</div>';
+
+  var [stats, graph] = await Promise.all([
+    api('/nexus/stats/' + S.userId),
+    api('/nexus/graph/' + S.userId + '?limit=30'),
+  ]);
+
+  var s = stats || {};
+  var totalNodes = s.totalNodes || 0;
+  var totalEdges = s.totalEdges || 0;
+  var totalCausal = s.totalCausal || 0;
+  var sources = s.sources || {};
+
+  var html = '';
+
+  html += '<div class="stats-row">';
+  html += statCard('Episodic Nodes', totalNodes, 'time-aware gists + facts', 'var(--purple)');
+  html += statCard('Temporal Edges', totalEdges, 'spatiotemporal links', 'var(--blue)');
+  html += statCard('Causal Edges', totalCausal, 'longitudinal links', 'var(--teal)');
+  html += statCard('Sources', Object.keys(sources).length, 'modules feeding memory', 'var(--amber)');
+  html += '</div>';
+
+  // Source breakdown
+  var sourceRows = Object.entries(sources).map(function(pair) {
+    var src = pair[0], cnt = pair[1];
+    var isCoding = ['timps-code','timps-vscode','timps-mcp','cli'].some(function(s){ return src.includes(s); });
+    return '<div class="bar-row">'
+      + '<span class="bar-label">' + (isCoding ? tag('code','teal') : tag(src,'blue')) + '</span>'
+      + '<div class="bar-track"><div class="bar-fill" style="width:'+Math.min(100, cnt)+'%;background:var(--purple)"></div></div>'
+      + '<span class="bar-val" style="color:var(--purple)">'+cnt+'</span>'
+      + '</div>';
+  }).join('');
+  html += panel('◆', 'purple', 'Source Breakdown', Object.keys(sources).length, sourceRows || empty('No sources yet.'));
+
+  // Recent nodes
+  var nodes = graph && graph.nodes ? graph.nodes : [];
+  var nodeHtml = nodes.length === 0 ? empty('No episodic nodes. Coding sessions and tool activations populate the graph.')
+    : nodes.map(function(n) {
+        var gist = (n.gist || n.content || '').slice(0, 100);
+        var src = n.source_module || 'unknown';
+        var date = n.created_at ? new Date(n.created_at).toLocaleDateString() : '';
+        var codeTag = n.isCoding ? tag('code', 'teal') : '';
+        return itemRow(
+          codeTag + ' <span style="font-size:10px;color:var(--muted2)">' + esc(src) + '</span>',
+          esc(gist),
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + date + '</span>'
+        );
+      }).join('');
+  html += panel('▦', 'purple', 'Recent Episodic Nodes', nodes.length, nodeHtml);
+
+  // Edges
+  var edges = graph && graph.edges ? graph.edges : [];
+  var edgeHtml = edges.length === 0 ? empty('No temporal edges yet.')
+    : edges.slice(0, 15).map(function(e) {
+        var src = String(e.source_node_id).slice(-6);
+        var tgt = String(e.target_node_id).slice(-6);
+        return '<div class="bar-row">'
+          + '<span class="bar-label" style="font-size:10px">' + esc(e.edge_type || 'temporal') + '</span>'
+          + '<div class="bar-track" style="flex:1"><div class="bar-fill" style="width:'+Math.round((e.confidence||0.5)*100)+'%;background:var(--blue)"></div></div>'
+          + '<span class="bar-val">'+src+'→'+tgt+'</span>'
+          + '</div>';
+      }).join('');
+  html += panel('◈', 'blue', 'Temporal Edges', edges.length, edgeHtml);
+
+  // Query
+  var queryHtml = '<div style="display:flex;gap:8px">'
+    + '<input type="text" id="nexus-query" placeholder="Query episodic memory..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:11px" />'
+    + '<button class="btn primary" onclick="queryNexusForge()" style="flex-shrink:0">Weave</button>'
+    + '</div>'
+    + '<div id="nexus-results" style="margin-top:12px;display:none"></div>';
+  html += panel('◆', 'purple', 'Retrieval Weaver — Agentic Iterative Query', 0, queryHtml);
+
+  c.innerHTML = html;
+
+  var qInput = document.getElementById('nexus-query');
+  if (qInput) {
+    qInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') queryNexusForge();
+    });
+  }
+
+  if (stats) document.getElementById('nb-nexus').textContent = totalNodes || '—';
+}
+
+async function queryNexusForge() {
+  var q = document.getElementById('nexus-query');
+  if (!q || !q.value.trim()) return;
+  var results = document.getElementById('nexus-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading">Weaving episodic retrieval...</div>';
+
+  try {
+    var r = await fetch(S.apiBase + '/api/nexus/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q.value.trim(), userId: S.userId }),
+      signal: AbortSignal.timeout(8000),
+    });
+    var d = await r.json();
+
+    if (d.refusal) {
+      results.innerHTML = '<div class="empty">No episodic matches found (confidence: ' + (d.confidence || 0).toFixed(2) + '). Insufficient evidence.</div>';
+      return;
+    }
+
+    var items = d.results || [];
+    if (items.length === 0) {
+      results.innerHTML = '<div class="empty">No results.</div>';
+      return;
+    }
+
+    var html = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:10px">'
+      + 'Confidence: <strong style="color:' + (d.confidence > 0.7 ? 'var(--green)' : 'var(--amber)') + '">' + (d.confidence || 0).toFixed(2) + '</strong> | '
+      + items.length + ' results | path: ' + (d.traversalPath || []).join(' → ')
+      + '</div>';
+
+    items.forEach(function(item) {
+      html += '<div class="item">'
+        + '<div style="flex-shrink:0"><span style="font-size:10px;color:var(--purple)">' + esc(item.source_module || 'unknown') + '</span></div>'
+        + '<div class="item-text">' + esc((item.gist || item.content || '').slice(0, 120)) + '</div>'
+        + '<div class="item-right"><span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + (item.created_at ? new Date(item.created_at).toLocaleDateString() : '') + '</span></div>'
+        + '</div>';
+    });
+
+    results.innerHTML = html;
+  } catch(e) {
+    results.innerHTML = '<div class="empty">Query failed. Check server connection.</div>';
+  }
+}
+
+// ── SynapseMetabolon ───────────────────────────────────────────────────────────
+async function renderSynapseMetabolon() {
+  var c = document.getElementById('panels-container');
+  c.innerHTML = '<div class="loading">Loading SynapseMetabolon...</div>';
+
+  var [stats, graph] = await Promise.all([
+    api('/synapse/stats/' + S.userId),
+    api('/synapse/graph/' + S.userId + '?limit=30'),
+  ]);
+
+  var s = stats || {};
+  var totalNodes = s.totalNodes || 0;
+  var totalEdges = s.totalEdges || 0;
+  var avgAct = s.avgActivation || 0;
+  var layers = s.layers || {};
+
+  var html = '';
+
+  html += '<div class="stats-row">';
+  html += statCard('Metabolic Nodes', totalNodes, 'layered substrate', 'var(--teal)');
+  html += statCard('Relational Edges', totalEdges, 'activation pathways', 'var(--blue)');
+  html += statCard('Avg Activation', avgAct.toFixed(2), 'spreading activation', 'var(--amber)');
+  html += statCard('Layers', Object.keys(layers).length, 'interaction/reasoning/audit', 'var(--purple)');
+  html += '</div>';
+
+  // Layer breakdown
+  var layerRows = Object.entries(layers).map(function(pair) {
+    var layer = pair[0], data = pair[1];
+    var col = layer === 'interaction' ? 'teal' : layer === 'reasoning' ? 'purple' : 'amber';
+    var cnt = data.count || 0;
+    var act = (data.avgActivation || 0).toFixed(2);
+    return '<div class="bar-row">'
+      + '<span class="bar-label">' + tag(layer, col) + '</span>'
+      + '<div class="bar-track"><div class="bar-fill" style="width:'+Math.round((data.avgActivation||0)*100)+'%;background:var(--'+col+')"></div></div>'
+      + '<span class="bar-val" style="color:var(--'+col+')">'+cnt+' nodes (act:'+act+')</span>'
+      + '</div>';
+  }).join('');
+  html += panel('⬢', 'teal', 'Layer Breakdown', Object.keys(layers).length, layerRows || empty('No layers yet.'));
+
+  // Active nodes
+  var nodes = graph && graph.nodes ? graph.nodes : [];
+  var nodeHtml = nodes.length === 0 ? empty('No metabolic nodes. Tool activations and coding sessions populate the graph.')
+    : nodes.map(function(n) {
+        var content = (n.content || '').slice(0, 100);
+        var layer = n.layer || 'unknown';
+        var act = (n.activation || 0).toFixed(2);
+        var lcol = layer === 'interaction' ? 'teal' : layer === 'reasoning' ? 'purple' : 'amber';
+        return itemRow(
+          tag(layer, lcol) + ' <span style="font-size:10px;color:var(--muted2)">act:' + act + '</span>',
+          esc(content),
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + (n.source_module || '') + '</span>'
+        );
+      }).join('');
+  html += panel('▦', 'teal', 'Active Metabolic Nodes', nodes.length, nodeHtml);
+
+  // Edges
+  var edges = graph && graph.edges ? graph.edges : [];
+  var edgeHtml = edges.length === 0 ? empty('No relational edges yet.')
+    : edges.slice(0, 15).map(function(e) {
+        var src = String(e.source_node_id).slice(-6);
+        var tgt = String(e.target_node_id).slice(-6);
+        return '<div class="bar-row">'
+          + '<span class="bar-label" style="font-size:10px">' + esc(e.edge_type || 'relational') + '</span>'
+          + '<div class="bar-track" style="flex:1"><div class="bar-fill" style="width:'+Math.round((e.weight||0.5)*100)+'%;background:var(--teal)"></div></div>'
+          + '<span class="bar-val">'+src+'→'+tgt+'</span>'
+          + '</div>';
+      }).join('');
+  html += panel('◈', 'blue', 'Relational Edges', edges.length, edgeHtml);
+
+  // Query
+  var queryHtml = '<div style="display:flex;gap:8px">'
+    + '<input type="text" id="synapse-query" placeholder="Query metabolic graph..." style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:11px" />'
+    + '<button class="btn primary" onclick="querySynapseMetabolon()" style="flex-shrink:0">Spread</button>'
+    + '<button class="btn" onclick="consolidateSynapse()" style="flex-shrink:0">Cycle</button>'
+    + '</div>'
+    + '<div id="synapse-results" style="margin-top:12px;display:none"></div>';
+  html += panel('⬢', 'teal', 'Spreading Activation Query', 0, queryHtml);
+
+  c.innerHTML = html;
+
+  var qInput = document.getElementById('synapse-query');
+  if (qInput) {
+    qInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') querySynapseMetabolon();
+    });
+  }
+
+  if (stats) document.getElementById('nb-synapse').textContent = totalNodes || '—';
+}
+
+async function querySynapseMetabolon() {
+  var q = document.getElementById('synapse-query');
+  if (!q || !q.value.trim()) return;
+  var results = document.getElementById('synapse-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading">Spreading activation...</div>';
+
+  try {
+    var r = await fetch(S.apiBase + '/api/synapse/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q.value.trim(), userId: S.userId }),
+      signal: AbortSignal.timeout(10000),
+    });
+    var d = await r.json();
+
+    if (!d.activatedNodes || d.activatedNodes.length === 0) {
+      results.innerHTML = '<div class="empty">No metabolic matches found (confidence: ' + (d.confidence || 0).toFixed(2) + ')</div>';
+      return;
+    }
+
+    var conf = (d.confidence || 0).toFixed(2);
+    var html = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted2);margin-bottom:10px">'
+      + 'Confidence: <strong style="color:' + (d.confidence > 0.7 ? 'var(--green)' : 'var(--amber)') + '">' + conf + '</strong> | '
+      + d.activatedNodes.length + ' activated nodes | path: ' + (d.activationPath || []).join(' → ')
+      + '</div>';
+
+    d.activatedNodes.forEach(function(n) {
+      var lcol = n.layer === 'interaction' ? 'teal' : n.layer === 'reasoning' ? 'purple' : 'amber';
+      html += '<div class="item">'
+        + '<div style="flex-shrink:0"><span class="tag '+lcol+'">' + esc(n.layer) + '</span> <span style="font-size:10px;color:var(--muted2)">act:' + (n.activation || 0).toFixed(2) + '</span></div>'
+        + '<div class="item-text">' + esc((n.content || '').slice(0, 140)) + '</div>'
+        + '<div class="item-right"><span style="font-family:var(--mono);font-size:9px;color:var(--muted2)">' + esc(n.sourceModule || '') + '</span></div>'
+        + '</div>';
+    });
+
+    if (d.summary) {
+      html += '<div style="margin-top:10px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;font-size:11px;color:var(--muted);line-height:1.6">' + esc(d.summary) + '</div>';
+    }
+
+    results.innerHTML = html;
+  } catch(e) {
+    results.innerHTML = '<div class="empty">Query failed. Check server connection.</div>';
+  }
+}
+
+async function consolidateSynapse() {
+  var results = document.getElementById('synapse-results');
+  if (!results) return;
+
+  results.style.display = 'block';
+  results.innerHTML = '<div class="loading">Running consolidation cycle...</div>';
+
+  try {
+    var r = await fetch(S.apiBase + '/api/synapse/consolidate/' + S.userId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: 'default' }),
+      signal: AbortSignal.timeout(10000),
+    });
+    var d = await r.json();
+    results.innerHTML = '<div class="item">'
+      + '<div class="item-text"><strong>Consolidation complete</strong><br/>'
+      + 'Consolidated: ' + (d.consolidated || 0) + ' | '
+      + 'Audited: ' + (d.audited || 0) + ' | '
+      + 'Refreshed: ' + (d.refreshed || 0) + ' | '
+      + 'Decayed: ' + (d.decayed || 0) + '</div></div>';
+    setTimeout(function() { renderSynapseMetabolon(); }, 500);
+  } catch(e) {
+    results.innerHTML = '<div class="empty">Consolidation failed.</div>';
+  }
+}
+
 async function loadStats() {
   var d = await api('/dashboard/stats/' + S.userId);
   if (!d) return;
@@ -650,6 +1105,10 @@ async function loadStats() {
   document.getElementById('nb-com').textContent = d.commitments || '0';
   document.getElementById('nb-bug').textContent = d.bugs || '0';
 }
+
+async function loadVeil() { if (S.view === 'veil') renderView(); }
+async function loadNexusForge() { if (S.view === 'nexusforge') renderView(); }
+async function loadSynapseMetabolon() { if (S.view === 'synapse') renderView(); }
 
 async function loadPositions() { if (S.view === 'positions' || S.view === 'overview') renderView(); }
 async function loadBurnout() { if (S.view === 'burnout') renderView(); }

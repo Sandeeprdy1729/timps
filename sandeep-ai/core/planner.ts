@@ -9,6 +9,7 @@ import { atomChain } from './atomChain';
 import { policyMetabol } from './policyMetabol';
 import { layerForge } from './layerForge';
 import { echoForge } from './echoForge';
+import { nexusForge } from './nexusForge';
 
 export interface PlanStep {
   id: string;
@@ -129,6 +130,7 @@ Create a practical plan with 2-8 steps maximum.`;
       await policyMetabol.buildPolicyContext(goal, userId, projectId, 5),
       await layerForge.buildLayerContext(goal, userId, projectId, 5),
       await echoForge.buildEchoContext(goal, userId, projectId, 5),
+      await nexusForge.buildVeilContext(goal, userId, projectId, 5),
     ].join('');
 
     return this.createPlan(goal, `${context || ''}${evolutionContext}`);
