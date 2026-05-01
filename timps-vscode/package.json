@@ -43,6 +43,12 @@
           "name": "TIMPS Chat",
           "icon": "resources/timps-icon.svg",
           "contextualTitle": "TIMPS AI Coding Agent"
+        },
+        {
+          "type": "webview",
+          "id": "timps.nexusForgeExplorer",
+          "name": "NexusForge Explorer",
+          "contextualTitle": "Episodic Memory Graph"
         }
       ]
     },

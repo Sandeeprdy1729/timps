@@ -10,6 +10,8 @@ import { atomChain } from './atomChain';
 import { policyMetabol } from './policyMetabol';
 import { layerForge } from './layerForge';
 import { echoForge } from './echoForge';
+import { nexusForge } from './nexusForge';
+import { synapseMetabolon } from './synapseMetabolon';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -292,6 +294,9 @@ Return JSON array:
 	    policyMetabol.runLoop(signal, sourceModule, outcomeScore),
 	    layerForge.forgeCompress(signal, sourceModule, sourceModule),
 	    echoForge.runReconstruction(signal, sourceModule, sourceModule),
+	    nexusForge.episodicIndexer(signal, sourceModule),
+	    nexusForge.evolutionOracle(signal, { projectId }),
+	    synapseMetabolon.injectEvent(signal, sourceModule),
 	  ]);
 	}
 }

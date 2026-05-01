@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as https from 'https';
 import * as http from 'http';
+import { NexusForgeExplorerProvider } from './nexusExplorer';
+import { SynapseMetabolonExplorerProvider } from './synapseExplorer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,14 +48,67 @@ let chatProvider: TIMPSChatViewProvider | undefined;
 
 // ─── Extension Activate ───────────────────────────────────────────────────────
 
+let chronosVeilApiBase: string | undefined;
+
+// ─── ChronosVeil integration ─────────────────────────────────────────────────
+async function ingestToChronosVeil(content: string, sourceModule: string, tags: string[], entity?: string) {
+  if (!chronosVeilApiBase) {
+    const cfg = vscode.workspace.getConfiguration('timps');
+    const userId = cfg.get<number>('userId', 1);
+    chronosVeilApiBase = cfg.get<string>('apiBase', 'http://localhost:3000') + '/api';
+  }
+  try {
+    await fetch(chronosVeilApiBase + '/chronos/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        sourceModule,
+        tags,
+        entity,
+        userId: 1,
+        projectId: vscode.workspace.name || 'default',
+      }),
+    });
+  } catch { /* non-critical */ }
+}
+
+function detectCodingEntities(content: string): string[] {
+  const tags: string[] = ['code'];
+  const lower = content.toLowerCase();
+  if (/bug|error|crash|exception|failed/.test(lower)) tags.push('bug');
+  if (/debt|legacy|refactor|complex/.test(lower)) tags.push('tech-debt');
+  if (/api|endpoint|webhook|route/.test(lower)) tags.push('api');
+  if (/test|fail|pass|assert/.test(lower)) tags.push('testing');
+  if (/security|vuln|xss|injection/.test(lower)) tags.push('security');
+  return tags;
+}
+
 export function activate(context: vscode.ExtensionContext) {
   console.log('TIMPS AI Coding Agent activating...');
 
   chatProvider = new TIMPSChatViewProvider(context);
 
-  // Register the sidebar webview provider
+  const cfg = vscode.workspace.getConfiguration('timps');
+  const userId = cfg.get<number>('userId', 1);
+  const apiBase = cfg.get<string>('apiBase', 'http://localhost:3000');
+  const nexusExplorer = new NexusForgeExplorerProvider(context.extensionUri, userId, apiBase);
+  const synapseExplorer = new SynapseMetabolonExplorerProvider(context.extensionUri, userId, apiBase);
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('timps.chatView', chatProvider, {
+      webviewOptions: { retainContextWhenHidden: true }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('timps.nexusForgeExplorer', nexusExplorer, {
+      webviewOptions: { retainContextWhenHidden: true }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('timps.synapseMetabolonExplorer', synapseExplorer, {
       webviewOptions: { retainContextWhenHidden: true }
     })
   );
@@ -315,6 +370,59 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private _saveToChronosVeil(session: Session, userMsg: string, assistantMsg: string) {
+    const content = `User: ${userMsg.slice(0, 200)}\n\nTIMPS: ${assistantMsg.slice(0, 300)}`;
+    const tags = detectCodingEntities(content);
+    const entity = vscode.window.activeTextEditor?.document.fileName.split('/').pop() || 'vscode';
+    ingestToChronosVeil(content, 'timps-vscode', tags, entity);
+    this._saveToNexusForge(userMsg, assistantMsg);
+    this._saveToSynapseMetabolon(userMsg, assistantMsg);
+  }
+
+  private _saveToSynapseMetabolon(userMsg: string, assistantMsg: string) {
+    const cfg = vscode.workspace.getConfiguration('timps');
+    const apiBase = cfg.get<string>('apiBase', 'http://localhost:3000');
+    const userId = cfg.get<number>('userId', 1);
+    const content = `User: ${userMsg.slice(0, 200)}\n\nTIMPS: ${assistantMsg.slice(0, 300)}`;
+    const tags = detectCodingEntities(content);
+    const filename = vscode.window.activeTextEditor?.document.fileName.split('/').pop() || 'vscode';
+    fetch(apiBase + '/api/synapse/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        projectId: vscode.workspace.name || 'default',
+        content,
+        tags,
+        metadata: { source: 'timps-vscode', entity: filename },
+        sourceModule: 'timps-vscode',
+      }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => {});
+  }
+
+  private _saveToNexusForge(userMsg: string, assistantMsg: string) {
+    const cfg = vscode.workspace.getConfiguration('timps');
+    const apiBase = cfg.get<string>('apiBase', 'http://localhost:3000');
+    const userId = cfg.get<number>('userId', 1);
+    const content = `User: ${userMsg.slice(0, 200)}\n\nTIMPS: ${assistantMsg.slice(0, 300)}`;
+    const tags = detectCodingEntities(content);
+    const filename = vscode.window.activeTextEditor?.document.fileName.split('/').pop() || 'vscode';
+    fetch(apiBase + '/api/nexus/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        projectId: vscode.workspace.name || 'default',
+        content,
+        tags,
+        metadata: { source: 'timps-vscode', entity: filename },
+        sourceModule: 'timps-vscode',
+      }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => {});
+  }
+
   private async _handleUserMessage(content: string, sessionId: string) {
     const session = this._sessions.find(s => s.id === sessionId) || this._currentSession();
     if (!session) { return; }
@@ -384,6 +492,7 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
       assistantMsg.status = 'done';
       this._sendToView({ type: 'assistantDone', messageId: assistantMsg.id, content: assistantMsg.content, sessionId });
       this._saveSessions();
+      this._saveToChronosVeil(session, userMsg.content, assistantMsg.content);
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);

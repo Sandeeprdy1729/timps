@@ -220,6 +220,8 @@ If no tools needed return: {"routes":[],"needs_planning":false,"complexity":"sim
       { pattern: /\b(skill|growth|improve|evolution|trajectory)\b/i, intent: 'skill_evolution' },
       { pattern: /\b(relationship|team|drift|colleague)\b/i, intent: 'relationship' },
       { pattern: /\b(branch|merge|version|latest semantic|provenance)\b/i, intent: 'provenance_forge' },
+      { pattern: /\b(nexus|sub-agent|episodic|hybrid|iterative)\b/i, intent: 'nexus_forge' },
+      { pattern: /\b(how.*connected|linked|chain|trajectory from)\b/i, intent: 'multi_hop' },
     ];
 
     for (const { pattern, intent } of intentPatterns) {

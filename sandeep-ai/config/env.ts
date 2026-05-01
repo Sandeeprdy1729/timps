@@ -63,6 +63,14 @@ export interface Config {
     evolveIntervalHours: number;
   };
   
+  aetherForge: {
+    enabled: boolean;
+    maxTraverseSteps: number;
+    confidenceThreshold: number;
+    refusalThreshold: number;
+    maxSummaryLength: number;
+  };
+  
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
   };
@@ -131,6 +139,14 @@ export function loadConfig(): Config {
       minEdgeConfidence: parseFloat(process.env.FORGELINK_MIN_CONFIDENCE || '0.3'),
       maxEdgesPerProcess: parseInt(process.env.FORGELINK_MAX_EDGES || '20', 10),
       evolveIntervalHours: parseInt(process.env.FORGELINK_EVOLVE_INTERVAL || '24', 10),
+    },
+    
+    aetherForge: {
+      enabled: process.env.ENABLE_AETHERFORGE !== 'false',
+      maxTraverseSteps: parseInt(process.env.AETHERFORGE_MAX_TRAVERSE || '8', 10),
+      confidenceThreshold: parseFloat(process.env.AETHERFORGE_CONFIDENCE_THRESHOLD || '0.65'),
+      refusalThreshold: parseFloat(process.env.AETHERFORGE_REFUSAL_THRESHOLD || '0.15'),
+      maxSummaryLength: parseInt(process.env.AETHERFORGE_MAX_SUMMARY || '500', 10),
     },
     
     logging: {

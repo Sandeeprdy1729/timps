@@ -1,223 +1,232 @@
-// ── TIMPS Code — SkillGalaxy Integration ──
-// Fetch and apply skills from https://skill-galaxy.vercel.app
-// Skills are .md instruction files that enhance the agent's expertise
+// TIMPS Skills System
+// Agent-created procedural memory — skills auto-improve during use
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { t, icons } from '../config/theme.js';
-
-const SKILLS_DIR = path.join(os.homedir(), '.timps', 'skills');
-const SKILL_CACHE_FILE = path.join(SKILLS_DIR, '_cache.json');
-const SKILL_GALAXY_URL = 'https://skill-galaxy.vercel.app';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+import { generateId } from './utils.js';
 
 export interface Skill {
   id: string;
   name: string;
   description: string;
-  category: string;
-  difficulty?: string;
-  content?: string; // full markdown body (loaded on demand)
-  version?: string;
+  trigger: string;
+  prompt: string;
+  tools: string[];
+  examples: string[];
+  version: number;
+  createdAt: number;
+  lastUsed: number;
+  useCount: number;
+  selfImprove: boolean;
 }
 
-interface SkillCache {
-  timestamp: number;
-  categories: string[];
+export interface SkillManifest {
   skills: Skill[];
+  version: string;
+  createdAt: number;
 }
 
-// ═══════════════════════════════════════
-// Skill storage
-// ═══════════════════════════════════════
+const SKILLS_DIR = path.join(os.homedir(), '.timps', 'skills');
+const MANIFEST_FILE = path.join(SKILLS_DIR, 'manifest.json');
 
-function ensureDir(): void {
-  fs.mkdirSync(SKILLS_DIR, { recursive: true });
-}
+export class SkillsEngine {
+  private manifest: SkillManifest;
+  private loaded: Map<string, Skill> = new Map();
 
-function loadCache(): SkillCache | null {
-  try {
-    if (fs.existsSync(SKILL_CACHE_FILE)) {
-      const data = JSON.parse(fs.readFileSync(SKILL_CACHE_FILE, 'utf-8')) as SkillCache;
-      if (Date.now() - data.timestamp < CACHE_TTL_MS) return data;
+  constructor() {
+    this.manifest = this.loadManifest();
+  }
+
+  private loadManifest(): SkillManifest {
+    try {
+      if (fs.existsSync(MANIFEST_FILE)) {
+        return JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf-8'));
+      }
+    } catch { /* ignore */ }
+    return { skills: [], version: '1.0', createdAt: Date.now() };
+  }
+
+  private saveManifest(): void {
+    fs.mkdirSync(SKILLS_DIR, { recursive: true });
+    fs.writeFileSync(MANIFEST_FILE, JSON.stringify(this.manifest, null, 2), 'utf-8');
+  }
+
+  listSkills(): Skill[] {
+    return this.manifest.skills.sort((a, b) => b.useCount - a.useCount);
+  }
+
+  findSkill(query: string): Skill | null {
+    const q = query.toLowerCase();
+    return this.manifest.skills.find(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.trigger.toLowerCase().includes(q)
+    ) || null;
+  }
+
+  registerSkill(skill: Omit<Skill, 'id' | 'version' | 'createdAt' | 'lastUsed' | 'useCount'>): Skill {
+    const existing = this.findSkill(skill.name);
+    if (existing) {
+      existing.useCount++;
+      existing.lastUsed = Date.now();
+      this.saveManifest();
+      return existing;
     }
-  } catch { /* ignore */ }
-  return null;
-}
 
-function saveCache(cache: SkillCache): void {
-  ensureDir();
-  fs.writeFileSync(SKILL_CACHE_FILE, JSON.stringify(cache), 'utf-8');
-}
-
-// ═══════════════════════════════════════
-// Installed skills (local .md files)
-// ═══════════════════════════════════════
-
-export function getInstalledSkills(): Skill[] {
-  ensureDir();
-  const files = fs.readdirSync(SKILLS_DIR).filter(f => f.endsWith('.md'));
-  return files.map(f => {
-    const content = fs.readFileSync(path.join(SKILLS_DIR, f), 'utf-8');
-    const meta = parseFrontmatter(content);
-    return {
-      id: f.replace('.md', ''),
-      name: meta.name || f.replace('.md', ''),
-      description: meta.description || '',
-      category: meta.category || 'general',
-      difficulty: meta.difficulty,
-      version: meta.version,
-      content,
+    const newSkill: Skill = {
+      ...skill,
+      id: generateId('skill'),
+      version: 1,
+      createdAt: Date.now(),
+      lastUsed: Date.now(),
+      useCount: 1,
     };
-  });
-}
 
-export function installSkill(skill: Skill): void {
-  ensureDir();
-  const filename = `${skill.id.replace(/[^a-zA-Z0-9_-]/g, '_')}.md`;
-  const filepath = path.join(SKILLS_DIR, filename);
-  fs.writeFileSync(filepath, skill.content || `---\nname: ${skill.name}\ndescription: ${skill.description}\n---\n`, 'utf-8');
-}
+    this.manifest.skills.push(newSkill);
+    this.loaded.set(newSkill.id, newSkill);
+    this.saveManifest();
+    
+    return newSkill;
+  }
 
-export function uninstallSkill(skillId: string): boolean {
-  const filename = `${skillId.replace(/[^a-zA-Z0-9_-]/g, '_')}.md`;
-  const filepath = path.join(SKILLS_DIR, filename);
-  if (fs.existsSync(filepath)) {
-    fs.unlinkSync(filepath);
+  useSkill(skillId: string): string | null {
+    const skill = this.manifest.skills.find(s => s.id === skillId);
+    if (!skill) return null;
+    
+    skill.useCount++;
+    skill.lastUsed = Date.now();
+    this.saveManifest();
+    
+    return skill.prompt;
+  }
+
+  improveSkill(skillId: string, improvedPrompt: string): boolean {
+    const skill = this.manifest.skills.find(s => s.id === skillId);
+    if (!skill) return false;
+
+    skill.prompt = improvedPrompt;
+    skill.version++;
+    skill.lastUsed = Date.now();
+    this.saveManifest();
+    
     return true;
   }
-  return false;
-}
 
-// ═══════════════════════════════════════
-// SkillGalaxy API — search & fetch
-// ═══════════════════════════════════════
-
-export async function searchSkills(query: string, category?: string): Promise<Skill[]> {
-  // Try local cache first
-  const cache = loadCache();
-  if (cache && cache.skills.length > 0) {
-    return filterSkills(cache.skills, query, category);
+  suggestSkills(task: string, limit = 3): Skill[] {
+    const q = task.toLowerCase();
+    const words = q.split(/\s+/);
+    
+    return this.manifest.skills
+      .map(s => {
+        const triggerLower = s.trigger.toLowerCase();
+        const score = words.reduce((acc, w) => acc + (triggerLower.includes(w) ? 1 : 0), 0);
+        return { skill: s, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(x => x.skill);
   }
 
-  // Fetch from SkillGalaxy
-  try {
-    const params = new URLSearchParams({ q: query, format: 'json' });
-    if (category) params.set('category', category);
-
-    const res = await fetch(`${SKILL_GALLERY_API}/api/skills?${params}`, {
-      signal: AbortSignal.timeout(10000),
-      headers: { 'Accept': 'application/json' },
-    });
-
-    if (!res.ok) {
-      // Fallback to local installed skills
-      return filterSkills(getInstalledSkills(), query, category);
-    }
-
-    const data = await res.json() as { skills?: Skill[] };
-    const skills = data.skills || [];
-
-    // Cache results
-    saveCache({ timestamp: Date.now(), categories: [], skills });
-    return skills.slice(0, 20);
-  } catch {
-    // Offline — search installed skills only
-    return filterSkills(getInstalledSkills(), query, category);
-  }
-}
-
-const SKILL_GALLERY_API = SKILL_GALAXY_URL;
-
-export async function fetchSkillContent(skillId: string): Promise<string | null> {
-  // Check if installed locally first
-  const localPath = path.join(SKILLS_DIR, `${skillId.replace(/[^a-zA-Z0-9_-]/g, '_')}.md`);
-  if (fs.existsSync(localPath)) {
-    return fs.readFileSync(localPath, 'utf-8');
+  deleteSkill(skillId: string): boolean {
+    const idx = this.manifest.skills.findIndex(s => s.id === skillId);
+    if (idx === -1) return false;
+    
+    this.manifest.skills.splice(idx, 1);
+    this.loaded.delete(skillId);
+    this.saveManifest();
+    
+    return true;
   }
 
-  try {
-    const res = await fetch(`${SKILL_GALLERY_API}/api/skills/${encodeURIComponent(skillId)}`, {
-      signal: AbortSignal.timeout(10000),
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!res.ok) return null;
-    const data = await res.json() as { content?: string; body?: string };
-    return data.content || data.body || null;
-  } catch {
-    return null;
+  exportSkill(skillId: string): string | null {
+    const skill = this.manifest.skills.find(s => s.id === skillId);
+    if (!skill) return null;
+    
+    return JSON.stringify({
+      name: skill.name,
+      description: skill.description,
+      trigger: skill.trigger,
+      prompt: skill.prompt,
+      tools: skill.tools,
+      examples: skill.examples,
+    }, null, 2);
   }
-}
 
-export async function listCategories(): Promise<string[]> {
-  const defaults = [
-    'AI & ML', 'Cybersecurity', 'Data Engineering', 'Cloud & Infra',
-    'Development', 'Writing', 'Business', 'Design & Education',
-    'Product & Strategy', 'Creative Technology', 'Blockchain & Web3',
-    'Robotics & Automation', 'Climate Tech', 'Quantum Computing',
-    'Computational Biology', 'Spatial Computing',
-  ];
-
-  try {
-    const res = await fetch(`${SKILL_GALLERY_API}/api/categories`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      const data = await res.json() as { categories?: string[] };
-      return data.categories || defaults;
-    }
-  } catch { /* fallback */ }
-  return defaults;
-}
-
-// ═══════════════════════════════════════
-// Build context injection from installed skills
-// ═══════════════════════════════════════
-
-export function getSkillContext(): string {
-  const installed = getInstalledSkills();
-  if (installed.length === 0) return '';
-
-  const parts = ['## Active Skills (from SkillGalaxy)'];
-  for (const skill of installed) {
-    // Strip frontmatter, keep instruction body
-    const body = stripFrontmatter(skill.content || '');
-    if (body.trim()) {
-      parts.push(`### ${skill.name}\n${body.slice(0, 2000)}`);
+  importSkill(json: string): Skill | null {
+    try {
+      const imported = JSON.parse(json);
+      return this.registerSkill({
+        name: imported.name,
+        description: imported.description,
+        trigger: imported.trigger,
+        prompt: imported.prompt,
+        tools: imported.tools || [],
+        examples: imported.examples || [],
+        selfImprove: imported.selfImprove ?? true,
+      });
+    } catch {
+      return null;
     }
   }
-  return parts.join('\n\n');
+
+  getStats(): { totalSkills: number; totalUses: number; selfImproving: number } {
+    return {
+      totalSkills: this.manifest.skills.length,
+      totalUses: this.manifest.skills.reduce((a, s) => a + s.useCount, 0),
+      selfImproving: this.manifest.skills.filter(s => s.selfImprove).length,
+    };
+  }
 }
 
-// ═══════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════
+export const DEFAULT_SKILLS: Partial<Skill>[] = [
+  {
+    name: 'Code Review',
+    description: 'Review code for bugs, security issues, and best practices',
+    trigger: 'review code|review pr|check code',
+    prompt: 'You are a code reviewer. Analyze the provided code for:\n1. Bugs and edge cases\n2. Security vulnerabilities\n3. Performance issues\n4. Code style violations\n\nProvide specific, actionable feedback.',
+    tools: ['search_code', 'read_file'],
+    examples: ['review src/utils.ts', 'review this PR'],
+  },
+  {
+    name: 'Explain Error',
+    description: 'Explain and fix programming errors',
+    trigger: 'fix error|debug|error fix|what does this mean',
+    prompt: 'You are a debugging assistant. When given an error:\n1. Explain what caused it in simple terms\n2. Show the exact fix\n3. Suggest how to prevent it in the future',
+    tools: ['search_code', 'run_diagnostics'],
+    examples: ['fix this error', 'debug TypeError'],
+  },
+  {
+    name: 'Write Tests',
+    description: 'Generate comprehensive tests',
+    trigger: 'write tests|add tests|test',
+    prompt: 'You are a test engineer. Write comprehensive tests that:\n1. Cover happy path and edge cases\n2. Use descriptive test names\n3. Follow project testing conventions\n4. Mock external dependencies',
+    tools: ['find_files', 'read_file', 'bash'],
+    examples: ['write tests for utils.ts', 'add tests'],
+  },
+  {
+    name: 'Refactor',
+    description: 'Refactor code for better quality',
+    trigger: 'refactor|clean up|improve',
+    prompt: 'You are a refactoring expert. When refactoring:\n1. Make small, incremental changes\n2. Preserve behavior exactly\n3. Add tests before large changes\n4. Run tests after each change',
+    tools: ['search_code', 'read_file', 'bash'],
+    examples: ['refactor this function', 'clean up legacy code'],
+  },
+];
 
-function filterSkills(skills: Skill[], query: string, category?: string): Skill[] {
-  const q = query.toLowerCase();
-  return skills.filter(s => {
-    const matchQuery = !q || s.name.toLowerCase().includes(q) ||
-      s.description.toLowerCase().includes(q) ||
-      s.category.toLowerCase().includes(q);
-    const matchCat = !category || s.category.toLowerCase() === category.toLowerCase();
-    return matchQuery && matchCat;
-  });
-}
-
-function parseFrontmatter(content: string): Record<string, string> {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return {};
-  const meta: Record<string, string> = {};
-  for (const line of match[1].split('\n')) {
-    const [key, ...rest] = line.split(':');
-    if (key && rest.length) {
-      meta[key.trim()] = rest.join(':').trim();
+export function initializeDefaultSkills(): void {
+  const engine = new SkillsEngine();
+  for (const skill of DEFAULT_SKILLS) {
+    if (skill.name && !engine.findSkill(skill.name)) {
+      engine.registerSkill({
+        name: skill.name,
+        description: skill.description || '',
+        trigger: skill.trigger || '',
+        prompt: skill.prompt || '',
+        tools: skill.tools || [],
+        examples: skill.examples || [],
+        selfImprove: true,
+      });
     }
   }
-  return meta;
-}
-
-function stripFrontmatter(content: string): string {
-  return content.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
 }

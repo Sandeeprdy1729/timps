@@ -13,3 +13,5 @@ export { ChronosVeil, chronosVeil, aetherForge, PersistenceLayer, ChronosEventRe
 export { PolicyMetabol, policyMetabol, MetabolAction, PolicyMetabolResult } from './policyMetabol';
 export { LayerForge, layerForge, LayerForgeLayer, LayerForgeResult } from './layerForge';
 export { EchoForge, echoForge, EchoHierarchy, EchoResult } from './echoForge';
+
+export { NexusForge, nexusForge, Signal, EpisodicNode, PolicyDecision, RetrievalResult, DeltaUpdate } from './nexusForge';

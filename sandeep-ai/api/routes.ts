@@ -5,6 +5,9 @@ import { memoryIndex } from '../memory/memoryIndex';
 import { query, execute } from '../db/postgres';
 import { ContradictionTool } from '../tools/contradictionTool';
 import { positionStore } from '../tools/positionStore';
+import { nexusForge } from '../core/nexusForge';
+import { chronosVeil, ChronosSignal } from '../core/chronosVeil';
+import { synapseMetabolon, MetabolicSignal } from '../core/synapseMetabolon';
 
 const router = Router();
 const contradictionTool = new ContradictionTool();
@@ -495,6 +498,392 @@ router.get('/events/:userId', (req: Request, res: Response) => {
     clearInterval(heartbeat);
     eventBus.unsubscribe(userId, res);
   });
+});
+
+// ─── NexusForge API Routes ───────────────────────────────────────────────
+
+router.post('/nexus/ingest', async (req: Request, res: Response) => {
+  try {
+    const { userId, projectId, content, tags, metadata, sourceModule } = req.body;
+    if (!content || !sourceModule) {
+      res.status(400).json({ error: 'content and sourceModule required' });
+      return;
+    }
+
+    const signal = {
+      userId: userId || 1,
+      projectId,
+      content,
+      tags: tags || [],
+      metadata: metadata || {},
+    };
+
+    const nodeId = await nexusForge.episodicIndexer(signal, sourceModule);
+    if (nodeId) {
+      await nexusForge.evolutionOracle(signal, { projectId: projectId || 'default' });
+      res.json({ success: true, nodeId });
+    } else {
+      res.json({ success: false, message: 'NexusForge disabled or error' });
+    }
+  } catch (err: any) {
+    console.error('[nexus/ingest] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/nexus/query', async (req: Request, res: Response) => {
+  try {
+    const { query: q, userId, projectId } = req.body;
+    if (!q) {
+      res.status(400).json({ error: 'query required' });
+      return;
+    }
+
+    const result = await nexusForge.retrievalWeaver(
+      q,
+      userId || 1,
+      { projectId: projectId || 'default' }
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('[nexus/query] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/nexus/stats/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const [totalNodes, totalEdges, totalCausal, sources] = await Promise.all([
+      query(`SELECT COUNT(*) as count FROM nexus_episodic_nodes WHERE user_id = $1`, [userId]),
+      query(`SELECT COUNT(*) as count FROM nexus_temporal_edges WHERE source_node_id IN (SELECT node_id FROM nexus_episodic_nodes WHERE user_id = $1)`, [userId]),
+      query(`SELECT COUNT(*) as count FROM nexus_causal_edges WHERE source_node_id IN (SELECT node_id FROM nexus_episodic_nodes WHERE user_id = $1)`, [userId]),
+      query(`SELECT source_module, COUNT(*) as count FROM nexus_episodic_nodes WHERE user_id = $1 GROUP BY source_module`, [userId]),
+    ]);
+
+    res.json({
+      totalNodes: parseInt((totalNodes[0] as any).count),
+      totalEdges: parseInt((totalEdges[0] as any).count),
+      totalCausal: parseInt((totalCausal[0] as any).count),
+      sources: sources.reduce((acc: any, row: any) => { acc[row.source_module] = parseInt(row.count); return acc; }, {}),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const limit = parseInt(req.query.limit as string) || 30;
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const [nodes, edges] = await Promise.all([
+      query(`SELECT node_id, gist, facts, entity_keys, content, source_module, created_at, metadata
+             FROM nexus_episodic_nodes WHERE user_id = $1
+             ORDER BY created_at DESC LIMIT $2`, [userId, limit]),
+      query(`SELECT source_node_id, target_node_id, edge_type, confidence, provenance_module
+             FROM nexus_temporal_edges
+             WHERE source_node_id IN (SELECT node_id FROM nexus_episodic_nodes WHERE user_id = $1)
+             ORDER BY created_at DESC LIMIT $2`, [userId, limit * 2]),
+    ]);
+
+    const enrichedNodes = nodes.map((n: any) => ({
+      ...n,
+      isCoding: ['timps-code', 'timps-vscode', 'timps-mcp', 'cli', 'code'].some(s => n.source_module?.includes(s)),
+    }));
+
+    res.json({ nodes: enrichedNodes, edges });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ─── ChronosVeil API Routes ───────────────────────────────────────────────
+
+router.post('/chronos/ingest', async (req: Request, res: Response) => {
+  try {
+    const { userId, projectId, content, tags, entity, metadata, sourceModule } = req.body;
+    if (!content || !sourceModule) {
+      res.status(400).json({ error: 'content and sourceModule required' });
+      return;
+    }
+
+    const signal: ChronosSignal = {
+      userId: userId || 1,
+      projectId: projectId || 'default',
+      content,
+      tags: tags || [],
+      entity,
+      metadata: metadata || {},
+    };
+
+    const result = await chronosVeil.ingestEvent(signal, sourceModule);
+
+    eventBus.emit({
+      type: 'chronos_event',
+      userId: userId || 1,
+      payload: {
+        eventId: result.eventId,
+        layer: result.layer,
+        entities: result.entities,
+        supersedes: result.supersedes,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true, eventId: result.eventId, layer: result.layer, entities: result.entities });
+  } catch (err: any) {
+    console.error('[chronos/ingest] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/chronos/query', async (req: Request, res: Response) => {
+  try {
+    const { query: q, userId, projectId, limit } = req.body;
+    if (!q) {
+      res.status(400).json({ error: 'query required' });
+      return;
+    }
+
+    const resolved = await chronosVeil.queryWithVeil(
+      q,
+      userId || 1,
+      projectId || 'default',
+      limit || 8
+    );
+
+    res.json(resolved);
+  } catch (err: any) {
+    console.error('[chronos/query] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/chronos/context/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const projectId = (req.query.projectId as string) || 'default';
+    const { query: q } = req.query;
+
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    if (!q) {
+      res.status(400).json({ error: 'query parameter required' });
+      return;
+    }
+
+    const context = await chronosVeil.buildVeilContext(String(q), userId, projectId, 5);
+    res.json({ context });
+  } catch (err: any) {
+    console.error('[chronos/context] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/chronos/stats/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const [total, byLayer, recent] = await Promise.all([
+      query(`SELECT COUNT(*) as count FROM chronos_events WHERE user_id = $1`, [userId]),
+      query(`SELECT layer, COUNT(*) as count FROM chronos_events WHERE user_id = $1 GROUP BY layer`, [userId]),
+      query(`SELECT event_id, layer, entity_keys, content, confidence, created_at
+             FROM chronos_events WHERE user_id = $1
+             ORDER BY created_at DESC LIMIT 10`, [userId]),
+    ]);
+
+    res.json({
+      total: parseInt((total[0] as any).count),
+      byLayer: byLayer.reduce((acc: any, row: any) => { acc[row.layer] = parseInt(row.count); return acc; }, {}),
+      recent,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/chronos/edges/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const edges = await query(
+      `SELECT e.source_event_id, e.target_event_id, e.edge_type, e.confidence,
+              e.entity_keys, e.created_at
+       FROM chronos_entity_edges e
+       JOIN chronos_events c ON c.event_id = e.target_event_id
+       WHERE c.user_id = $1
+       ORDER BY e.created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({ edges, total: edges.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ─── SynapseMetabolon API Routes ─────────────────────────────────────────────
+
+router.post('/synapse/ingest', async (req: Request, res: Response) => {
+  try {
+    const { userId, projectId, content, tags, entity, metadata, sourceModule, confidence, outcomeScore } = req.body;
+    if (!content || !sourceModule) {
+      res.status(400).json({ error: 'content and sourceModule required' });
+      return;
+    }
+
+    const signal: MetabolicSignal = {
+      userId: userId || 1,
+      projectId: projectId || 'default',
+      content,
+      tags: tags || [],
+      entity,
+      confidence,
+      outcomeScore,
+      metadata: metadata || {},
+    };
+
+    const result = await synapseMetabolon.injectEvent(signal, sourceModule);
+
+    eventBus.emit({
+      type: 'synapse_event',
+      userId: userId || 1,
+      payload: {
+        nodeId: result.nodeId,
+        layer: result.layer,
+        entities: result.entities,
+        activation: result.activation,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true, nodeId: result.nodeId, layer: result.layer, activation: result.activation, entities: result.entities });
+  } catch (err: any) {
+    console.error('[synapse/ingest] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/synapse/query', async (req: Request, res: Response) => {
+  try {
+    const { query: q, userId, projectId, limit } = req.body;
+    if (!q) {
+      res.status(400).json({ error: 'query required' });
+      return;
+    }
+
+    const result = await synapseMetabolon.queryWithSpread(
+      q,
+      userId || 1,
+      projectId || 'default',
+      limit || 10
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('[synapse/query] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/synapse/context/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const projectId = (req.query.projectId as string) || 'default';
+    const { query: q } = req.query;
+
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    if (!q) {
+      res.status(400).json({ error: 'query parameter required' });
+      return;
+    }
+
+    const context = await synapseMetabolon.buildMetabolicContext(String(q), userId, projectId, 5);
+    res.json({ context });
+  } catch (err: any) {
+    console.error('[synapse/context] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/synapse/stats/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const projectId = (req.query.projectId as string) || 'default';
+
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const stats = await synapseMetabolon.getStats(userId, projectId);
+    res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const limit = parseInt(req.query.limit as string) || 30;
+
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const graph = await synapseMetabolon.getGraph(userId, limit);
+    res.json(graph);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId, 10);
+    const projectId = (req.body.projectId as string) || 'default';
+
+    if (isNaN(userId)) {
+      res.status(400).json({ error: 'Invalid userId' });
+      return;
+    }
+
+    const result = await synapseMetabolon.runConsolidationCycle(userId, projectId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
