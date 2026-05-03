@@ -12,6 +12,12 @@ import { layerForge } from './layerForge';
 import { echoForge } from './echoForge';
 import { nexusForge } from './nexusForge';
 import { synapseMetabolon } from './synapseMetabolon';
+import { veilForge } from './veilForge';
+import { temporaTree } from './temporaTree';
+import { bindWeave } from './bindWeave';
+import { aetherWeft } from './aetherWeft';
+import { apexSynapse } from './apexSynapse';
+import { quaternaryForge } from './quaternaryForge';
 
 export interface ExtractedKnowledge {
   memories: Array<{
@@ -294,9 +300,16 @@ Return JSON array:
 	    policyMetabol.runLoop(signal, sourceModule, outcomeScore),
 	    layerForge.forgeCompress(signal, sourceModule, sourceModule),
 	    echoForge.runReconstruction(signal, sourceModule, sourceModule),
+	    echoForge.forgeHierarchical(signal, sourceModule),
 	    nexusForge.episodicIndexer(signal, sourceModule),
 	    nexusForge.evolutionOracle(signal, { projectId }),
 	    synapseMetabolon.injectEvent(signal, sourceModule),
+	    veilForge.projectAndForge(signal, sourceModule),
+	    temporaTree.growTree(signal, sourceModule),
+	    bindWeave.bindEvent(signal, sourceModule),
+	    aetherWeft.weaveEntry(signal, sourceModule),
+	    apexSynapse.forgeEvent(signal, sourceModule),
+	    quaternaryForge.forgeTyped(signal, sourceModule),
 	  ]);
 	}
 }

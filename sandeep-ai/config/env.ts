@@ -70,7 +70,57 @@ export interface Config {
     refusalThreshold: number;
     maxSummaryLength: number;
   };
-  
+
+  veilForge: {
+    enabled: boolean;
+    maxTraverseSteps: number;
+    confidenceThreshold: number;
+    refusalThreshold: number;
+    maxSummaryLength: number;
+  };
+
+  temporaTree: {
+    enabled: boolean;
+    bmmThreshold: number;
+    maxTreeDepth: number;
+    policyLearnRate: number;
+  };
+
+  bindWeave: {
+    enabled: boolean;
+    inductionThreshold: number;
+    maxWeaveDegree: number;
+    reflectionDepth: number;
+  };
+
+  echoForge: {
+    enabled: boolean;
+    minConfidence: number;
+    maxEchoDepth: number;
+    reflectionDepth: number;
+  };
+
+  aetherWeft: {
+    enabled: boolean;
+    maturityThreshold: number;
+    decayRate: number;
+    maxRiverDepth: number;
+  };
+
+  apexSynapse: {
+    enabled: boolean;
+    maxResolutionSteps: number;
+    minConfidence: number;
+    maxPropagationDepth: number;
+  };
+
+  quaternaryForge: {
+    enabled: boolean;
+    wisdomThreshold: number;
+    memoryDecayRate: number;
+    intelligenceMaxAge: number;
+  };
+
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
   };
@@ -148,7 +198,57 @@ export function loadConfig(): Config {
       refusalThreshold: parseFloat(process.env.AETHERFORGE_REFUSAL_THRESHOLD || '0.15'),
       maxSummaryLength: parseInt(process.env.AETHERFORGE_MAX_SUMMARY || '500', 10),
     },
-    
+
+    veilForge: {
+      enabled: process.env.ENABLE_VEILFORGE !== 'false',
+      maxTraverseSteps: parseInt(process.env.VEILFORGE_MAX_TRAVERSE || '8', 10),
+      confidenceThreshold: parseFloat(process.env.VEILFORGE_CONFIDENCE_THRESHOLD || '0.65'),
+      refusalThreshold: parseFloat(process.env.VEILFORGE_REFUSAL_THRESHOLD || '0.15'),
+      maxSummaryLength: parseInt(process.env.VEILFORGE_MAX_SUMMARY || '500', 10),
+    },
+
+    temporaTree: {
+      enabled: process.env.ENABLE_TEMPORATREE !== 'false',
+      bmmThreshold: parseFloat(process.env.TEMPORATREE_BMM_THRESHOLD || '0.55'),
+      maxTreeDepth: parseInt(process.env.TEMPORATREE_MAX_DEPTH || '4', 10),
+      policyLearnRate: parseFloat(process.env.TEMPORATREE_POLICY_RATE || '0.1'),
+    },
+
+    bindWeave: {
+      enabled: process.env.ENABLE_BINDWEAVE !== 'false',
+      inductionThreshold: parseFloat(process.env.BINDWEAVE_INDUCTION_THRESHOLD || '0.45'),
+      maxWeaveDegree: parseInt(process.env.BINDWEAVE_MAX_DEGREE || '6', 10),
+      reflectionDepth: parseInt(process.env.BINDWEAVE_REFLECTION_DEPTH || '3', 10),
+    },
+
+    echoForge: {
+      enabled: process.env.ENABLE_ECHOFORGE !== 'false',
+      minConfidence: parseFloat(process.env.ECHOFORGE_MIN_CONFIDENCE || '0.65'),
+      maxEchoDepth: parseInt(process.env.ECHOFORGE_MAX_DEPTH || '4', 10),
+      reflectionDepth: parseInt(process.env.ECHOFORGE_REFLECTION_DEPTH || '3', 10),
+    },
+
+    aetherWeft: {
+      enabled: process.env.ENABLE_AETHERWEFT !== 'false',
+      maturityThreshold: parseFloat(process.env.AETHERWEFT_MATURITY_THRESHOLD || '0.6'),
+      decayRate: parseFloat(process.env.AETHERWEFT_DECAY_RATE || '0.02'),
+      maxRiverDepth: parseInt(process.env.AETHERWEFT_MAX_RIVER_DEPTH || '5', 10),
+    },
+
+    apexSynapse: {
+      enabled: process.env.ENABLE_APEXSYNAPSE !== 'false',
+      maxResolutionSteps: parseInt(process.env.APEXSYNAPSE_MAX_STEPS || '8', 10),
+      minConfidence: parseFloat(process.env.APEXSYNAPSE_MIN_CONFIDENCE || '0.6'),
+      maxPropagationDepth: parseInt(process.env.APEXSYNAPSE_MAX_PROPAGATION || '3', 10),
+    },
+
+    quaternaryForge: {
+      enabled: process.env.ENABLE_QUATERNARYFORGE !== 'false',
+      wisdomThreshold: parseFloat(process.env.QUATERNARYFORGE_WISDOM_THRESHOLD || '0.65'),
+      memoryDecayRate: parseFloat(process.env.QUATERNARYFORGE_MEMORY_DECAY || '0.03'),
+      intelligenceMaxAge: parseInt(process.env.QUATERNARYFORGE_INTELLIGENCE_AGE || '30', 10),
+    },
+
     logging: {
       level: (process.env.LOG_LEVEL as any) || 'info',
     },
