@@ -1,7 +1,7 @@
 import type { Message, ToolCall, ToolDefinition, AgentEvent, TokenUsage, ModelProvider } from '../config/types.js';
 import { getTool, getToolRisk, getToolDefinitions } from '../tools/tools.js';
 import type { ToolExecResult } from '../tools/tools.js';
-import { Permissions } from '../utils/permissions.js';
+import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { estimateTokens, estimateCost, generateId, sleep } from '../utils/utils.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -18,6 +18,7 @@ export interface AgentConfig {
   maxCorrections?: number;
   autoCorrect?: boolean;
   memoryEnabled?: boolean;
+  completionPromise?: () => boolean;
 }
 
 const SYSTEM_PROMPT = `You are TIMPS Code, a production-grade AI coding agent.
@@ -60,7 +61,7 @@ export class BaseAgent {
     this.maxTurns = config.maxTurns ?? 30;
     this.maxCorrections = config.maxCorrections ?? 5;
     this.autoCorrect = config.autoCorrect ?? true;
-    this.permissions = new Permissions(config.trustLevel || 'normal');
+    this.permissions = new Permissions();
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
   }
 
@@ -184,8 +185,8 @@ export class BaseAgent {
     }
 
     const risk = getToolRisk(tc.name);
-    const allowed = await this.permissions.check(tc.name, tc.arguments, risk);
-    if (!allowed) {
+    const needsApproval = this.permissions.requiresApproval(tc.name, tc.arguments);
+    if (needsApproval) {
       const msg = `Permission denied for ${tc.name}`;
       this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
       yield { type: 'tool_result', tool: tc.name, result: msg, success: false };

@@ -84,7 +84,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 **Pull your model:**
 ```bash
-ollama pull sandeeprdy1729/timps-coder
+ollama pull qwen2.5-coder:7b
 ```
 
 ---
@@ -95,7 +95,7 @@ ollama pull sandeeprdy1729/timps-coder
 |---------|---------|-------------|
 | `timps.agentMode` | `terminal` | `terminal`, `chat`, or `inline` |
 | `timps.useLocalAgent` | `true` | Use local Ollama AI |
-| `timps.localModel` | `sandeeprdy1729/timps-coder` | Ollama model |
+| `timps.localModel` | `qwen2.5-coder:7b` | Ollama model |
 | `timps.ollamaUrl` | `http://localhost:11434` | Ollama URL |
 | `timps.autoInstall` | `true` | Auto-install dependencies |
 | `timps.enableDiagnostics` | `true` | Show inline hints |
@@ -140,10 +140,11 @@ ollama pull sandeeprdy1729/timps-coder
 
 ## 🤖 Supported Models
 
-- `sandeeprdy1729/timps-coder` (recommended - your custom model)
-- `qwen2.5-coder:7b` - General coding
-- `deepseek-r1:7b` - Reasoning
-- `codellama:13b` - Meta's model
+- `qwen2.5-coder:7b` — recommended (fast, great for code)
+- `qwen2.5-coder:14b` — higher quality, needs ~10 GB RAM
+- `deepseek-r1:7b` — strong reasoning
+- `codellama:13b` — Meta's coding model
+- Any OpenAI / Anthropic / Gemini model via API key
 
 ---
 

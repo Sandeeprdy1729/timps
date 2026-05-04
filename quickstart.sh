@@ -3,8 +3,8 @@
 set -e
 
 echo "═══════════════════════════════════════════"
-echo "     TIMPs - Quickstart Installer"
-echo "     Trustworthy Intelligent Memory & Privacy System"
+echo "     TIMPS — CLI Coding Agent"
+echo "     Quick installer"
 echo "═══════════════════════════════════════════"
 
 # ---------------------------
@@ -17,67 +17,62 @@ fi
 
 NODE_VERSION=$(node -v | cut -d. -f1 | tr -d 'v')
 if [ "$NODE_VERSION" -lt 18 ]; then
-    echo "❌ Node 18+ required."
+    echo "❌ Node 18+ required. Current: $(node -v)"
     exit 1
 fi
 
 # ---------------------------
-# Check Docker
+# Check Docker (for optional server)
 # ---------------------------
-if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed."
-    exit 1
+HAS_DOCKER=false
+if command -v docker &> /dev/null; then
+    HAS_DOCKER=true
 fi
 
-echo "✅ Node & Docker detected"
+echo "✅ Node $(node -v) detected"
 
 # ---------------------------
-# Start PostgreSQL
+# Install timps-code CLI
 # ---------------------------
-echo "🚀 Starting PostgreSQL..."
+echo ""
+echo "📦 Installing timps-code CLI from local source..."
+(
+  cd timps-code
+  npm install --silent
+  # Build — type errors don't block JS output (noEmitOnError defaults to false)
+  npm run build > /dev/null 2>&1 || true
+  if [ ! -f "dist/bin/timps.js" ]; then
+    echo "❌ Build failed — dist/bin/timps.js not found"
+    exit 1
+  fi
+  npm install -g . --force --silent
+)
 
-docker start timps-postgres 2>/dev/null || \
-docker run -d \
-  --name timps-postgres \
-  -p 5432:5432 \
-  -v timps_postgres_data:/var/lib/postgresql/data \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=timps \
-  postgres:14
-
-# Wait for Postgres
-echo "⏳ Waiting for PostgreSQL..."
-sleep 5
-
-# ---------------------------
-# Start Qdrant
-# ---------------------------
-echo "🚀 Starting Qdrant..."
-
-docker start timps-qdrant 2>/dev/null || \
-docker run -d \
-  --name timps-qdrant \
-  -p 6333:6333 \
-  -v timps_qdrant_data:/qdrant/storage \
-  qdrant/qdrant
-
-sleep 3
+echo ""
+echo "✅ timps installed! Run 'timps' in any project directory."
+echo ""
 
 # ---------------------------
-# Install dependencies
+# Optional: start the full server
 # ---------------------------
-echo "📦 Installing dependencies..."
-npm install
+if [ "$HAS_DOCKER" = true ]; then
+    echo "Docker detected. Do you want to start the full TIMPS server?"
+    echo "(Enables persistent memory across sessions — recommended)"
+    read -p "Start server? [Y/n] " REPLY
+    REPLY=${REPLY:-Y}
+    if [[ "$REPLY" =~ ^[Yy] ]]; then
+        echo ""
+        echo "🚀 Starting Postgres + Qdrant + TIMPS server..."
+        docker compose up -d
+        echo ""
+        echo "✅ Server running at http://localhost:3000"
+        echo ""
+        echo "Add to your .env:"
+        echo "  TIMPS_SERVER_URL=http://localhost:3000"
+    fi
+fi
 
-# ---------------------------
-# Build project
-# ---------------------------
-echo "🏗️ Building TIMPs..."
-npm run build
-
-# ---------------------------
-# Launch
-# ---------------------------
-echo "🔥 Launching TIMPs..."
-npm run cli -- --user-id 1 --interactive
+echo ""
+echo "════════════════════════════════════════"
+echo "  Run 'timps' in any project to start!"
+echo "════════════════════════════════════════"

@@ -1,7 +1,7 @@
 {
   "name": "timps-mcp",
   "version": "1.0.0",
-  "description": "MCP server for TIMPs — 17 intelligence tools for Claude, Cursor, and any MCP agent",
+  "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 17 more tools for Claude Code, Cursor, and Windsurf",
   "main": "dist/index.js",
   "bin": {
     "timps-mcp": "./dist/index.js"
@@ -12,7 +12,22 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["mcp", "ai", "memory", "timps", "claude", "cursor"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "memory",
+    "timps",
+    "claude",
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "persistent-memory",
+    "contradiction-detection",
+    "burnout",
+    "developer-tools",
+    "ai-agent"
+  ],
   "author": "Sandeeprdy1729",
   "license": "MIT",
   "dependencies": {

@@ -43,25 +43,10 @@ else
   cd timps
 fi
 
-# ── 4. Start Postgres + Qdrant via Docker ─────────────────────────────────────
-echo -e "${BLUE}🐘 Starting PostgreSQL...${NC}"
-docker start timps-postgres 2>/dev/null || \
-docker run -d --name timps-postgres \
-  -p 5432:5432 \
-  -v timps_postgres_data:/var/lib/postgresql/data \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=sandeep_ai \
-  postgres:17-alpine
-echo -e "${GREEN}✅ PostgreSQL running${NC}"
-
-echo -e "${BLUE}🧠 Starting Qdrant...${NC}"
-docker start timps-qdrant 2>/dev/null || \
-docker run -d --name timps-qdrant \
-  -p 6333:6333 \
-  -v timps_qdrant_data:/qdrant/storage \
-  qdrant/qdrant
-echo -e "${GREEN}✅ Qdrant running${NC}"
+# ── 4. Start full stack via Docker Compose ───────────────────────────────────
+echo -e "${BLUE}🐘 Starting Postgres + Qdrant + TIMPS server...${NC}"
+docker compose up -d
+echo -e "${GREEN}✅ Stack running${NC}"
 
 # ── 5. Check Ollama for embeddings ───────────────────────────────────────────
 if command -v ollama &>/dev/null; then
@@ -76,37 +61,37 @@ else
   echo -e "   Install from: https://ollama.com"
 fi
 
-# ── 6. Install dependencies ───────────────────────────────────────────────────
-echo -e "${BLUE}📦 Installing dependencies...${NC}"
-cd sandeep-ai && npm install --prefer-offline --no-audit --silent
-echo -e "${GREEN}✅ Dependencies installed${NC}"
+# ── 6. Install timps-code CLI ────────────────────────────────────────────────
+echo -e "${BLUE}📦 Installing timps-code CLI...${NC}"
+npm install -g timps-code --prefer-offline --no-audit --silent 2>/dev/null || \
+npm install -g timps-code --no-audit --silent
+echo -e "${GREEN}✅ timps CLI installed${NC}"
 
-# ── 7. Create .env if missing ─────────────────────────────────────────────────
-if [ ! -f ".env" ]; then
-  cp .env.example .env
-  echo -e "${YELLOW}⚠️  .env created from template.${NC}"
-  echo -e "   Add your API key to .env:"
-  echo -e "   ${BLUE}OPENROUTER_API_KEY=sk-or-v1-...${NC}  (free at openrouter.ai)"
-  echo -e "   ${BLUE}DEFAULT_MODEL_PROVIDER=openrouter${NC}"
+# ── 7. Create server .env if missing ─────────────────────────────────────────
+if [ ! -f "sandeep-ai/.env" ]; then
+  cp sandeep-ai/.env.example sandeep-ai/.env
+  echo -e "${YELLOW}⚠️  sandeep-ai/.env created from template.${NC}"
+  echo -e "   Ollama is the default — no API key needed."
+  echo -e "   Edit sandeep-ai/.env to add cloud provider keys."
 fi
 
-# ── 8. Wait for Postgres ──────────────────────────────────────────────────────
-echo -e "${BLUE}⏳ Waiting for PostgreSQL to be ready...${NC}"
-for i in $(seq 1 15); do
-  if docker exec timps-postgres pg_isready -U postgres &>/dev/null; then break; fi
-  sleep 1
+# ── 8. Wait for server health ─────────────────────────────────────────────────
+echo -e "${BLUE}⏳ Waiting for TIMPS server...${NC}"
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:3000/api/health &>/dev/null; then
+    echo -e "${GREEN}✅ Server ready${NC}"
+    break
+  fi
+  sleep 2
 done
-
-# ───────────────────────────────
-
 
 echo
 echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  TIMPs v1.0 installed successfully!              ║${NC}"
+echo -e "${GREEN}║  TIMPS installed successfully!                   ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "  ${BLUE}Start server:${NC}    npm run server"
-echo -e "  ${BLUE}Seed demo data:${NC}  npm run seed"
-echo -e "  ${BLUE}Open browser:${NC}    http://localhost:3000"
+echo -e "  ${BLUE}CLI:${NC}             timps  (run in any project folder)"
+echo -e "  ${BLUE}Server API:${NC}      http://localhost:3000"
 echo -e "  ${BLUE}Dashboard:${NC}       http://localhost:3000/dashboard"
+echo -e "  ${BLUE}MCP tools:${NC}       npm install -g timps-mcp"
 echo

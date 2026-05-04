@@ -1,3 +1,13 @@
+# TIMPS Full Stack — starts Postgres, Qdrant, and the TIMPS server
+# Usage: docker compose up -d
+# Then configure Claude/Cursor/Windsurf to point at http://localhost:3000
+#
+# API keys (optional — Ollama is the default and needs no key):
+#   ANTHROPIC_API_KEY=sk-...
+#   OPENAI_API_KEY=sk-...
+#   GEMINI_API_KEY=...
+#   OPENROUTER_API_KEY=sk-...
+
 version: '3.9'
 
 services:
@@ -29,7 +39,7 @@ services:
     volumes:
       - timps_qdrant:/qdrant/storage
     healthcheck:
-      test: ['CMD-SHELL', 'curl -sf http://localhost:6333/healthz || exit 1']
+      test: ['CMD-SHELL', 'bash -c "</dev/tcp/localhost/6333" 2>/dev/null || exit 1']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -52,15 +62,16 @@ services:
       POSTGRES_PASSWORD: postgres
       QDRANT_URL: http://qdrant:6333
       DEFAULT_MODEL_PROVIDER: ${DEFAULT_MODEL_PROVIDER:-ollama}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:-anthropic/claude-3.5-haiku}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-llama3.1:8b}
-      EMBEDDINGS_PROVIDER: ollama
-      EMBEDDINGS_MODEL: nomic-embed-text
-      EMBEDDINGS_DIMENSION: 768
+      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-qwen2.5-coder:7b}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-ollama}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-nomic-embed-text}
+      EMBEDDINGS_DIMENSION: ${EMBEDDINGS_DIMENSION:-768}
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +79,12 @@ services:
         condition: service_healthy
     extra_hosts:
       - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:3000/api/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   timps_postgres:
