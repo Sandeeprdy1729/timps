@@ -48,32 +48,32 @@ Familiarity with **TypeScript** and the **command line** will go a long way — 
 
 ## Project Structure
 
-All core source lives inside the `sandeep-ai/` directory:
+The repo is a monorepo with four packages:
 
 ```
-sandeep-ai/
-├── main.ts                 # CLI entrypoint, --tui routing
-├── api/                    # Express REST API handlers
-│   ├── routes.ts
-│   └── server.ts
-├── config/                 # Type-safe environment loading
-├── core/                   # AI agent logic (agent, planner, reflection, executor)
-├── db/                     # Database layer (PostgreSQL + Qdrant)
-├── interfaces/
-│   ├── cli.ts              # CLI commands (!blame, !forget, !audit)
-│   ├── tui.ts              # Blessed TUI (4-panel layout)
-│   └── tuiHandlers.ts      # Reusable command handlers
-├── memory/                 # Short-term cache, long-term storage, embedding
-├── models/                 # LLM provider adapters (OpenAI, Gemini, Ollama)
-├── tools/                  # External tools (file, web search)
-├── .env.example            # Environment variable template
-├── quickstart.sh           # Automated quickstart script
-├── setup.sh                # Full setup script
-├── tsconfig.json
-└── package.json
+timps/
+├── timps-code/             # CLI coding agent (npm: timps-code)
+│   └── src/
+│       ├── core/           # Agent loop, planner, reflection, executor
+│       ├── memory/         # 3-layer persistent memory (working/episodic/semantic)
+│       ├── models/         # LLM adapters (Claude, OpenAI, Gemini, Ollama, OpenRouter)
+│       ├── tools/          # 25 CLI tools (file, search, shell, browser…)
+│       └── interfaces/     # CLI + TUI entry points
+├── timps-mcp/              # MCP server (npm: timps-mcp)
+│   └── src/                # 20 MCP tools proxying to sandeep-ai REST API
+├── timps-vscode/           # VS Code extension
+│   └── src/                # Sidebar panels, keybindings, webview
+├── sandeep-ai/             # Full server (Docker: timps-app)
+│   ├── api/                # Express REST API (routes.ts, server.ts)
+│   ├── config/             # Type-safe environment loading
+│   ├── core/               # Intelligence layer (17 tools)
+│   ├── db/                 # PostgreSQL + Qdrant adapters
+│   ├── memory/             # Short-term cache, long-term storage, embeddings
+│   └── models/             # Server-side LLM adapters
+└── docker-compose.yml      # One-command full-stack startup
 ```
 
-Understanding `interfaces/`, `models/`, and `memory/` is essential for most feature contributions.
+Most feature work touches `timps-code/src/` (CLI) or `sandeep-ai/` (server intelligence).
 
 ---
 
@@ -96,65 +96,47 @@ git remote add upstream https://github.com/Sandeeprdy1729/timps.git
 
 ### 2. Install Dependencies
 
-```bash
-npm install
-```
-
-### 3. Configure Environment
-
-Copy the example env file and fill in your values:
+Install deps for all packages:
 
 ```bash
-cp ../.env.example .env
+# CLI agent
+cd timps-code && npm install && cd ..
+
+# MCP server
+cd timps-mcp && npm install && cd ..
+
+# VS Code extension
+cd timps-vscode && npm install && cd ..
+
+# Server (or just use docker compose up -d)
+cd sandeep-ai && npm install && cd ..
 ```
 
-Key variables to set:
-
-```env
-PROVIDER=ollama                          # or openai / gemini
-OLLAMA_API_URL=http://localhost:11434
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DATABASE=sandeep_ai
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=yourpassword
-QDRANT_URL=http://localhost:6333         # optional
-```
-
-### 4. Start Required Services
+### 3. Start the Server (easiest: Docker)
 
 ```bash
-# PostgreSQL
-brew services start postgresql    # macOS
-sudo systemctl start postgresql   # Linux
-
-# Ollama (if using local LLM)
-ollama serve
-ollama pull mistral               # or llama2, neural-chat
-
-# Qdrant (optional — for vector search)
-docker run -p 6333:6333 qdrant/qdrant
+docker compose up -d
 ```
 
-### 5. Initialize the Database
+This starts Postgres, Qdrant, and the TIMPS server on port 3000.
+
+Or run the server locally:
 
 ```bash
-npm run init-db
+cp sandeep-ai/.env.example sandeep-ai/.env
+# edit sandeep-ai/.env — Ollama needs no key
+cd sandeep-ai && npm run dev
 ```
 
-This creates all required tables: `memories`, `users`, `conversations`, `messages`, `goals`, `preferences`, and `projects`.
-
-### 6. Run TIMPs
+### 4. Run the CLI in dev mode
 
 ```bash
-# TUI mode (recommended for development)
-npm run tui -- --user-id 1 --username "Dev"
-
-# CLI mode
-npm run cli -- --user-id 1 --interactive
+cd timps-code
+cp ../.env.example .env   # only need keys for providers you use
+npm run dev
 ```
 
-### 7. Sync Your Fork Before Starting Work
+### 5. Sync Your Fork Before Starting Work
 
 ```bash
 git fetch upstream
@@ -166,17 +148,15 @@ git merge upstream/main
 
 ## Finding Something to Work On
 
-The README lists areas actively needing help — great starting points for contributors:
+Check the [Issues](https://github.com/Sandeeprdy1729/timps/issues) tab for open bugs and feature requests. Good first areas:
 
-- **Web UI dashboard** — a browser-based interface for TIMPs
-- **Docker Compose setup** — make the full stack easy to spin up in one command
-- **Performance optimizations** — reduce latency across the dual-search pipeline
-- **Additional LLM providers** — extend beyond OpenAI, Gemini, and Ollama
-- **Tool system expansion** — add new tools under `sandeep-ai/tools/`
-- **Tests** — the project needs broader test coverage across all modules
-- **Documentation** — improve `TUI_README.md`, `QUICKSTART.md`, or inline comments
+- **Tests** — the project needs broader coverage across all modules
+- **Additional LLM providers** — extend `timps-code/src/models/` with new adapters
+- **Tool system expansion** — add new tools in `timps-code/src/tools/`
+- **VS Code panels** — improve sidebar UX in `timps-vscode/src/`
+- **Documentation** — improve inline code comments, add examples
 
-Check the [Issues](https://github.com/Sandeeprdy1729/timps/issues) tab for open bugs and feature requests. If you want to claim something, leave a comment so others know it's in progress.
+If you want to claim something, leave a comment so others know it's in progress.
 
 ---
 

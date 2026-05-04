@@ -1,221 +1,183 @@
-# TIMPS Code — Production AI Coding Agent
+# TIMPS Code — Open-Source CLI Coding Agent
 
-<a href="https://www.npmjs.com/package/timps-code"><img src="https://img.shields.io/npm/v/timps-code" alt="NPM"></a>
-<a href="https://github.com/Sandeeprdy1729/timps/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/timps-code" alt="License: MIT"></a>
+[![npm](https://img.shields.io/npm/v/timps-code?color=brightgreen)](https://www.npmjs.com/package/timps-code)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
 
-A production-grade AI coding agent with persistent memory, multi-model support, skills system, MCP integration, and messaging gateway.
-
-## Why TIMPS?
-
-- **#1 Agent** — Outperforms all other coding agents
-- **Persistent Memory** — Remembers facts, patterns, and decisions across sessions
-- **Skills System** — Auto-creates skills from experience, self-improves during use
-- **Multi-Model** — Claude, OpenAI, Gemini, Ollama, OpenRouter, DeepSeek, Groq
-- **MCP Integration** — Connect to any MCP server or expose TIMPS tools
-- **Messaging Gateway** — Talk to TIMPS on Telegram, Discord, Slack
-- **Cron Scheduling** — Automated tasks with platform delivery
-
-## Quick Install
+**A CLI coding agent like Claude Code — runs on Ollama (free, local), has persistent memory across sessions, and is fully open source.**
 
 ```bash
-# Quick install
 npm install -g timps-code
-
-# Or use the installer
-curl -sSL https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/timps-code/install.sh | bash
+timps
 ```
 
-## Quick Start
+---
+
+## What makes TIMPS different
+
+**Persistent memory.** TIMPS remembers your project across sessions using a 3-layer memory system:
+
+- **Working memory** — current goal, active files, recent errors (this session)
+- **Episodic memory** — summaries of past conversations stored to disk
+- **Semantic memory** — facts, patterns, and conventions your project uses (permanent)
+
+When you start a new session and say "use the same pattern we always use for API routes", TIMPS knows what you mean.
+
+**Runs 100% locally.** The default provider is Ollama. No API keys, no data leaving your machine, no monthly bill.
+
+**Self-correcting.** When a command fails, the agent analyzes the error, fixes its approach, and retries — up to 3 times by default.
+
+---
+
+## Install
 
 ```bash
-# Interactive mode
+npm install -g timps-code
+```
+
+Requirements: Node.js 18+ | For local AI: [Ollama](https://ollama.com)
+
+---
+
+## Usage
+
+```bash
+# Interactive session (persistent memory, full agent loop)
 timps
 
 # One-shot mode
-timps "write a hello world function"
-timps "fix this bug"
+timps "add input validation to src/api.ts"
+timps "write tests for the payment module"
+timps "explain why src/queue.ts uses a semaphore"
 
-# With specific provider
-timps --provider ollama "hello"
-timps --provider claude "refactor this"
+# Specify provider
+timps --provider ollama "refactor this"
+timps --provider claude "review this PR diff"
+timps --provider gemini "suggest architecture improvements"
+
+# Setup wizard (first time)
+timps --config
 ```
 
-## Core Commands
-
-```bash
-# Setup
-timps --setup                 # Interactive setup wizard
-timps --provider ollama       # Use specific provider
-timps --trust normal         # Trust level
-
-# Tools
-timps --tools               # List all available tools
-
-# Skills management
-timps --skills list         # List skills
-timps --skills init         # Initialize default skills
-
-# MCP servers
-timps --mcp list            # List MCP servers
-timps --mcp add <name> <cmd> # Add MCP server
-
-# Cron jobs
-timps --cron list           # List scheduled tasks
-timps --cron add "0 9 * * *" "backup.sh"  # Add cron job
-
-# Gateway
-timps --gateway list       # List platforms
-timps --gateway setup telegram <token>  # Setup Telegram
-timps --gateway start       # Start messaging gateway
-```
+---
 
 ## Providers
 
 | Provider | Setup | Cost |
-|----------|-------|------|
-| Ollama (default) | `ollama serve` | Free |
-| Claude | Set `ANTHROPIC_API_KEY` | Paid |
-| OpenAI | Set `OPENAI_API_KEY` | Paid |
-| Gemini | Set `GEMINI_API_KEY` | Paid (free tier) |
-| OpenRouter | Set `OPENROUTER_API_KEY` | Paid |
-| DeepSeek | Set `DEEPSEEK_API_KEY` | Cheap |
-| Groq | Set `GROQ_API_KEY` | Fast |
+|---|---|---|
+| **Ollama** (default) | `ollama serve` | Free |
+| **Claude** | `ANTHROPIC_API_KEY=...` | Paid |
+| **OpenAI** | `OPENAI_API_KEY=...` | Paid |
+| **Gemini** | `GEMINI_API_KEY=...` | Free tier available |
+| **OpenRouter** | `OPENROUTER_API_KEY=...` | Pay per use |
+| **Hybrid** | Ollama + API fallback | Mixed |
 
-## Configuration
-
-### Environment Variables
-
-```bash
-# Create ~/.timps/config.json
-{
-  "defaultProvider": "ollama",
-  "defaultModel": "qwen2.5-coder:latest",
-  "trustLevel": "normal",
-  "keys": {},
-  "ollamaUrl": "http://localhost:11434",
-  "memoryEnabled": true,
-  "autoCorrect": true,
-  "maxContextTokens": 128000
-}
-```
-
-### API Keys
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-export OPENAI_API_KEY=sk-...
-export GEMINI_API_KEY=...
-export OPENROUTER_API_KEY=...
-export OLLAMA_HOST=http://localhost:11434
-```
-
-## Features
-
-### Memory System
-
-TIMPS has a 3-layer memory system:
-
-1. **Working Memory** — Current session, in-process
-2. **Episodic Memory** — Conversation summaries
-3. **Semantic Memory** — Facts, patterns, conventions (persistent)
-
-### Skills System
-
-Skills are auto-created by TIMPS after complex tasks. They include:
-
-- Code Review
-- Explain Error
-- Write Tests
-- Refactor
-
-The agent can improve skills during use (self-improving).
-
-### MCP Integration
-
-Connect TIMPS to any MCP server:
-
-```bash
-# Add an MCP server
-timps --mcp add filesystem "npx @modelcontextprotocol/server-filesystem /path"
-
-# List tools from all connected servers
-timps --mcp list
-```
-
-Or expose TIMPS as an MCP server to Claude Code/Cursor.
-
-### Messaging Gateway
-
-Talk to TIMPS from Telegram, Discord, Slack:
-
-```bash
-# Setup Telegram
-timps --gateway setup telegram <bot_token>
-
-# Setup Discord
-timps --gateway setup discord <bot_token>
-
-# Start gateway
-timps --gateway start
-```
-
-### Cron Scheduling
-
-Schedule automated tasks:
-
-```bash
-# Add a daily backup task
-timps --cron add "0 9 * * *" "bash /path/to/backup.sh"
-
-# List tasks
-timps --cron list
-```
-
-## Development
-
-```bash
-cd timps-code
-npm install
-
-# Dev mode
-npm run dev
-
-# Build
-npm run build
-
-# Run
-npm run start
-```
-
-## Project Structure
-
-```
-timps-code/
-├── src/
-│   ├── bin/timps.ts      # CLI entry point
-│   ├── core/           # Agent & app
-│   ├── models/         # Ollama, Claude, OpenAI, Gemini
-│   ├── memory/        # 3-layer memory
-│   ├── commands/       # Slash commands
-│   ├── tools/         # 25+ tools
-│   ├── utils/         # Helpers, skills, MCP, cron, gateway
-│   └── ui/            # Ink TUI
-└── dist/              # Compiled output
-```
-
-## Keyboard Shortcuts (TUI)
-
-| Key | Action |
-|-----|--------|
-| Enter | Send message |
-| Tab | Switch panels |
-| Ctrl+C | Exit |
-| ↑/↓ | Scroll history |
-
-## License
-
-MIT — see [LICENSE](LICENSE)
+TIMPS auto-detects Ollama on startup. If Ollama is running, it uses it without any config.
 
 ---
 
-**TIMPS Code** — The #1 AI coding agent
+## CLI Flags
+
+```bash
+timps --provider <name>   # claude | openai | gemini | ollama | openrouter | hybrid
+timps --model <model>     # e.g. gpt-4o, claude-sonnet-4-5, llama3.1:8b
+timps --dir <path>        # set working directory (default: cwd)
+timps --config            # run setup wizard
+timps --branch <name>     # start from a named memory branch
+timps --merge <name>      # merge a memory branch into current context
+```
+
+---
+
+## Slash commands (inside interactive session)
+
+```
+/help           — list all commands
+/memory         — show what TIMPS remembers about this project
+/todo           — manage task list with the agent
+/branch <name>  — snapshot current memory into a named branch
+/merge <name>   — merge a memory branch back
+/skills         — list and install skills
+/mcp            — list connected MCP servers
+/git            — git status and diff
+/models         — list available Ollama models
+/doctor         — diagnose config and connection issues
+/clear          — clear session working memory
+```
+
+---
+
+## Tools available to the agent
+
+TIMPS ships with 25 tools. The agent picks them automatically:
+
+| Category | Tools |
+|---|---|
+| File ops | `read_file`, `write_file`, `edit_file`, `multi_edit`, `patch_file` |
+| Search | `find_files`, `search_code`, `grep` |
+| Git | `get_git_status`, `git_diff`, `git_log`, `git_commit` |
+| Shell | `run_bash` |
+| Code quality | `run_tests`, `lint`, `type_check` |
+| Reasoning | `think`, `plan` |
+| Web | `web_search`, `web_fetch` |
+| Task management | `todo_create`, `todo_list`, `todo_update` |
+
+---
+
+## Memory system in practice
+
+TIMPS stores memory per-project in `~/.timps/memory/<project-hash>/`:
+
+```
+semantic.json     — long-term facts and patterns
+episodes.jsonl    — past session summaries (rolling 100)
+working.json      — current session state
+```
+
+You can view it with `/memory` inside a session, or inspect the files directly.
+
+**Branching:** `timps --branch feature-x` snapshots the current memory state before you start a risky refactor. `timps --merge main` merges it back.
+
+---
+
+## Skills system
+
+TIMPS can install reusable skills — small prompt packages that add domain expertise:
+
+```bash
+# Inside a session:
+/skills list       — browse available skills
+/skills install react-patterns
+/skills install test-driven-development
+```
+
+Skills are stored in `~/.timps/skills/` and injected into the system prompt when relevant.
+
+---
+
+## Connect to TIMPS MCP (optional)
+
+If you're running the full TIMPS server (`docker compose up -d` from the repo root), you can connect it to Claude Code, Cursor, or Windsurf for persistent memory inside those tools too. See [timps-mcp](../timps-mcp/README.md).
+
+---
+
+## Configuration
+
+On first run, TIMPS creates `~/.timps/config.json`. You can also set via environment:
+
+```bash
+ANTHROPIC_API_KEY=sk-...
+OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=...
+OPENROUTER_API_KEY=sk-...
+OLLAMA_BASE_URL=http://localhost:11434   # default
+OLLAMA_DEFAULT_MODEL=qwen2.5-coder:7b   # default
+```
+
+Only set the keys for providers you actually use. Ollama needs no key.
+
+---
+
+## License
+
+MIT — [github.com/Sandeeprdy1729/timps](https://github.com/Sandeeprdy1729/timps)

@@ -257,7 +257,7 @@ reg({
       ['GROQ_API_KEY', 'Groq'],
     ];
     for (const [env, label] of providers) {
-      const hasKey = !!(process.env[env] || config.keys[label.toLowerCase() as any]);
+      const hasKey = !!(process.env[env] || config.keys[label.toLowerCase() as import('../config/types.js').ProviderName]);
       if (hasKey) check(label + ' API key', true);
     }
 

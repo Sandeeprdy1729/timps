@@ -19,7 +19,12 @@
     "assistant",
     "timps",
     "ollama",
-    "llm"
+    "llm",
+    "persistent-memory",
+    "claude-code-alternative",
+    "local-llm",
+    "ai-agent",
+    "mcp"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -47,8 +52,8 @@
         {
           "type": "webview",
           "id": "timps.nexusForgeExplorer",
-          "name": "NexusForge Explorer",
-          "contextualTitle": "Episodic Memory Graph"
+          "name": "Memory Explorer",
+          "contextualTitle": "Project Memory Graph"
         }
       ]
     },
