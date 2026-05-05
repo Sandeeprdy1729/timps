@@ -133,6 +133,11 @@ export async function runSetupWizard(existing?: TimpsConfig): Promise<TimpsConfi
   return config;
 }
 
+export function getProjectId(projectPath: string): string {
+  // Derive a stable project ID from the folder name
+  return path.basename(path.resolve(projectPath)).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+}
+
 export function getMemoryDir(projectPath: string): string {
   const id = hashProject(projectPath);
   const dir = path.join(CONFIG_DIR, 'memory', id);

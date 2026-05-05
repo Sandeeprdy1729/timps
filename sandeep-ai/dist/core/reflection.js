@@ -13,6 +13,14 @@ const atomChain_1 = require("./atomChain");
 const policyMetabol_1 = require("./policyMetabol");
 const layerForge_1 = require("./layerForge");
 const echoForge_1 = require("./echoForge");
+const nexusForge_1 = require("./nexusForge");
+const synapseMetabolon_1 = require("./synapseMetabolon");
+const veilForge_1 = require("./veilForge");
+const temporaTree_1 = require("./temporaTree");
+const bindWeave_1 = require("./bindWeave");
+const aetherWeft_1 = require("./aetherWeft");
+const apexSynapse_1 = require("./apexSynapse");
+const quaternaryForge_1 = require("./quaternaryForge");
 class Reflection {
     model;
     constructor() {
@@ -177,6 +185,16 @@ Return JSON array:
             policyMetabol_1.policyMetabol.runLoop(signal, sourceModule, outcomeScore),
             layerForge_1.layerForge.forgeCompress(signal, sourceModule, sourceModule),
             echoForge_1.echoForge.runReconstruction(signal, sourceModule, sourceModule),
+            echoForge_1.echoForge.forgeHierarchical(signal, sourceModule),
+            nexusForge_1.nexusForge.episodicIndexer(signal, sourceModule),
+            nexusForge_1.nexusForge.evolutionOracle(signal, { projectId }),
+            synapseMetabolon_1.synapseMetabolon.injectEvent(signal, sourceModule),
+            veilForge_1.veilForge.projectAndForge(signal, sourceModule),
+            temporaTree_1.temporaTree.growTree(signal, sourceModule),
+            bindWeave_1.bindWeave.bindEvent(signal, sourceModule),
+            aetherWeft_1.aetherWeft.weaveEntry(signal, sourceModule),
+            apexSynapse_1.apexSynapse.forgeEvent(signal, sourceModule),
+            quaternaryForge_1.quaternaryForge.forgeTyped(signal, sourceModule),
         ]);
     }
 }

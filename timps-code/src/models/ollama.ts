@@ -1,4 +1,4 @@
-import type { Message, ModelProvider, StreamEvent, StreamOptions } from '../../config/types.js';
+import type { Message, ModelProvider, StreamEvent, StreamOptions } from '../config/types.js';
 
 export function createOllamaProvider(
   baseUrl?: string, 

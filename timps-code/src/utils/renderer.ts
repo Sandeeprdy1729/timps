@@ -326,10 +326,11 @@ function renderPlan(steps: PlanStep[]): void {
     const statusIcon = {
       pending: t.dim('○'),
       running: t.accent('◉'),
+      in_progress: t.accent('◉'),
       done: t.success('●'),
       failed: t.error('●'),
       skipped: t.dim('◌'),
-    }[s.status];
+    }[s.status as string];
 
     console.log(`  ${statusIcon} ${t.dim(`${i + 1}.`)} ${s.description}`);
     if (s.result && s.status !== 'pending') {
@@ -457,7 +458,7 @@ export function renderMemoryPanel(
         fact: '#60A5FA', pattern: '#34D399', preference: '#FBBF24',
       };
       const typeColor = typeColors[entry.type] ?? '#9CA3AF';
-      const confBar = bar(entry.confidence, 1, 5, '▪', '▫');
+      const confBar = bar(entry.confidence ?? 1, 1, 5, '▪', '▫');
 
       console.log(`  ${chalk.hex(typeColor)('[' + entry.type.slice(0, 4) + ']')} ${t.dim(ageStr.padEnd(8))} ${confBar}  ${entry.content.slice(0, 60)}`);
       if (entry.tags.length > 0) {

@@ -9,7 +9,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { ALL_TOOLS, type ToolDefinition } from './tools.js';
+import { ALL_TOOLS } from '../tools/tools.js';
+import type { ToolDefinition } from '../config/types.js';
 
 const MCP_CONFIG_DIR = path.join(os.homedir(), '.timps', 'mcp');
 const MCP_SERVERS_FILE = path.join(MCP_CONFIG_DIR, 'servers.json');
@@ -73,7 +74,7 @@ export class MCPServer {
       }
 
       try {
-        const result = await tool.executor(args as any);
+        const result = await tool.execute(args as Record<string, unknown>, process.cwd());
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
@@ -198,12 +199,14 @@ export class MCPClientRegistry {
       const transport = new StdioClientTransport({
         command: config.command,
         args: config.args || [],
-        env: { ...process.env, ...config.env },
+        env: Object.fromEntries(
+          Object.entries({ ...process.env, ...config.env }).filter(([, v]) => v !== undefined)
+        ) as Record<string, string>,
       });
 
       const client = new Client(
         { name, version: '1.0' },
-        { capabilities: { tools: {} } }
+        { capabilities: {} }
       );
 
       await client.connect(transport);
@@ -232,31 +235,26 @@ export class MCPClientRegistry {
   }
 
   // Call a tool on a connected MCP server
-  async callTool(serverName: string, toolName: string, args: Record<string, any>): Promise<any> {
+  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
     const client = this.clients.get(serverName);
     if (!client) {
       throw new Error(`Not connected to ${serverName}. Run: timps mcp connect ${serverName}`);
     }
 
-    const response = await client.request(
-      CallToolRequestSchema,
-      { name: toolName, arguments: args }
-    );
+    const response = await client.callTool({ name: toolName, arguments: args });
 
-    if (response.content?.[0]?.isError) {
-      throw new Error(response.content[0].text);
-    }
-
-    return response.content?.[0]?.text;
+    const first = (response.content as Array<{type: string; text?: string; isError?: boolean}>)?.[0];
+    if (first?.isError) throw new Error(first.text);
+    return first?.text;
   }
 
   // List tools from all connected servers
-  async listAllTools(): Promise<{ server: string; tools: any[] }[]> {
-    const results: { server: string; tools: any[] }[] = [];
+  async listAllTools(): Promise<{ server: string; tools: unknown[] }[]> {
+    const results: { server: string; tools: unknown[] }[] = [];
     
     for (const [name, client] of this.clients) {
       try {
-        const response = await client.request(ListToolsRequestSchema, {});
+        const response = await client.listTools();
         results.push({ server: name, tools: response.tools || [] });
       } catch { /* skip errors */ }
     }

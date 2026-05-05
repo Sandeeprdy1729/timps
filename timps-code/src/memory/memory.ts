@@ -116,7 +116,7 @@ export class Memory {
       .slice(0, limit);
   }
 
-  getContextString(task: string): string {
+  getContextString(task = ''): string {
     const episodes = this.loadEpisodes(5);
     const facts = this.searchFacts(task, 5);
     const parts: string[] = [];
@@ -147,7 +147,65 @@ export class Memory {
     };
   }
 
-  private loadSemanticEntries(): MemoryEntry[] {
+  /** Alias for getStats() */
+  get stats(): { semanticCount: number; episodeCount: number; workingFiles: number } {
+    return this.getStats();
+  }
+
+  /** Extract facts from a conversation turn */
+  extractFacts(userMessage: string, assistantResponse: string): void {
+    // Heuristic: store the pair as a 'pattern' if the response is non-trivial
+    const combined = assistantResponse.trim();
+    if (combined.length > 50) {
+      this.storeFact(combined.slice(0, 300), 'pattern', []);
+    }
+  }
+
+  /** Simple query against semantic entries */
+  query(q: string, limit = 10): MemoryEntry[] {
+    return q.trim() ? this.searchFacts(q, limit) : this.loadSemanticEntries().slice(-limit);
+  }
+
+  /** Delete all semantic memory entries */
+  clearAll(): void {
+    try { fs.writeFileSync(this.semanticFile, '[]', 'utf-8'); } catch { /* ignore */ }
+    this.clearWorking();
+  }
+
+  /** Export all memory data as a JSON string */
+  exportMemory(): string {
+    return JSON.stringify({
+      semantic: this.loadSemanticEntries(),
+      episodes: this.loadEpisodes(9999),
+      working: this.working,
+    }, null, 2);
+  }
+
+  /** Import memory data; returns count of imported entries */
+  importMemory(data: string): number {
+    try {
+      const parsed = JSON.parse(data);
+      const entries: MemoryEntry[] = parsed.semantic || [];
+      fs.writeFileSync(this.semanticFile, JSON.stringify(entries, null, 2), 'utf-8');
+      return entries.length;
+    } catch { return 0; }
+  }
+
+  /** Merge near-duplicate semantic entries; returns number consolidated */
+  consolidate(): number {
+    const entries = this.loadSemanticEntries();
+    const before = entries.length;
+    const deduped: MemoryEntry[] = [];
+    for (const e of entries) {
+      if (!deduped.some(d => this.similarity(d.content, e.content) > 0.85)) {
+        deduped.push(e);
+      }
+    }
+    fs.writeFileSync(this.semanticFile, JSON.stringify(deduped, null, 2), 'utf-8');
+    return before - deduped.length;
+  }
+
+  loadSemanticEntries(): MemoryEntry[] {
     try {
       if (!fs.existsSync(this.semanticFile)) return [];
       return JSON.parse(fs.readFileSync(this.semanticFile, 'utf-8'));

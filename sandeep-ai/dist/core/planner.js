@@ -10,6 +10,7 @@ const atomChain_1 = require("./atomChain");
 const policyMetabol_1 = require("./policyMetabol");
 const layerForge_1 = require("./layerForge");
 const echoForge_1 = require("./echoForge");
+const nexusForge_1 = require("./nexusForge");
 class Planner {
     model;
     constructor() {
@@ -96,6 +97,7 @@ Create a practical plan with 2-8 steps maximum.`;
             await policyMetabol_1.policyMetabol.buildPolicyContext(goal, userId, projectId, 5),
             await layerForge_1.layerForge.buildLayerContext(goal, userId, projectId, 5),
             await echoForge_1.echoForge.buildEchoContext(goal, userId, projectId, 5),
+            await nexusForge_1.nexusForge.buildVeilContext(goal, userId, projectId, 5),
         ].join('');
         return this.createPlan(goal, `${context || ''}${evolutionContext}`);
     }

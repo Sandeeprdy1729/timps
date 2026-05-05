@@ -352,5 +352,4 @@ export function initCommandRegistry(): void {
   });
 }
 
-export { COMMAND_CATEGORIES };
 export type { CommandCategory } from '../config/types.js';

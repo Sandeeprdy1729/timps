@@ -16,6 +16,7 @@ const chronosVeil_1 = require("./chronosVeil");
 const policyMetabol_1 = require("./policyMetabol");
 const layerForge_1 = require("./layerForge");
 const echoForge_1 = require("./echoForge");
+const nexusForge_1 = require("./nexusForge");
 const DEFAULT_SYSTEM_PROMPT = `You are TIMPs — a persistent cognitive partner with 18 specialized intelligence tools.
 
 TOOL REFERENCE:
@@ -106,7 +107,8 @@ class Agent {
                 await atomChain_1.atomChain.buildAtomicContext(userMessage, this.userId, this.projectId, 4) +
                 await policyMetabol_1.policyMetabol.buildPolicyContext(userMessage, this.userId, this.projectId, 4) +
                 await layerForge_1.layerForge.buildLayerContext(userMessage, this.userId, this.projectId, 4) +
-                await echoForge_1.echoForge.buildEchoContext(userMessage, this.userId, this.projectId, 4);
+                await echoForge_1.echoForge.buildEchoContext(userMessage, this.userId, this.projectId, 4) +
+                await nexusForge_1.nexusForge.buildVeilContext(userMessage, this.userId, this.projectId, 4);
         const routingHint = toolRouter_1.toolRouter.buildRoutingHint(routing.routes, this.userId);
         // ── Step 2: Plan — for complex tasks, build a multi-step plan ─────────────
         if (routing.needs_planning && routing.complexity === 'complex') {
@@ -255,6 +257,8 @@ class Agent {
             policyMetabol_1.policyMetabol.runLoop(signal, sourceModule, outcomeScore),
             layerForge_1.layerForge.forgeCompress(signal, sourceModule, sourceModule),
             echoForge_1.echoForge.runReconstruction(signal, sourceModule, sourceModule),
+            nexusForge_1.nexusForge.episodicIndexer(signal, sourceModule),
+            nexusForge_1.nexusForge.evolutionOracle(signal, { projectId: this.projectId }),
         ]);
     }
     async evolveReflectionMemory(memory, importance) {

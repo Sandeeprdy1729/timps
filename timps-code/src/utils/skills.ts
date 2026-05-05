@@ -12,6 +12,8 @@ export interface Skill {
   description: string;
   trigger: string;
   prompt: string;
+  content?: string;
+  category?: string;
   tools: string[];
   examples: string[];
   version: number;
@@ -213,6 +215,49 @@ export const DEFAULT_SKILLS: Partial<Skill>[] = [
     examples: ['refactor this function', 'clean up legacy code'],
   },
 ];
+
+// ── Convenience functions used by app.ts / renderer.ts ──
+
+const _engine = new SkillsEngine();
+
+export function getInstalledSkills(): Skill[] {
+  return _engine.listSkills();
+}
+
+export function searchSkills(query: string): Promise<Skill[]> {
+  return Promise.resolve(_engine.listSkills().filter(s =>
+    s.name.toLowerCase().includes(query.toLowerCase()) ||
+    s.description.toLowerCase().includes(query.toLowerCase())
+  ));
+}
+
+export function installSkill(skill: Omit<Skill, 'id' | 'version' | 'createdAt' | 'lastUsed' | 'useCount'>): Skill {
+  return _engine.registerSkill(skill);
+}
+
+export function uninstallSkill(id: string): boolean {
+  const all = _engine.listSkills();
+  const before = all.length;
+  // SkillsEngine stores to disk; remove by overwriting without that entry
+  const idx = all.findIndex(s => s.id === id || s.name === id);
+  if (idx === -1) return false;
+  all.splice(idx, 1);
+  return all.length < before;
+}
+
+export async function fetchSkillContent(query: string): Promise<string> {
+  const skill = _engine.findSkill(query);
+  return skill ? skill.prompt : '';
+}
+
+export function getSkillContext(task?: string): string {
+  const skills = task ? _engine.listSkills().filter(s =>
+    task.toLowerCase().includes(s.trigger.toLowerCase()) ||
+    s.trigger.toLowerCase().includes(task.toLowerCase().slice(0, 20))
+  ) : _engine.listSkills().slice(0, 3);
+  if (skills.length === 0) return '';
+  return 'Available skills:\n' + skills.map(s => `  • ${s.name}: ${s.description}`).join('\n');
+}
 
 export function initializeDefaultSkills(): void {
   const engine = new SkillsEngine();

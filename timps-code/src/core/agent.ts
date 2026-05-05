@@ -8,7 +8,7 @@ import type {
 import { ALL_TOOLS, getTool, getToolRisk, getToolDefinitions } from '../tools/tools.js';
 import type { ToolExecResult } from '../tools/tools.js';
 import { SnapshotManager } from '../memory/snapshot.js';
-import { Permissions } from '../utils/permissions.js';
+import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { Memory } from '../memory/memory.js';
 import { getSkillContext } from '../utils/skills.js';
 import { estimateTokens, generateId, estimateCost } from '../utils/utils.js';
@@ -150,7 +150,7 @@ export class Agent {
 
   /** Whether the provider is a local/small model that needs a simpler prompt */
   private get isLocalModel(): boolean {
-    return this.provider.name === 'ollama' || this.provider.name === 'opencode';
+    return this.provider.name === 'ollama' || (this.provider.name as string) === 'opencode';
   }
 
   private buildSystemPrompt(): string {
@@ -406,7 +406,7 @@ End your response with a confirmation question.`;
 
       // Permission check
       const risk = getToolRisk(tc.name);
-      const allowed = await this.permissions.check(tc.name, tc.arguments, risk);
+      const allowed = !this.permissions.requiresApproval(tc.name, tc.arguments as Record<string, unknown>);
       if (!allowed) {
         const msg = 'Permission denied by user';
         this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
@@ -535,7 +535,7 @@ End your response with a confirmation question.`;
 
     // Permission check
     const risk = getToolRisk(tc.name);
-    const allowed = await this.permissions.check(tc.name, tc.arguments, risk);
+    const allowed = !this.permissions.requiresApproval(tc.name, tc.arguments as Record<string, unknown>);
     if (!allowed) {
       return { id: tc.id, result: `Permission denied for ${tc.name}`, success: false, tool: tc.name, durationMs: 0 };
     }
