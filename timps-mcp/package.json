@@ -30,6 +30,17 @@
   ],
   "author": "Sandeeprdy1729",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
+  "homepage": "https://github.com/Sandeeprdy1729/timps/tree/main/timps-mcp",
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.0",
     "dotenv": "^16.4.5",
