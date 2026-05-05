@@ -120,8 +120,8 @@ export class AutoDream {
     for (const entry of entries) {
       const ageInDays = (Date.now() - entry.timestamp) / (24 * 3600 * 1000);
       
-      if (ageInDays > 14 && entry.accessCount < 2) {
-        entry.confidence = Math.max(0.1, entry.confidence - 0.1);
+      if (ageInDays > 14 && (entry.accessCount ?? 0) < 2) {
+        entry.confidence = Math.max(0.1, (entry.confidence ?? 1) - 0.1);
         decayed++;
       }
     }
@@ -137,7 +137,7 @@ export class AutoDream {
 
     const staleEntries = entries.filter(e => {
       const ageInDays = (Date.now() - e.timestamp) / (24 * 3600 * 1000);
-      return ageInDays > 7 && e.confidence < 0.7;
+      return ageInDays > 7 && (e.confidence ?? 1) < 0.7;
     });
 
     for (const entry of staleEntries.slice(0, 5)) {
@@ -163,7 +163,7 @@ Return JSON with:
           const idx = entries.findIndex(e => e.id === entry.id);
           if (idx !== -1) {
             entries[idx].content = response.updated_content;
-            entries[idx].confidence = Math.min(1, entry.confidence + 0.1);
+            entries[idx].confidence = Math.min(1, (entry.confidence ?? 1) + 0.1);
             enhanced++;
           }
         } else if (response.action === 'prune') {

@@ -1,7 +1,7 @@
-import type { ModelProvider, StreamEvent, Message, ToolDefinition, StreamOptions } from '../config/types.js';
+import type { ModelProvider, ProviderName, StreamEvent, Message, ToolDefinition, StreamOptions } from '../config/types.js';
 
 export class HybridProvider implements ModelProvider {
-  name = 'hybrid';
+  name: ProviderName = 'hybrid';
   model = 'Intelligence Router';
   supportsFunctionCalling = true;
 

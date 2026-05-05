@@ -152,6 +152,267 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_positions_user_project ON positions(user_id, project_id);
       CREATE INDEX IF NOT EXISTS idx_positions_topic ON positions(topic_cluster);
       CREATE INDEX IF NOT EXISTS idx_contradiction_history_position ON contradiction_history(position_id);
+
+      -- VeilForge: Four-layer persistence projector + ontology-driven append-only entity graph
+      CREATE TABLE IF NOT EXISTS veilforge_events (
+        event_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        layer VARCHAR(20) NOT NULL CHECK (layer IN ('knowledge', 'memory', 'wisdom', 'intelligence')),
+        entity_keys TEXT[],
+        content TEXT,
+        raw_event JSONB,
+        evidence TEXT,
+        confidence FLOAT DEFAULT 0.5,
+        supersedes_event_id VARCHAR(255) REFERENCES veilforge_events(event_id),
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS veilforge_layer_projections (
+        event_id VARCHAR(255) NOT NULL,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        layer VARCHAR(20) NOT NULL CHECK (layer IN ('knowledge', 'memory', 'wisdom', 'intelligence')),
+        source_module VARCHAR(100),
+        entity_keys TEXT[],
+        decay_weight FLOAT DEFAULT 1.0,
+        revision_gate_passed BOOLEAN DEFAULT TRUE,
+        content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (event_id, layer)
+      );
+
+      CREATE TABLE IF NOT EXISTS veilforge_entity_edges (
+        source_event_id VARCHAR(255) NOT NULL REFERENCES veilforge_events(event_id),
+        target_event_id VARCHAR(255) NOT NULL REFERENCES veilforge_events(event_id),
+        edge_type VARCHAR(30) NOT NULL,
+        entity_keys TEXT[],
+        confidence FLOAT DEFAULT 0.5,
+        provenance_module VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_event_id, target_event_id, edge_type)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_veilforge_user_project ON veilforge_events(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_veilforge_layer ON veilforge_events(layer);
+      CREATE INDEX IF NOT EXISTS idx_veilforge_entities ON veilforge_events USING GIN(entity_keys);
+      CREATE INDEX IF NOT EXISTS idx_veilforge_created ON veilforge_events(created_at DESC);
+
+      -- TemporaTree: Temporal memory tree with gated hierarchical consolidation
+      CREATE TABLE IF NOT EXISTS tempora_nodes (
+        node_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('raw', 'episodic', 'persona')),
+        layer VARCHAR(20) NOT NULL CHECK (layer IN ('stim', 'mtem', 'ltsm')),
+        node_data JSONB,
+        parent_id VARCHAR(255) REFERENCES tempora_nodes(node_id),
+        confidence FLOAT DEFAULT 0.5,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS tempora_gating_log (
+        id SERIAL PRIMARY KEY,
+        node_id VARCHAR(255) REFERENCES tempora_nodes(node_id),
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        from_layer VARCHAR(20),
+        to_layer VARCHAR(20),
+        bmm_probability FLOAT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS tempora_policy_log (
+        id SERIAL PRIMARY KEY,
+        node_id VARCHAR(255) REFERENCES tempora_nodes(node_id),
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        layer VARCHAR(20),
+        confidence FLOAT,
+        action VARCHAR(20) CHECK (action IN ('consolidate', 'update', 'prune', 'retain')),
+        source_module VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS tempora_edges (
+        source_node_id VARCHAR(255) NOT NULL REFERENCES tempora_nodes(node_id),
+        target_node_id VARCHAR(255) NOT NULL REFERENCES tempora_nodes(node_id),
+        edge_type VARCHAR(30) NOT NULL,
+        confidence FLOAT DEFAULT 0.5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_node_id, target_node_id, edge_type)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tempora_user_project ON tempora_nodes(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_tempora_level ON tempora_nodes(level);
+      CREATE INDEX IF NOT EXISTS idx_tempora_layer ON tempora_nodes(layer);
+      CREATE INDEX IF NOT EXISTS idx_tempora_parent ON tempora_nodes(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_tempora_created ON tempora_nodes(created_at DESC);
+
+      -- BindWeave: Structure-enriched binding weaver with cross-event induction
+      CREATE TABLE IF NOT EXISTS bindweave_events (
+        event_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        layer VARCHAR(20) NOT NULL CHECK (layer IN ('interaction', 'reasoning', 'consolidation')),
+        frame_data JSONB,
+        entity_bindings TEXT[],
+        temporal_anchor VARCHAR(100),
+        causal_links TEXT[],
+        coherence_score FLOAT DEFAULT 0.5,
+        content TEXT,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS bindweave_edges (
+        source_event_id VARCHAR(255) NOT NULL REFERENCES bindweave_events(event_id),
+        target_event_id VARCHAR(255) NOT NULL REFERENCES bindweave_events(event_id),
+        edge_type VARCHAR(30) NOT NULL,
+        weight FLOAT DEFAULT 0.5,
+        provenance_module VARCHAR(100),
+        reason VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_event_id, target_event_id, edge_type)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_bindweave_user_project ON bindweave_events(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_bindweave_layer ON bindweave_events(layer);
+      CREATE INDEX IF NOT EXISTS idx_bindweave_entities ON bindweave_events USING GIN(entity_bindings);
+      CREATE INDEX IF NOT EXISTS idx_bindweave_coherence ON bindweave_events(coherence_score DESC);
+      CREATE INDEX IF NOT EXISTS idx_bindweave_created ON bindweave_events(created_at DESC);
+
+      -- EchoForge: Hierarchical abstraction echo chamber (H-MEM style)
+      CREATE TABLE IF NOT EXISTS echo_hierarchical_nodes (
+        node_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('domain', 'category', 'trace', 'episode')),
+        module VARCHAR(20) NOT NULL CHECK (module IN ('interaction', 'reasoning', 'consolidation')),
+        content TEXT,
+        confidence FLOAT DEFAULT 0.5,
+        parent_id VARCHAR(255) REFERENCES echo_hierarchical_nodes(node_id),
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_echo_hier_user_project ON echo_hierarchical_nodes(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_echo_hier_level ON echo_hierarchical_nodes(level);
+      CREATE INDEX IF NOT EXISTS idx_echo_hier_module ON echo_hierarchical_nodes(module);
+      CREATE INDEX IF NOT EXISTS idx_echo_hier_confidence ON echo_hierarchical_nodes(confidence DESC);
+
+      -- AetherWeft: Adaptive Knowledge Lifecycle Weaver with context trees + validity rivers
+      CREATE TABLE IF NOT EXISTS aetherweft_entries (
+        entry_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('domain', 'topic', 'subcategory', 'entry')),
+        maturity VARCHAR(20) NOT NULL CHECK (maturity IN ('draft', 'validated', 'stable', 'core')),
+        content TEXT,
+        akl_data JSONB,
+        parent_path TEXT[],
+        validity_score FLOAT DEFAULT 0.5,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS aetherweft_rivers (
+        source_entry_id VARCHAR(255) NOT NULL REFERENCES aetherweft_entries(entry_id),
+        target_entry_id VARCHAR(255) NOT NULL REFERENCES aetherweft_entries(entry_id),
+        river_type VARCHAR(30) NOT NULL,
+        shared_entities TEXT[],
+        confidence FLOAT DEFAULT 0.5,
+        decay_rate FLOAT DEFAULT 0.9,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_entry_id, target_entry_id, river_type)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_aether_user_project ON aetherweft_entries(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_aether_level ON aetherweft_entries(level);
+      CREATE INDEX IF NOT EXISTS idx_aether_maturity ON aetherweft_entries(maturity);
+      CREATE INDEX IF NOT EXISTS idx_aether_validity ON aetherweft_entries(validity_score DESC);
+
+      -- ApexSynapse: Entity-centric temporal graph with validity windows
+      CREATE TABLE IF NOT EXISTS apexsynapse_events (
+        event_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        entities TEXT[],
+        content TEXT,
+        raw_event JSONB,
+        confidence FLOAT DEFAULT 0.5,
+        valid_from TIMESTAMP NOT NULL,
+        valid_to TIMESTAMP,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS apexsynapse_edges (
+        source_event_id VARCHAR(255) NOT NULL REFERENCES apexsynapse_events(event_id),
+        target_event_id VARCHAR(255) NOT NULL REFERENCES apexsynapse_events(event_id),
+        edge_type VARCHAR(30) NOT NULL,
+        shared_entities TEXT[],
+        weight FLOAT DEFAULT 0.5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_event_id, target_event_id, edge_type)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_apex_user_project ON apexsynapse_events(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_apex_entities ON apexsynapse_events USING GIN(entities);
+      CREATE INDEX IF NOT EXISTS idx_apex_valid ON apexsynapse_events(valid_from, valid_to);
+      CREATE INDEX IF NOT EXISTS idx_apex_confidence ON apexsynapse_events(confidence DESC);
+
+      -- QuaternaryForge: Typed four-layer persistence router with evidence gating
+      CREATE TABLE IF NOT EXISTS quaternaryforge_entries (
+        entry_id VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        project_id TEXT DEFAULT 'default',
+        source_module VARCHAR(100),
+        source_record_id TEXT,
+        layer VARCHAR(20) NOT NULL CHECK (layer IN ('knowledge', 'memory', 'wisdom', 'intelligence')),
+        content TEXT,
+        raw_data JSONB,
+        evidence_score FLOAT DEFAULT 0.5,
+        valid_from TIMESTAMP NOT NULL,
+        valid_to TIMESTAMP,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS quaternaryforge_propagations (
+        source_entry_id VARCHAR(255) NOT NULL REFERENCES quaternaryforge_entries(entry_id),
+        target_entry_id VARCHAR(255) NOT NULL REFERENCES quaternaryforge_entries(entry_id),
+        source_layer VARCHAR(20),
+        target_layer VARCHAR(20),
+        propagation_score FLOAT DEFAULT 0.5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (source_entry_id, target_entry_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_quat_user_project ON quaternaryforge_entries(user_id, project_id);
+      CREATE INDEX IF NOT EXISTS idx_quat_layer ON quaternaryforge_entries(layer);
+      CREATE INDEX IF NOT EXISTS idx_quat_evidence ON quaternaryforge_entries(evidence_score DESC);
+      CREATE INDEX IF NOT EXISTS idx_quat_valid ON quaternaryforge_entries(valid_from, valid_to);
     `);
         console.log('Database initialized successfully');
     }

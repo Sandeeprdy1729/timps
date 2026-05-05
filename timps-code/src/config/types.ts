@@ -125,10 +125,12 @@ export interface McpServerConfig {
 export interface MemoryEntry {
   id: string;
   timestamp: number;
-  type: 'fact' | 'pattern' | 'convention' | 'error' | 'decision';
+  type: 'fact' | 'pattern' | 'convention' | 'error' | 'decision' | 'architecture' | 'preference' | 'error_lesson';
   content: string;
   tags: string[];
   project?: string;
+  confidence?: number;
+  accessCount?: number;
 }
 
 export interface EpisodicMemory {

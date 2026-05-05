@@ -179,7 +179,7 @@ export class TeamMemory {
     });
     // Cap at 500
     if (store.sharedFacts.length > 500) {
-      store.sharedFacts.sort((a, b) => b.confidence - a.confidence);
+      store.sharedFacts.sort((a, b) => (b.confidence ?? 1) - (a.confidence ?? 1));
       store.sharedFacts.length = 500;
     }
     this.save(store);

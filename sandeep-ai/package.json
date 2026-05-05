@@ -1,6 +1,6 @@
 {
   "name": "timps",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "description": "TIMPs — The AI memory layer that gets smarter the longer you use it. 17 intelligence tools built on persistent memory.",
   "main": "dist/main.js",
   "bin": {

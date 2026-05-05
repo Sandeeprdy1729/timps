@@ -2,7 +2,7 @@
   "name": "timps",
   "version": "1.0.3",
   "bin": {
-  "timps": "./sandeep-ai/main.js"
+    "timps": "./sandeep-ai/main.js"
   },
   "preferGlobal": true,
   "engines": {
@@ -37,7 +37,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "openai": "^4.63.0",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "timps": "^2.0.1"
   },
   "devDependencies": {
     "@types/blessed": "^0.1.21",

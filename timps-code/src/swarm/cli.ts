@@ -93,7 +93,7 @@ export function addSwarmCommands() {
         const statusIcon = { idle: '○', busy: '●', waiting: '◐', error: '✕' };
         const color = { idle: 'dim', busy: 'cyan', waiting: 'yellow', error: 'red' };
         
-        console.log(`  ${chalk[color[agent.status] as keyof typeof chalk](statusIcon[agent.status as keyof typeof statusIcon])} ${agent.name}`);
+        console.log(`  ${(chalk as unknown as Record<string, (s: string) => string>)[color[agent.status]](statusIcon[agent.status as keyof typeof statusIcon])} ${agent.name}`);
         console.log(chalk.dim(`     Model: ${agent.model} | Tasks: ${agent.stats.tasksCompleted}`));
         if (agent.status === 'busy') activeCount++;
       }

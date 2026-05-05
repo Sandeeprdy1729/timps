@@ -33,6 +33,17 @@ export function shellEscape(s: string): string {
 }
 
 // ── File size formatting ──
+/** Alias for estimateCost — formats cost as a readable string */
+export function formatCost(model: string, inputTokens: number, outputTokens: number): string {
+  const cost = estimateCost(model, inputTokens, outputTokens);
+  return cost < 0.001 ? '<$0.001' : `$${cost.toFixed(4)}`;
+}
+
+export function generateRandomSecret(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;

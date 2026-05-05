@@ -1,8 +1,11 @@
 // TIMPS Tools System
 // Complete toolset like Claude Code: Agent, skills, hooks, permissions, subagents
 
-import { ALL_TOOLS, type ToolDefinition, type ToolExecutor } from '../tools/tools.js';
+import { ALL_TOOLS } from '../tools/tools.js';
+import type { ToolDefinition } from '../config/types.js';
 import { generateId, shellEscape, formatDuration } from '../utils/utils.js';
+
+type ToolExecutor = (args: Record<string, unknown>) => Promise<ToolResult>;
 
 export interface ToolResult {
   content: string;
@@ -130,13 +133,17 @@ export const GlobTool: ToolExecutor = async (args) => {
 
 // ── Grep Tool: Search code ──
 export const GrepTool: ToolExecutor = async (args) => {
-  const { pattern, path: searchPath, include } = args as any;
-  const { grep } = await import('../utils/grep.js').catch(() => null) || {};
-  
-  return {
-    content: `Searched for: ${pattern}`,
-    toolName: 'Grep',
-  };
+  const { pattern, path: searchPath, include } = args as Record<string, string>;
+  // Use Node's child_process for grep since no dedicated util exists
+  const { execSync } = await import('node:child_process');
+  try {
+    const flags = include ? `--include="${include}"` : '';
+    const cmd = `grep -rn ${flags} "${pattern}" "${searchPath || '.'}" 2>/dev/null | head -50`;
+    const out = execSync(cmd, { encoding: 'utf-8', timeout: 10000 });
+    return { content: out || `No matches for: ${pattern}`, toolName: 'Grep' };
+  } catch {
+    return { content: `Searched for: ${pattern}`, toolName: 'Grep' };
+  }
 };
 
 // ── Edit Tool ──
@@ -305,7 +312,7 @@ export const EXTENDED_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         title: { type: 'string', description: 'Task title' },
-        priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+        priority: { type: 'string', description: 'Task priority', enum: ['high', 'medium', 'low'] },
       },
       required: ['title'],
     },
@@ -325,7 +332,7 @@ export const EXTENDED_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Task ID' },
-        status: { type: 'string', enum: ['done', 'pending', 'in_progress', 'failed'] },
+        status: { type: 'string', description: 'Task status', enum: ['done', 'pending', 'in_progress', 'failed'] },
       },
       required: ['id', 'status'],
     },
@@ -359,7 +366,7 @@ export const EXTENDED_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         url: { type: 'string', description: 'URL to fetch' },
-        format: { type: 'string', enum: ['text', 'markdown', 'html'] },
+        format: { type: 'string', description: 'Output format', enum: ['text', 'markdown', 'html'] },
       },
       required: ['url'],
     },
@@ -447,7 +454,7 @@ export const EXTENDED_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         content: { type: 'string', description: 'Task content' },
-        status: { type: 'string', enum: ['pending', 'in_progress', 'done', 'cancelled'] },
+        status: { type: 'string', description: 'Todo status', enum: ['pending', 'in_progress', 'done', 'cancelled'] },
       },
       required: ['content'],
     },
@@ -466,7 +473,7 @@ export const EXTENDED_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        operation: { type: 'string', enum: ['definition', 'references', 'hover', 'type'] },
+        operation: { type: 'string', description: 'Language server operation', enum: ['definition', 'references', 'hover', 'type'] },
         path: { type: 'string', description: 'File path' },
         line: { type: 'number', description: 'Line number' },
         column: { type: 'number', description: 'Column number' },

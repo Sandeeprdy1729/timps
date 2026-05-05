@@ -15,7 +15,7 @@ import { Agent } from './agent.js';
 import { Memory } from '../memory/memory.js';
 import { TeamMemory } from '../memory/teamMemory.js';
 import { SnapshotManager } from '../memory/snapshot.js';
-import { Permissions } from '../utils/permissions.js';
+import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { TodoStore } from '../utils/todo.js';
 import { loadConfig, saveConfig, runSetupWizard, getProjectId, getApiKey, getDefaultModel } from '../config/config.js';
 import { runDataPipeline, type DataPipelineConfig } from '../data-pipeline/data-pipeline.js';
@@ -170,7 +170,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   }
 
   // ── Step 4: For cloud providers, ensure API key ──
-  const localProviders: ProviderName[] = ['ollama', 'opencode'];
+  const localProviders = ['ollama', 'opencode'] as ProviderName[];
   if (!localProviders.includes(providerName) && !getApiKey(config, providerName)) {
     console.log(`\n  ${t.warning(`${icons.key} No API key for ${providerName}`)}`);
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -201,7 +201,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   const memory = new Memory(projectId);
   const todos = new TodoStore(projectId);
   const snapshots = new SnapshotManager(projectId);
-  const permissions = new Permissions(config.trustLevel, config.pathRules);
+  const permissions = new Permissions();
   const multimodalMemory = new MultimodalMemory(cwd);
 
   // Create agent
@@ -415,7 +415,7 @@ export async function handleSlashCommand(
         case 'export': {
           const data = memory.exportMemory();
           const outFile = path.join(cwd, 'timps-memory-export.json');
-          fs.writeFileSync(outFile, JSON.stringify(data, null, 2), 'utf-8');
+          fs.writeFileSync(outFile, data, 'utf-8');
           console.log(`\n  ${t.success(icons.success)} Memory exported to ${t.file('timps-memory-export.json')}\n`);
           break;
         }
@@ -426,8 +426,8 @@ export async function handleSlashCommand(
             console.log(`\n  ${t.error('File not found:')} ${importFile}\n`);
             break;
           }
-          const data = JSON.parse(fs.readFileSync(importFile, 'utf-8'));
-          const count = memory.importMemory(data);
+          const raw = fs.readFileSync(importFile, 'utf-8');
+          const count = memory.importMemory(raw);
           console.log(`\n  ${t.success(icons.success)} Imported ${count} memory entries\n`);
           break;
         }
@@ -462,7 +462,10 @@ export async function handleSlashCommand(
       }
       const valid = ['cautious', 'normal', 'trust', 'yolo'];
       if (valid.includes(args)) {
-        permissions.setTrust(args as any);
+        // Trust level is stored in config, not on PermissionSystem directly
+        const trustCfg = loadConfig();
+        trustCfg.trustLevel = args as 'cautious' | 'normal' | 'trust' | 'yolo';
+        saveConfig(trustCfg);
         console.log(`\n  ${t.success(icons.success)} Trust level: ${t.accent(args)}\n`);
       } else {
         renderError(`Invalid trust level. Use: ${valid.join(', ')}`);
@@ -527,7 +530,7 @@ export async function handleSlashCommand(
     case 'cost': {
       const usage = agent.getUsage();
       const costStr = usage.estimatedCost !== undefined && usage.estimatedCost > 0
-        ? formatCost(usage.estimatedCost)
+        ? formatCost('', usage.inputTokens, usage.outputTokens)
         : t.success('free');
       console.log(`\n${panel('Token Usage', [
         `${t.dim('Input:')}  ${t.accent(usage.inputTokens.toLocaleString())} tokens`,
@@ -606,7 +609,7 @@ export async function handleSlashCommand(
           console.log(`\n  ${t.dim(`Fetching skill: ${subQuery}...`)}`);
           const content = await fetchSkillContent(subQuery);
           if (content) {
-            installSkill({ id: subQuery, name: subQuery, description: '', category: 'general', content });
+            installSkill({ name: subQuery, description: '', category: 'general', content, trigger: subQuery, prompt: content, tools: [], examples: [], selfImprove: false });
             console.log(`  ${t.success(`${icons.success} Installed: ${subQuery}`)}`);
             console.log(`  ${t.dim('Skill will be active in next message.')}\n`);
           } else {
@@ -1148,11 +1151,11 @@ export async function handleSlashCommand(
         });
       }
 
-      const memStats = memory.stats();
+      const memStats = memory.stats;
       checks.push({
         name: 'memory health',
         ok: true,
-        detail: `${memStats.facts} facts, ${memStats.episodes} sessions, ${memStats.patterns} patterns`,
+        detail: `${memStats.semanticCount} facts, ${memStats.episodeCount} sessions, ${memStats.workingFiles} active files`,
       });
 
       const installed = getInstalledSkills();
@@ -1543,11 +1546,11 @@ function timeSince(ts: number): string {
 
 const PROVIDER_MENU: { name: ProviderName; label: string; desc: string }[] = [
   { name: 'claude',     label: '🟣 Claude (Anthropic)',   desc: 'Claude Sonnet / Opus — top-tier coding' },
-  { name: 'openai',     label: '🟢 OpenAI / Codex',      desc: 'GPT-4o, o3-mini — fast & versatile' },
-  { name: 'gemini',     label: '🔵 Google Gemini',        desc: 'Gemini 2.5 Pro/Flash — free tier available' },
-  { name: 'ollama',     label: '⚪ Ollama (local)',        desc: 'Qwen, DeepSeek, Llama — runs on your machine' },
-  { name: 'openrouter', label: '🟡 OpenRouter',           desc: '100+ models, pay-per-token routing' },
-  { name: 'opencode',   label: '🔶 OpenCode (local)',      desc: 'Local models via Ollama — no API key needed' },
+  { name: 'openai' as ProviderName,     label: '🟢 OpenAI / Codex',      desc: 'GPT-4o, o3-mini — fast & versatile' },
+  { name: 'gemini' as ProviderName,     label: '🔵 Google Gemini',        desc: 'Gemini 2.5 Pro/Flash — free tier available' },
+  { name: 'ollama' as ProviderName,     label: '⚪ Ollama (local)',        desc: 'Qwen, DeepSeek, Llama — runs on your machine' },
+  { name: 'openrouter' as ProviderName, label: '🟡 OpenRouter',           desc: '100+ models, pay-per-token routing' },
+  { name: 'ollama' as ProviderName,     label: '🔶 OpenCode (local)',      desc: 'Local models via Ollama — no API key needed' },
 ];
 
 async function pickProvider(config: import('../config/types.js').TimpsConfig): Promise<ProviderName | null> {

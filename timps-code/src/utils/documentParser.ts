@@ -10,8 +10,8 @@ let pdfParse: any = null;
 
 async function getPdfParse() {
   if (!pdfParse) {
-    const { PDFParse } = await import('pdf-parse');
-    pdfParse = PDFParse;
+    const mod = await import('pdf-parse');
+    pdfParse = mod.default || mod;
   }
   return pdfParse;
 }
