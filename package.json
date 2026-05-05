@@ -5,6 +5,12 @@
     "timps": "./sandeep-ai/main.js"
   },
   "preferGlobal": true,
+  "files": [
+    "sandeep-ai/",
+    "docker-compose.yml",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
@@ -37,8 +43,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "openai": "^4.63.0",
-    "pg": "^8.12.0",
-    "timps": "^2.0.1"
+    "pg": "^8.12.0"
   },
   "devDependencies": {
     "@types/blessed": "^0.1.21",
