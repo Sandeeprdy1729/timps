@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TIMPS Documentation — Installation, CLI reference, memory system, MCP setup, TIMPS-Coder, SkillGalaxy, TIMPS Swarm, and more.">
+  <title>Docs — TIMPS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-box">T</div>
+      TIMPS
+    </a>
+    <ul class="nav-links">
+      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li><a href="docs.html" class="active">Docs</a></li>
+      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
+      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
+      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
+      <a href="index.html" class="btn btn-primary btn-sm">Home</a>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Getting Started</div>
+      <a href="#install" class="sidebar-link active">Installation</a>
+      <a href="#quickstart" class="sidebar-link">Quick Start</a>
+      <a href="#providers" class="sidebar-link">Providers</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">CLI</div>
+      <a href="#cli-flags" class="sidebar-link">Flags</a>
+      <a href="#slash-commands" class="sidebar-link">Slash Commands</a>
+      <a href="#tools" class="sidebar-link">Built-in Tools (25+)</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Memory</div>
+      <a href="#memory" class="sidebar-link">Memory System</a>
+      <a href="#memory-schema" class="sidebar-link">Memory Schema</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">MCP</div>
+      <a href="#mcp" class="sidebar-link">timps-mcp Setup</a>
+      <a href="#mcp-tools" class="sidebar-link">MCP Tools (20)</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Extensions</div>
+      <a href="#vscode" class="sidebar-link">VS Code</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">TIMPS-Coder</div>
+      <a href="#timps-coder" class="sidebar-link">Model Overview</a>
+      <a href="#lora-adapters" class="sidebar-link">LoRA Adapters (20)</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">SkillGalaxy</div>
+      <a href="#skillgalaxy" class="sidebar-link">Skills</a>
+      <a href="#skillforge" class="sidebar-link">SkillForge Composer</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Swarm</div>
+      <a href="#swarm" class="sidebar-link">TIMPS Swarm</a>
+      <a href="#swarm-agents" class="sidebar-link">All 22 Agents</a>
+      <a href="#swarm-mcp" class="sidebar-link">Swarm MCP</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Design Skill</div>
+      <a href="#design-skill" class="sidebar-link">claude-design-skill</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Config</div>
+      <a href="#config" class="sidebar-link">Environment Vars</a>
+      <a href="#contributing" class="sidebar-link">Contributing</a>
+    </div>
+  </aside>
+
+  <main class="docs-content">
+    <h1>TIMPS Documentation</h1>
+    <p style="margin-bottom: 40px;">Everything you need to install, configure, and build with the full TIMPS ecosystem.</p>
+    <hr class="divider" style="margin-bottom: 40px;">
+
+    <h2 id="install">Installation</h2>
+    <p>Requires Node.js 18+.</p>
+    <div class="code-block">npm install -g timps-code
+timps --version</div>
+
+    <h3>With Ollama (free, recommended)</h3>
+    <div class="code-block">ollama pull qwen2.5-coder:7b
+ollama pull qwen2.5-coder:14b
+ollama pull sandeeprdy1729/timps-coder</div>
+    <div class="callout callout-tip">No API key needed with Ollama. TIMPS auto-detects it when Ollama is running.</div>
+
+    <h2 id="quickstart">Quick Start</h2>
+    <div class="code-block">timps
+timps "add error handling to src/api.ts"
+timps --provider claude "refactor this module"
+timps --provider timps-coder "fix the async bug in queue.ts"</div>
+
+    <h2 id="providers">Providers</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Flag</th><th>Provider</th><th>Env Var</th><th>Free?</th></tr></thead>
+        <tbody>
+          <tr><td><code>ollama</code></td><td>Ollama (local)</td><td>—</td><td>Yes</td></tr>
+          <tr><td><code>timps-coder</code></td><td>TIMPS-Coder via Ollama</td><td>—</td><td>Yes</td></tr>
+          <tr><td><code>claude</code></td><td>Anthropic Claude</td><td>ANTHROPIC_API_KEY</td><td>No</td></tr>
+          <tr><td><code>openai</code></td><td>OpenAI GPT-4o</td><td>OPENAI_API_KEY</td><td>No</td></tr>
+          <tr><td><code>gemini</code></td><td>Google Gemini</td><td>GEMINI_API_KEY</td><td>Free tier</td></tr>
+          <tr><td><code>openrouter</code></td><td>OpenRouter (200+ models)</td><td>OPENROUTER_API_KEY</td><td>Some free</td></tr>
+          <tr><td><code>deepseek</code></td><td>DeepSeek</td><td>DEEPSEEK_API_KEY</td><td>Very cheap</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="cli-flags">CLI Flags</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>--provider &lt;name&gt;</code></td><td>ollama, claude, openai, gemini, openrouter, deepseek, timps-coder</td></tr>
+          <tr><td><code>--model &lt;name&gt;</code></td><td>Override model name (e.g. gpt-4o, claude-sonnet-4-5)</td></tr>
+          <tr><td><code>--branch &lt;name&gt;</code></td><td>Start session from a named memory branch</td></tr>
+          <tr><td><code>--config</code></td><td>Open interactive setup wizard</td></tr>
+          <tr><td><code>--version</code></td><td>Show version</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="slash-commands">Slash Commands</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/memory</code></td><td>Show what TIMPS knows about this project</td></tr>
+          <tr><td><code>/todo</code></td><td>View, add, and complete task list items</td></tr>
+          <tr><td><code>/branch &lt;name&gt;</code></td><td>Snapshot memory into a named branch</td></tr>
+          <tr><td><code>/merge &lt;name&gt;</code></td><td>Merge a branch back into main memory</td></tr>
+          <tr><td><code>/skills</code></td><td>List installed skills and browse SkillGalaxy</td></tr>
+          <tr><td><code>/skills install &lt;name&gt;</code></td><td>Install a skill from SkillGalaxy</td></tr>
+          <tr><td><code>/mcp</code></td><td>List connected MCP servers and tools</td></tr>
+          <tr><td><code>/models</code></td><td>List available models for current provider</td></tr>
+          <tr><td><code>/doctor</code></td><td>Diagnose config, provider, and memory issues</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="tools">Built-in Tools (25+)</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Category</th><th>Tools</th></tr></thead>
+        <tbody>
+          <tr><td>File</td><td>read_file, write_file, edit_file, delete_file, list_dir, search_files, move_file</td></tr>
+          <tr><td>Shell</td><td>run_command, run_tests, npm_install, lint, type_check</td></tr>
+          <tr><td>Git</td><td>git_status, git_commit, git_branch, git_diff</td></tr>
+          <tr><td>Web</td><td>web_search, fetch_url</td></tr>
+          <tr><td>Memory</td><td>memory_save, memory_recall, memory_list</td></tr>
+          <tr><td>GitHub</td><td>create_github_issue, read_github_pr</td></tr>
+          <tr><td>Docker</td><td>docker_build, docker_run</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="memory">Memory System</h2>
+    <p>Three layers survive every restart:</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 24px 0;">
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">working</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Working Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Current goal, active files, recent errors. Lives in RAM. Resets on exit.</p></div>
+      </div>
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">episodic</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Episodic Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Summaries of past sessions: what was built, what failed. Persisted to disk.</p></div>
+      </div>
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">semantic</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Semantic Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Permanent facts: patterns, conventions, architecture decisions.</p></div>
+      </div>
+    </div>
+
+    <h2 id="memory-schema">Memory Schema</h2>
+    <div class="code-block">~/.timps/memory/&lt;project-hash&gt;/episodes.jsonl
+~/.timps/memory/&lt;project-hash&gt;/semantic.json</div>
+    <div class="callout callout-warn">Do not manually edit these files. Use <code>/memory</code> commands instead. Schema is backwards-compatible across versions.</div>
+
+    <h2 id="mcp">timps-mcp Setup</h2>
+    <div class="code-block">npm install -g timps-mcp</div>
+    <h3>Claude Code / Claude Desktop</h3>
+    <div class="code-block">{
+  "mcpServers": {
+    "timps": {
+      "command": "timps-mcp"
+    }
+  }
+}</div>
+    <h3>Cursor</h3>
+    <p>Settings → MCP → Add Server → Command: <code>timps-mcp</code></p>
+
+    <h2 id="mcp-tools">MCP Tools (20)</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>timps_get_memories</code></td><td>Recall stored facts and preferences about the project</td></tr>
+          <tr><td><code>timps_store_memory</code></td><td>Permanently store a fact across sessions</td></tr>
+          <tr><td><code>timps_check_contradiction</code></td><td>Detect when you contradict a past decision</td></tr>
+          <tr><td><code>timps_check_regret</code></td><td>Warn before repeating a regretted decision</td></tr>
+          <tr><td><code>timps_warn_bug_pattern</code></td><td>Warn if context matches your personal bug triggers</td></tr>
+          <tr><td><code>timps_check_tech_debt</code></td><td>Surface hidden technical debt from memory</td></tr>
+          <tr><td><code>timps_burnout_analyze</code></td><td>Burnout risk from work session patterns</td></tr>
+          <tr><td><code>timps_extract_commitments</code></td><td>Extract action items from meeting notes</td></tr>
+          <tr><td><code>timps_get_episodes</code></td><td>Search past episodic memory entries</td></tr>
+          <tr><td><code>timps_save_episode</code></td><td>Manually log a session summary</td></tr>
+          <tr><td><code>timps_get_goals</code></td><td>Retrieve current and past project goals</td></tr>
+          <tr><td><code>timps_set_goal</code></td><td>Set or update the current project goal</td></tr>
+          <tr><td><code>timps_api_archaeologist</code></td><td>Recall undocumented API quirks from past encounters</td></tr>
+          <tr><td><code>timps_regret_oracle</code></td><td>Warn before repeating a regretted decision</td></tr>
+          <tr><td><code>timps_tech_debt_seismograph</code></td><td>Surface hidden technical debt from code patterns</td></tr>
+          <tr><td><code>timps_energy_manager</code></td><td>Route tasks to right energy level and time of day</td></tr>
+          <tr><td><code>timps_context_restorer</code></td><td>Restore mental context from last session</td></tr>
+          <tr><td><code>timps_skill_advisor</code></td><td>Recommend SkillGalaxy skills for current task</td></tr>
+          <tr><td><code>timps_pattern_library</code></td><td>Recall code patterns your project uses</td></tr>
+          <tr><td><code>timps_contradiction_detector</code></td><td>Catch self-contradictory positions over time</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="vscode">VS Code Extension</h2>
+    <p>Search "TIMPS AI Coding Agent" in the VS Code Marketplace. Features: TIMPS Chat panel, Memory Explorer sidebar, inline suggestions, provider switcher in status bar.</p>
+    <div class="callout callout-info">The VS Code extension and CLI share the same memory layer — the Memory Explorer reflects everything the CLI has learned.</div>
+
+    <h2 id="timps-coder">TIMPS-Coder — Model Overview</h2>
+    <p>Fine-tuned Qwen2.5-Coder-0.5B-Instruct with Unsloth. <strong>92% accuracy</strong> on bug-fix benchmarks. Runs free via Ollama.</p>
+    <div class="code-block">ollama run sandeeprdy1729/timps-coder
+timps --provider timps-coder "fix the race condition"</div>
+    <p>Base: Qwen2.5-Coder-0.5B-Instruct · Training: Unsloth 4-bit QLoRA · Hardware: MacBook M2 Air</p>
+
+    <h2 id="lora-adapters">LoRA Adapters (20 Bug Patterns)</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>#</th><th>Adapter</th><th>Bug Pattern</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>java_npe</code></td><td>Java NullPointerException patterns</td></tr>
+          <tr><td>2</td><td><code>python_asyncio</code></td><td>Python async/await mistakes</td></tr>
+          <tr><td>3</td><td><code>js_null_check</code></td><td>JavaScript null/undefined access</td></tr>
+          <tr><td>4</td><td><code>react_hooks</code></td><td>React hooks rules violations</td></tr>
+          <tr><td>5</td><td><code>sql_injection</code></td><td>SQL injection vulnerabilities</td></tr>
+          <tr><td>6</td><td><code>xss_vulnerability</code></td><td>Cross-site scripting</td></tr>
+          <tr><td>7</td><td><code>memory_leak</code></td><td>Resource cleanup patterns</td></tr>
+          <tr><td>8</td><td><code>race_condition</code></td><td>Concurrency / race condition bugs</td></tr>
+          <tr><td>9</td><td><code>type_coercion</code></td><td>Implicit type conversion bugs</td></tr>
+          <tr><td>10</td><td><code>off_by_one</code></td><td>Array bounds and loop boundary errors</td></tr>
+          <tr><td>11</td><td><code>exception_swallowing</code></td><td>Silent exception catching</td></tr>
+          <tr><td>12</td><td><code>api_error_handling</code></td><td>Missing HTTP error handling</td></tr>
+          <tr><td>13</td><td><code>deadlock</code></td><td>Mutex and threading deadlock</td></tr>
+          <tr><td>14</td><td><code>integer_overflow</code></td><td>Integer overflow/underflow</td></tr>
+          <tr><td>15</td><td><code>path_traversal</code></td><td>Directory traversal security bugs</td></tr>
+          <tr><td>16</td><td><code>env_var_leak</code></td><td>Secrets/env var exposure</td></tr>
+          <tr><td>17</td><td><code>db_n_plus_one</code></td><td>ORM N+1 query anti-patterns</td></tr>
+          <tr><td>18</td><td><code>regex_dos</code></td><td>ReDoS catastrophic backtracking</td></tr>
+          <tr><td>19</td><td><code>ts_any_escape</code></td><td>TypeScript <code>any</code> type safety bypasses</td></tr>
+          <tr><td>20</td><td><code>docker_root</code></td><td>Dockerfile running as root</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="skillgalaxy">SkillGalaxy — Skills</h2>
+    <p>Community library of <code>.md</code> skill files for Claude Projects. Drop a skill into a Claude Project and Claude applies it every chat automatically. 10,171+ skills across 16 domains.</p>
+    <div class="code-block">/skills install react-expert
+/skills install security-audit
+/skills list</div>
+
+    <h2 id="skillforge">SkillForge Composer</h2>
+    <p>Evolutionary optimizer for composing multiple skills efficiently.</p>
+    <ul>
+      <li>Builds a synergy graph — nodes are skills, edges model compatibility</li>
+      <li>Runs genetic algorithm (selection → crossover → mutation → pruning)</li>
+      <li>Prunes overlapping content — redundancy drops from 38% to 4%</li>
+    </ul>
+    <div class="callout callout-tip">Benchmark: 72% better token efficiency (1.0x → 1.72x). Success rate 74% → 91%. Redundancy 38% → 4%.</div>
+    <div class="code-block">python3 scripts/skillforge_benchmark.py</div>
+
+    <h2 id="swarm">TIMPS Swarm</h2>
+    <p>22-agent system running on <strong>Ollama + LangGraph</strong>. No cloud APIs. 10 SDLC agents + 12 Mac health agents.</p>
+    <div class="code-block">git clone https://github.com/Sandeeprdy1729/timps-swarm
+cd timps-swarm
+make all
+open http://localhost:3000</div>
+
+    <h3>Run tasks</h3>
+    <div class="code-block">python3 give_work.py "Write a REST API for auth"
+python3 give_work.py "Create a job queue" -l python
+python3 give_work.py --spawn code_generator qa_tester "Write and test"
+python3 give_work.py "My laptop fan is always running"
+python3 give_work.py --health</div>
+
+    <h3>API key auth (team use)</h3>
+    <div class="code-block">python3 give_work.py --keygen "team-key"
+python3 give_work.py --keys
+python3 give_work.py --revoke timps-sk-xxxx</div>
+
+    <h2 id="swarm-agents">All 22 Agents</h2>
+    <h3>SDLC Pipeline (10)</h3>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>#</th><th>Agent</th><th>Model</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Orchestrator</td><td>qwen2.5:14b</td><td>Task DAG decomposition, routing, retries</td></tr>
+          <tr><td>2</td><td>Product Manager</td><td>qwen2.5:7b</td><td>PRDs and acceptance criteria</td></tr>
+          <tr><td>3</td><td>Architect</td><td>qwen2.5:14b</td><td>System design, API contracts, data models</td></tr>
+          <tr><td>4</td><td>Code Generator</td><td>TIMPS-Coder + qwen2.5-coder:7b</td><td>Implementation using 20 LoRA adapters</td></tr>
+          <tr><td>5</td><td>Code Reviewer</td><td>qwen2.5:7b</td><td>Bugs, anti-patterns, architecture drift</td></tr>
+          <tr><td>6</td><td>QA Tester</td><td>qwen2.5-coder:7b</td><td>pytest + integration tests in sandbox</td></tr>
+          <tr><td>7</td><td>Security Auditor</td><td>qwen2.5:7b</td><td>OWASP, bandit SAST, secrets detection</td></tr>
+          <tr><td>8</td><td>Performance Optimizer</td><td>qwen2.5:7b</td><td>Big-O, N+1, caching recommendations</td></tr>
+          <tr><td>9</td><td>Docs Writer</td><td>qwen2.5:3b</td><td>README, API reference, contributing guide</td></tr>
+          <tr><td>10</td><td>DevOps</td><td>qwen2.5:7b</td><td>Dockerfile, docker-compose, GitHub Actions</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Mac Health Agents (12)</h3>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>#</th><th>Agent</th><th>What it diagnoses</th></tr></thead>
+        <tbody>
+          <tr><td>11</td><td>System Optimizer</td><td>CPU hogs, startup bloat, thermal throttling, memory pressure</td></tr>
+          <tr><td>12</td><td>File Organizer</td><td>Downloads chaos, duplicates, large junk files</td></tr>
+          <tr><td>13</td><td>Environment Doctor</td><td>Broken Python/Node/Docker/PATH — generates exact fix commands</td></tr>
+          <tr><td>14</td><td>Security Guard</td><td>Open ports, camera/mic permissions, suspicious processes</td></tr>
+          <tr><td>15</td><td>Network Medic</td><td>WiFi drops, DNS failures, high latency</td></tr>
+          <tr><td>16</td><td>Battery Analyst</td><td>Energy vampires, battery health, cycle count</td></tr>
+          <tr><td>17</td><td>Update Manager</td><td>Pending OS/brew/pip/npm updates — generates safe ordered script</td></tr>
+          <tr><td>18</td><td>Log Interpreter</td><td>Crash logs explained in plain English</td></tr>
+          <tr><td>19</td><td>Privacy Cleaner</td><td>Cookie audit, macOS app permission review</td></tr>
+          <tr><td>20</td><td>Media Librarian</td><td>Photo rename plan, ffmpeg compression suggestions</td></tr>
+          <tr><td>21</td><td>Backup Sentinel</td><td>Time Machine gaps, uncommitted git, at-risk files</td></tr>
+          <tr><td>22</td><td>Context Switcher</td><td>Tab overload triage, focus-mode script, distraction blocking</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="swarm-mcp">Swarm MCP (31 tools)</h2>
+    <div class="code-block">{
+  "mcpServers": {
+    "timps-swarm": {
+      "command": "python3",
+      "args": ["mcp_server/server.py"],
+      "cwd": "/path/to/timps-swarm"
+    }
+  }
+}</div>
+
+    <h2 id="design-skill">claude-design-skill</h2>
+    <p>7 design systems in one <code>SKILL.md</code>. Drop into any Claude Project: 98% token savings vs re-explaining style guides each session.</p>
+    <div class="code-block">git clone https://github.com/Sandeeprdy1729/claude-design-skill
+# Upload DESIGN-SYSTEM.md to Claude Project Knowledge</div>
+    <p>Systems: <strong>Tailwind CSS</strong> · <strong>shadcn/ui</strong> · <strong>Radix UI</strong> · <strong>Material Design 3</strong> · <strong>Apple HIG</strong> · <strong>Framer Motion</strong> · <strong>Figma Tokens</strong></p>
+    <p>Slash commands: <code>/polish</code> · <code>/animate</code> · <code>/audit</code> · <code>/overdrive</code> · <code>/token</code> · <code>/a11y</code> · <code>/motion</code> · <code>/figma</code></p>
+
+    <h2 id="config">Environment Variables</h2>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Variable</th><th>Description</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude provider key</td><td>—</td></tr>
+          <tr><td><code>OPENAI_API_KEY</code></td><td>OpenAI provider key</td><td>—</td></tr>
+          <tr><td><code>GEMINI_API_KEY</code></td><td>Gemini provider key</td><td>—</td></tr>
+          <tr><td><code>OPENROUTER_API_KEY</code></td><td>OpenRouter key</td><td>—</td></tr>
+          <tr><td><code>DEEPSEEK_API_KEY</code></td><td>DeepSeek key</td><td>—</td></tr>
+          <tr><td><code>OLLAMA_BASE_URL</code></td><td>Ollama server URL</td><td>http://localhost:11434</td></tr>
+          <tr><td><code>TIMPS_DEFAULT_PROVIDER</code></td><td>Default provider</td><td>ollama</td></tr>
+          <tr><td><code>TIMPS_AUTH</code></td><td>Enable API key auth (team use)</td><td>0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="contributing">Contributing</h2>
+    <div class="code-block">cd timps-code && npx tsc --noEmit
+cd timps-code && npm test
+cd timps-code && npm run build</div>
+    <div class="callout callout-warn">New tools need accurate descriptions. Memory schema changes must be backwards compatible. Update CHANGELOG.md.</div>
+  </main>
+</div>
+
+<script src="js/main.js"></script>
+<script>
+const headings = document.querySelectorAll('.docs-content h2[id]');
+const links = document.querySelectorAll('.sidebar-link');
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector('.sidebar-link[href="#' + e.target.id + '"]');
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-52px 0px -60% 0px' });
+headings.forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

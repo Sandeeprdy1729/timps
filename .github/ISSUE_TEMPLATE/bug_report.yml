@@ -1,0 +1,104 @@
+name: "🐛 Bug report"
+description: "Something isn't working as expected"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Fill in as much detail as you can — it helps us fix things faster.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: "Affected component"
+      description: "Which part of TIMPS is broken?"
+      options:
+        - "timps-code (CLI coding agent)"
+        - "timps-mcp (MCP server / tools)"
+        - "timps-vscode (VS Code extension)"
+        - "sandeep-ai (full server)"
+        - "Multiple / unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What happened?"
+      description: "Describe the bug clearly."
+      placeholder: "When I run `timps ...`, it shows ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: "Steps to reproduce"
+      description: "Step-by-step instructions to reproduce the bug."
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behaviour"
+      placeholder: "What should have happened instead?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: "AI provider"
+      options:
+        - "Ollama (local)"
+        - "Claude (Anthropic)"
+        - "OpenAI"
+        - "Gemini"
+        - "OpenRouter"
+        - "Hybrid"
+        - "Other"
+    validations:
+      required: true
+
+  - type: input
+    id: timps-version
+    attributes:
+      label: "TIMPS version"
+      description: "Run `timps --version` to get this."
+      placeholder: "2.x.x"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: "Node.js version"
+      description: "Run `node -v`"
+      placeholder: "v20.x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating system"
+      options:
+        - "macOS"
+        - "Linux"
+        - "Windows (WSL)"
+        - "Windows (native)"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Relevant logs or error output"
+      description: "Paste any terminal output that shows the error. This is automatically formatted as code."
+      render: shell

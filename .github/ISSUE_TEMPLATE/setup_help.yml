@@ -1,0 +1,77 @@
+name: "🆘 Setup / install help"
+description: "Can't get TIMPS installed or running? We'll help."
+labels: ["help wanted", "setup"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **First:** Run `timps --doctor` — it diagnoses the most common problems automatically and shows you the fix.
+
+        If that doesn't resolve it, fill in the details below and we'll help you out. You can also ask on [Discord](https://discord.gg/timps) for faster response.
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: "How did you install TIMPS?"
+      options:
+        - "npm install -g timps-code"
+        - "Docker Compose (full server)"
+        - "Cloned the repo manually"
+        - "VS Code extension from Marketplace"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What went wrong?"
+      description: "Describe what you see — error message, unexpected behaviour, blank output, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor-output
+    attributes:
+      label: "Output of `timps --doctor`"
+      description: "Paste the full output. This is the most useful diagnostic information."
+      render: shell
+
+  - type: input
+    id: timps-version
+    attributes:
+      label: "TIMPS version (timps --version)"
+      placeholder: "2.x.x"
+
+  - type: input
+    id: node-version
+    attributes:
+      label: "Node.js version (node -v)"
+      placeholder: "v20.x.x"
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating system"
+      options:
+        - "macOS"
+        - "Linux (Ubuntu / Debian)"
+        - "Linux (other)"
+        - "Windows (WSL)"
+        - "Windows (native)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: "Which AI provider are you trying to use?"
+      options:
+        - "Ollama (local — no key needed)"
+        - "Claude (Anthropic API key)"
+        - "OpenAI"
+        - "Gemini"
+        - "OpenRouter"
+        - "Not sure yet"
+    validations:
+      required: true

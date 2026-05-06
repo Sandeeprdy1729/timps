@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TIMPS — The open-source AI coding agent that remembers. Free with Ollama. 3-layer persistent memory, 25+ tools, 7 providers.">
+  <title>TIMPS — The AI Coding Agent That Remembers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- Top Banner -->
+<div class="top-banner">
+  ✦ TIMPS-Coder 0.5B — 92% bug-fix accuracy with 20 LoRA adapters. &nbsp;
+  <a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Try it free via Ollama →</a>
+</div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-box">T</div>
+      TIMPS
+    </a>
+    <ul class="nav-links">
+      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li><a href="docs.html">Docs</a></li>
+      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
+      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
+      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">⭐ GitHub</a>
+      <a href="docs.html" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero blob-bg" style="position: relative;">
+  <div class="container" style="position: relative; z-index: 1;">
+    <div class="hero-inner">
+      <!-- Left -->
+      <div class="hero-left">
+        <div class="hero-badge">✦ Open Source · MIT License · Free with Ollama</div>
+        <h1>The AI coding<br>agent that<br><span class="display">remembers.</span></h1>
+        <p class="hero-sub">Claude Code forgets everything when you close it. TIMPS builds a permanent memory of your project — across every session, every day.</p>
+        <div class="hero-actions">
+          <a href="docs.html" class="btn btn-primary btn-lg">Get Started</a>
+          <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-lg">⭐ Star on GitHub</a>
+        </div>
+        <div class="install-block" data-copy="npm install -g timps-code">
+          <code>npm install -g timps-code</code>
+          <button class="copy-btn">Copy</button>
+        </div>
+        <div class="hero-lang" style="margin-top: 16px;">
+          <span class="lang-tag">Ollama · Free</span>
+          <span class="lang-tag">Claude</span>
+          <span class="lang-tag">GPT-4o</span>
+          <span class="lang-tag">Gemini</span>
+          <span class="lang-tag">DeepSeek</span>
+          <span class="lang-tag">OpenRouter</span>
+        </div>
+      </div>
+      <!-- Right: OS window demo -->
+      <div class="hero-right">
+        <div class="window">
+          <div class="window-bar">
+            <div class="dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="window-title">timps — ~/my-project</span>
+          </div>
+          <div class="terminal" style="border: none; border-radius: 0; box-shadow: none;">
+            <div class="terminal-body" style="padding: 20px;">
+              <div><span class="prompt">$</span> <span class="cmd">timps</span></div>
+              <div class="out-g">✓ Ollama detected (qwen2.5-coder:7b)</div>
+              <div class="out-b">✓ Loaded episodic memory (47 sessions)</div>
+              <div class="out-y">✓ Semantic memory: 128 stored facts</div>
+              <div style="margin-top: 8px;"><span class="prompt">&gt;</span> <span class="cmd">fix the race condition in queue.ts</span></div>
+              <div class="out" style="margin-top: 4px;">Reading src/queue.ts...</div>
+              <div class="out">Recalling: past race condition in this file</div>
+              <div class="out-y">⚠ Memory match: setTimeout sync issue</div>
+              <div class="out">   Last seen: March 2025 — took 12h to fix</div>
+              <div class="out-g" style="margin-top: 4px;">✓ Applying mutex pattern instead</div>
+              <div class="out-g">✓ queue.ts updated (3 lines changed)</div>
+              <div style="margin-top: 4px;"><span class="prompt">&gt;</span> <span class="cursor"></span></div>
+            </div>
+          </div>
+        </div>
+        <!-- Memory visualizer window -->
+        <div class="window" style="margin-top: 12px;">
+          <div class="window-bar">
+            <div class="dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="window-title">memory explorer</span>
+          </div>
+          <div class="window-body" style="padding: 16px; font-family: var(--mono); font-size: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+              <div style="background: var(--paper-2); border: var(--border); border-radius: var(--radius); padding: 10px; text-align: center;">
+                <div style="font-size: 1.2rem; font-weight: 700;">47</div>
+                <div style="font-size: 0.65rem; color: var(--ink-3); font-weight: 700;">EPISODES</div>
+              </div>
+              <div style="background: var(--green-pale); border: 1.5px solid var(--green); border-radius: var(--radius); padding: 10px; text-align: center;">
+                <div style="font-size: 1.2rem; font-weight: 700; color: var(--green-dark);">128</div>
+                <div style="font-size: 0.65rem; color: var(--green-dark); font-weight: 700;">SEMANTIC</div>
+              </div>
+              <div style="background: var(--paper-2); border: var(--border); border-radius: var(--radius); padding: 10px; text-align: center;">
+                <div style="font-size: 1.2rem; font-weight: 700;">12</div>
+                <div style="font-size: 0.65rem; color: var(--ink-3); font-weight: 700;">WORKING</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-num"><span class="accent" data-target="25" data-suffix="+">25+</span></div>
+        <div class="stat-label">Built-in Tools</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span data-target="10171" data-suffix="+">10,171+</span></div>
+        <div class="stat-label">SkillGalaxy Skills</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span class="accent" data-target="22" data-suffix="">22</span></div>
+        <div class="stat-label">Swarm Agents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span data-target="92" data-suffix="%">92%</span></div>
+        <div class="stat-label">Bug-Fix Accuracy</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span class="accent" data-target="20" data-suffix="">20</span></div>
+        <div class="stat-label">MCP Tools</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num"><span data-target="7" data-suffix="">7</span></div>
+        <div class="stat-label">Providers</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURES ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">Why TIMPS</span>
+      <h2>An agent that grows<br>smarter over time.</h2>
+      <p>Everything Claude Code and Cursor can't do — because they don't remember.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card highlight fade-in">
+        <div class="card-icon">🧠</div>
+        <h3>3-Layer Persistent Memory</h3>
+        <p>Working memory for the current session. Episodic memory for past conversations. Semantic memory for permanent project facts. TIMPS remembers your codebase better than you do.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🆓</div>
+        <h3>100% Free with Ollama</h3>
+        <p>Default provider is Ollama — no API key, no data leaving your machine, no monthly bill. Pull <code>qwen2.5-coder:7b</code> and start immediately.</p>
+      </div>
+      <div class="feature-card fade-in accent-green">
+        <div class="card-icon">🤖</div>
+        <h3>TIMPS-Coder Model</h3>
+        <p>Fine-tuned 0.5B model with 20 LoRA adapters — one per bug pattern. 92% accuracy on bug-fix benchmarks. Runs free via Ollama. Beats models 10× its size on specialized tasks.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🔌</div>
+        <h3>20 MCP Tools</h3>
+        <p>Give Claude Code and Cursor the persistent memory they were born without. Install <code>timps-mcp</code> in 30 seconds — works with Claude Desktop, Cursor, Windsurf.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🐝</div>
+        <h3>22-Agent Swarm</h3>
+        <p>10 agents handle the full SDLC pipeline automatically (PM → Architect → Coder → QA → Security → DevOps). 12 agents diagnose and fix Mac health issues. All on Ollama, locally.</p>
+      </div>
+      <div class="feature-card fade-in accent-orange">
+        <div class="card-icon">⭐</div>
+        <h3>SkillGalaxy — 10,171+ Skills</h3>
+        <p>Browse, install, and compose domain-expertise skills for Claude Projects. The SkillForge optimizer composes multiple skills with 72% better token efficiency than naive concatenation.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🎨</div>
+        <h3>Claude Design Skill</h3>
+        <p>7 complete design systems (Tailwind, shadcn/ui, Radix, Material, Apple HIG, Framer Motion, Figma tokens) merged into one SKILL.md. 98% token savings. 8 slash commands.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🧩</div>
+        <h3>VS Code Extension</h3>
+        <p>TIMPS Chat panel, Memory Explorer sidebar, and inline agent — right inside your editor. Same memory layer as the CLI. Provider switcher in the status bar.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="card-icon">🔄</div>
+        <h3>Self-Correcting Loop</h3>
+        <p>When a command fails, TIMPS analyzes the error, revises its plan, and retries automatically. Up to 3 retries with a different approach each time. Mistakes feed back into memory.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section">
+  <div class="container">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;">
+      <div class="fade-in">
+        <span class="section-label">How It Works</span>
+        <h2 style="margin: 16px 0 32px;">Your project.<br><span class="display">Remembered forever.</span></h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <h4>1. You give TIMPS a task</h4>
+            <p>In the CLI, VS Code chat, or via REST API. Natural language — no special syntax required.</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <h4>2. TIMPS loads your memory</h4>
+            <p>Episodic memory surfaces relevant past sessions. Semantic memory loads your project conventions. Working memory sets the current context.</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <h4>3. Agent loop runs with tools</h4>
+            <p>25+ tools available: read/write files, run shell commands, git operations, web search, GitHub API, Docker, tests, and more. Self-corrects on failure.</p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <h4>4. Memory updated automatically</h4>
+            <p>What was built, what failed, what patterns were used — all stored. Next session starts smarter than the last.</p>
+          </div>
+        </div>
+      </div>
+      <div class="fade-in">
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">timps session</span>
+          </div>
+          <div class="terminal-body">
+            <div><span class="prompt">$</span> <span class="cmd">timps "add rate limiting to the API"</span></div>
+            <div class="out-g" style="margin-top: 4px;">✓ Memory: found 3 related episodes</div>
+            <div class="out">  Episode #41: "added Redis in auth module"</div>
+            <div class="out">  Fact: "we use express-rate-limit, not custom"</div>
+            <div class="out-y" style="margin-top: 4px;">→ Planning: check existing deps first</div>
+            <div class="out">  Reading package.json...</div>
+            <div class="out">  express-rate-limit: not installed</div>
+            <div class="out-b">  Running: npm install express-rate-limit</div>
+            <div class="out-g">  ✓ Installed</div>
+            <div class="out" style="margin-top: 4px;">  Writing src/middleware/rateLimit.ts</div>
+            <div class="out">  Updating src/api/routes.ts</div>
+            <div class="out-g">✓ Rate limiting added (100 req/15min)</div>
+            <div class="out-g">✓ Memory updated: stored pattern</div>
+            <div style="margin-top: 6px;"><span class="prompt">$</span> <span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── ECOSYSTEM ── -->
+<section class="section">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-label">Ecosystem</span>
+      <h2>One brain.<br>Seven tools.</h2>
+      <p>Every TIMPS project shares the same memory and skills layer. From CLI to swarm to fine-tuned model.</p>
+    </div>
+    <div class="eco-grid">
+      <!-- timps-code -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">💻</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">timps-code <span class="badge badge-cli">CLI</span></h3>
+            <p style="font-size: 0.8rem;">npm install -g timps-code</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>The main CLI coding agent. 3-layer memory, 25+ tools, self-correcting loop, TUI in your terminal.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="docs.html" class="eco-link">📖 Docs</a>
+          <a href="https://www.npmjs.com/package/timps-code" target="_blank" class="eco-link">📦 npm</a>
+        </div>
+      </div>
+      <!-- TIMPS-Coder -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">🤖</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">TIMPS-Coder <span class="badge badge-model">Model</span></h3>
+            <p style="font-size: 0.8rem;">0.5B · 20 LoRA adapters · 92% accuracy</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>Fine-tuned Qwen2.5-Coder with domain-specific LoRA adapters for bug patterns. Runs free via Ollama.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank" class="eco-link">🤗 HuggingFace</a>
+          <a href="https://ollama.com/sandeeprdy1729/timps-coder" target="_blank" class="eco-link">🦙 Ollama</a>
+        </div>
+      </div>
+      <!-- SkillGalaxy -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">⭐</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">SkillGalaxy <span class="badge badge-hub">Marketplace</span></h3>
+            <p style="font-size: 0.8rem;">10,171+ skills · 16 domains · Free</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>Community marketplace for Claude Project skills. SkillForge optimizer composes skills with 72% token savings.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="https://skill-galaxy.vercel.app" target="_blank" class="eco-link">🌐 Live Site</a>
+          <a href="https://github.com/Sandeeprdy1729/skill_galaxy" target="_blank" class="eco-link">⭐ GitHub</a>
+        </div>
+      </div>
+      <!-- Swarm -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">🐝</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">TIMPS Swarm <span class="badge badge-swarm">Multi-Agent</span></h3>
+            <p style="font-size: 0.8rem;">22 agents · LangGraph · Ollama only</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>10 SDLC pipeline agents + 12 Mac health agents. All local. Runs from requirements to deployed Docker container.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank" class="eco-link">⭐ GitHub</a>
+          <a href="ecosystem.html#timps-swarm" class="eco-link">Details →</a>
+        </div>
+      </div>
+      <!-- Design Skill -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">🎨</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">Claude Design Skill <span class="badge badge-skill">Skill</span></h3>
+            <p style="font-size: 0.8rem;">7 design systems · 98% token savings</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>Tailwind, shadcn/ui, Radix, Material Design, Apple HIG, Framer Motion, Figma tokens — one SKILL.md file.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="https://github.com/Sandeeprdy1729/claude-design-skill" target="_blank" class="eco-link">⭐ GitHub</a>
+          <a href="ecosystem.html#design-skill" class="eco-link">Details →</a>
+        </div>
+      </div>
+      <!-- timps-mcp -->
+      <div class="eco-card fade-in">
+        <div class="eco-card-head">
+          <div class="eco-icon">🔌</div>
+          <div>
+            <h3 style="margin-bottom: 4px;">timps-mcp <span class="badge badge-mcp">MCP</span></h3>
+            <p style="font-size: 0.8rem;">20 tools · Claude Code · Cursor · Windsurf</p>
+          </div>
+        </div>
+        <div class="eco-card-body">
+          <p>Add TIMPS persistent memory to any MCP-compatible tool. Install once, get long-term project memory everywhere.</p>
+        </div>
+        <div class="eco-card-footer">
+          <a href="https://www.npmjs.com/package/timps-mcp" target="_blank" class="eco-link">📦 npm</a>
+          <a href="docs.html#mcp" class="eco-link">📖 Setup</a>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 32px;">
+      <a href="ecosystem.html" class="btn btn-primary">Explore Full Ecosystem →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── PIXEL ROBOT PARADE ── -->
+<div class="pixel-parade">
+
+  <!-- Robot A: timps-code (smiley monitor) -->
+  <div class="pixel-parade-bot">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 42" width="40" height="56" class="pixel-art" role="img" aria-label="timps-code robot">
+      <rect x="0" y="0" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="6" width="18" height="6" fill="#ede9db"/>
+      <rect x="24" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="12" width="6" height="6" fill="#2db87f"/>
+      <rect x="12" y="12" width="6" height="6" fill="#ede9db"/>
+      <rect x="18" y="12" width="6" height="6" fill="#2db87f"/>
+      <rect x="24" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="18" width="18" height="6" fill="#ede9db"/>
+      <rect x="24" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="24" width="6" height="6" fill="#ede9db"/>
+      <rect x="12" y="24" width="6" height="6" fill="#2db87f"/>
+      <rect x="18" y="24" width="6" height="6" fill="#ede9db"/>
+      <rect x="24" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="30" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="36" width="18" height="6" fill="#1c1c1c"/>
+    </svg>
+    <span>timps-code</span>
+  </div>
+
+  <!-- Robot B: TIMPS-Coder (wide head / headphones) -->
+  <div class="pixel-parade-bot">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 42 42" width="56" height="56" class="pixel-art" role="img" aria-label="TIMPS-Coder robot">
+      <rect x="6" y="0" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="6" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="12" y="6" width="18" height="6" fill="#ede9db"/>
+      <rect x="30" y="6" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="12" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="12" y="12" width="6" height="6" fill="#f07038"/>
+      <rect x="18" y="12" width="6" height="6" fill="#ede9db"/>
+      <rect x="24" y="12" width="6" height="6" fill="#f07038"/>
+      <rect x="30" y="12" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="18" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="12" y="18" width="18" height="6" fill="#ede9db"/>
+      <rect x="30" y="18" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="24" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="12" y="24" width="6" height="6" fill="#ede9db"/>
+      <rect x="18" y="24" width="6" height="6" fill="#3dbcb8"/>
+      <rect x="24" y="24" width="6" height="6" fill="#ede9db"/>
+      <rect x="30" y="24" width="12" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="30" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="12" y="36" width="18" height="6" fill="#1c1c1c"/>
+    </svg>
+    <span>timps-coder</span>
+  </div>
+
+  <!-- Robot C: Swarm (tower computer) -->
+  <div class="pixel-parade-bot">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 48" width="32" height="64" class="pixel-art" role="img" aria-label="Swarm robot">
+      <rect x="0" y="0" width="24" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="6" width="12" height="6" fill="#ede9db"/>
+      <rect x="18" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="12" width="12" height="6" fill="#2db87f"/>
+      <rect x="18" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="18" width="24" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="24" width="12" height="6" fill="#ede9db"/>
+      <rect x="8" y="26" width="8" height="2" fill="#1c1c1c"/>
+      <rect x="18" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="30" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="30" width="12" height="6" fill="#ede9db"/>
+      <rect x="8" y="32" width="8" height="2" fill="#1c1c1c"/>
+      <rect x="18" y="30" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="36" width="24" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="42" width="12" height="6" fill="#1c1c1c"/>
+    </svg>
+    <span>swarm</span>
+  </div>
+
+  <!-- Robot D: SkillGalaxy (visor/helmet robot) -->
+  <div class="pixel-parade-bot">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 42" width="40" height="56" class="pixel-art" role="img" aria-label="SkillGalaxy robot">
+      <rect x="0" y="0" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="6" width="18" height="6" fill="#ede9db"/>
+      <rect x="24" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="12" width="18" height="6" fill="#3dbcb8"/>
+      <rect x="24" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="18" width="18" height="6" fill="#ede9db"/>
+      <rect x="24" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="24" width="4" height="6" fill="#ede9db"/>
+      <rect x="10" y="24" width="4" height="6" fill="#1c1c1c"/>
+      <rect x="14" y="24" width="4" height="6" fill="#ede9db"/>
+      <rect x="18" y="24" width="4" height="6" fill="#1c1c1c"/>
+      <rect x="22" y="24" width="2" height="6" fill="#ede9db"/>
+      <rect x="24" y="24" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="30" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="36" width="18" height="6" fill="#1c1c1c"/>
+    </svg>
+    <span>skill galaxy</span>
+  </div>
+
+  <!-- Robot E: timps-mcp (simple smiley, yellow eyes) -->
+  <div class="pixel-parade-bot">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 36" width="40" height="48" class="pixel-art" role="img" aria-label="timps-mcp robot">
+      <rect x="0" y="0" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="6" width="6" height="6" fill="#febc2e"/>
+      <rect x="12" y="6" width="6" height="6" fill="#ede9db"/>
+      <rect x="18" y="6" width="6" height="6" fill="#febc2e"/>
+      <rect x="24" y="6" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="12" width="18" height="6" fill="#ede9db"/>
+      <rect x="24" y="12" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="18" width="6" height="6" fill="#febc2e"/>
+      <rect x="12" y="18" width="6" height="6" fill="#ede9db"/>
+      <rect x="18" y="18" width="6" height="6" fill="#febc2e"/>
+      <rect x="24" y="18" width="6" height="6" fill="#1c1c1c"/>
+      <rect x="0" y="24" width="30" height="6" fill="#1c1c1c"/>
+      <rect x="6" y="30" width="18" height="6" fill="#1c1c1c"/>
+    </svg>
+    <span>timps-mcp</span>
+  </div>
+
+</div>
+
+<!-- ── SWARM AGENTS ── -->
+<section class="section" style="background: var(--paper-2);">
+  <div class="container">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start;">
+      <div class="fade-in">
+        <span class="section-label">TIMPS Swarm</span>
+        <h2 style="margin: 16px 0 16px;">22 agents.<br><span class="display">One command.</span></h2>
+        <p style="margin-bottom: 24px;">Give the swarm a feature request and 10 specialized agents handle the entire SDLC pipeline — from writing requirements to shipping a Docker container. All local, all free, no cloud APIs required.</p>
+        <div class="code-block">git clone https://github.com/Sandeeprdy1729/timps-swarm
+cd timps-swarm
+make all
+open http://localhost:3000</div>
+        <div style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank" class="btn btn-primary btn-sm">View on GitHub</a>
+          <a href="ecosystem.html#timps-swarm" class="btn btn-ghost btn-sm">Learn More</a>
+        </div>
+      </div>
+      <div class="fade-in">
+        <h4 style="margin-bottom: 16px;">SDLC Pipeline (10 agents)</h4>
+        <div class="agents-grid" style="margin-bottom: 20px;">
+          <div class="agent-card"><span class="agent-num">01</span><strong>Orchestrator</strong><span>qwen2.5:14b · task DAG routing</span></div>
+          <div class="agent-card"><span class="agent-num">02</span><strong>Product Manager</strong><span>PRDs & acceptance criteria</span></div>
+          <div class="agent-card"><span class="agent-num">03</span><strong>Architect</strong><span>system design, API contracts</span></div>
+          <div class="agent-card"><span class="agent-num">04</span><strong>Code Generator</strong><span>TIMPS-Coder + 20 LoRA adapters</span></div>
+          <div class="agent-card"><span class="agent-num">05</span><strong>Code Reviewer</strong><span>bugs, anti-patterns, drift</span></div>
+          <div class="agent-card"><span class="agent-num">06</span><strong>QA Tester</strong><span>pytest & integration tests</span></div>
+          <div class="agent-card"><span class="agent-num">07</span><strong>Security Auditor</strong><span>OWASP, bandit SAST, CVE scan</span></div>
+          <div class="agent-card"><span class="agent-num">08</span><strong>Performance Optimizer</strong><span>Big-O, N+1, caching</span></div>
+          <div class="agent-card"><span class="agent-num">09</span><strong>Docs Writer</strong><span>README, API docs, guide</span></div>
+          <div class="agent-card"><span class="agent-num">10</span><strong>DevOps</strong><span>Dockerfile, CI/CD, deploy</span></div>
+        </div>
+        <h4 style="margin-bottom: 12px;">+ 12 Mac Health Agents</h4>
+        <div class="tag-list">
+          <span class="tag">System Optimizer</span>
+          <span class="tag">Environment Doctor</span>
+          <span class="tag">Network Medic</span>
+          <span class="tag">Security Guard</span>
+          <span class="tag">Battery Analyst</span>
+          <span class="tag">Log Interpreter</span>
+          <span class="tag teal">+6 more</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── SKILL GALAXY ── -->
+<section class="section">
+  <div class="container">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start;">
+      <div class="fade-in">
+        <span class="section-label">SkillGalaxy</span>
+        <h2 style="margin: 16px 0 16px;"><span class="display">10,171+</span> skills<br>for Claude.</h2>
+        <p style="margin-bottom: 16px;">Download a <code>.md</code> skill file once. Drop it into a Claude Project. Claude applies it in every conversation automatically — no re-explaining, no wasted tokens.</p>
+        <p style="margin-bottom: 24px;">The <strong>SkillForge</strong> evolutionary optimizer composes multiple skills with 72% better token efficiency. AI validator scores community submissions. One-click Claude Desktop setup.</p>
+        <a href="https://skill-galaxy.vercel.app" target="_blank" class="btn btn-green btn-lg">Browse SkillGalaxy →</a>
+      </div>
+      <div class="fade-in">
+        <h4 style="margin-bottom: 16px;">16 Domains</h4>
+        <div class="domain-grid">
+          <span class="domain-tag">AI &amp; ML</span>
+          <span class="domain-tag">Cybersecurity</span>
+          <span class="domain-tag">Data Engineering</span>
+          <span class="domain-tag">Cloud &amp; Infra</span>
+          <span class="domain-tag">Quantum Computing</span>
+          <span class="domain-tag">Blockchain &amp; Web3</span>
+          <span class="domain-tag">Robotics</span>
+          <span class="domain-tag">Climate Tech</span>
+          <span class="domain-tag">Development</span>
+          <span class="domain-tag">Design &amp; UX</span>
+          <span class="domain-tag">Product &amp; Strategy</span>
+          <span class="domain-tag">Creative Tech</span>
+          <span class="domain-tag">Writing</span>
+          <span class="domain-tag">Business</span>
+          <span class="domain-tag">Spatial Computing</span>
+          <span class="domain-tag">Comp. Biology</span>
+        </div>
+        <div style="margin-top: 20px;" class="window">
+          <div class="window-bar">
+            <div class="dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="window-title">SkillForge benchmark</span>
+          </div>
+          <div class="window-body" style="font-size: 0.8rem; font-family: var(--mono);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+              <tr>
+                <th style="text-align: left; padding: 6px 0; border-bottom: 1px solid var(--paper-3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em;">Metric</th>
+                <th style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-3); font-size: 0.7rem;">Baseline (Top-K)</th>
+                <th style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-3); font-size: 0.7rem; color: var(--green-dark);">SkillForge</th>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; border-bottom: 1px solid var(--paper-2);">Token efficiency</td>
+                <td style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-2); color: var(--ink-3);">1.0×</td>
+                <td style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-2); color: var(--green-dark); font-weight: 700;">1.72×</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; border-bottom: 1px solid var(--paper-2);">Task accuracy</td>
+                <td style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-2); color: var(--ink-3);">74%</td>
+                <td style="text-align: right; padding: 6px 0; border-bottom: 1px solid var(--paper-2); color: var(--green-dark); font-weight: 700;">91%</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0;">Redundancy rate</td>
+                <td style="text-align: right; padding: 6px 0; color: var(--ink-3);">38%</td>
+                <td style="text-align: right; padding: 6px 0; color: var(--green-dark); font-weight: 700;">4%</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── PROVIDERS ── -->
+<section class="section-sm">
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="section-label">Providers</span>
+      <h3 style="margin-top: 8px;">Works with any model.</h3>
+    </div>
+    <div class="providers-wrap fade-in" style="justify-content: center;">
+      <div class="provider-pill">🦙 Ollama <span class="free">FREE</span></div>
+      <div class="provider-pill">🤖 TIMPS-Coder <span class="free">FREE</span></div>
+      <div class="provider-pill">⚡ Claude (Anthropic)</div>
+      <div class="provider-pill">💫 GPT-4o (OpenAI)</div>
+      <div class="provider-pill">🌟 Gemini (Google)</div>
+      <div class="provider-pill">🔀 OpenRouter</div>
+      <div class="provider-pill">🔥 DeepSeek</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="container" style="position: relative; z-index: 1;">
+    <span class="section-label" style="border-color: rgba(250,246,237,0.3); color: rgba(250,246,237,0.6);">Get Started</span>
+    <h2 style="margin-top: 12px;">Start building with memory.<br><span class="display">Today. Free.</span></h2>
+    <p>No API key required. No account. No credit card. Install and run in under 60 seconds with Ollama.</p>
+    <div class="cta-actions">
+      <a href="docs.html" class="btn btn-primary" style="background: var(--paper); color: var(--ink); border-color: var(--paper);">Read the Docs →</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost" style="border-color: rgba(250,246,237,0.4); color: var(--paper);">⭐ Star on GitHub</a>
+    </div>
+    <div class="announce-grid" style="margin-top: 48px; text-align: left;">
+      <div class="announce-card" style="background: rgba(250,246,237,0.05); border-color: rgba(250,246,237,0.15);">
+        <h3 style="color: var(--paper);">CLI Agent</h3>
+        <p>Works in any terminal. Interactive TUI. One-shot mode. Branch and merge memory.</p>
+      </div>
+      <div class="announce-card" style="background: rgba(250,246,237,0.05); border-color: rgba(250,246,237,0.15);">
+        <h3 style="color: var(--paper);">VS Code Extension</h3>
+        <p>Chat panel + Memory Explorer inside VS Code. Same memory as CLI. Install from Marketplace.</p>
+      </div>
+      <div class="announce-card" style="background: rgba(250,246,237,0.05); border-color: rgba(250,246,237,0.15);">
+        <h3 style="color: var(--paper);">MCP Server</h3>
+        <p>20 tools for Claude Code, Cursor, Windsurf. Add memory to your existing AI setup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PIXEL FIELD FOOTER SCENE ── -->
+<div class="pixel-field-footer">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMax slice" width="100%" class="pixel-art" role="img" aria-label="Developer in a field with retro computer — TIMPS">
+
+    <!-- === SKY === -->
+    <rect x="0" y="0"   width="1440" height="88" fill="#f5e8be"/>
+    <rect x="0" y="88"  width="1440" height="10" fill="#edd9a8"/>
+    <rect x="0" y="98"  width="1440" height="10" fill="#e5c870"/>
+    <rect x="0" y="108" width="1440" height="8"  fill="#dbb848"/>
+    <rect x="0" y="116" width="1440" height="6"  fill="#cfaa38"/>
+    <rect x="0" y="122" width="1440" height="5"  fill="#c4a030"/>
+    <!-- horizon glow -->
+    <rect x="0" y="127" width="1440" height="4"  fill="#a0b838"/>
+
+    <!-- === GRASS — FAR (lightest) === -->
+    <rect x="0" y="131" width="1440" height="6"  fill="#789040"/>
+    <rect x="0" y="137" width="1440" height="5"  fill="#6e8838"/>
+    <rect x="0" y="142" width="1440" height="6"  fill="#688030"/>
+    <rect x="0" y="148" width="1440" height="5"  fill="#607828"/>
+    <rect x="0" y="153" width="1440" height="6"  fill="#587020"/>
+    <rect x="0" y="159" width="1440" height="5"  fill="#526818"/>
+    <rect x="0" y="164" width="1440" height="6"  fill="#4e6518"/>
+    <rect x="0" y="170" width="1440" height="5"  fill="#4a6215"/>
+    <rect x="0" y="175" width="1440" height="6"  fill="#466015"/>
+    <rect x="0" y="181" width="1440" height="5"  fill="#425e12"/>
+
+    <!-- === GRASS — MID === -->
+    <rect x="0" y="186" width="1440" height="6"  fill="#3e5a12"/>
+    <rect x="0" y="192" width="1440" height="5"  fill="#3a5810"/>
+    <rect x="0" y="197" width="1440" height="6"  fill="#385510"/>
+    <rect x="0" y="203" width="1440" height="5"  fill="#345208"/>
+    <rect x="0" y="208" width="1440" height="6"  fill="#325008"/>
+    <rect x="0" y="214" width="1440" height="5"  fill="#2e4c05"/>
+    <rect x="0" y="219" width="1440" height="6"  fill="#2c4a08"/>
+    <rect x="0" y="225" width="1440" height="5"  fill="#2a4808"/>
+    <rect x="0" y="230" width="1440" height="6"  fill="#284605"/>
+    <rect x="0" y="236" width="1440" height="5"  fill="#264205"/>
+    <rect x="0" y="241" width="1440" height="6"  fill="#284508"/>
+    <rect x="0" y="247" width="1440" height="5"  fill="#244005"/>
+    <rect x="0" y="252" width="1440" height="6"  fill="#263e05"/>
+
+    <!-- === GRASS — FOREGROUND (darkest) === -->
+    <rect x="0" y="258" width="1440" height="6"  fill="#243e05"/>
+    <rect x="0" y="264" width="1440" height="5"  fill="#223c05"/>
+    <rect x="0" y="269" width="1440" height="6"  fill="#203a05"/>
+    <rect x="0" y="275" width="1440" height="5"  fill="#1e3805"/>
+    <rect x="0" y="280" width="1440" height="6"  fill="#203a08"/>
+    <rect x="0" y="286" width="1440" height="5"  fill="#1e3805"/>
+    <rect x="0" y="291" width="1440" height="6"  fill="#1c3605"/>
+    <rect x="0" y="297" width="1440" height="5"  fill="#1e3808"/>
+    <rect x="0" y="302" width="1440" height="5"  fill="#1a3405"/>
+    <rect x="0" y="307" width="1440" height="5"  fill="#1c3605"/>
+    <rect x="0" y="312" width="1440" height="5"  fill="#183205"/>
+    <rect x="0" y="317" width="1440" height="43" fill="#163005"/>
+
+    <!-- === GRASS TUFTS === -->
+    <rect x="62"   y="316" width="3" height="20" fill="#123005"/>
+    <rect x="65"   y="312" width="4" height="24" fill="#143205"/>
+    <rect x="69"   y="309" width="3" height="27" fill="#123005"/>
+    <rect x="72"   y="313" width="4" height="23" fill="#153405"/>
+    <rect x="76"   y="317" width="3" height="19" fill="#123005"/>
+
+    <rect x="335"  y="318" width="3" height="18" fill="#123005"/>
+    <rect x="338"  y="314" width="4" height="22" fill="#143205"/>
+    <rect x="342"  y="317" width="3" height="19" fill="#123005"/>
+
+    <rect x="1082" y="317" width="3" height="19" fill="#123005"/>
+    <rect x="1085" y="313" width="4" height="23" fill="#143205"/>
+    <rect x="1089" y="316" width="3" height="20" fill="#123005"/>
+
+    <rect x="1310" y="315" width="3" height="21" fill="#123005"/>
+    <rect x="1313" y="311" width="4" height="25" fill="#143205"/>
+    <rect x="1317" y="314" width="3" height="22" fill="#123005"/>
+    <rect x="1320" y="317" width="4" height="19" fill="#143205"/>
+
+    <!-- === PERSON + COMPUTER (centered ~x=560) === -->
+
+    <!-- Chair back frame (behind person) -->
+    <rect x="535" y="289" width="5"  height="45" fill="#7a5828"/>
+    <rect x="560" y="289" width="5"  height="45" fill="#7a5828"/>
+    <rect x="535" y="289" width="30" height="5"  fill="#8a6438"/>
+
+    <!-- Hair / head -->
+    <rect x="545" y="260" width="14" height="3"  fill="#342010"/>
+    <rect x="543" y="263" width="18" height="5"  fill="#3a2410"/>
+    <rect x="543" y="268" width="18" height="7"  fill="#3c2610"/>
+    <rect x="545" y="275" width="14" height="4"  fill="#382208"/>
+
+    <!-- Neck -->
+    <rect x="549" y="279" width="7"  height="5"  fill="#c8a070"/>
+
+    <!-- Shirt (cream, back view) -->
+    <rect x="535" y="284" width="30" height="36" fill="#e0d8c0"/>
+    <rect x="547" y="284" width="10" height="36" fill="#d8d0b0"/>
+    <rect x="535" y="284" width="7"  height="9"  fill="#d0c8a8"/>
+    <rect x="558" y="284" width="7"  height="9"  fill="#d0c8a8"/>
+
+    <!-- Left sleeve -->
+    <rect x="524" y="288" width="13" height="24" fill="#d8d0b8"/>
+    <rect x="524" y="288" width="5"  height="24" fill="#ccc4b0"/>
+    <!-- Right sleeve -->
+    <rect x="563" y="288" width="13" height="24" fill="#d8d0b8"/>
+    <rect x="571" y="288" width="5"  height="24" fill="#ccc4b0"/>
+
+    <!-- Dark pants -->
+    <rect x="538" y="320" width="13" height="5"  fill="#263020"/>
+    <rect x="549" y="320" width="13" height="5"  fill="#263020"/>
+    <rect x="538" y="325" width="13" height="16" fill="#1c2818"/>
+    <rect x="549" y="325" width="13" height="16" fill="#1c2818"/>
+
+    <!-- Shoes -->
+    <rect x="535" y="341" width="17" height="5"  fill="#141c10"/>
+    <rect x="548" y="341" width="17" height="5"  fill="#141c10"/>
+
+    <!-- Chair seat -->
+    <rect x="527" y="318" width="48" height="8"  fill="#7a5828"/>
+    <rect x="527" y="326" width="48" height="3"  fill="#6a4c1c"/>
+    <rect x="528" y="329" width="5"  height="26" fill="#6a4c1c"/>
+    <rect x="568" y="329" width="5"  height="26" fill="#6a4c1c"/>
+
+    <!-- Desk surface -->
+    <rect x="575" y="314" width="72" height="6"  fill="#8a6a30"/>
+    <rect x="575" y="320" width="72" height="4"  fill="#7a5a20"/>
+    <rect x="577" y="324" width="5"  height="36" fill="#7a5828"/>
+    <rect x="637" y="324" width="5"  height="36" fill="#7a5828"/>
+
+    <!-- Keyboard -->
+    <rect x="578" y="304" width="30" height="11" fill="#c8bea8"/>
+    <rect x="580" y="306" width="26" height="7"  fill="#b8ae98"/>
+    <rect x="581" y="307" width="4"  height="2"  fill="#a0988a"/>
+    <rect x="587" y="307" width="4"  height="2"  fill="#a0988a"/>
+    <rect x="593" y="307" width="4"  height="2"  fill="#a0988a"/>
+    <rect x="581" y="310" width="3"  height="2"  fill="#a0988a"/>
+    <rect x="586" y="310" width="3"  height="2"  fill="#a0988a"/>
+    <rect x="591" y="310" width="3"  height="2"  fill="#a0988a"/>
+    <rect x="596" y="310" width="3"  height="2"  fill="#a0988a"/>
+
+    <!-- Monitor beige CRT case -->
+    <rect x="610" y="274" width="40" height="40" fill="#c8bea0"/>
+    <rect x="610" y="274" width="40" height="4"  fill="#b8ae90"/>
+    <rect x="610" y="310" width="40" height="4"  fill="#afa888"/>
+    <rect x="646" y="274" width="4"  height="40" fill="#b0a888"/>
+
+    <!-- Monitor screen — green phosphor -->
+    <rect x="615" y="279" width="30" height="28" fill="#7aaa50"/>
+    <rect x="615" y="279" width="30" height="3"  fill="#6a9a40"/>
+    <rect x="615" y="304" width="30" height="3"  fill="#6a9a40"/>
+    <rect x="615" y="279" width="3"  height="28" fill="#6a9a40"/>
+    <rect x="642" y="279" width="3"  height="28" fill="#6a9a40"/>
+    <!-- Screen text lines -->
+    <rect x="619" y="284" width="22" height="2"  fill="#9acc68"/>
+    <rect x="619" y="288" width="16" height="2"  fill="#9acc68"/>
+    <rect x="619" y="292" width="20" height="2"  fill="#9acc68"/>
+    <rect x="619" y="296" width="12" height="2"  fill="#9acc68"/>
+    <rect x="619" y="296" width="3"  height="2"  fill="#c8f080"/>
+
+    <!-- Monitor vents -->
+    <rect x="649" y="282" width="2" height="3"   fill="#a0988a"/>
+    <rect x="649" y="287" width="2" height="3"   fill="#a0988a"/>
+    <rect x="649" y="292" width="2" height="3"   fill="#a0988a"/>
+    <rect x="649" y="297" width="2" height="3"   fill="#a0988a"/>
+
+    <!-- Monitor stand + base -->
+    <rect x="624" y="314" width="12" height="5"  fill="#b8ae90"/>
+    <rect x="619" y="319" width="22" height="4"  fill="#a8a080"/>
+
+  </svg>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-box">T</div>
+          TIMPS
+        </a>
+        <p>The open-source AI coding agent that remembers.<br>Free with Ollama. MIT licensed.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Ecosystem</h4>
+        <ul>
+          <li><a href="ecosystem.html#timps-code">timps-code</a></li>
+          <li><a href="ecosystem.html#timps-coder">TIMPS-Coder</a></li>
+          <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
+          <li><a href="ecosystem.html#timps-swarm">TIMPS Swarm</a></li>
+          <li><a href="ecosystem.html#design-skill">Design Skill</a></li>
+          <li><a href="ecosystem.html#timps-mcp">timps-mcp</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Documentation</a></li>
+          <li><a href="ecosystem.html">Ecosystem</a></li>
+          <li><a href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank">Changelog</a></li>
+          <li><a href="https://github.com/Sandeeprdy1729/timps/blob/main/SECURITY.md" target="_blank">Security</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Community</h4>
+        <ul>
+          <li><a href="https://github.com/Sandeeprdy1729/timps" target="_blank">GitHub</a></li>
+          <li><a href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank">Issues</a></li>
+          <li><a href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank">Discussions</a></li>
+          <li><a href="https://github.com/Sandeeprdy1729" target="_blank">@Sandeeprdy1729</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 TIMPS. MIT License.</p>
+      <p>Built by <a href="https://github.com/Sandeeprdy1729" style="color: var(--green-dark); font-weight: 600;">Sandeep Reddy</a></p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
