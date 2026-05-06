@@ -1,7 +1,7 @@
 {
   "name": "timps-code",
   "version": "2.0.0",
-  "description": "TIMPS Code — Production-grade AI coding agent with persistent memory, multi-model support, skills, MCP, and messaging gateway",
+  "description": "Open-source CLI coding agent with 3-layer persistent memory. Free with Ollama. Drop-in Claude Code alternative. Works with any model.",
   "type": "module",
   "bin": {
     "timps": "./dist/bin/timps.js"
@@ -24,6 +24,7 @@
     "coding-agent",
     "cli",
     "claude-code-alternative",
+    "claude-code",
     "claude",
     "openai",
     "gemini",
@@ -38,7 +39,12 @@
     "open-source",
     "ai-agent",
     "code-generation",
-    "developer-tools"
+    "developer-tools",
+    "agentic",
+    "autonomous-agent",
+    "self-correcting",
+    "free-ai",
+    "swe-bench"
   ],
   "author": "TIMPS Contributors",
   "license": "MIT",

@@ -26,7 +26,12 @@
     "contradiction-detection",
     "burnout",
     "developer-tools",
-    "ai-agent"
+    "ai-agent",
+    "long-term-memory",
+    "agentic",
+    "openai",
+    "gemini",
+    "claude-code-alternative"
   ],
   "author": "Sandeeprdy1729",
   "license": "MIT",

@@ -1,0 +1,50 @@
+name: "✨ Feature request"
+description: "Suggest a new feature or improvement"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd love to hear it. Please search existing issues first to avoid duplicates.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "What problem does this solve?"
+      description: "Describe the limitation or pain point you're experiencing."
+      placeholder: "I find myself constantly doing X manually because TIMPS doesn't..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed solution"
+      description: "Describe what you'd like to see. Be as specific as possible."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: "Component"
+      options:
+        - "timps-code (CLI coding agent)"
+        - "timps-mcp (MCP server / tools)"
+        - "timps-vscode (VS Code extension)"
+        - "sandeep-ai (full server)"
+        - "New component"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternatives considered"
+      description: "Any other approaches you thought about?"
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Additional context"
+      description: "Screenshots, mockups, links to related issues — anything that helps."

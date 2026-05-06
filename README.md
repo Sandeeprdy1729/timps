@@ -1,19 +1,43 @@
-# TIMPS — Open-Source AI Coding Agent
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/assets/banner.png" alt="TIMPS — AI Coding Agent" width="100%">
+</p>
 
-<div align="center">
+<h1 align="center">TIMPS — The AI Coding Agent That Remembers</h1>
 
-[![npm](https://img.shields.io/npm/v/timps-code?label=timps-code&color=brightgreen)](https://www.npmjs.com/package/timps-code)
-[![npm](https://img.shields.io/npm/v/timps-mcp?label=timps-mcp&color=blue)](https://www.npmjs.com/package/timps-mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
-[![CI](https://github.com/Sandeeprdy1729/timps/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandeeprdy1729/timps/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://www.npmjs.com/package/timps-code"><img src="https://img.shields.io/npm/v/timps-code?label=timps-code&color=brightgreen&style=for-the-badge" alt="npm timps-code"></a>
+  <a href="https://www.npmjs.com/package/timps-mcp"><img src="https://img.shields.io/npm/v/timps-mcp?label=timps-mcp&color=0ea5e9&style=for-the-badge" alt="npm timps-mcp"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent"><img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visualstudiocode" alt="VS Code Extension"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT License"></a>
+  <a href="https://github.com/Sandeeprdy1729/timps/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Sandeeprdy1729/timps/ci.yml?label=CI&style=for-the-badge" alt="CI"></a>
+  <a href="https://discord.gg/timps"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
+</p>
 
-**Claude Code forgets everything when you close it. TIMPS remembers — forever.**
+<p align="center">
+  <b>Claude Code forgets everything when you close it. TIMPS remembers — forever.</b><br>
+  <i>Free (Ollama), open source, runs 100% locally, works in Claude/Cursor/Windsurf via MCP.</i>
+</p>
 
-[Quick Start](#-quick-start) · [MCP Tools](#-timps-mcp--20-tools-for-claudecursorwindsurf) · [VS Code Extension](#-timps-vscode-extension) · [Full Server](#-full-server-setup) · [Contributing](contributing.md)
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-timps-mcp--20-tools-for-claudecursorwindsurf">MCP Tools</a> ·
+  <a href="#-timps-vscode-extension">VS Code</a> ·
+  <a href="#-full-server-setup">Full Server</a> ·
+  <a href="contributing.md">Contributing</a> ·
+  <a href="https://discord.gg/timps">Discord</a>
+</p>
 
-</div>
+---
+
+<table>
+<tr><td><b>3-layer persistent memory</b></td><td>Working → Episodic → Semantic. TIMPS builds a deepening model of your project across every session. Say "use the pattern we always use for routes" — it knows what you mean.</td></tr>
+<tr><td><b>Runs free, 100% locally</b></td><td>Default provider is Ollama — no API key, no data leaving your machine, no monthly bill. Switch to Claude, GPT-4o, Gemini, or OpenRouter in one flag.</td></tr>
+<tr><td><b>20 MCP tools for Claude/Cursor</b></td><td>Give Claude Code and Cursor the persistent memory they were born without. Install <code>timps-mcp</code> and connect it in 30 seconds.</td></tr>
+<tr><td><b>VS Code extension</b></td><td>TIMPS Chat panel, Memory Explorer, and inline agent — right inside your editor. Install from the VS Marketplace.</td></tr>
+<tr><td><b>Self-correcting agent loop</b></td><td>When a command fails, TIMPS analyzes the error, revises its plan, and retries automatically. Up to 3 retries with a different approach each time.</td></tr>
+<tr><td><b>Skills system</b></td><td>Install reusable prompt packages (<code>/skills install react-patterns</code>) for domain expertise that loads automatically when relevant.</td></tr>
+<tr><td><b>17 intelligence tools</b></td><td>Contradiction Detector, Bug Pattern Prophet, Burnout Seismograph, Tech Debt Radar, and more — all wired to your personal history.</td></tr>
+</table>
 
 ---
 

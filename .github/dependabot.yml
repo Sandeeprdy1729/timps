@@ -1,0 +1,55 @@
+version: 2
+updates:
+  # timps-code
+  - package-ecosystem: "npm"
+    directory: "/timps-code"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "timps-code"
+
+  # timps-mcp
+  - package-ecosystem: "npm"
+    directory: "/timps-mcp"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "timps-mcp"
+
+  # timps-vscode
+  - package-ecosystem: "npm"
+    directory: "/timps-vscode"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "timps-vscode"
+
+  # sandeep-ai
+  - package-ecosystem: "npm"
+    directory: "/sandeep-ai"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "sandeep-ai"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"
