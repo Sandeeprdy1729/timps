@@ -60,7 +60,7 @@
     "diff": "^5.2.0",
     "dotenv": "^17.4.2",
     "glob": "^10.4.0",
-    "ora": "^8.1.0"
+    "ora": "^9.4.0"
   },
   "devDependencies": {
     "@types/diff": "^5.2.0",
