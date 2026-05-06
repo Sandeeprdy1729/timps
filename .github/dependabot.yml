@@ -1,12 +1,14 @@
 version: 2
 updates:
-  # timps-code
+  # timps-code — one grouped PR per month instead of many weekly PRs
   - package-ecosystem: "npm"
     directory: "/timps-code"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      timps-code-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "timps-code"
@@ -15,9 +17,11 @@ updates:
   - package-ecosystem: "npm"
     directory: "/timps-mcp"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      timps-mcp-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "timps-mcp"
@@ -26,9 +30,11 @@ updates:
   - package-ecosystem: "npm"
     directory: "/timps-vscode"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      timps-vscode-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "timps-vscode"
@@ -37,9 +43,11 @@ updates:
   - package-ecosystem: "npm"
     directory: "/sandeep-ai"
     schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      sandeep-ai-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "sandeep-ai"
@@ -48,8 +56,11 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      actions-deps:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "github-actions"
