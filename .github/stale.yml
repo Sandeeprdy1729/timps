@@ -1,0 +1,31 @@
+pulls:
+  daysUntilStale: 60
+  daysUntilClose: 7
+  staleLabel: stale
+  markComment: |
+    This pull request has been inactive for 60 days. It will be closed in 7 days unless there is new activity.
+    
+    If you're still working on this, please leave a comment or push a commit to reset the timer.
+  closeComment: |
+    This pull request was closed due to inactivity. Feel free to reopen it if you'd like to continue.
+  exemptLabels:
+    - pinned
+    - security
+    - do-not-stale
+    - dependencies
+
+issues:
+  daysUntilStale: 90
+  daysUntilClose: 14
+  staleLabel: stale
+  markComment: |
+    This issue has been inactive for 90 days. It will be closed in 14 days unless there is new activity.
+    
+    If this is still relevant, please comment to keep it open.
+  closeComment: |
+    This issue was closed due to inactivity. If this is still a problem, please open a new issue with updated details.
+  exemptLabels:
+    - pinned
+    - security
+    - roadmap
+    - do-not-stale

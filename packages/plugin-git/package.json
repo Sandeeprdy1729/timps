@@ -1,0 +1,16 @@
+{
+  "name": "@timps-plugin/git",
+  "version": "0.1.0",
+  "description": "TIMPS plugin: enhanced git tools (commit, push, pr, stash)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@timps/plugin-sdk": "*"
+  },
+  "keywords": ["timps-plugin", "git"],
+  "license": "MIT"
+}

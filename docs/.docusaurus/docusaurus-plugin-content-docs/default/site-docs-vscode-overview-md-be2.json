@@ -1,0 +1,27 @@
+{
+  "id": "vscode/overview",
+  "title": "VS Code Extension Overview",
+  "description": "The TIMPS — AI Coding Agent extension brings the full TIMPS experience into VS Code.",
+  "source": "@site/docs/vscode/overview.md",
+  "sourceDirName": "vscode",
+  "slug": "/vscode/overview",
+  "permalink": "/docs/vscode/overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/vscode/overview.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "MCP Server Setup",
+    "permalink": "/docs/mcp/setup"
+  },
+  "next": {
+    "title": "Memory Layers View",
+    "permalink": "/docs/vscode/memory-view"
+  }
+}

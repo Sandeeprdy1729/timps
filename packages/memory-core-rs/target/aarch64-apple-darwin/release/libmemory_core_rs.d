@@ -1,0 +1,1 @@
+/Users/sandeepreddy/Desktop/testbot/packages/memory-core-rs/target/aarch64-apple-darwin/release/libmemory_core_rs.dylib: /Users/sandeepreddy/Desktop/testbot/packages/memory-core-rs/build.rs /Users/sandeepreddy/Desktop/testbot/packages/memory-core-rs/src/lib.rs

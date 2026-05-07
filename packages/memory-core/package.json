@@ -1,0 +1,48 @@
+{
+  "name": "@timps/memory-core",
+  "version": "0.1.0",
+  "description": "TIMPS 3-layer persistent memory engine — working, episodic, and semantic memory with intelligence tools",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --config jest.config.cjs",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "minisearch": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.4",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "memory",
+    "agent",
+    "ai",
+    "timps",
+    "episodic",
+    "semantic",
+    "working-memory"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

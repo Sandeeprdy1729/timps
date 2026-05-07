@@ -1,0 +1,42 @@
+name: feature-plan
+description: Plan and scaffold a new feature with tests
+memory_context: true
+
+steps:
+  - name: understand_codebase
+    prompt: |
+      Read the project structure:
+      1. Run: ls -la
+      2. Read README.md (first 100 lines)
+      3. List main source directories
+      Report a brief summary of the codebase architecture.
+
+  - name: design
+    prompt: |
+      Based on this codebase:
+      {understand_codebase.output}
+
+      Design an implementation plan for the requested feature.
+      Include:
+      - Files to create/modify
+      - Data types/interfaces needed
+      - API surface (functions, classes, or endpoints)
+      - Testing approach
+
+  - name: scaffold
+    prompt: |
+      Implement the scaffold for this plan:
+      {design.output}
+
+      Create stub files with type signatures and TODO comments.
+      Don't implement logic yet — just the structure.
+
+  - name: write_tests
+    prompt: |
+      Write failing tests for the scaffold:
+      {scaffold.output}
+
+      Tests should:
+      - Cover the happy path
+      - Cover 2-3 edge cases
+      - Be runnable (correct imports, test runner syntax)

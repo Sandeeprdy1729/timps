@@ -1,0 +1,27 @@
+{
+  "id": "memory/semantic",
+  "title": "Semantic Memory",
+  "description": "Semantic memory holds distilled facts about the project — patterns, architectural decisions, constraints, and preferences. It persists indefinitely and is retrieved by relevance.",
+  "source": "@site/docs/memory/semantic.md",
+  "sourceDirName": "memory",
+  "slug": "/memory/semantic",
+  "permalink": "/docs/memory/semantic",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/memory/semantic.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Episodic Memory",
+    "permalink": "/docs/memory/episodic"
+  },
+  "next": {
+    "title": "Skills Overview",
+    "permalink": "/docs/skills/overview"
+  }
+}

@@ -1,0 +1,126 @@
+name: Tauri Desktop Release
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. desktop-v0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── macOS ARM64 ───────────────────────────────────────────────────
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+            artifact_name: TIMPS_aarch64-apple-darwin
+
+          # ── macOS x64 ────────────────────────────────────────────────────
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+            artifact_name: TIMPS_x86_64-apple-darwin
+
+          # ── Linux x64 ────────────────────────────────────────────────────
+          - platform: ubuntu-22.04
+            args: ''
+            artifact_name: TIMPS_linux-x86_64
+
+          # ── Windows x64 ──────────────────────────────────────────────────
+          - platform: windows-latest
+            args: ''
+            artifact_name: TIMPS_windows-x86_64
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Rust toolchain ────────────────────────────────────────────────────
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/timps-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('packages/timps-desktop/src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-release-
+
+      # ── Linux system deps ─────────────────────────────────────────────────
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # ── Node + frontend ───────────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: packages/timps-desktop/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: packages/timps-desktop
+        run: npm ci
+
+      # ── Build Tauri app ───────────────────────────────────────────────────
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing — set these secrets in repo settings for signed builds
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: packages/timps-desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'TIMPS Desktop ${{ github.ref_name }}'
+          releaseBody: |
+            Cross-platform TIMPS Memory Cockpit desktop app.
+            See [CHANGELOG.md](https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md) for details.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  # ── Announce success ──────────────────────────────────────────────────────
+  summary:
+    name: Release summary
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print outcome
+        run: |
+          echo "Build matrix result: ${{ needs.build.result }}"
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "All platform builds succeeded."
+          else
+            echo "One or more builds failed — check matrix logs above."
+            exit 1
+          fi

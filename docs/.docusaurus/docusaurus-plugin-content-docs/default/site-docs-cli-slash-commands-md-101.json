@@ -1,0 +1,27 @@
+{
+  "id": "cli/slash-commands",
+  "title": "Slash Commands Reference",
+  "description": "Slash commands are typed inside the TIMPS CLI session prompt.",
+  "source": "@site/docs/cli/slash-commands.md",
+  "sourceDirName": "cli",
+  "slug": "/cli/slash-commands",
+  "permalink": "/docs/cli/slash-commands",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/cli/slash-commands.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "CLI Commands",
+    "permalink": "/docs/cli/commands"
+  },
+  "next": {
+    "title": "Contributing",
+    "permalink": "/docs/contributing"
+  }
+}

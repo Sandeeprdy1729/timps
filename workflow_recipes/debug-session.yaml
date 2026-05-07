@@ -1,0 +1,39 @@
+name: debug-session
+description: Systematic debugging workflow — reproduce, isolate, fix, verify
+memory_context: true
+
+steps:
+  - name: reproduce
+    prompt: |
+      The user reports this bug/error. Try to reproduce it:
+      1. Read any error messages from recent git log or test output
+      2. Run: git log --oneline -5
+      3. Run: npm test 2>&1 | tail -50 (or cargo test 2>&1 | tail -50)
+      Report: what error occurs and in which file/line.
+
+  - name: isolate
+    prompt: |
+      Given this error:
+      {reproduce.output}
+
+      Find the root cause:
+      1. Read the failing file(s)
+      2. Trace the call stack
+      3. Check for recent changes that might have caused it (git diff HEAD~3 HEAD -- <file>)
+      Report the most likely root cause with evidence.
+
+  - name: fix
+    prompt: |
+      Write a fix for this root cause:
+      {isolate.output}
+
+      Requirements:
+      - Minimal change (don't refactor unrelated code)
+      - Add a regression test if possible
+      - Show the exact code change needed
+
+  - name: verify
+    prompt: |
+      Apply the fix from the previous step if it's safe to do so automatically.
+      Then run tests again to verify the fix works.
+      Report: FIXED or STILL FAILING with details.

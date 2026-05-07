@@ -18,6 +18,12 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - `.github/workflows/supply-chain-audit.yml` — npm audit + OSV scanning on every push
 - `.github/workflows/docker-publish.yml` — multi-arch Docker image auto-publish on tag
 - `timps --doctor` diagnostic command to self-diagnose config issues
+- **Phase 5**: `@timps/memory-dashboard` — sigma.js graph web UI for memory exploration (`/api/graph` endpoint, Vite build)
+- **Phase 6**: `@timps/memory-core-rs` — Rust/NAPI-RS native addon; 6.4× speedup on `loadSemantic` at 500 entries; 19/19 Rust unit tests; `isNativeAvailable()` export in `@timps/memory-core`
+- **Phase 7**: `@timps/desktop` — Tauri 2 desktop app (macOS/Linux/Windows); 7 Rust memory commands; React frontend with Stats/Semantic/Episodic/Search views
+- **Phase 8**: CI jobs for `memory-core`, `memory-core-rs`, `timps-desktop` added to `.github/workflows/ci.yml`; `.github/workflows/tauri-release.yml` — cross-platform binary builds triggered on `desktop-v*` tags
+- **Phase 9**: `@timps/plugin-sdk` — formal plugin interface: `PluginRegistry`, `loadPlugin`, `Plugin`/`PluginManifest`/`PluginContext` types, echo reference plugin; 17/17 Vitest tests; wired into `turbo.json` + CI matrix
+- **Phase 10**: `PluginManager` class bridges `@timps/plugin-sdk` into `timps-code` agent loop; plugin tools merged at runtime in `agent.ts`; `/plugin list|load|unload` slash commands in `app.ts`; 15/15 Jest tests
 
 ---
 

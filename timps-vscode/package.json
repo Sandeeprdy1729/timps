@@ -54,10 +54,22 @@
           "id": "timps.nexusForgeExplorer",
           "name": "Memory Explorer",
           "contextualTitle": "Project Memory Graph"
+        },
+        {
+          "type": "tree",
+          "id": "timps.memoryView",
+          "name": "Memory Layers",
+          "contextualTitle": "TIMPS 3-Layer Memory"
         }
       ]
     },
     "commands": [
+      {
+        "command": "timps.refreshMemory",
+        "title": "Refresh Memory",
+        "category": "TIMPS",
+        "icon": "$(refresh)"
+      },
       {
         "command": "timps.openChat",
         "title": "Open TIMPS Chat",
@@ -141,6 +153,11 @@
           "command": "timps.openSettings",
           "when": "view == timps.chatView",
           "group": "navigation@3"
+        },
+        {
+          "command": "timps.refreshMemory",
+          "when": "view == timps.memoryView",
+          "group": "navigation@1"
         }
       ]
     },

@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "updated": "2026-05-07",
+  "skills": [
+    {
+      "id": "nextjs-patterns",
+      "name": "Next.js Patterns",
+      "description": "App Router patterns: server components, streaming, route handlers, metadata, image optimization",
+      "category": "framework",
+      "tags": ["nextjs", "react", "app-router", "server-components"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: nextjs-patterns\ncategory: framework\ndescription: Next.js App Router patterns and conventions\n---\n\n# Next.js Patterns\n\n## Server vs Client Components\n\nDefault to Server Components. Add `'use client'` only when you need:\n- `useState`, `useEffect`, `useReducer`\n- Browser APIs (`window`, `document`)\n- Event listeners\n- Third-party client-only libraries\n\n```tsx\n// Server Component (default) — no directive needed\nasync function ProductPage({ params }: { params: { id: string } }) {\n  const product = await db.products.findUnique({ where: { id: params.id } });\n  return <ProductDetail product={product} />;\n}\n\n// Client Component\n'use client';\nfunction AddToCart({ productId }: { productId: string }) {\n  const [loading, setLoading] = useState(false);\n  // ...\n}\n```\n\n## Route Handlers\n\n```ts\n// app/api/products/route.ts\nexport async function GET(request: Request) {\n  const { searchParams } = new URL(request.url);\n  const q = searchParams.get('q') ?? '';\n  const products = await db.products.findMany({ where: { name: { contains: q } } });\n  return Response.json(products);\n}\n\nexport async function POST(request: Request) {\n  const body = await request.json();\n  // validate with zod before DB write\n  const parsed = ProductSchema.safeParse(body);\n  if (!parsed.success) return Response.json({ error: parsed.error }, { status: 400 });\n  const product = await db.products.create({ data: parsed.data });\n  return Response.json(product, { status: 201 });\n}\n```\n\n## Metadata\n\n```ts\n// Static metadata\nexport const metadata: Metadata = {\n  title: 'Product Catalog',\n  description: 'Browse all products',\n};\n\n// Dynamic metadata\nexport async function generateMetadata({ params }: Props): Promise<Metadata> {\n  const product = await getProduct(params.id);\n  return { title: product.name, description: product.description };\n}\n```\n\n## Loading & Error Boundaries\n\n```\napp/products/\n  page.tsx       — main page\n  loading.tsx    — shown while page.tsx suspends\n  error.tsx      — 'use client' error boundary\n  not-found.tsx  — shown when notFound() is called\n```\n\n## Data Fetching Patterns\n\n```ts\n// Parallel fetches (preferred)\nconst [user, products] = await Promise.all([getUser(id), getProducts()]);\n\n// Fetch with revalidation\nconst data = await fetch('/api/products', { next: { revalidate: 60 } });\n\n// Server Action\n'use server';\nasync function updateProduct(formData: FormData) {\n  const id = formData.get('id') as string;\n  await db.products.update({ where: { id }, data: { name: formData.get('name') as string } });\n  revalidatePath('/products');\n}\n```\n\n## Image Optimization\n\n```tsx\nimport Image from 'next/image';\n<Image src={product.imageUrl} alt={product.name} width={400} height={300} priority />\n```\n\n## Convention\n- Route groups: `(marketing)`, `(app)` — organize without affecting URL\n- Colocation: keep components, hooks, utils near the route that uses them\n- `lib/` for shared utilities, `components/ui/` for reusable UI\n"
+    },
+    {
+      "id": "react-patterns",
+      "name": "React Patterns",
+      "description": "Compound components, render props, custom hooks, context patterns",
+      "category": "framework",
+      "tags": ["react", "hooks", "patterns", "typescript"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: react-patterns\ncategory: framework\ndescription: Advanced React patterns for scalable component design\n---\n\n# React Patterns\n\n## Custom Hooks\n\nExtract stateful logic into hooks. Name must start with `use`.\n\n```ts\nfunction useLocalStorage<T>(key: string, initial: T) {\n  const [value, setValue] = useState<T>(() => {\n    try { return JSON.parse(localStorage.getItem(key) ?? '') as T; }\n    catch { return initial; }\n  });\n  const set = useCallback((v: T) => {\n    setValue(v);\n    localStorage.setItem(key, JSON.stringify(v));\n  }, [key]);\n  return [value, set] as const;\n}\n```\n\n## Compound Components\n\n```tsx\nconst Select = ({ children, value, onChange }: SelectProps) => (\n  <SelectContext.Provider value={{ value, onChange }}>\n    <div className=\"select\">{children}</div>\n  </SelectContext.Provider>\n);\nSelect.Option = function Option({ value, children }: OptionProps) {\n  const ctx = useContext(SelectContext);\n  return <button onClick={() => ctx.onChange(value)}>{children}</button>;\n};\n// Usage: <Select><Select.Option value=\"a\">A</Select.Option></Select>\n```\n\n## Error Boundaries\n\n```tsx\n// Always use for async data-fetching components\n<ErrorBoundary fallback={<ErrorFallback />}>\n  <Suspense fallback={<Spinner />}>\n    <AsyncDataComponent />\n  </Suspense>\n</ErrorBoundary>\n```\n\n## Rules\n- Lift state only as high as needed\n- Prefer `useReducer` over multiple `useState` for complex state\n- `useMemo`/`useCallback` only after profiling shows a need\n- Co-locate state with the component that owns it\n"
+    },
+    {
+      "id": "typescript-strict",
+      "name": "TypeScript Strict Mode",
+      "description": "Strict TypeScript patterns: narrowing, generics, utility types, discriminated unions",
+      "category": "language",
+      "tags": ["typescript", "strict", "types", "generics"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: typescript-strict\ncategory: language\ndescription: TypeScript strict mode patterns and best practices\n---\n\n# TypeScript Strict Mode\n\n## Discriminated Unions (prefer over inheritance)\n\n```ts\ntype Result<T> =\n  | { ok: true; value: T }\n  | { ok: false; error: string };\n\nfunction divide(a: number, b: number): Result<number> {\n  if (b === 0) return { ok: false, error: 'Division by zero' };\n  return { ok: true, value: a / b };\n}\n```\n\n## Type Narrowing\n\n```ts\nfunction processInput(input: string | number | null) {\n  if (input === null) return 'null';\n  if (typeof input === 'string') return input.toUpperCase();\n  return input.toFixed(2);\n}\n```\n\n## Utility Types\n\n```ts\ntype PartialUser = Partial<User>;           // all optional\ntype ReadonlyUser = Readonly<User>;         // all readonly\ntype UserPreview = Pick<User, 'id' | 'name'>;  // subset\ntype UserWithoutPw = Omit<User, 'password'>; // exclude\ntype UserOrAdmin = User | Admin;             // union\n```\n\n## Generic Constraints\n\n```ts\nfunction getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {\n  return obj[key];\n}\n```\n\n## Rules\n- Enable `strict: true`, `noUncheckedIndexedAccess: true`\n- Avoid `any` — use `unknown` + narrowing instead\n- Prefer interfaces for object shapes (better error messages)\n- Use `as const` for literal arrays/objects\n"
+    },
+    {
+      "id": "testing-patterns",
+      "name": "Testing Patterns",
+      "description": "Jest + supertest patterns: unit tests, integration tests, mocking, test data factories",
+      "category": "testing",
+      "tags": ["jest", "testing", "supertest", "mocking", "tdd"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: testing-patterns\ncategory: testing\ndescription: Jest testing patterns for TypeScript projects\n---\n\n# Testing Patterns\n\n## Test Structure (AAA)\n\n```ts\ndescribe('UserService', () => {\n  it('should create a user with hashed password', async () => {\n    // Arrange\n    const input = { email: 'test@test.com', password: 'plain' };\n    // Act\n    const user = await userService.create(input);\n    // Assert\n    expect(user.email).toBe(input.email);\n    expect(user.password).not.toBe(input.password);\n  });\n});\n```\n\n## Mocking Modules\n\n```ts\njest.mock('../db', () => ({\n  users: { findUnique: jest.fn(), create: jest.fn() },\n}));\n\nbeforeEach(() => jest.clearAllMocks());\n```\n\n## Test Data Factories\n\n```ts\nfunction makeUser(overrides: Partial<User> = {}): User {\n  return { id: 'u1', email: 'test@test.com', role: 'user', ...overrides };\n}\n```\n\n## Integration Tests with Supertest\n\n```ts\nconst app = createApp();\ndescribe('POST /api/users', () => {\n  it('returns 201 on valid input', async () => {\n    const res = await request(app).post('/api/users').send({ email: 'a@b.com', password: 'pass' });\n    expect(res.status).toBe(201);\n    expect(res.body.email).toBe('a@b.com');\n  });\n});\n```\n\n## Rules\n- Test behavior, not implementation\n- One assertion per test (when possible)\n- `beforeEach` / `afterEach` for setup/teardown, not `beforeAll`\n- Name tests as: 'should [behavior] when [condition]'\n"
+    },
+    {
+      "id": "api-security",
+      "name": "API Security",
+      "description": "OWASP Top 10 patterns: input validation, rate limiting, auth middleware, CORS",
+      "category": "security",
+      "tags": ["security", "owasp", "api", "auth", "validation"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: api-security\ncategory: security\ndescription: OWASP-aligned API security patterns\n---\n\n# API Security Patterns\n\n## Input Validation (always use zod)\n\n```ts\nconst CreateUserSchema = z.object({\n  email: z.string().email().max(254),\n  password: z.string().min(8).max(128),\n  role: z.enum(['user', 'admin']).default('user'),\n});\n\napp.post('/users', async (req, res) => {\n  const parsed = CreateUserSchema.safeParse(req.body);\n  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });\n  // safe to use parsed.data\n});\n```\n\n## Auth Middleware\n\n```ts\nconst requireAuth = (req: Request, res: Response, next: NextFunction) => {\n  const token = req.headers.authorization?.split(' ')[1];\n  if (!token) return res.status(401).json({ error: 'Unauthorized' });\n  try {\n    req.user = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;\n    next();\n  } catch {\n    res.status(401).json({ error: 'Invalid token' });\n  }\n};\n```\n\n## Rate Limiting\n\n```ts\nimport rateLimit from 'express-rate-limit';\nconst limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });\napp.use('/api/', limiter);\n```\n\n## Rules\n- Never trust req.body — always validate\n- Never log passwords, tokens, or PII\n- Use parameterized queries (never string concatenation for SQL)\n- Set security headers: helmet(), CORS with allowlist\n- Secrets in env vars, never in code\n"
+    },
+    {
+      "id": "prisma-patterns",
+      "name": "Prisma Patterns",
+      "description": "Prisma ORM patterns: relations, transactions, migrations, soft deletes",
+      "category": "database",
+      "tags": ["prisma", "database", "orm", "postgresql", "typescript"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: prisma-patterns\ncategory: database\ndescription: Prisma ORM patterns and conventions\n---\n\n# Prisma Patterns\n\n## Schema Conventions\n\n```prisma\nmodel User {\n  id        String   @id @default(cuid())\n  email     String   @unique\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  deletedAt DateTime? // soft delete\n  posts     Post[]\n}\n```\n\n## Transactions\n\n```ts\n// Interactive transactions for complex operations\nconst result = await prisma.$transaction(async (tx) => {\n  const order = await tx.order.create({ data: orderData });\n  await tx.inventory.update({ where: { id: itemId }, data: { stock: { decrement: 1 } } });\n  return order;\n});\n```\n\n## Soft Deletes\n\n```ts\n// Never hard delete — soft delete with deletedAt\nawait prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });\n// Always filter in queries\nconst users = await prisma.user.findMany({ where: { deletedAt: null } });\n```\n\n## N+1 Prevention\n\n```ts\n// Bad: N+1\nconst users = await prisma.user.findMany();\nfor (const user of users) {\n  user.posts = await prisma.post.findMany({ where: { userId: user.id } }); // N queries!\n}\n// Good: include\nconst users = await prisma.user.findMany({ include: { posts: true } });\n```\n"
+    },
+    {
+      "id": "docker-patterns",
+      "name": "Docker Patterns",
+      "description": "Production Dockerfile patterns: multi-stage builds, security, caching, health checks",
+      "category": "devops",
+      "tags": ["docker", "devops", "containers", "security", "ci"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: docker-patterns\ncategory: devops\ndescription: Production-ready Docker patterns\n---\n\n# Docker Patterns\n\n## Multi-Stage Node.js Dockerfile\n\n```dockerfile\n# Build stage\nFROM node:22-alpine AS builder\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nRUN npm run build\n\n# Runtime stage\nFROM node:22-alpine AS runner\nRUN addgroup --system app && adduser --system --ingroup app app\nWORKDIR /app\nCOPY --from=builder --chown=app:app /app/dist ./dist\nCOPY --from=builder --chown=app:app /app/node_modules ./node_modules\nUSER app\nEXPOSE 3000\nHEALTHCHECK --interval=30s CMD wget -qO- http://localhost:3000/health || exit 1\nCMD [\"node\", \"dist/index.js\"]\n```\n\n## .dockerignore\n\n```\nnode_modules\n.env\n*.log\ndist\n.git\ncoverage\n```\n\n## Rules\n- Always use specific tags (not `latest`)\n- Run as non-root user\n- Multi-stage to minimize image size\n- HEALTHCHECK for production\n- Never put secrets in Dockerfile or image layers\n"
+    },
+    {
+      "id": "git-workflow",
+      "name": "Git Workflow",
+      "description": "Trunk-based development, commit conventions, PR templates, branch naming",
+      "category": "workflow",
+      "tags": ["git", "workflow", "commits", "pr", "branching"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: git-workflow\ncategory: workflow\ndescription: Trunk-based development workflow conventions\n---\n\n# Git Workflow\n\n## Commit Message Convention (Conventional Commits)\n\n```\n<type>(<scope>): <short summary>\n\n[optional body]\n\n[optional footer]\n```\n\nTypes: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`\n\nExamples:\n```\nfeat(auth): add JWT refresh token rotation\nfix(db): resolve N+1 query in user listing\ntest(api): add integration tests for /users endpoint\n```\n\n## Branch Naming\n\n```\nfeat/description-of-feature\nfix/short-bug-description\nchore/dependency-updates\nrelease/v1.2.0\n```\n\n## PR Template\n\n```markdown\n## What does this change?\n[1-3 sentences]\n\n## Why?\n[context, links to issue]\n\n## Testing\n- [ ] Unit tests added/updated\n- [ ] Integration tests pass\n- [ ] Manual testing done\n\n## Checklist\n- [ ] `tsc --noEmit` passes\n- [ ] No console.log left in code\n- [ ] Backward compatible\n```\n\n## Rules\n- Main is always deployable\n- Short-lived branches (< 2 days)\n- Squash merge to keep main history clean\n- Tag releases: `git tag v1.2.0 && git push --tags`\n"
+    },
+    {
+      "id": "error-handling",
+      "name": "Error Handling",
+      "description": "Typed error patterns, Result types, async error boundaries, centralized error middleware",
+      "category": "patterns",
+      "tags": ["errors", "typescript", "async", "express", "patterns"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: error-handling\ncategory: patterns\ndescription: Typed error handling patterns for TypeScript\n---\n\n# Error Handling\n\n## Result Type\n\n```ts\ntype Ok<T> = { ok: true; value: T };\ntype Err = { ok: false; error: string; code?: string };\ntype Result<T> = Ok<T> | Err;\n\nconst ok = <T>(value: T): Ok<T> => ({ ok: true, value });\nconst err = (error: string, code?: string): Err => ({ ok: false, error, code });\n```\n\n## Typed Application Errors\n\n```ts\nclass AppError extends Error {\n  constructor(public message: string, public statusCode: number, public code: string) {\n    super(message);\n    this.name = 'AppError';\n  }\n}\n\nclass NotFoundError extends AppError {\n  constructor(resource: string) { super(`${resource} not found`, 404, 'NOT_FOUND'); }\n}\nclass ValidationError extends AppError {\n  constructor(message: string) { super(message, 400, 'VALIDATION_ERROR'); }\n}\n```\n\n## Express Error Middleware\n\n```ts\napp.use((err: Error, req: Request, res: Response, _next: NextFunction) => {\n  if (err instanceof AppError) {\n    return res.status(err.statusCode).json({ error: err.message, code: err.code });\n  }\n  console.error(err); // log unexpected errors\n  res.status(500).json({ error: 'Internal server error' });\n});\n```\n\n## Rules\n- Never swallow errors silently (`catch {}` is forbidden)\n- Always log unexpected errors with stack trace\n- Return typed errors from service layer, throw in route handlers\n- `finally` for cleanup (db connections, temp files)\n"
+    },
+    {
+      "id": "react-query-patterns",
+      "name": "TanStack Query Patterns",
+      "description": "useQuery, useMutation, optimistic updates, cache invalidation, error handling",
+      "category": "framework",
+      "tags": ["react-query", "tanstack", "async", "caching", "mutations"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: react-query-patterns\ncategory: framework\ndescription: TanStack Query v5 patterns\n---\n\n# TanStack Query Patterns\n\n## Query Keys as Constants\n\n```ts\nexport const userKeys = {\n  all: ['users'] as const,\n  list: () => [...userKeys.all, 'list'] as const,\n  detail: (id: string) => [...userKeys.all, 'detail', id] as const,\n};\n```\n\n## useQuery\n\n```ts\nconst { data: user, isPending, error } = useQuery({\n  queryKey: userKeys.detail(userId),\n  queryFn: () => fetchUser(userId),\n  staleTime: 5 * 60 * 1000, // 5 min\n});\n```\n\n## useMutation with Optimistic Update\n\n```ts\nconst updateUser = useMutation({\n  mutationFn: (data: UpdateUserInput) => api.updateUser(data),\n  onMutate: async (data) => {\n    await queryClient.cancelQueries({ queryKey: userKeys.detail(data.id) });\n    const previous = queryClient.getQueryData(userKeys.detail(data.id));\n    queryClient.setQueryData(userKeys.detail(data.id), (old) => ({ ...old, ...data }));\n    return { previous };\n  },\n  onError: (_err, data, ctx) => {\n    queryClient.setQueryData(userKeys.detail(data.id), ctx?.previous);\n  },\n  onSettled: (data) => {\n    queryClient.invalidateQueries({ queryKey: userKeys.detail(data!.id) });\n  },\n});\n```\n\n## Rules\n- Define query keys as typed constants — never inline strings\n- Set `staleTime` explicitly (default 0 is too aggressive)\n- Use `suspense: true` with Suspense boundaries for loading states\n"
+    },
+    {
+      "id": "zod-validation",
+      "name": "Zod Validation",
+      "description": "Schema validation patterns with zod: parsing, transforms, custom errors, inferred types",
+      "category": "patterns",
+      "tags": ["zod", "validation", "typescript", "schema", "parsing"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: zod-validation\ncategory: patterns\ndescription: Zod schema validation patterns\n---\n\n# Zod Validation\n\n## Basic Usage\n\n```ts\nimport { z } from 'zod';\n\nconst UserSchema = z.object({\n  id: z.string().cuid(),\n  email: z.string().email(),\n  age: z.number().int().min(13).max(120),\n  role: z.enum(['user', 'admin', 'moderator']).default('user'),\n});\n\ntype User = z.infer<typeof UserSchema>; // derive type from schema\n```\n\n## Transforms\n\n```ts\nconst DateSchema = z.string().transform((s) => new Date(s));\nconst TrimmedString = z.string().trim().min(1);\nconst CoercedNumber = z.coerce.number(); // '42' -> 42\n```\n\n## Custom Errors\n\n```ts\nconst PasswordSchema = z.string()\n  .min(8, 'Password must be at least 8 characters')\n  .regex(/[A-Z]/, 'Must contain at least one uppercase letter')\n  .regex(/[0-9]/, 'Must contain at least one number');\n```\n\n## Partial / Merge for Update Schemas\n\n```ts\nconst CreateUserSchema = z.object({ email: z.string().email(), name: z.string() });\nconst UpdateUserSchema = CreateUserSchema.partial().merge(z.object({ id: z.string() }));\n```\n\n## Rules\n- Always use `safeParse` (not `parse`) at API boundaries — returns `{ success, data, error }`\n- Derive TypeScript types from schemas with `z.infer<typeof Schema>`\n- Colocate schema with the type it validates\n- Use `.describe()` on fields for better error messages and docs\n"
+    },
+    {
+      "id": "monorepo-patterns",
+      "name": "Monorepo Patterns",
+      "description": "npm workspaces conventions: package structure, shared configs, build order, cross-package imports",
+      "category": "architecture",
+      "tags": ["monorepo", "npm-workspaces", "typescript", "build", "packages"],
+      "author": "timps-community",
+      "version": "1.0.0",
+      "content": "---\nname: monorepo-patterns\ncategory: architecture\ndescription: npm workspaces monorepo patterns\n---\n\n# Monorepo Patterns\n\n## Structure\n\n```\nroot/\n  package.json          # workspaces: [\"packages/*\", \"apps/*\"]\n  tsconfig.base.json    # shared TS config\n  packages/\n    memory-core/        # @myorg/memory-core\n    ui/                 # @myorg/ui\n  apps/\n    web/                # uses @myorg/ui\n    cli/                # uses @myorg/memory-core\n```\n\n## Package Naming\n\n```json\n{ \"name\": \"@myorg/memory-core\", \"version\": \"0.1.0\" }\n```\n\n## Cross-Package Imports\n\n```ts\n// In apps/cli/package.json\n{ \"dependencies\": { \"@myorg/memory-core\": \"*\" } }\n\n// In apps/cli/src/index.ts\nimport { MemoryEngine } from '@myorg/memory-core';\n```\n\n## Shared tsconfig.base.json\n\n```json\n{\n  \"compilerOptions\": {\n    \"strict\": true, \"target\": \"ES2022\", \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\", \"declaration\": true,\n    \"declarationMap\": true, \"sourceMap\": true\n  }\n}\n```\n\n## Rules\n- Build shared packages before apps: `npm run build -w packages/memory-core`\n- Never import from `dist/` in dev — use `exports` field with `\".\": { \"development\": \"./src/index.ts\" }`\n- Keep circular deps at zero: `madge --circular`\n- One `tsconfig.base.json` at root, extended by each package\n"
+    }
+  ]
+}

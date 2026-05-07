@@ -1,0 +1,252 @@
+{
+  "q001": {
+    "expected_keywords": ["JWT", "session", "OAuth", "token", "cookie"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q002": {
+    "expected_keywords": ["Redux", "Context", "Zustand", "state", "complexity", "boilerplate"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q003": {
+    "expected_keywords": ["race condition", "queue", "async", "lock", "concurrent"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q004": {
+    "expected_keywords": ["try", "catch", "middleware", "error", "handler", "HTTP status"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q005": {
+    "expected_keywords": ["migration", "SQL", "schema", "timestamp", "up", "down"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q006": {
+    "expected_keywords": ["PostgreSQL", "relational", "schema", "joins", "ACID"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q007": {
+    "expected_keywords": ["interface", "I prefix", "PascalCase", "type", "naming"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q008": {
+    "expected_keywords": ["async", "await", "promise", "unhandled", "rejection"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q009": {
+    "expected_keywords": ["env", ".env", "dotenv", "process.env", "config"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q010": {
+    "expected_keywords": ["supertest", "integration", "unit", "mock", "endpoint", "jest"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q011": {
+    "expected_keywords": ["spaces", "tabs", "2", "4", "prettier", "eslint"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q012": {
+    "expected_keywords": ["Redis", "in-memory", "cache", "TTL", "LRU"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q013": {
+    "expected_keywords": ["WebSocket", "memory leak", "listener", "cleanup", "close"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q014": {
+    "expected_keywords": ["error", "warn", "log level", "stack trace", "console"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q015": {
+    "expected_keywords": ["monorepo", "shared", "packages", "workspace", "code sharing"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q016": {
+    "expected_keywords": ["Jest", "Vitest", "mocha", "testing", "runner"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q017": {
+    "expected_keywords": ["auth", "bearer", "token", "MCP", "header", "validate"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q018": {
+    "expected_keywords": ["off-by-one", "pagination", "offset", "limit", "page"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q019": {
+    "expected_keywords": ["ESM", "CJS", "module", "import", "export", "NodeNext"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q020": {
+    "expected_keywords": ["tool", "schema", "execute", "description", "register"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q021": {
+    "expected_keywords": ["Promise.all", "async iteration", "concurrent", "parallel", "batch"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q022": {
+    "expected_keywords": ["zod", "schema", "inputSchema", "JSON Schema", "z.string"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q023": {
+    "expected_keywords": ["token", "expiry", "refresh", "JWT", "401", "auth"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q024": {
+    "expected_keywords": ["optional", "?", "undefined", "default", "TypeScript"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q025": {
+    "expected_keywords": ["index.ts", "export", "re-export", "barrel", "public API"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q026": {
+    "expected_keywords": ["tsup", "tsc", "OOM", "memory", "bundle", "CJS"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q027": {
+    "expected_keywords": ["null", "undefined", "check", "export", "serialize"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q028": {
+    "expected_keywords": ["version", "1.0", "schema", "backward", "migration"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q029": {
+    "expected_keywords": ["Node.js", "inspector", "async_hooks", "trace", "debug"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q030": {
+    "expected_keywords": ["Windows", "path", "cross-platform", "slash", "support"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q031": {
+    "expected_keywords": ["snake_case", "camelCase", "JSON", "API", "response"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q032": {
+    "expected_keywords": ["timeout", "stream", "Ollama", "abort", "reconnect"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q033": {
+    "expected_keywords": ["working", "episodic", "semantic", "3-layer", "memory"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q034": {
+    "expected_keywords": ["Ink", "TUI", "React", "component", "panel", "render"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q035": {
+    "expected_keywords": ["functional", "class", "Ink", "React", "hooks"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q036": {
+    "expected_keywords": ["embedding", "Qdrant", "vector", "local", "BM25"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q037": {
+    "expected_keywords": ["Jest", "ESM", "transform", "moduleNameMapper", "ts-jest"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q038": {
+    "expected_keywords": ["error", "retry", "agent", "observation", "catch"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q039": {
+    "expected_keywords": ["project", "hash", "isolation", "per-project", "path"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q040": {
+    "expected_keywords": ["main", "feature", "branch", "PR", "trunk", "git"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q041": {
+    "expected_keywords": ["dedup", "duplicate", "episodic", "append", "check"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q042": {
+    "expected_keywords": ["vector", "index", "corruption", "import", "serialize"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q043": {
+    "expected_keywords": ["backward", "compat", "schema", "version", "migration", "breaking"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q044": {
+    "expected_keywords": [".test.ts", "spec", "test", "file", "naming"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q045": {
+    "expected_keywords": ["lazy", "getter", "??=", "instance", "class", "property"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q046": {
+    "expected_keywords": ["SHA-256", "hash", "project path", "deterministic", "collision"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  },
+  "q047": {
+    "expected_keywords": ["BM25", "MiniSearch", "short", "string", "recall", "score"],
+    "expected_source": "stored incident",
+    "category": "bug_history"
+  },
+  "q048": {
+    "expected_keywords": ["description", "LLM", "routing", "tool", "MCP", "intent"],
+    "expected_source": "stored pattern",
+    "category": "code_pattern"
+  },
+  "q049": {
+    "expected_keywords": ["JSDoc", "comment", "internal", "helper", "minimal"],
+    "expected_source": "stored preference",
+    "category": "personal_preference"
+  },
+  "q050": {
+    "expected_keywords": ["MiniSearch", "Lunr", "size", "performance", "npm", "bundle"],
+    "expected_source": "stored decision",
+    "category": "architecture_decision"
+  }
+}

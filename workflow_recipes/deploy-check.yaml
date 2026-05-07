@@ -1,0 +1,37 @@
+name: deploy-check
+description: Pre-deployment safety checklist — tests, build, env vars, migrations
+memory_context: true
+
+steps:
+  - name: check_tests
+    prompt: |
+      Run the test suite: npm test --if-present 2>&1 || cargo test 2>&1
+      Report: pass/fail counts. If failures, list them.
+
+  - name: check_build
+    prompt: |
+      Run the build: npm run build --if-present 2>&1 || cargo check 2>&1
+      Report any errors or warnings.
+
+  - name: check_env
+    prompt: |
+      List all environment variable references in the codebase (grep for process.env or std::env::var).
+      Then check which ones are missing from .env.example or README.
+      Report any undocumented env vars.
+
+  - name: check_migrations
+    prompt: |
+      List any database migration files (look in migrations/, db/migrate/, prisma/migrations/).
+      Check if there are any pending migrations (files not mentioned in git history as applied).
+      Report the status.
+
+  - name: summary
+    prompt: |
+      Create a concise deployment readiness report with:
+      - ✅ PASS / ❌ FAIL / ⚠️ WARNING for each check
+      - Overall recommendation: READY / NOT READY / NEEDS REVIEW
+
+      Test results: {check_tests.output}
+      Build: {check_build.output}
+      Env vars: {check_env.output}
+      Migrations: {check_migrations.output}

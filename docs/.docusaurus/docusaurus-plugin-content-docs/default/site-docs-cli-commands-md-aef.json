@@ -1,0 +1,27 @@
+{
+  "id": "cli/commands",
+  "title": "CLI Commands",
+  "description": "Starting TIMPS",
+  "source": "@site/docs/cli/commands.md",
+  "sourceDirName": "cli",
+  "slug": "/cli/commands",
+  "permalink": "/docs/cli/commands",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/cli/commands.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Memory Layers View",
+    "permalink": "/docs/vscode/memory-view"
+  },
+  "next": {
+    "title": "Slash Commands Reference",
+    "permalink": "/docs/cli/slash-commands"
+  }
+}

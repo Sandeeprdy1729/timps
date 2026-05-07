@@ -326,6 +326,7 @@ export async function handleSlashCommand(
   sessionDir: string,
   providerName?: string,
   multimodalMem?: MultimodalMemory,
+  pluginManager?: import('../plugins/pluginManager.js').PluginManager,
 ): Promise<void> {
   const [cmd, ...rest] = input.slice(1).split(' ');
   const args = rest.join(' ').trim();
@@ -1526,6 +1527,67 @@ export async function handleSlashCommand(
       console.log(`\n  ${t.dim('session saved · goodbye')}\n`);
       process.exit(0);
       break;
+
+    case 'plugin': {
+      const [sub, ...pluginRest] = args.split(' ');
+      const pluginArg = pluginRest.join(' ').trim();
+      if (!pluginManager) {
+        console.log(`\n  ${t.dim('Plugin system not initialised.')}\n`);
+        break;
+      }
+      switch (sub) {
+        case 'list':
+        case 'ls': {
+          const plugins = pluginManager.listPlugins();
+          if (plugins.length === 0) {
+            console.log(`\n  ${t.dim('No plugins loaded. Use /plugin load <package> to add one.')}\n`);
+          } else {
+            console.log(`\n  ${t.accent('Loaded plugins:')}`);
+            for (const p of plugins) {
+              const cmds = (p.commands ?? []).map((c) => `/${c.name}`).join(', ');
+              const tools = (p.tools ?? []).map((t2) => t2.name).join(', ');
+              console.log(`  · ${t.accent(p.name)} v${p.version} — ${p.description}`);
+              if (cmds) console.log(`    commands: ${cmds}`);
+              if (tools) console.log(`    tools: ${tools}`);
+            }
+            console.log();
+          }
+          break;
+        }
+        case 'load': {
+          if (!pluginArg) {
+            console.log(`\n  ${t.dim('Usage: /plugin load <package-name-or-path>')}\n`);
+            break;
+          }
+          try {
+            await pluginManager.load(pluginArg);
+            console.log(`\n  ${t.success('✓')} Plugin loaded: ${t.accent(pluginArg)}\n`);
+          } catch (err) {
+            renderError(`Failed to load plugin "${pluginArg}": ${(err as Error).message}`);
+          }
+          break;
+        }
+        case 'unload': {
+          if (!pluginArg) {
+            console.log(`\n  ${t.dim('Usage: /plugin unload <plugin-name>')}\n`);
+            break;
+          }
+          const removed = await pluginManager.unload(pluginArg);
+          if (removed) {
+            console.log(`\n  ${t.success('✓')} Plugin unloaded: ${t.accent(pluginArg)}\n`);
+          } else {
+            console.log(`\n  ${t.dim(`Plugin not found: ${pluginArg}`)}\n`);
+          }
+          break;
+        }
+        default:
+          console.log(`\n  ${t.dim('Usage:')}`);
+          console.log(`  ${t.accent('/plugin list')}             — list loaded plugins`);
+          console.log(`  ${t.accent('/plugin load <pkg>')}       — load a plugin by package name or path`);
+          console.log(`  ${t.accent('/plugin unload <name>')}    — unload a plugin\n`);
+      }
+      break;
+    }
 
     default:
       console.log(`\n  ${t.dim(`Unknown command: /${cmd}. Type /help for commands.`)}\n`);

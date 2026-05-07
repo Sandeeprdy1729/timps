@@ -1,0 +1,27 @@
+{
+  "id": "skills/installing",
+  "title": "Installing Skills",
+  "description": "Skills are saved to ~/.timps/skills/.md and automatically loaded every time TIMPS starts.",
+  "source": "@site/docs/skills/installing.md",
+  "sourceDirName": "skills",
+  "slug": "/skills/installing",
+  "permalink": "/docs/skills/installing",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/skills/installing.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Skills Overview",
+    "permalink": "/docs/skills/overview"
+  },
+  "next": {
+    "title": "Creating Skills",
+    "permalink": "/docs/skills/creating"
+  }
+}

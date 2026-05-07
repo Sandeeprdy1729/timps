@@ -1,0 +1,118 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/docs",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/docs",
+          "mainDocId": "intro",
+          "docs": [
+            {
+              "id": "cli/commands",
+              "path": "/docs/cli/commands",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "cli/slash-commands",
+              "path": "/docs/cli/slash-commands",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "contributing",
+              "path": "/docs/contributing",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "getting-started/configuration",
+              "path": "/docs/getting-started/configuration",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "getting-started/installation",
+              "path": "/docs/getting-started/installation",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "getting-started/quickstart",
+              "path": "/docs/getting-started/quickstart",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "intro",
+              "path": "/docs/",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "mcp/setup",
+              "path": "/docs/mcp/setup",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "mcp/tools",
+              "path": "/docs/mcp/tools",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "memory/architecture",
+              "path": "/docs/memory/architecture",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "memory/episodic",
+              "path": "/docs/memory/episodic",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "memory/semantic",
+              "path": "/docs/memory/semantic",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "memory/working",
+              "path": "/docs/memory/working",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "skills/creating",
+              "path": "/docs/skills/creating",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "skills/installing",
+              "path": "/docs/skills/installing",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "skills/overview",
+              "path": "/docs/skills/overview",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "vscode/memory-view",
+              "path": "/docs/vscode/memory-view",
+              "sidebar": "docsSidebar"
+            },
+            {
+              "id": "vscode/overview",
+              "path": "/docs/vscode/overview",
+              "sidebar": "docsSidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docsSidebar": {
+              "link": {
+                "path": "/docs/",
+                "label": "Introduction"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

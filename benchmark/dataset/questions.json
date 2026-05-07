@@ -1,0 +1,302 @@
+[
+  {
+    "id": "q001",
+    "category": "architecture_decision",
+    "question": "What auth pattern did we decide on for this project?",
+    "context": "User is about to implement authentication and wants to recall the team decision."
+  },
+  {
+    "id": "q002",
+    "category": "architecture_decision",
+    "question": "Why did we move away from Redux?",
+    "context": "User is reviewing state management options and wants to recall the reason."
+  },
+  {
+    "id": "q003",
+    "category": "bug_history",
+    "question": "What causes the race condition in queue.ts?",
+    "context": "User is debugging a concurrency issue and wants past incident knowledge."
+  },
+  {
+    "id": "q004",
+    "category": "code_pattern",
+    "question": "What error handling pattern do we use in API routes?",
+    "context": "User is writing a new API route and wants to follow the established convention."
+  },
+  {
+    "id": "q005",
+    "category": "code_pattern",
+    "question": "How do we structure database migrations in this project?",
+    "context": "User is about to add a new table and wants to know the migration convention."
+  },
+  {
+    "id": "q006",
+    "category": "architecture_decision",
+    "question": "What was the reason we chose PostgreSQL over MongoDB?",
+    "context": "User is evaluating data storage options for a new feature."
+  },
+  {
+    "id": "q007",
+    "category": "personal_preference",
+    "question": "What naming convention do I use for TypeScript interfaces?",
+    "context": "User is writing new TypeScript types and wants to be consistent."
+  },
+  {
+    "id": "q008",
+    "category": "bug_history",
+    "question": "What bugs have I encountered when working with async/await?",
+    "context": "User is about to write async code and wants to avoid past mistakes."
+  },
+  {
+    "id": "q009",
+    "category": "architecture_decision",
+    "question": "How do we handle environment variables in this codebase?",
+    "context": "User is adding a new config value and wants to follow the pattern."
+  },
+  {
+    "id": "q010",
+    "category": "code_pattern",
+    "question": "What testing strategy do we use for API endpoints?",
+    "context": "User is writing tests for a new endpoint."
+  },
+  {
+    "id": "q011",
+    "category": "personal_preference",
+    "question": "Do I prefer tabs or spaces in this project?",
+    "context": "User is setting up a new file and checking formatting."
+  },
+  {
+    "id": "q012",
+    "category": "architecture_decision",
+    "question": "What caching strategy have we decided to use?",
+    "context": "User is implementing a performance improvement."
+  },
+  {
+    "id": "q013",
+    "category": "bug_history",
+    "question": "What caused the memory leak in the WebSocket handler?",
+    "context": "User is rewriting the WebSocket layer."
+  },
+  {
+    "id": "q014",
+    "category": "code_pattern",
+    "question": "What's our convention for logging errors vs. warnings?",
+    "context": "User is adding observability to a service."
+  },
+  {
+    "id": "q015",
+    "category": "architecture_decision",
+    "question": "Why did we decide to use a monorepo structure?",
+    "context": "User is explaining the project layout to a new contributor."
+  },
+  {
+    "id": "q016",
+    "category": "personal_preference",
+    "question": "What test framework do I prefer for unit tests?",
+    "context": "User is setting up a new package and choosing a test runner."
+  },
+  {
+    "id": "q017",
+    "category": "code_pattern",
+    "question": "How do we authenticate MCP tool requests?",
+    "context": "User is writing a new MCP tool that needs auth."
+  },
+  {
+    "id": "q018",
+    "category": "bug_history",
+    "question": "What off-by-one errors have I made with pagination?",
+    "context": "User is implementing pagination for a new list endpoint."
+  },
+  {
+    "id": "q019",
+    "category": "architecture_decision",
+    "question": "What was the rationale for using ESM over CJS in timps-code?",
+    "context": "User is configuring a new package's module format."
+  },
+  {
+    "id": "q020",
+    "category": "code_pattern",
+    "question": "What's the pattern for adding a new tool to the timps-code tool registry?",
+    "context": "User is adding a new tool to the CLI agent."
+  },
+  {
+    "id": "q021",
+    "category": "personal_preference",
+    "question": "Do I prefer async iteration or Promise.all for parallel requests?",
+    "context": "User is implementing concurrent API calls."
+  },
+  {
+    "id": "q022",
+    "category": "architecture_decision",
+    "question": "How are MCP tool schemas defined in this project?",
+    "context": "User is writing a new MCP tool definition."
+  },
+  {
+    "id": "q023",
+    "category": "bug_history",
+    "question": "What caused the auth token expiry bug we fixed last month?",
+    "context": "User is reviewing token refresh logic."
+  },
+  {
+    "id": "q024",
+    "category": "code_pattern",
+    "question": "What's the standard way to handle optional fields in TypeScript here?",
+    "context": "User is designing a new interface with optional props."
+  },
+  {
+    "id": "q025",
+    "category": "personal_preference",
+    "question": "How do I usually structure the index.ts exports for a new package?",
+    "context": "User is creating a new package and setting up the public API."
+  },
+  {
+    "id": "q026",
+    "category": "architecture_decision",
+    "question": "Why did we choose tsup over tsc for building MCP packages?",
+    "context": "User is configuring a build pipeline for a new package."
+  },
+  {
+    "id": "q027",
+    "category": "bug_history",
+    "question": "What caused the null pointer error in the memory export function?",
+    "context": "User is reviewing the memory pack serialization code."
+  },
+  {
+    "id": "q028",
+    "category": "code_pattern",
+    "question": "How do we version the memory storage format?",
+    "context": "User is about to change the memory schema and wants backward compat."
+  },
+  {
+    "id": "q029",
+    "category": "personal_preference",
+    "question": "What debugging tools do I prefer for Node.js async issues?",
+    "context": "User is stuck on a hard async bug."
+  },
+  {
+    "id": "q030",
+    "category": "architecture_decision",
+    "question": "What was decided about supporting Windows in timps-code?",
+    "context": "User is fixing a path separator bug."
+  },
+  {
+    "id": "q031",
+    "category": "code_pattern",
+    "question": "What's the convention for snake_case vs camelCase in JSON responses?",
+    "context": "User is designing a new REST API response."
+  },
+  {
+    "id": "q032",
+    "category": "bug_history",
+    "question": "What happens when the Ollama connection times out mid-stream?",
+    "context": "User is hardening the streaming response handler."
+  },
+  {
+    "id": "q033",
+    "category": "architecture_decision",
+    "question": "How did we decide to structure the 3-layer memory system?",
+    "context": "User is adding a 4th memory layer and wants to understand the original design."
+  },
+  {
+    "id": "q034",
+    "category": "code_pattern",
+    "question": "What's the pattern for progressive disclosure in the TUI?",
+    "context": "User is adding a new panel to the terminal UI."
+  },
+  {
+    "id": "q035",
+    "category": "personal_preference",
+    "question": "Do I prefer functional or class-based components for Ink?",
+    "context": "User is writing a new TUI component."
+  },
+  {
+    "id": "q036",
+    "category": "architecture_decision",
+    "question": "What was the decision on embedding memory vs external vector DB?",
+    "context": "User is evaluating adding Qdrant to the memory system."
+  },
+  {
+    "id": "q037",
+    "category": "bug_history",
+    "question": "What caused Jest to fail on ESM imports in timps-code?",
+    "context": "User is setting up tests for a new ESM module."
+  },
+  {
+    "id": "q038",
+    "category": "code_pattern",
+    "question": "How do we handle tool execution errors in the agent loop?",
+    "context": "User is adding error recovery to a new tool."
+  },
+  {
+    "id": "q039",
+    "category": "architecture_decision",
+    "question": "Why is the memory hash per-project rather than global?",
+    "context": "User is implementing a new multi-project feature."
+  },
+  {
+    "id": "q040",
+    "category": "personal_preference",
+    "question": "What branching strategy do I use for this repo?",
+    "context": "User is about to create a feature branch."
+  },
+  {
+    "id": "q041",
+    "category": "code_pattern",
+    "question": "How do we prevent duplicate entries in episodic memory?",
+    "context": "User is adding a new write path to episodic storage."
+  },
+  {
+    "id": "q042",
+    "category": "bug_history",
+    "question": "What caused the vector index corruption on memory import?",
+    "context": "User is fixing the import/export flow."
+  },
+  {
+    "id": "q043",
+    "category": "architecture_decision",
+    "question": "What's the plan for backward compatibility when the memory schema changes?",
+    "context": "User is about to change the semantic.json format."
+  },
+  {
+    "id": "q044",
+    "category": "personal_preference",
+    "question": "How do I usually name test files in this project?",
+    "context": "User is creating a test file for a new module."
+  },
+  {
+    "id": "q045",
+    "category": "code_pattern",
+    "question": "What's the approach for lazy initialization of intelligence tools?",
+    "context": "User is adding a 10th intelligence tool class."
+  },
+  {
+    "id": "q046",
+    "category": "architecture_decision",
+    "question": "Why use SHA-256 for project hashing in memory-core?",
+    "context": "User is reviewing the storage.ts hash function."
+  },
+  {
+    "id": "q047",
+    "category": "bug_history",
+    "question": "What caused the BM25 search to return wrong results on short strings?",
+    "context": "User is improving the recall accuracy in search.ts."
+  },
+  {
+    "id": "q048",
+    "category": "code_pattern",
+    "question": "What's the format for MCP tool descriptions to optimize LLM routing?",
+    "context": "User is writing a description for a new MCP tool."
+  },
+  {
+    "id": "q049",
+    "category": "personal_preference",
+    "question": "How much do I typically document internal helper functions?",
+    "context": "User is deciding how to document new utility code."
+  },
+  {
+    "id": "q050",
+    "category": "architecture_decision",
+    "question": "What was the rationale for using MiniSearch over Lunr for BM25?",
+    "context": "User is evaluating the search library choice."
+  }
+]

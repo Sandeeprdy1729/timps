@@ -9,6 +9,19 @@ import { getMemoryDir } from '../config/config.js';
 import type { MemoryEntry, EpisodicMemory, WorkingMemory } from '../config/types.js';
 import { generateId } from '../utils/utils.js';
 
+// Intelligence tools from @timps/memory-core (co-located in same memory dir)
+import {
+  ContradictionDetector,
+  BurnoutSeismograph,
+  RegretOracle,
+  TechDebtSeismograph,
+  BugPatternProphet,
+  APIArchaeologist,
+  VelocityTracker,
+  ArchitectureDriftDetector,
+  PatternLearner,
+} from '@timps/memory-core';
+
 export class Memory {
   private dir: string;
   private semanticFile: string;
@@ -16,12 +29,53 @@ export class Memory {
   private workingFile: string;
   private working: WorkingMemory;
 
+  // ── Intelligence tool instances (lazy-init, share this.dir) ──
+  private _contradiction?: ContradictionDetector;
+  private _burnout?: BurnoutSeismograph;
+  private _regret?: RegretOracle;
+  private _techDebt?: TechDebtSeismograph;
+  private _bugPattern?: BugPatternProphet;
+  private _api?: APIArchaeologist;
+  private _velocity?: VelocityTracker;
+  private _architecture?: ArchitectureDriftDetector;
+  private _patterns?: PatternLearner;
+
   constructor(projectPath: string) {
     this.dir = getMemoryDir(projectPath);
     this.semanticFile = path.join(this.dir, 'semantic.json');
     this.episodicFile = path.join(this.dir, 'episodes.jsonl');
     this.workingFile = path.join(this.dir, 'working.json');
     this.working = this.loadWorking();
+  }
+
+  // ── Intelligence tools (each stores its own file in this.dir) ──
+
+  get contradiction(): ContradictionDetector {
+    return (this._contradiction ??= new ContradictionDetector(this.dir));
+  }
+  get burnoutSeismograph(): BurnoutSeismograph {
+    return (this._burnout ??= new BurnoutSeismograph(this.dir));
+  }
+  get regretOracle(): RegretOracle {
+    return (this._regret ??= new RegretOracle(this.dir));
+  }
+  get techDebt(): TechDebtSeismograph {
+    return (this._techDebt ??= new TechDebtSeismograph(this.dir));
+  }
+  get bugPattern(): BugPatternProphet {
+    return (this._bugPattern ??= new BugPatternProphet(this.dir));
+  }
+  get apiArchaeologist(): APIArchaeologist {
+    return (this._api ??= new APIArchaeologist(this.dir));
+  }
+  get velocityTracker(): VelocityTracker {
+    return (this._velocity ??= new VelocityTracker(this.dir));
+  }
+  get architectureDrift(): ArchitectureDriftDetector {
+    return (this._architecture ??= new ArchitectureDriftDetector(this.dir));
+  }
+  get patternLearner(): PatternLearner {
+    return (this._patterns ??= new PatternLearner(this.dir));
   }
 
   // ── Layer 1: Working Memory ──

@@ -5,9 +5,21 @@ dotenv.config();
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
 import { z } from 'zod';
+import { MemoryEngine } from '@timps/memory-core';
 
+// ── Runtime mode ────────────────────────────────────────────────────────────
+// LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use
+//   @timps/memory-core for deterministic, file-based intelligence — no server.
+// SERVER mode: TIMPS_URL is set.  Tools proxy to the sandeep-ai HTTP API for
+//   full LLM-powered intelligence (manifesto, dead reckoning, etc.).
+
+const SERVER_MODE = !!(process.env.TIMPS_URL && process.env.TIMPS_URL !== '' && process.env.TIMPS_LOCAL !== 'true');
 const TIMPS_URL = process.env.TIMPS_URL || 'http://localhost:3000';
 const TIMPS_USER_ID = parseInt(process.env.TIMPS_USER_ID || '1', 10);
+const PROJECT_PATH = process.env.TIMPS_PROJECT_PATH || process.cwd();
+
+// Local memory engine (used in LOCAL mode)
+const localEngine = new MemoryEngine(PROJECT_PATH);
 
 async function timpsAPI(path: string, method = 'GET', body?: unknown): Promise<any> {
   const res = await fetch(`${TIMPS_URL}/api${path}`, {
@@ -43,6 +55,20 @@ async function main() {
     description: 'Get all stored memories, goals, and preferences. Use before starting a complex task.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      const facts = localEngine.recall('', { limit: 10 });
+      const working = localEngine.workingMemory;
+      if (!facts.length && !working.currentGoal) {
+        return { content: [{ type: 'text' as const, text: 'No memories stored yet.' }] };
+      }
+      const lines: string[] = [];
+      if (working.currentGoal) lines.push(`**Current Goal:** ${working.currentGoal}`);
+      if (facts.length) {
+        lines.push(`\n**Memories (${facts.length}):**`);
+        facts.forEach(f => lines.push(`- [${f.type}] ${f.content}`));
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
     const data = await timpsAPI(`/memory/${TIMPS_USER_ID}`);
     const memories: any[] = data.memories || [];
     const goals: any[] = data.goals || [];
@@ -65,6 +91,10 @@ async function main() {
       importance: z.number().min(1).max(5).optional().describe('Importance 1-5'),
     },
   }, async ({ content, importance }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content, type: 'fact', tags: importance ? [`importance:${importance}`] : [] });
+      return { content: [{ type: 'text' as const, text: `✓ Stored: ${content}` }] };
+    }
     await chat(`Remember this (importance ${importance || 3}/5): ${content}`);
     return { content: [{ type: 'text' as const, text: `✓ Stored: ${content}` }] };
   });
@@ -77,6 +107,16 @@ async function main() {
       text: z.string().describe('Statement to check'),
     },
   }, async ({ text }) => {
+    if (!SERVER_MODE) {
+      const result = localEngine.contradiction.check(text, true);
+      if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
+        const score = Math.round((result.contradiction_score || 0) * 100);
+        const claim = result.conflicting_position?.extracted_claim || 'a past position';
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
+    }
     const data = await timpsAPI('/contradiction/check', 'POST', {
       userId: TIMPS_USER_ID, text, autoStore: true,
     });
@@ -95,6 +135,15 @@ async function main() {
     description: 'List all tracked positions with conflict counts.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      const positions = localEngine.contradiction.list();
+      if (!positions.length) return { content: [{ type: 'text' as const, text: 'No positions stored yet.' }] };
+      const text = [`**Positions (${positions.length}):**`,
+        ...positions.slice(0, 15).map(p =>
+          `- [${p.topic_cluster}] ${p.extracted_claim}${p.contradiction_count > 0 ? ` ⚠️ ${p.contradiction_count} conflict(s)` : ''}`)
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/positions/${TIMPS_USER_ID}`);
     const positions: any[] = data.positions || [];
     if (!positions.length) return { content: [{ type: 'text' as const, text: 'No positions stored yet.' }] };
@@ -110,9 +159,18 @@ async function main() {
   server.registerTool('timps_check_regret', {
     description: 'Warn before repeating a past regretted decision.',
     inputSchema: { decision: z.string().describe('Decision being considered') },
-  }, async ({ decision }) => ({
-    content: [{ type: 'text' as const, text: await chat(`Regret Oracle: am I about to repeat a regretted decision? "${decision}"`) }],
-  }));
+  }, async ({ decision }) => {
+    if (!SERVER_MODE) {
+      const result = localEngine.regretOracle.check(decision);
+      if (result.warning && result.matching_past_decision) {
+        const d = result.matching_past_decision;
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ REGRET WARNING (${Math.round(result.similarity_score * 100)}% match)\n\nPast decision: "${d.description}"\nRegret score: ${d.regret_score}/1\n\n${result.message}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: result.message }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Regret Oracle: am I about to repeat a regretted decision? "${decision}"`) }] };
+  });
 
   server.registerTool('timps_log_decision', {
     description: 'Log a decision outcome to build the Regret Oracle knowledge base.',
@@ -122,6 +180,10 @@ async function main() {
       regret_score: z.number().min(0).max(1).optional().describe('Regret 0-1'),
     },
   }, async ({ description, outcome, regret_score }) => {
+    if (!SERVER_MODE) {
+      const d = localEngine.regretOracle.log(description, outcome, regret_score ?? 0);
+      return { content: [{ type: 'text' as const, text: `✓ Decision logged (regret: ${d.regret_score})` }] };
+    }
     await chat(`Log decision: "${description}". Outcome: ${outcome || 'unknown'}. Regret: ${regret_score ?? 0}`);
     return { content: [{ type: 'text' as const, text: `✓ Decision logged` }] };
   });
@@ -131,9 +193,14 @@ async function main() {
   server.registerTool('timps_burnout_analyze', {
     description: 'Analyze burnout risk vs personal baseline. Use when user mentions stress or exhaustion.',
     inputSchema: {},
-  }, async () => ({
-    content: [{ type: 'text' as const, text: await chat('Burnout Seismograph: analyze my current risk vs personal baseline.') }],
-  }));
+  }, async () => {
+    if (!SERVER_MODE) {
+      const r = localEngine.burnoutSeismograph.analyze();
+      return { content: [{ type: 'text' as const, text:
+        `**Burnout Risk: ${r.risk_level.toUpperCase()}** (score: ${r.risk_score}/100)\n\n${r.recommendation}${r.weeks_to_burnout_estimate ? `\n\nEstimated weeks to burnout: ${r.weeks_to_burnout_estimate}` : ''}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat('Burnout Seismograph: analyze my current risk vs personal baseline.') }] };
+  });
 
   server.registerTool('timps_record_signal', {
     description: 'Log a behavioral signal for burnout tracking.',
@@ -142,6 +209,10 @@ async function main() {
       value: z.number().describe('Signal value'),
     },
   }, async ({ signal_type, value }) => {
+    if (!SERVER_MODE) {
+      localEngine.burnoutSeismograph.record(signal_type, value);
+      return { content: [{ type: 'text' as const, text: `✓ Signal: ${signal_type} = ${value}` }] };
+    }
     await chat(`Record burnout signal: ${signal_type} = ${value}`);
     return { content: [{ type: 'text' as const, text: `✓ Signal: ${signal_type} = ${value}` }] };
   });
@@ -151,9 +222,17 @@ async function main() {
   server.registerTool('timps_warn_bug_pattern', {
     description: 'Check if coding context matches personal bug triggers. Use before writing code under pressure.',
     inputSchema: { context: z.string().describe('Current coding context and conditions') },
-  }, async ({ context }) => ({
-    content: [{ type: 'text' as const, text: await chat(`Bug Pattern Prophet: check my triggers for: ${context}`) }],
-  }));
+  }, async ({ context }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.bugPattern.warn(context);
+      if (r.alert) {
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ BUG RISK: ${r.risk_level.toUpperCase()}\n\nLikely bugs: ${r.likely_bug_types.join(', ')}\n${r.suggestion}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ ${r.reason}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Bug Pattern Prophet: check my triggers for: ${context}`) }] };
+  });
 
   server.registerTool('timps_record_bug', {
     description: 'Record a bug to build personal pattern profile.',
@@ -162,6 +241,10 @@ async function main() {
       trigger_context: z.string().optional().describe('Context when bug appeared'),
     },
   }, async ({ bug_type, trigger_context }) => {
+    if (!SERVER_MODE) {
+      const p = localEngine.bugPattern.recordBug(bug_type, trigger_context);
+      return { content: [{ type: 'text' as const, text: `✓ Bug recorded: ${bug_type} (seen ${p.frequency}x)` }] };
+    }
     await chat(`Record bug: ${bug_type}. Context: ${trigger_context || 'unknown'}`);
     return { content: [{ type: 'text' as const, text: `✓ Bug recorded: ${bug_type}` }] };
   });
@@ -174,9 +257,17 @@ async function main() {
       pattern: z.string().describe('Code pattern or approach'),
       project_id: z.string().optional().describe('Project ID'),
     },
-  }, async ({ pattern, project_id }) => ({
-    content: [{ type: 'text' as const, text: await chat(`Tech Debt Seismograph for ${project_id || 'default'}: "${pattern}"`) }],
-  }));
+  }, async ({ pattern, project_id }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.techDebt.checkPattern(pattern, project_id);
+      if (r.warning) {
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ TECH DEBT RISK: ${r.risk_level.toUpperCase()}\n\n${r.message}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ ${r.message}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Tech Debt Seismograph for ${project_id || 'default'}: "${pattern}"`) }] };
+  });
 
   server.registerTool('timps_record_incident', {
     description: 'Record a production incident to build pattern library.',
@@ -186,6 +277,10 @@ async function main() {
       time_to_debug_hrs: z.number().optional().describe('Debug hours'),
     },
   }, async ({ pattern, incident_type, time_to_debug_hrs }) => {
+    if (!SERVER_MODE) {
+      localEngine.techDebt.recordIncident(pattern, 'default', incident_type || 'unknown', time_to_debug_hrs);
+      return { content: [{ type: 'text' as const, text: `✓ Incident recorded` }] };
+    }
     await chat(`Record incident: "${pattern}", type: ${incident_type || 'unknown'}, hours: ${time_to_debug_hrs || '?'}`);
     return { content: [{ type: 'text' as const, text: `✓ Incident recorded` }] };
   });
@@ -195,9 +290,15 @@ async function main() {
   server.registerTool('timps_lookup_api', {
     description: 'Look up known quirks for an API before using it.',
     inputSchema: { api_name: z.string().describe('API name: Stripe, GitHub, etc.') },
-  }, async ({ api_name }) => ({
-    content: [{ type: 'text' as const, text: await chat(`API Archaeologist: quirks for ${api_name}?`) }],
-  }));
+  }, async ({ api_name }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.apiArchaeologist.lookup(api_name);
+      if (!r.total) return { content: [{ type: 'text' as const, text: `No quirks recorded yet for ${api_name}. Use timps_record_api_quirk to add one.` }] };
+      const lines = r.quirks.map(q => `• [${q.severity}]${q.endpoint ? ` ${q.endpoint}` : ''}: ${q.discovered_quirk}`);
+      return { content: [{ type: 'text' as const, text: `**${api_name} quirks (${r.total}):**\n${lines.join('\n')}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`API Archaeologist: quirks for ${api_name}?`) }] };
+  });
 
   server.registerTool('timps_record_api_quirk', {
     description: 'Save a discovered API quirk for future reference.',
@@ -208,6 +309,10 @@ async function main() {
       severity: z.enum(['info', 'warning', 'critical']).optional(),
     },
   }, async ({ api_name, endpoint, quirk, severity }) => {
+    if (!SERVER_MODE) {
+      localEngine.apiArchaeologist.recordQuirk(api_name, quirk, endpoint, severity);
+      return { content: [{ type: 'text' as const, text: `✓ Saved: ${api_name} — ${quirk}` }] };
+    }
     await chat(`Save API quirk for ${api_name}${endpoint ? ` (${endpoint})` : ''}: ${quirk}. Severity: ${severity || 'info'}`);
     return { content: [{ type: 'text' as const, text: `✓ Saved: ${api_name} — ${quirk}` }] };
   });
@@ -525,6 +630,299 @@ async function main() {
       `Decayed: ${data.decayed || 0}`,
     ].join('\n');
     return { content: [{ type: 'text' as const, text }] };
+  });
+
+  // ── Phase 2: Session & Context Tools ────────────────────────────────────────
+
+  server.registerTool('timps_get_session_history', {
+    description: 'Retrieve what you were working on in recent sessions. Use before starting a task to restore context.',
+    inputSchema: {
+      days_back: z.number().int().min(1).max(30).optional().describe('How many days back (default: 7)'),
+    },
+  }, async ({ days_back }) => {
+    if (!SERVER_MODE) {
+      const limit = (days_back || 7) * 5;
+      const episodes = localEngine.loadEpisodes(limit);
+      if (!episodes.length) return { content: [{ type: 'text' as const, text: 'No session history yet.' }] };
+      const cutoff = Date.now() - (days_back || 7) * 86400_000;
+      const recent = episodes.filter(e => new Date(e.timestamp).getTime() >= cutoff);
+      if (!recent.length) return { content: [{ type: 'text' as const, text: `No sessions in the last ${days_back || 7} days.` }] };
+      const lines = recent.slice(0, 20).map(e => {
+        const d = new Date(e.timestamp).toLocaleDateString();
+        return `- [${d}] [${e.type}] ${e.content.slice(0, 100)}`;
+      });
+      return { content: [{ type: 'text' as const, text: `**Session history (last ${days_back || 7} days):**\n${lines.join('\n')}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`What was I working on in the last ${days_back || 7} days? Summarize my session history.`) }] };
+  });
+
+  server.registerTool('timps_get_architecture_decisions', {
+    description: 'Retrieve past architecture decisions and design choices. Use when making structural code decisions.',
+    inputSchema: {
+      topic: z.string().optional().describe('Filter by topic (e.g. auth, database, state)'),
+    },
+  }, async ({ topic }) => {
+    if (!SERVER_MODE) {
+      const query = topic ? `architecture decision ${topic}` : 'architecture decision design pattern';
+      const results = localEngine.recall(query, { limit: 10 });
+      if (!results.length) return { content: [{ type: 'text' as const, text: 'No architecture decisions recorded yet. Use timps_store_memory to save decisions.' }] };
+      const lines = results.map(r => `- ${r.content}`);
+      return { content: [{ type: 'text' as const, text: `**Architecture decisions${topic ? ` (${topic})` : ''}:**\n${lines.join('\n')}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`What architecture decisions have we made${topic ? ` about ${topic}` : ''}?`) }] };
+  });
+
+  server.registerTool('timps_get_code_patterns', {
+    description: 'Retrieve personal coding patterns and conventions I always use.',
+    inputSchema: {
+      context: z.string().optional().describe('Filter by context or language'),
+    },
+  }, async ({ context }) => {
+    if (!SERVER_MODE) {
+      const patterns = localEngine.patternLearner.getAll(context);
+      if (!patterns.length) return { content: [{ type: 'text' as const, text: 'No code patterns recorded yet. Use timps_record_pattern to save patterns.' }] };
+      const lines = patterns.map(p => `- [${p.tags.join(', ')}] ${p.content}`);
+      return { content: [{ type: 'text' as const, text: `**Code patterns${context ? ` (${context})` : ''}:**\n${lines.join('\n')}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`What coding patterns and conventions do I always use${context ? ` for ${context}` : ''}?`) }] };
+  });
+
+  server.registerTool('timps_record_pattern', {
+    description: 'Store a reusable code pattern or convention for future recall.',
+    inputSchema: {
+      pattern: z.string().describe('The code pattern or convention to store'),
+      tags: z.array(z.string()).optional().describe('Tags like ["typescript", "react", "error-handling"]'),
+    },
+  }, async ({ pattern, tags }) => {
+    if (!SERVER_MODE) {
+      const result = localEngine.patternLearner.learn(pattern, tags || []);
+      if (!result) return { content: [{ type: 'text' as const, text: '⚠️ Similar pattern already exists (>80% match). Skipped.' }] };
+      return { content: [{ type: 'text' as const, text: `✓ Pattern stored` + (tags?.length ? ` [${tags.join(', ')}]` : '') }] };
+    }
+    await chat(`Store this code pattern: ${pattern}. Tags: ${(tags || []).join(', ')}`);
+    return { content: [{ type: 'text' as const, text: `✓ Pattern stored` }] };
+  });
+
+  server.registerTool('timps_get_patterns_for_context', {
+    description: 'Retrieve code patterns relevant to the current file or task context.',
+    inputSchema: {
+      file_path: z.string().optional().describe('Current file path'),
+      task_description: z.string().describe('What you are trying to do'),
+    },
+  }, async ({ file_path, task_description }) => {
+    if (!SERVER_MODE) {
+      const query = [task_description, file_path].filter(Boolean).join(' ');
+      const results = localEngine.recall(query, { limit: 5 });
+      const patterns = localEngine.patternLearner.getAll();
+      // score patterns by jaccard similarity to task
+      const taskTokens = new Set(task_description.toLowerCase().split(/\W+/));
+      const scored = patterns.map(p => {
+        const pTokens = new Set(p.content.toLowerCase().split(/\W+/));
+        const inter = [...taskTokens].filter(t => pTokens.has(t)).length;
+        const union = new Set([...taskTokens, ...pTokens]).size;
+        return { p, score: inter / (union || 1) };
+      }).sort((a, b) => b.score - a.score).slice(0, 5).filter(x => x.score > 0);
+      const lines: string[] = [];
+      if (scored.length) {
+        lines.push('**Relevant patterns:**');
+        scored.forEach(({ p }) => lines.push(`- ${p.content}`));
+      }
+      if (results.length) {
+        lines.push('\n**Related memories:**');
+        results.forEach(r => lines.push(`- ${r.content.slice(0, 120)}`));
+      }
+      if (!lines.length) return { content: [{ type: 'text' as const, text: 'No relevant patterns found for this context.' }] };
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`What patterns are relevant for: ${task_description}${file_path ? ` in ${file_path}` : ''}?`) }] };
+  });
+
+  server.registerTool('timps_detect_architecture_drift', {
+    description: 'Compare current code structure against past architectural decisions and detect drift.',
+    inputSchema: {
+      current_patterns: z.array(z.string()).describe('Patterns observed in current codebase'),
+      project_id: z.string().optional().describe('Project ID'),
+    },
+  }, async ({ current_patterns, project_id }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.architectureDrift.driftCheck(current_patterns, project_id || 'default');
+      if (r.drift_detected) {
+        const drifts = r.drifted_patterns.map((d: any) => `  • ${d.pattern}: expected "${d.expected}" → got "${d.observed}"`).join('\n');
+        return { content: [{ type: 'text' as const, text: `⚠️ ARCHITECTURE DRIFT DETECTED (score: ${Math.round(r.drift_score * 100)}%)\n\n${drifts}\n\nRecommendation: ${r.recommendation}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ No drift. Codebase matches ${r.matched_patterns.length} known patterns.` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Detect architecture drift. Current patterns: ${current_patterns.join(', ')}`) }] };
+  });
+
+  // ── Phase 2: Risk Tools ──────────────────────────────────────────────────────
+
+  server.registerTool('timps_predict_bug_risk', {
+    description: 'Predict bug risk for a planned change based on past incident history.',
+    inputSchema: {
+      change_description: z.string().describe('What you are about to change or add'),
+      files_affected: z.array(z.string()).optional().describe('Files being changed'),
+    },
+  }, async ({ change_description, files_affected }) => {
+    if (!SERVER_MODE) {
+      const context = [change_description, ...(files_affected || [])].join(' ');
+      const bugWarn = localEngine.bugPattern.warn(context);
+      const debtCheck = localEngine.techDebt.checkPattern(change_description, 'default');
+      const lines: string[] = [];
+      if (bugWarn.alert) {
+        lines.push(`⚠️ BUG RISK: ${bugWarn.risk_level.toUpperCase()}`);
+        lines.push(`Likely bugs: ${bugWarn.likely_bug_types.join(', ')}`);
+        lines.push(bugWarn.suggestion);
+      }
+      if (debtCheck.warning) {
+        lines.push(`\n⚠️ TECH DEBT RISK: ${debtCheck.risk_level.toUpperCase()}`);
+        lines.push(debtCheck.message);
+      }
+      if (!lines.length) return { content: [{ type: 'text' as const, text: `✓ Low risk. No matching patterns in personal incident history.` }] };
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Predict bug risk for: ${change_description}. Files: ${(files_affected || []).join(', ')}`) }] };
+  });
+
+  server.registerTool('timps_get_incident_timeline', {
+    description: 'Show past incidents and bugs in a specific module or area.',
+    inputSchema: {
+      module: z.string().describe('Module name or area (e.g. auth, payment, queue)'),
+    },
+  }, async ({ module }) => {
+    if (!SERVER_MODE) {
+      const allIncidents = localEngine.techDebt.getIncidents();
+      const relevant = allIncidents.filter((inc) =>
+        inc.pattern.toLowerCase().includes(module.toLowerCase())
+      );
+      if (!relevant.length) return { content: [{ type: 'text' as const, text: `No incidents recorded for "${module}". Use timps_record_incident to track future incidents.` }] };
+      const lines = relevant.map((inc) => {
+        const d = new Date(inc.occurred_at).toLocaleDateString();
+        return `- [${d}] ${inc.pattern} (type: ${inc.incident_type}${inc.time_to_debug_hrs ? `, ~${inc.time_to_debug_hrs}h to fix` : ''})`;
+      });
+      return { content: [{ type: 'text' as const, text: `**Incident timeline — ${module} (${relevant.length} incidents):**\n${lines.join('\n')}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Show incident timeline for the ${module} module.`) }] };
+  });
+
+  server.registerTool('timps_check_deployment_risk', {
+    description: 'Check if a deployment pattern has caused issues before.',
+    inputSchema: {
+      pattern: z.string().describe('Deployment approach or config being used'),
+    },
+  }, async ({ pattern }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.techDebt.checkPattern(pattern, 'default');
+      if (r.warning) {
+        return { content: [{ type: 'text' as const, text: `⚠️ DEPLOYMENT RISK: ${r.risk_level.toUpperCase()}\n\n${r.message}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ No past incidents with this deployment pattern.` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`Deployment risk check: "${pattern}" — has this caused issues before?`) }] };
+  });
+
+  // ── Phase 2: Developer Intelligence Tools ───────────────────────────────────
+
+  server.registerTool('timps_get_velocity_trend', {
+    description: 'Show productivity trend — am I faster or slower this week vs baseline?',
+    inputSchema: {},
+  }, async () => {
+    if (!SERVER_MODE) {
+      const r = localEngine.velocityTracker.coach('velocity trend this week');
+      const { patterns } = localEngine.velocityTracker.getPatterns();
+      const lines: string[] = [`**Velocity Coach:**`, r.advice];
+      if (r.relevant_pattern) {
+        lines.push(`\n**Most relevant pattern:** ${r.relevant_pattern}`);
+      }
+      if (r.action_now) lines.push(`\n**Action:** ${r.action_now}`);
+      if (patterns.length) {
+        const avg = patterns.reduce((s: number, p: any) => s + p.success_rate, 0) / patterns.length;
+        lines.push(`\nBaseline success rate: ${Math.round(avg * 100)}%`);
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat('Velocity trend: am I faster or slower this week vs my baseline?') }] };
+  });
+
+  server.registerTool('timps_get_context_switches', {
+    description: 'Count and analyze context switches in current session.',
+    inputSchema: {},
+  }, async () => {
+    if (!SERVER_MODE) {
+      const episodes = localEngine.loadEpisodes(50);
+      const today = new Date().toDateString();
+      const todayEps = episodes.filter(e => new Date(e.timestamp).toDateString() === today);
+      const types = todayEps.reduce((acc: Record<string, number>, e) => {
+        acc[e.type] = (acc[e.type] || 0) + 1;
+        return acc;
+      }, {});
+      const switches = todayEps.length;
+      const lines = [`**Context switches today: ${switches}**`];
+      Object.entries(types).forEach(([t, c]) => lines.push(`- ${t}: ${c}`));
+      if (switches > 10) lines.push('\n⚠️ High context switching detected. Consider time-blocking.');
+      else if (switches === 0) lines.push('\nNo activity logged yet today.');
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat('How many context switches have I done today? Is it affecting my focus?') }] };
+  });
+
+  server.registerTool('timps_record_learning', {
+    description: 'Store something you learned today for future reference.',
+    inputSchema: {
+      learning: z.string().describe('What you learned'),
+      topic: z.string().optional().describe('Topic or technology'),
+    },
+  }, async ({ learning, topic }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content: learning, type: 'learning', tags: topic ? [topic] : [] });
+      localEngine.velocityTracker.observe('learning', learning);
+      return { content: [{ type: 'text' as const, text: `✓ Learning stored${topic ? ` [${topic}]` : ''}: ${learning.slice(0, 80)}` }] };
+    }
+    await chat(`Record learning: ${learning}. Topic: ${topic || 'general'}`);
+    return { content: [{ type: 'text' as const, text: `✓ Learning stored` }] };
+  });
+
+  server.registerTool('timps_get_shared_decisions', {
+    description: 'Retrieve team-level architecture decisions. Scoped to the current project.',
+    inputSchema: {
+      topic: z.string().optional().describe('Filter by topic'),
+    },
+  }, async ({ topic }) => {
+    if (!SERVER_MODE) {
+      const query = topic ? `team decision ${topic}` : 'team architecture decision';
+      const results = localEngine.recall(query, { limit: 10, type: 'decision' });
+      const archInsights = localEngine.architectureDrift.cultureReport('default');
+      const lines: string[] = [];
+      if (results.length) {
+        lines.push('**Decisions:**');
+        results.forEach(r => lines.push(`- ${r.content}`));
+      }
+      if (archInsights.insight_count > 0) {
+        lines.push('\n**Architecture culture:**');
+        archInsights.insights.slice(0, 5).forEach(i =>
+          lines.push(`- [${i.insight_type}] ${i.description.slice(0, 100)}`)
+        );
+      }
+      if (!lines.length) return { content: [{ type: 'text' as const, text: 'No shared decisions yet. Use timps_store_memory with type "decision" to record team decisions.' }] };
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(`What team architecture decisions exist${topic ? ` about ${topic}` : ''}?`) }] };
+  });
+
+  server.registerTool('timps_record_review_pattern', {
+    description: 'Store something you consistently flag or look for during code reviews.',
+    inputSchema: {
+      pattern: z.string().describe('What you always check or flag in reviews'),
+      severity: z.enum(['info', 'warning', 'blocker']).optional(),
+    },
+  }, async ({ pattern, severity }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content: `[review-pattern][${severity || 'info'}] ${pattern}`, type: 'pattern', tags: ['code-review', severity || 'info'] });
+      localEngine.patternLearner.learn(pattern, ['code-review', severity || 'info']);
+      return { content: [{ type: 'text' as const, text: `✓ Review pattern stored [${severity || 'info'}]: ${pattern.slice(0, 80)}` }] };
+    }
+    await chat(`Store review pattern [${severity || 'info'}]: ${pattern}`);
+    return { content: [{ type: 'text' as const, text: `✓ Review pattern stored` }] };
   });
 
   // ── Start ────────────────────────────────────────────────────────────────────

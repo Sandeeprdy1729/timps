@@ -37,6 +37,23 @@ npm install -g timps-code
 
 Requirements: Node.js 18+ | For local AI: [Ollama](https://ollama.com)
 
+### How the agent loop works
+
+```mermaid
+flowchart LR
+    Input["User input"] --> App["app.ts\nAgentLoop.run()"]
+    App --> Agent["agent.ts\n(plan + execute)"]
+    Agent --> Tools["25+ Tools\nfile · git · shell · web"]
+    Agent --> Memory["3-Layer Memory\nworking · episodic · semantic"]
+    Memory -->|"recalled context"| Agent
+    Tools -->|"observation"| Agent
+    Agent -->|"stream"| TUI["Ink/React TUI\n(src/ui/App.tsx)"]
+    Agent -->|"retry × 3 on error"| Agent
+
+    style Memory fill:#dcfce7,stroke:#16a34a
+    style Tools fill:#dbeafe,stroke:#2563eb
+```
+
 ---
 
 ## Usage

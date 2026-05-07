@@ -213,6 +213,20 @@ export class TIMPsMemory {
     this.saveWorking();
   }
 
+  getStats(): { semanticCount: number; episodeCount: number; workingFiles: number } {
+    const semantic = this.loadSemanticEntries();
+    const episodes = this.loadEpisodes(1000);
+    return {
+      semanticCount: semantic.length,
+      episodeCount: episodes.length,
+      workingFiles: this.working.activeFiles.length,
+    };
+  }
+
+  getSemanticEntries(): MemoryEntry[] {
+    return this.loadSemanticEntries();
+  }
+
   // ── Private ───────────────────────────────────────────────
 
   private loadWorking(): WorkingMemory {

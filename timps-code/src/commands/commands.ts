@@ -315,6 +315,95 @@ reg({
 });
 
 // ─────────────────────────────────────────
+// /skills
+// ─────────────────────────────────────────
+reg({
+  name: 'skills',
+  description: 'Skills Marketplace — list, search, and install community skills',
+  usage: '/skills [list|search <query>|install <id>|show <id>]',
+  async execute(_ctx, args) {
+    const { listSkills, searchSkills, installSkill, getSkillContent } = await import('../skills/marketplace.js');
+    const [sub, ...rest] = args.trim().split(' ');
+    const CATEGORY_ICONS: Record<string, string> = {
+      framework: '🧩', language: '📘', testing: '🧪', security: '🔒',
+      database: '🗄', devops: '🐳', workflow: '🔀', patterns: '⚙', architecture: '🏗',
+    };
+
+    if (!sub || sub === 'list') {
+      const { registry, installed } = listSkills();
+      const byCategory = new Map<string, typeof registry.skills>();
+      for (const s of registry.skills) {
+        if (!byCategory.has(s.category)) byCategory.set(s.category, []);
+        byCategory.get(s.category)!.push(s);
+      }
+      console.log(`\n  ${t.brandBold('⚡ TIMPS Skills Marketplace')}  ${t.dim('v' + registry.version + ' · ' + registry.skills.length + ' skills')}\n`);
+      for (const [cat, skills] of byCategory) {
+        const icon = CATEGORY_ICONS[cat] ?? '•';
+        console.log(`  ${t.bold(icon + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1))}`);
+        for (const s of skills) {
+          const tag = installed.includes(s.id) ? t.success(' [installed]') : '';
+          console.log(`    ${t.accent(s.id.padEnd(24))}${tag}`);
+          console.log(`    ${t.dim(s.description)}`);
+        }
+        console.log();
+      }
+      console.log(t.dim(`  Install: /skills install <id>   Search: /skills search <query>\n`));
+      return;
+    }
+
+    if (sub === 'search') {
+      const query = rest.join(' ');
+      if (!query) { console.log(t.dim('  Usage: /skills search <query>')); return; }
+      const results = searchSkills(query);
+      if (results.length === 0) {
+        console.log(t.dim(`\n  No skills found for "${query}"\n`));
+        return;
+      }
+      console.log(`\n  ${t.bold('Search results for "')}${t.accent(query)}${t.bold('"')}\n`);
+      for (const s of results) {
+        console.log(`  ${t.accent(s.id.padEnd(24))} ${t.dim('[' + s.category + ']')}`);
+        console.log(`  ${t.dim(s.description)}`);
+        console.log(`  ${t.dim('Tags: ' + s.tags.join(', '))}\n`);
+      }
+      return;
+    }
+
+    if (sub === 'install') {
+      const skillId = rest[0];
+      if (!skillId) { console.log(t.dim('  Usage: /skills install <id>')); return; }
+      const result = installSkill(skillId);
+      if (!result) {
+        console.log(t.error(`  ✘ Skill not found: ${skillId}`));
+        console.log(t.dim('  Run /skills list to see available skills.'));
+        return;
+      }
+      if (result.alreadyInstalled) {
+        console.log(t.warning(`  ↻ Updated skill: ${result.skill.name} (${skillId})`));
+      } else {
+        console.log(t.success(`  ✔ Installed: ${result.skill.name}`));
+      }
+      console.log(t.dim(`  ${result.skill.description}`));
+      console.log(t.dim(`  Run /skills show ${skillId} to view the skill content.\n`));
+      return;
+    }
+
+    if (sub === 'show') {
+      const skillId = rest[0];
+      if (!skillId) { console.log(t.dim('  Usage: /skills show <id>')); return; }
+      const content = getSkillContent(skillId);
+      if (!content) {
+        console.log(t.warning(`  Skill "${skillId}" is not installed. Run: /skills install ${skillId}`));
+        return;
+      }
+      console.log(`\n${content}\n`);
+      return;
+    }
+
+    console.log(t.error(`  Unknown subcommand: ${sub}`) + t.dim(' — try: list, search, install, show'));
+  },
+});
+
+// ─────────────────────────────────────────
 // /exit / /quit
 // ─────────────────────────────────────────
 reg({

@@ -1,0 +1,27 @@
+{
+  "id": "mcp/tools",
+  "title": "MCP Tools Reference",
+  "description": "The timps-mcp server exposes 46 tools to any MCP-compatible client (Claude Code, Cursor, Windsurf, Continue).",
+  "source": "@site/docs/mcp/tools.md",
+  "sourceDirName": "mcp",
+  "slug": "/mcp/tools",
+  "permalink": "/docs/mcp/tools",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/mcp/tools.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Creating Skills",
+    "permalink": "/docs/skills/creating"
+  },
+  "next": {
+    "title": "MCP Server Setup",
+    "permalink": "/docs/mcp/setup"
+  }
+}

@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import * as https from 'https';
 import * as http from 'http';
+import * as os from 'os';
+import * as path from 'path';
 import { NexusForgeExplorerProvider } from './nexusExplorer';
 import { SynapseMetabolonExplorerProvider } from './synapseExplorer';
+import { registerMemoryView } from './memoryView';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +171,12 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('timps.chatView.focus');
     })
   );
+
+  // Memory View (3-layer memory TreeView)
+  const memoryStorageRoot = context.globalStorageUri
+    ? context.globalStorageUri.fsPath
+    : path.join(os.homedir(), '.timps', 'vscode-memory');
+  registerMemoryView(context, memoryStorageRoot);
 
   // Status bar item
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
