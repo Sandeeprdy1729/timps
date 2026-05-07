@@ -1,0 +1,108 @@
+.episodic-view {
+  max-width: 800px;
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.view-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.count-badge {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--border);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: 14px;
+  row-gap: 0;
+  position: relative;
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  justify-self: center;
+}
+
+.timeline-line {
+  grid-column: 1;
+  width: 2px;
+  background: var(--border);
+  justify-self: center;
+  min-height: 12px;
+}
+
+.timeline-content {
+  grid-column: 2;
+  grid-row: 1;
+  padding-bottom: 20px;
+}
+
+.ep-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.ep-outcome {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ep-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.ep-summary {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.loading-state {
+  color: var(--text-muted);
+  padding: 40px 0;
+  text-align: center;
+}

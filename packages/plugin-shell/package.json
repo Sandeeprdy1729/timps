@@ -1,0 +1,16 @@
+{
+  "name": "@timps-plugin/shell",
+  "version": "0.1.0",
+  "description": "TIMPS plugin: shell utilities (run commands, pipe, background jobs)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@timps/plugin-sdk": "*"
+  },
+  "keywords": ["timps-plugin", "shell"],
+  "license": "MIT"
+}

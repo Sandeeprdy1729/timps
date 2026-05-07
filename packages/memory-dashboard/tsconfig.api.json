@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "strict": true,
+    "outDir": "dist/api",
+    "skipLibCheck": true
+  },
+  "include": ["src/api"]
+}

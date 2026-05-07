@@ -1,0 +1,70 @@
+name: Plugin Submission
+description: Submit a community plugin to the TIMPS marketplace
+title: "[Plugin]: "
+labels: ["plugin-submission", "needs-review"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want your plugin listed in the TIMPS Plugin Marketplace? Fill out the form below.
+
+  - type: input
+    id: npm-package
+    attributes:
+      label: npm package name
+      placeholder: "@your-scope/timps-plugin-xyz"
+    validations:
+      required: true
+
+  - type: input
+    id: npm-url
+    attributes:
+      label: npm URL
+      placeholder: "https://www.npmjs.com/package/@your-scope/timps-plugin-xyz"
+    validations:
+      required: true
+
+  - type: input
+    id: github-repo
+    attributes:
+      label: GitHub repository
+      placeholder: "https://github.com/you/timps-plugin-xyz"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What does this plugin do?
+      description: A clear description of the tools and capabilities this plugin adds.
+    validations:
+      required: true
+
+  - type: textarea
+    id: tools
+    attributes:
+      label: List of tools provided
+      description: "One tool per line, with a brief description."
+      placeholder: |
+        `my_tool_name` — Does X
+        `another_tool` — Does Y
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission checklist
+      options:
+        - label: Plugin uses `@timps/plugin-sdk` and follows the Plugin interface
+          required: true
+        - label: Plugin is published on npm with a public license
+          required: true
+        - label: README includes installation and usage instructions
+          required: true
+        - label: I am the author or maintainer of this plugin
+          required: true
+        - label: Plugin does not duplicate an existing official plugin
+          required: false

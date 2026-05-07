@@ -1,0 +1,41 @@
+{
+  "name": "@timps/plugin-sdk",
+  "version": "0.1.0",
+  "description": "Formal plugin interface for extending TIMPS agents — register commands, tools, and lifecycle hooks",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.9"
+  },
+  "keywords": [
+    "timps",
+    "plugin",
+    "agent",
+    "sdk",
+    "extensibility"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

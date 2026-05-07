@@ -1,0 +1,189 @@
+// ── Tool 5 port: Argument DNA Mapper → Contradiction Detector ──
+// Ported from sandeep-ai/tools/contradictionTool.ts + positionStore.ts
+// Storage: JSON file instead of Postgres + Qdrant
+// Analysis: deterministic Jaccard similarity instead of LLM
+
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+export interface Position {
+  id: string;
+  content: string;
+  extracted_claim: string;
+  topic_cluster: string;
+  claim_type: 'normative' | 'empirical' | 'predictive' | 'general';
+  confidence_expressed: number;
+  source_context: string;
+  contradiction_count: number;
+  created_at: string;
+}
+
+export interface ContradictionRecord {
+  position_id: string;
+  contradicted_by_text: string;
+  contradiction_score: number;
+  semantic_similarity: number;
+  explanation: string;
+  acknowledged: boolean;
+  resolved: boolean;
+  created_at: string;
+}
+
+export interface ContradictionResult {
+  verdict: 'CONTRADICTION' | 'PARTIAL' | 'CLEAN';
+  contradiction_score: number;
+  semantic_similarity: number;
+  matched_position?: Position;
+  explanation: string;
+  extracted_claims: string[];
+  positions_checked: number;
+}
+
+// ── Heuristic claim extraction ──
+function extractClaims(text: string): string[] {
+  // Split into sentences, take non-trivial ones
+  return text
+    .split(/[.!?]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 15 && s.split(/\s+/).length >= 3)
+    .slice(0, 5);
+}
+
+// ── Jaccard similarity on normalized word sets ──
+function jaccard(a: string, b: string): number {
+  const normalize = (s: string) =>
+    new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2));
+  const sa = normalize(a);
+  const sb = normalize(b);
+  if (sa.size === 0 || sb.size === 0) return 0;
+  let inter = 0;
+  for (const w of sa) if (sb.has(w)) inter++;
+  return inter / (sa.size + sb.size - inter);
+}
+
+// ── Negation flip detection ──
+const NEGATORS = /\b(not|never|don't|doesn't|shouldn't|avoid|stop|remove|disable|reject|bad|wrong|false)\b/i;
+const AFFIRMERS = /\b(should|must|always|use|enable|add|good|best|true|correct|do|allow|prefer)\b/i;
+
+function sentimentFlip(a: string, b: string): boolean {
+  const aNeg = NEGATORS.test(a);
+  const bNeg = NEGATORS.test(b);
+  const aAff = AFFIRMERS.test(a);
+  const bAff = AFFIRMERS.test(b);
+  return (aNeg && bAff) || (aAff && bNeg) || (aNeg && !bNeg && jaccard(a, b) > 0.25);
+}
+
+export class ContradictionDetector {
+  private file: string;
+  private positions: Position[] = [];
+  private contradictions: ContradictionRecord[] = [];
+
+  constructor(dir: string) {
+    this.file = path.join(dir, 'contradiction_positions.json');
+    this.load();
+  }
+
+  private load(): void {
+    try {
+      if (fs.existsSync(this.file)) {
+        const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
+        this.positions = data.positions || [];
+        this.contradictions = data.contradictions || [];
+      }
+    } catch { /* ignore */ }
+  }
+
+  private save(): void {
+    fs.writeFileSync(this.file, JSON.stringify(
+      { positions: this.positions, contradictions: this.contradictions }, null, 2
+    ), 'utf-8');
+  }
+
+  /** check: analyze text for contradictions against stored positions */
+  check(text: string, autoStore = true): ContradictionResult {
+    const claims = extractClaims(text);
+    let best: Position | undefined;
+    let bestScore = 0;
+    let bestSimilarity = 0;
+
+    for (const claim of claims) {
+      for (const pos of this.positions) {
+        const sim = jaccard(claim, pos.extracted_claim);
+        if (sim < 0.15) continue;
+        const flip = sentimentFlip(claim, pos.extracted_claim);
+        const score = sim * (flip ? 1.4 : 0.6);
+        if (score > bestScore) {
+          bestScore = score;
+          bestSimilarity = sim;
+          best = pos;
+        }
+      }
+    }
+
+    if (autoStore) {
+      for (const claim of claims) {
+        this.store(text, claim);
+      }
+    }
+
+    if (best && bestScore > 0.35) {
+      best.contradiction_count++;
+      this.save();
+      return {
+        verdict: bestScore > 0.7 ? 'CONTRADICTION' : 'PARTIAL',
+        contradiction_score: Math.min(bestScore, 1),
+        semantic_similarity: bestSimilarity,
+        matched_position: best,
+        explanation: `Matches stored position: "${best.extracted_claim.slice(0, 100)}"`,
+        extracted_claims: claims,
+        positions_checked: this.positions.length,
+      };
+    }
+
+    return {
+      verdict: 'CLEAN',
+      contradiction_score: 0,
+      semantic_similarity: 0,
+      explanation: 'No contradictions detected.',
+      extracted_claims: claims,
+      positions_checked: this.positions.length,
+    };
+  }
+
+  /** store: manually save a position/claim */
+  store(content: string, claim?: string): Position {
+    const extracted_claim = claim || extractClaims(content)[0] || content.slice(0, 200);
+    // Dedup
+    const dup = this.positions.find(p => jaccard(p.extracted_claim, extracted_claim) > 0.85);
+    if (dup) return dup;
+
+    const pos: Position = {
+      id: `pos_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      content: content.slice(0, 500),
+      extracted_claim,
+      topic_cluster: extracted_claim.split(/\s+/).slice(0, 3).join('_'),
+      claim_type: 'general',
+      confidence_expressed: 0.7,
+      source_context: '',
+      contradiction_count: 0,
+      created_at: new Date().toISOString(),
+    };
+    this.positions.push(pos);
+    if (this.positions.length > 200) this.positions.shift();
+    this.save();
+    return pos;
+  }
+
+  /** list: all stored positions */
+  list(projectId?: string): Position[] {
+    return [...this.positions];
+  }
+
+  /** delete: remove a position by id */
+  delete(id: string): boolean {
+    const before = this.positions.length;
+    this.positions = this.positions.filter(p => p.id !== id);
+    if (this.positions.length < before) { this.save(); return true; }
+    return false;
+  }
+}

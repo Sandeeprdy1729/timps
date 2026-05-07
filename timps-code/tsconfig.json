@@ -17,5 +17,5 @@
     "paths": {}
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "../sandeep-ai"]
+  "exclude": ["node_modules", "dist", "../sandeep-ai", "src/**/*.test.ts", "src/**/*.spec.ts"]
 }

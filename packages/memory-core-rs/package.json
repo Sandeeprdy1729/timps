@@ -1,0 +1,39 @@
+{
+  "name": "@timps/memory-core-rs",
+  "version": "0.1.0",
+  "description": "TIMPS memory-core — Rust native addon (NAPI-RS). 10× faster storage, search, and hashing.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "memory-core-rs",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "test": "cargo test",
+    "typecheck": "echo 'no TS typecheck for Rust crate'",
+    "clean": "cargo clean && rm -f *.node"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "keywords": ["napi", "rust", "memory", "timps"],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.0.0"
+  }
+}

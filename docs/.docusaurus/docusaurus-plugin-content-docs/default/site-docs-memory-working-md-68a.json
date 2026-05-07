@@ -1,0 +1,27 @@
+{
+  "id": "memory/working",
+  "title": "Working Memory",
+  "description": "Working memory is the current session state — what the agent is doing right now. It's reset at the start of each new session.",
+  "source": "@site/docs/memory/working.md",
+  "sourceDirName": "memory",
+  "slug": "/memory/working",
+  "permalink": "/docs/memory/working",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/memory/working.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Memory Architecture",
+    "permalink": "/docs/memory/architecture"
+  },
+  "next": {
+    "title": "Episodic Memory",
+    "permalink": "/docs/memory/episodic"
+  }
+}

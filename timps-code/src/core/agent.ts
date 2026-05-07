@@ -7,6 +7,7 @@ import type {
 } from '../config/types.js';
 import { ALL_TOOLS, getTool, getToolRisk, getToolDefinitions } from '../tools/tools.js';
 import type { ToolExecResult } from '../tools/tools.js';
+import type { PluginManager } from '../plugins/pluginManager.js';
 import { SnapshotManager } from '../memory/snapshot.js';
 import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { Memory } from '../memory/memory.js';
@@ -43,6 +44,7 @@ export interface AgentOptions {
 techStack?: import('../config/types.js').TechStack;
   teamMemory?: TeamMemory;
   branchName?: string;
+  pluginManager?: PluginManager;
 }
 
 export const TIMPS_SYSTEM_PROMPT = `You are TIMPS Code — a highly capable AI coding agent running in the user's terminal.
@@ -128,6 +130,7 @@ export class Agent {
   private abortController: AbortController | null = null;
   private branchName?: string;
   private pendingMergeTarget?: string;
+  private pluginManager?: PluginManager;
 
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
@@ -143,6 +146,7 @@ export class Agent {
     this.techStack = opts.techStack;
     this.teamMemory = opts.teamMemory;
     this.branchName = opts.branchName;
+    this.pluginManager = opts.pluginManager;
 
     // Initialize with system prompt
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
@@ -273,7 +277,10 @@ End your response with a confirmation question.`;
     let turns = 0;
     while (turns < this.maxTurns) {
       turns++;
-      const tools = getToolDefinitions(this.isLocalModel);
+      const tools = [
+        ...getToolDefinitions(this.isLocalModel),
+        ...(this.pluginManager?.getPluginToolDefs() ?? []),
+      ];
       const toolCalls: ToolCall[] = [];
       let fullText = '';
       let currentToolArgs = new Map<string, string>();
@@ -395,7 +402,7 @@ End your response with a confirmation question.`;
         continue;
       }
 
-      const tool = getTool(tc.name);
+      const tool = getTool(tc.name) ?? this.pluginManager?.getPluginTool(tc.name);
       if (!tool) {
         this.messages.push({
           role: 'tool', content: `Unknown tool: ${tc.name}`, toolCallId: tc.id, name: tc.name,

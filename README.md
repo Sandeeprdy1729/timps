@@ -51,6 +51,32 @@ TIMPS stores memory in **3 layers** that survive every session restart:
 
 > "Use the same pattern we always use for API routes." — TIMPS knows what you mean because it remembered it last week.
 
+### Memory architecture
+
+```mermaid
+flowchart TD
+    UserInput["User input / code context"] --> AgentLoop["Agent Loop\n(timps-code)"]
+
+    AgentLoop --> WorkingMem["Working Memory\n(current session)\ngoals · active files · errors"]
+    AgentLoop --> EpisodicMem["Episodic Memory\n(persisted to disk)\nconversation summaries · outcomes"]
+    AgentLoop --> SemanticMem["Semantic Memory\n(permanent facts)\npatterns · decisions · conventions"]
+
+    WorkingMem -->|"recalled on every turn"| AgentLoop
+    EpisodicMem -->|"recalled on session start"| AgentLoop
+    SemanticMem -->|"recalled on context match"| AgentLoop
+
+    AgentLoop --> Tools["25+ Tools\n(file · git · shell · web · memory)"]
+    AgentLoop --> IntelTools["17 Intelligence Tools\n(contradiction · bug · burnout · debt…)"]
+
+    SemanticMem -->|"read/write"| MCPServer["timps-mcp\n(20 MCP tools)"]
+    MCPServer -->|"gives memory to"| Claude["Claude Code / Cursor / Windsurf"]
+
+    style WorkingMem fill:#fef9c3,stroke:#ca8a04
+    style EpisodicMem fill:#dbeafe,stroke:#2563eb
+    style SemanticMem fill:#dcfce7,stroke:#16a34a
+    style IntelTools fill:#fce7f3,stroke:#9d174d
+```
+
 ---
 
 ## ⚡ Quick Start
@@ -87,16 +113,20 @@ The server starts at `http://localhost:3000`. Then add `timps-mcp` to your AI to
 
 ## Why TIMPS instead of Claude Code / Cursor?
 
-| | TIMPS | Claude Code | Cursor |
-|---|---|---|---|
-| **Cost** | Free (Ollama) | ~$20–100/mo | ~$20/mo |
-| **Runs 100% locally** | ✅ | ❌ | ❌ |
-| **Persistent memory** | ✅ 3-layer | ❌ session only | ❌ session only |
-| **Open source** | ✅ MIT | ❌ | ❌ |
-| **MCP tools for Claude/Cursor** | ✅ 20 tools | ❌ | ❌ |
-| **VS Code extension** | ✅ | ❌ | built-in |
+| Feature | TIMPS | Claude Code | Cursor | MemGPT |
+|---|---|---|---|---|
+| **Cost** | Free (Ollama) | ~$20–100/mo | ~$20/mo | Self-hosted |
+| **Runs 100% locally** | ✅ | ❌ | ❌ | ✅ |
+| **Persistent 3-layer memory** | ✅ Working+Episodic+Semantic | ❌ session only | ❌ session only | ✅ limited |
+| **Memory branching/merging** | ✅ | ❌ | ❌ | ❌ |
+| **Open source** | ✅ MIT | ❌ | ❌ | ✅ |
+| **MCP tools for Claude/Cursor** | ✅ 20 tools | ❌ | ❌ | ❌ |
+| **VS Code extension** | ✅ | ❌ | built-in | ❌ |
+| **Intelligence tools (bug/burnout/debt)** | ✅ 17 tools | ❌ | ❌ | ❌ |
+| **CLI agent loop** | ✅ | ✅ | ❌ | limited |
+| **Recall accuracy benchmark** | [see benchmark](benchmark/) | n/a | n/a | published |
 
----
+
 
 ## 🔧 TIMPS MCP — 20 Tools for Claude/Cursor/Windsurf
 

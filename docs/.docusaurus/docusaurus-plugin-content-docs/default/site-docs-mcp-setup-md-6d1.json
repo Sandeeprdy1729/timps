@@ -1,0 +1,27 @@
+{
+  "id": "mcp/setup",
+  "title": "MCP Server Setup",
+  "description": "Claude Code",
+  "source": "@site/docs/mcp/setup.md",
+  "sourceDirName": "mcp",
+  "slug": "/mcp/setup",
+  "permalink": "/docs/mcp/setup",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/mcp/setup.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "MCP Tools Reference",
+    "permalink": "/docs/mcp/tools"
+  },
+  "next": {
+    "title": "VS Code Extension Overview",
+    "permalink": "/docs/vscode/overview"
+  }
+}

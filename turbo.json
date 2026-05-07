@@ -1,0 +1,58 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "package.json"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**", "tsconfig.json"],
+      "outputs": ["coverage/**"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "docs#build": {
+      "outputs": ["build/**", ".docusaurus/**"]
+    },
+    "@timps/memory-dashboard#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "vite.config.ts", "index.html"],
+      "outputs": ["dist/**"]
+    },
+    "@timps/memory-dashboard#dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "@timps/desktop#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "vite.config.ts", "index.html", "src-tauri/src/**", "src-tauri/Cargo.toml"],
+      "outputs": ["dist/**"]
+    },
+    "@timps/desktop#test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.test.ts"],
+      "outputs": []
+    },
+    "@timps/plugin-sdk#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json"],
+      "outputs": ["dist/**"]
+    },
+    "@timps/plugin-sdk#test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.test.ts", "src/**/*.ts"]
+    }
+  }
+}

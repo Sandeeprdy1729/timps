@@ -9,10 +9,12 @@ on:
 jobs:
   # ── timps-code ────────────────────────────────────────────────────────────
   timps-code:
-    name: timps-code (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: timps-code (${{ matrix.os }} / Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node: ['18', '20', '22']
     defaults:
       run:
@@ -31,19 +33,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --audit-level=high
+
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
 
       - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm test --if-present
-
   # ── timps-mcp ─────────────────────────────────────────────────────────────
   timps-mcp:
-    name: timps-mcp
-    runs-on: ubuntu-latest
+    name: timps-mcp (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         working-directory: timps-mcp
@@ -61,16 +70,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Security audit
+        run: npm audit --audit-level=high
 
+      # Build via tsup (esbuild-based) — avoids OOM from heavy MCP SDK types
       - name: Build
-        run: npm run build --if-present
+        run: npm run build
 
   # ── timps-vscode ──────────────────────────────────────────────────────────
   timps-vscode:
-    name: timps-vscode
-    runs-on: ubuntu-latest
+    name: timps-vscode (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         working-directory: timps-vscode
@@ -88,16 +102,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --audit-level=high
+
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Compile extension
-        run: npm run compile --if-present
+        run: npm run compile
 
   # ── sandeep-ai ────────────────────────────────────────────────────────────
   sandeep-ai:
-    name: sandeep-ai
-    runs-on: ubuntu-latest
+    name: sandeep-ai (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         working-directory: sandeep-ai
@@ -115,6 +136,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --audit-level=high
+
       - name: Type check
         run: npx tsc --noEmit
 
@@ -122,6 +146,179 @@ jobs:
         run: npm run build
 
       - name: Verify build output
+        shell: bash
         run: |
           test -f dist/main.js || (echo "Build failed — dist/main.js missing" && exit 1)
-          echo "✓ Build output verified"
+          echo "Build output verified"
+
+  # ── @timps/memory-core ────────────────────────────────────────────────────
+  memory-core:
+    name: memory-core (${{ matrix.os }} / Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['20', '22']
+    defaults:
+      run:
+        working-directory: packages/memory-core
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: packages/memory-core/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  # ── @timps/memory-core-rs (Rust + NAPI) ───────────────────────────────────
+  memory-core-rs:
+    name: memory-core-rs (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: packages/memory-core-rs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/memory-core-rs/target
+          key: ${{ runner.os }}-cargo-memory-core-rs-${{ hashFiles('packages/memory-core-rs/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-memory-core-rs-
+
+      - name: Cargo test
+        run: cargo test
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: packages/memory-core-rs/package-lock.json
+
+      - name: Install NAPI CLI
+        run: npm ci
+
+      - name: Build native addon
+        run: npm run build
+
+  # ── @timps/desktop (Tauri — typecheck + vitest only in CI) ────────────────
+  timps-desktop:
+    name: timps-desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: packages/timps-desktop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: packages/timps-desktop/package-lock.json
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/timps-desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-timps-desktop-${{ hashFiles('packages/timps-desktop/src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-timps-desktop-
+
+      - name: Install system deps (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Type check (frontend)
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Cargo check (Rust core)
+        working-directory: packages/timps-desktop/src-tauri
+        run: cargo check
+
+  plugin-sdk:
+    name: plugin-sdk (${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['20', '22']
+    defaults:
+      run:
+        working-directory: packages/plugin-sdk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: packages/plugin-sdk/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npx vitest run

@@ -1,0 +1,27 @@
+{
+  "id": "memory/architecture",
+  "title": "Memory Architecture",
+  "description": "The TIMPS 3-layer memory system is the core differentiator. All three layers persist to disk and survive process restarts.",
+  "source": "@site/docs/memory/architecture.md",
+  "sourceDirName": "memory",
+  "slug": "/memory/architecture",
+  "permalink": "/docs/memory/architecture",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/memory/architecture.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Configuration",
+    "permalink": "/docs/getting-started/configuration"
+  },
+  "next": {
+    "title": "Working Memory",
+    "permalink": "/docs/memory/working"
+  }
+}

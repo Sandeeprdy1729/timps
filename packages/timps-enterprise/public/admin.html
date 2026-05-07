@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TIMPS Enterprise Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    nav { background: #1a1d2e; border-bottom: 1px solid #2d3748; padding: 0 24px; display: flex; align-items: center; height: 52px; gap: 16px; }
+    nav h1 { font-size: 16px; font-weight: 700; color: #a78bfa; }
+    nav span { font-size: 12px; color: #64748b; margin-left: auto; }
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 10px; padding: 20px; }
+    .card h2 { font-size: 13px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+    .card .value { font-size: 28px; font-weight: 700; color: #e2e8f0; }
+    .card .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; border-bottom: 1px solid #2d3748; }
+    td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #1e2233; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-admin { background: #4c1d95; color: #c4b5fd; }
+    .badge-member { background: #1e3a5f; color: #7dd3fc; }
+    .badge-viewer { background: #1a2e1a; color: #86efac; }
+    section { margin-bottom: 32px; }
+    section h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .login { max-width: 380px; margin: 80px auto; }
+    .login h2 { margin-bottom: 24px; font-size: 24px; }
+    input { width: 100%; padding: 10px 12px; background: #1a1d2e; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; font-size: 14px; margin-bottom: 12px; }
+    button { width: 100%; padding: 10px 16px; background: #7c3aed; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #6d28d9; }
+    .error { color: #f87171; font-size: 13px; margin-bottom: 12px; }
+    #feed-list { list-style: none; }
+    #feed-list li { padding: 8px 0; border-bottom: 1px solid #1e2233; font-size: 13px; color: #94a3b8; }
+    #feed-list li span { color: #a78bfa; font-family: monospace; }
+    #plan-name { font-size: 20px; font-weight: 700; color: #a78bfa; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Login form (shown when not authenticated) -->
+    <div id="login-panel" class="card login">
+      <h2>TIMPS Enterprise</h2>
+      <div id="login-error" class="error" style="display:none"></div>
+      <input id="login-email" type="email" placeholder="Email" />
+      <input id="login-password" type="password" placeholder="Password" />
+      <button id="login-btn">Sign in</button>
+    </div>
+
+    <!-- Dashboard (shown after login) -->
+    <div id="dashboard" style="display:none">
+      <nav>
+        <h1>TIMPS Enterprise Admin</h1>
+        <span id="user-info"></span>
+        <button id="logout-btn" style="width:auto;padding:6px 14px;margin-left:12px;background:#2d3748">Logout</button>
+      </nav>
+      <main>
+        <!-- Stats -->
+        <div class="grid">
+          <div class="card">
+            <h2>Plan</h2>
+            <div class="value" id="plan-name">—</div>
+            <div class="sub" id="plan-limits">Loading...</div>
+          </div>
+          <div class="card">
+            <h2>Team Members</h2>
+            <div class="value" id="member-count">—</div>
+            <div class="sub">registered users</div>
+          </div>
+          <div class="card">
+            <h2>Shared Memories</h2>
+            <div class="value" id="memory-count">—</div>
+            <div class="sub">semantic entries</div>
+          </div>
+        </div>
+
+        <!-- Members table -->
+        <section>
+          <h2>Team Members</h2>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table id="members-table">
+              <thead><tr><th>Email</th><th>Role</th><th>Member since</th></tr></thead>
+              <tbody id="members-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Memory table -->
+        <section>
+          <h2>Shared Memory</h2>
+          <div class="card" style="padding:0;overflow:hidden">
+            <table id="memory-table">
+              <thead><tr><th>Key</th><th>Value</th><th>Importance</th><th>Tags</th><th>Updated</th></tr></thead>
+              <tbody id="memory-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Feed -->
+        <section>
+          <h2>Activity Feed</h2>
+          <div class="card">
+            <ul id="feed-list"><li>Loading...</li></ul>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const BASE = window.TIMPS_ENTERPRISE_URL || 'http://localhost:4000';
+    let token = localStorage.getItem('timps_enterprise_token');
+    let teamId = localStorage.getItem('timps_enterprise_team');
+
+    async function api(path, opts = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(BASE + path, { headers, ...opts });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    async function loadDashboard() {
+      try {
+        const [membersData, memData, feedData, planData] = await Promise.all([
+          api('/team/members'),
+          api('/team/memory'),
+          api('/team/feed?limit=20'),
+          api('/billing/plan'),
+        ]);
+
+        document.getElementById('member-count').textContent = membersData.members.length;
+        document.getElementById('memory-count').textContent = memData.entries.length;
+        document.getElementById('plan-name').textContent = planData.plan.name;
+        document.getElementById('plan-limits').textContent =
+          `${planData.plan.maxMembers === Infinity ? '∞' : planData.plan.maxMembers} members · ${planData.plan.maxMemoryEntries === Infinity ? '∞' : planData.plan.maxMemoryEntries.toLocaleString()} memory entries`;
+
+        const mb = document.getElementById('members-body');
+        mb.innerHTML = membersData.members.map(m => `
+          <tr>
+            <td>${m.email}</td>
+            <td><span class="badge badge-${m.role}">${m.role}</span></td>
+            <td>${new Date(m.createdAt).toLocaleDateString()}</td>
+          </tr>`).join('');
+
+        const memb = document.getElementById('memory-body');
+        memb.innerHTML = memData.entries.map(e => `
+          <tr>
+            <td style="font-family:monospace;color:#a78bfa">${e.key}</td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.value}</td>
+            <td>${(e.importance * 100).toFixed(0)}%</td>
+            <td>${e.tags.join(', ') || '—'}</td>
+            <td>${new Date(e.updatedAt).toLocaleString()}</td>
+          </tr>`).join('');
+
+        const fl = document.getElementById('feed-list');
+        fl.innerHTML = feedData.feed.slice().reverse().map(ev => `
+          <li><span>${ev.action}</span> — ${ev.summary} <small style="float:right">${new Date(ev.timestamp).toLocaleTimeString()}</small></li>
+        `).join('') || '<li>No activity yet</li>';
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function showDashboard(userEmail) {
+      document.getElementById('login-panel').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('user-info').textContent = userEmail;
+      loadDashboard();
+      setInterval(loadDashboard, 30000); // auto-refresh
+    }
+
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errEl = document.getElementById('login-error');
+      try {
+        const data = await api('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        });
+        token = data.token;
+        teamId = data.teamId;
+        localStorage.setItem('timps_enterprise_token', token);
+        localStorage.setItem('timps_enterprise_team', teamId);
+        errEl.style.display = 'none';
+        showDashboard(email);
+      } catch {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Invalid credentials';
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      token = null;
+      localStorage.removeItem('timps_enterprise_token');
+      localStorage.removeItem('timps_enterprise_team');
+      location.reload();
+    });
+
+    // Auto-login if token stored
+    if (token) {
+      api('/team/members').then(() => {
+        showDashboard('(stored session)');
+      }).catch(() => {
+        localStorage.removeItem('timps_enterprise_token');
+      });
+    }
+  </script>
+</body>
+</html>

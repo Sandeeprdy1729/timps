@@ -14,10 +14,22 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "packageManager": "npm@10.9.4",
+  "workspaces": [
+    "packages/*",
+    "timps-code",
+    "timps-mcp",
+    "docs"
+  ],
   "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "docs": "turbo run build --filter=@timps/docs",
+    "dashboard": "turbo run dev --filter=@timps/memory-dashboard",
     "start": "node dist/main.js",
     "dev": "ts-node main.ts",
     "cli": "ts-node main.ts cli",
@@ -46,12 +58,14 @@
     "pg": "^8.12.0"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.12",
     "@types/blessed": "^0.1.21",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.8",
     "ts-node": "^10.9.2",
+    "turbo": "^2.9.9",
     "typescript": "^5.5.0"
   }
 }

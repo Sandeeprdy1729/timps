@@ -1,0 +1,27 @@
+{
+  "id": "memory/episodic",
+  "title": "Episodic Memory",
+  "description": "Episodic memory is an append-only log of every TIMPS session. It answers: \"What did we work on last week?\"",
+  "source": "@site/docs/memory/episodic.md",
+  "sourceDirName": "memory",
+  "slug": "/memory/episodic",
+  "permalink": "/docs/memory/episodic",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/Sandeeprdy1729/timps/edit/main/docs/docs/memory/episodic.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Working Memory",
+    "permalink": "/docs/memory/working"
+  },
+  "next": {
+    "title": "Semantic Memory",
+    "permalink": "/docs/memory/semantic"
+  }
+}

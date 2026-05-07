@@ -1,0 +1,41 @@
+name: code-review
+description: Review staged or branch changes for bugs, security issues, and style problems
+memory_context: true
+
+steps:
+  - name: get_diff
+    prompt: |
+      Run: git diff --staged
+      If no staged changes, run: git diff HEAD~1 HEAD
+      Return ONLY the raw diff output, no commentary.
+
+  - name: summarize_changes
+    prompt: |
+      Summarize the following code diff in plain English. List:
+      - What files changed
+      - What the changes do
+      - Any obvious intent (feature/bug fix/refactor)
+
+      Diff:
+      {get_diff.output}
+
+  - name: find_issues
+    prompt: |
+      Review this diff carefully. Report any:
+      - Bugs or logic errors
+      - Security vulnerabilities (injection, auth bypass, data exposure)
+      - Performance problems
+      - Missing error handling
+      - Unhandled edge cases
+
+      For each issue, give: file:line — issue description — severity (low/medium/high)
+
+      Diff:
+      {get_diff.output}
+
+  - name: suggest_fixes
+    prompt: |
+      For each issue below, write a concrete code fix with before/after snippets.
+
+      Issues found:
+      {find_issues.output}
