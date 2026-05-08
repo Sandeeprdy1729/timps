@@ -1,7 +1,7 @@
 import React, { forwardRef, useState, useCallback, useRef, ReactNode, ChangeEvent, KeyboardEvent } from 'react';
 import './Input.css';
 
-export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
@@ -185,7 +185,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(({
 
 SearchInput.displayName = 'SearchInput';
 
-export interface FileInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, React.InputHTMLAttributes<HTMLInputElement> {
+export interface FileInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   accept?: string;
   multiple?: boolean;

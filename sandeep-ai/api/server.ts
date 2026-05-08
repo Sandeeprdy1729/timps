@@ -10,14 +10,32 @@ import { initVectorStore } from '../db/vector';
 import { positionStore } from '../tools/positionStore';
 import { initToolsTables } from '../tools/toolsDb';
 
+function readAllowedOrigins(): string[] | undefined {
+  const raw = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN;
+  if (raw) {
+    return raw.split(',').map(origin => origin.trim()).filter(Boolean);
+  }
+  return config.nodeEnv === 'production' ? [] : undefined;
+}
+
 export function createApp(): Express {
   const app = express();
+  const allowedOrigins = readAllowedOrigins();
 
   // Trust proxy for rate limiting behind Render/Railway reverse proxy
   app.set('trust proxy', 1);
   
-  app.use(cors());
-  app.use(express.json());
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins === undefined || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+  }));
+  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 
   // Rate limiting — generous for free tier, prevents abuse
   const apiLimiter = rateLimit({
@@ -28,7 +46,7 @@ export function createApp(): Express {
     message: { error: 'Too many requests. Please wait a few minutes.' },
   });
   app.use('/api', apiLimiter);
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: process.env.FORM_BODY_LIMIT || '1mb' }));
   
   app.use((req, _res, next) => {
     console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);

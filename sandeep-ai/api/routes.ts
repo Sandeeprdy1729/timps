@@ -43,12 +43,45 @@ interface ChatRequest {
   clearConversation?: boolean;
 }
 
+type JsonObject = Record<string, unknown>;
+
+function bodyObject(body: unknown): JsonObject | null {
+  return body && typeof body === 'object' && !Array.isArray(body) ? body as JsonObject : null;
+}
+
+function positiveInt(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function requiredString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : null;
+}
+
+function optionalString(value: unknown, maxLength: number): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+}
+
+function optionalBool(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
 router.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { userId, username, message, systemPrompt, clearConversation } = req.body as ChatRequest;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId);
+    const message = requiredString(body?.message, 20_000);
+    const username = optionalString(body?.username, 120);
+    const systemPrompt = optionalString(body?.systemPrompt, 20_000);
+    const clearConversation = optionalBool(body?.clearConversation);
     
     if (!userId || !message) {
-      res.status(400).json({ error: 'userId and message are required' });
+      res.status(400).json({ error: 'userId must be a positive integer and message must be a non-empty string' });
       return;
     }
 
@@ -138,10 +171,14 @@ router.get('/goals/:userId', async (req: Request, res: Response) => {
 
 router.post('/goals/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const { title, description, priority, targetDate } = req.body;
-    if (isNaN(userId) || !title) {
-      res.status(400).json({ error: 'Invalid userId or missing title' });
+    const userId = positiveInt(req.params.userId);
+    const body = bodyObject(req.body);
+    const title = requiredString(body?.title, 240);
+    const description = optionalString(body?.description, 5_000);
+    const priority = body?.priority === undefined ? 1 : positiveInt(body.priority);
+    const targetDate = optionalString(body?.targetDate, 80);
+    if (!userId || !title || !priority) {
+      res.status(400).json({ error: 'Invalid userId, title, or priority' });
       return;
     }
     await ensureUser(userId);
@@ -158,10 +195,11 @@ router.post('/goals/:userId', async (req: Request, res: Response) => {
 
 router.put('/goals/:goalId', async (req: Request, res: Response) => {
   try {
-    const goalId = parseInt(req.params.goalId, 10);
-    const { status } = req.body;
-    if (isNaN(goalId)) {
-      res.status(400).json({ error: 'Invalid goalId' });
+    const goalId = positiveInt(req.params.goalId);
+    const body = bodyObject(req.body);
+    const status = requiredString(body?.status, 80);
+    if (!goalId || !status) {
+      res.status(400).json({ error: 'Invalid goalId or status' });
       return;
     }
     await query(
@@ -195,9 +233,12 @@ router.get('/preferences/:userId', async (req: Request, res: Response) => {
 
 router.post('/preferences/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const { key, value, category } = req.body;
-    if (isNaN(userId) || !key || !value) {
+    const userId = positiveInt(req.params.userId);
+    const body = bodyObject(req.body);
+    const key = requiredString(body?.key, 160);
+    const value = requiredString(body?.value, 5_000);
+    const category = optionalString(body?.category, 160);
+    if (!userId || !key || !value) {
       res.status(400).json({ error: 'Invalid userId, key, or value' });
       return;
     }
@@ -230,16 +271,17 @@ router.get('/projects/:userId', async (req: Request, res: Response) => {
 
 router.post('/conversations/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const { title } = req.body;
-    if (isNaN(userId)) {
+    const userId = positiveInt(req.params.userId);
+    const body = bodyObject(req.body);
+    const title = optionalString(body?.title, 240) || 'New Conversation';
+    if (!userId) {
       res.status(400).json({ error: 'Invalid userId' });
       return;
     }
     await ensureUser(userId);
     const conversation = await query(
       'INSERT INTO conversations (user_id, title) VALUES ($1, $2) RETURNING *',
-      [userId, title || 'New Conversation']
+      [userId, title]
     );
     res.json({ conversation: conversation[0] });
   } catch (error: any) {

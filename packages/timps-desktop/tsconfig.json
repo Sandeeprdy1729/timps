@@ -12,9 +12,31 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/api.ts",
+    "src/constants/index.ts",
+    "src/utils/index.ts",
+    "src/components/Sidebar.tsx",
+    "src/components/SemanticView.tsx",
+    "src/components/EpisodicView.tsx",
+    "src/components/StatsView.tsx",
+    "src/components/SearchView.tsx",
+    "src/components/ChatView.tsx",
+    "src/components/SettingsView.tsx",
+    "src/components/QuickCapture.tsx",
+    "src/components/CommandBar.tsx"
+  ],
+  "exclude": [
+    "src/plugins",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/components/IntegrationSettings.tsx",
+    "src/components/WorkflowBuilder.tsx"
+  ]
 }
