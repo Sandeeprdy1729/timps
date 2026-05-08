@@ -1,0 +1,94 @@
+.command-bar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 1100;
+}
+
+.command-bar-container {
+  width: 90%;
+  max-width: 600px;
+  background: var(--bg-primary, #1e1e2e);
+  border: 1px solid var(--border, #3a3a5c);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.command-bar-input-wrap {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+.command-icon {
+  color: var(--accent, #6366f1);
+  font-size: 16px;
+}
+
+.command-bar-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary, #e4e4ef);
+  font-size: 18px;
+  outline: none;
+}
+
+.command-bar-input::placeholder {
+  color: var(--text-secondary, #666);
+}
+
+.executing-indicator {
+  color: var(--text-secondary, #999);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.command-bar-output {
+  border-top: 1px solid var(--border, #3a3a5c);
+  padding: 16px 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.command-bar-output pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary, #e4e4ef);
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  background: var(--bg-secondary, #252535);
+  border: 1px solid var(--border, #3a3a5c);
+  border-radius: 4px;
+  color: var(--text-secondary, #999);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: var(--bg-hover, #2a2a3c);
+  color: var(--text-primary, #e4e4ef);
+}

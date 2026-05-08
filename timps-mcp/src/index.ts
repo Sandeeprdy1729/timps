@@ -925,6 +925,100 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Review pattern stored` }] };
   });
 
+  // ── ChronosForge: Temporal Causal Memory ─────────────────────────────────────
+
+  server.registerTool('timps_temporal_query', {
+    description:
+      'Query memories that were valid at a specific point in time. ' +
+      'Use for historical reconstruction ("what did I believe on March 15?"), ' +
+      'longitudinal tracking, or context-anchored retrieval.',
+    inputSchema: {
+      at_timestamp: z.number().describe('Unix epoch seconds for the point-in-time query. Use Date.now()/1000 for "now".'),
+      domain: z.enum(['burnout','relationship','decision','code_pattern','contradiction','goal','general'])
+        .optional()
+        .describe('Filter by memory domain'),
+      limit: z.number().min(1).max(50).optional().describe('Max results (default 10)'),
+    },
+  }, async ({ at_timestamp, domain, limit }) => {
+    if (!SERVER_MODE) {
+      return { content: [{ type: 'text' as const, text: '⚠️ timps_temporal_query requires SERVER mode (set TIMPS_URL). In LOCAL mode, use timps_get_memories.' }] };
+    }
+    const data = await timpsAPI('/chrono/query', 'POST', {
+      userId: TIMPS_USER_ID,
+      atTime: at_timestamp,
+      domain,
+      limit: limit ?? 10,
+    });
+    const nodes: any[] = data.nodes ?? [];
+    if (!nodes.length) {
+      return { content: [{ type: 'text' as const, text: `No valid memories found at t=${at_timestamp}.` }] };
+    }
+    const lines = [
+      `**Temporal Query — ${new Date(at_timestamp * 1000).toISOString()}**`,
+      `Valid memories: ${nodes.length}`,
+      ...(data.causalChain?.length ? [`Causal chain root: ${data.causalChain.join(' → ')}`] : []),
+      '',
+      ...nodes.map((n: any, i: number) =>
+        `${i + 1}. [${n.domain}] ${n.content} (importance: ${n.importanceScore?.toFixed(2)})`),
+    ];
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  server.registerTool('timps_chrono_foresight', {
+    description:
+      'Run a Monte-Carlo foresight simulation to predict future risk trajectories. ' +
+      'Use for burnout prediction ("am I heading toward burnout?"), ' +
+      'relationship drift warnings, decision regret risk, or recurring bug likelihood.',
+    inputSchema: {
+      domain: z.enum(['burnout','relationship','decision','code_pattern','contradiction','goal','general'])
+        .describe('Which domain to simulate'),
+      lookback_days: z.number().min(1).max(365).optional().describe('How many days of history to analyze (default 30)'),
+      steps: z.number().min(3).max(20).optional().describe('Simulation steps (default 10)'),
+    },
+  }, async ({ domain, lookback_days, steps }) => {
+    if (!SERVER_MODE) {
+      return { content: [{ type: 'text' as const, text: '⚠️ timps_chrono_foresight requires SERVER mode (set TIMPS_URL). In LOCAL mode, use timps_burnout_analyze or timps_check_regret.' }] };
+    }
+    const data = await timpsAPI('/chrono/foresight', 'POST', {
+      userId: TIMPS_USER_ID,
+      domain,
+      lookbackDays: lookback_days ?? 30,
+      steps: steps ?? 10,
+    });
+    const r = data as {
+      riskScore: number; riskLevel: string; explanation: string;
+      trajectory: number[]; confidence: number; drivingNodeIds: string[];
+    };
+    const lines = [
+      r.explanation,
+      `Trajectory: [${r.trajectory.map((v: number) => Math.round(v * 100) + '%').join(', ')}]`,
+      `Confidence: ${Math.round((r.confidence ?? 0) * 100)}%`,
+      r.drivingNodeIds?.length ? `Top signals: ${r.drivingNodeIds.join(', ')}` : '',
+    ].filter(Boolean);
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  server.registerTool('timps_chrono_consolidate', {
+    description:
+      'Run the Ebbinghaus adaptive consolidation pass — prunes low-importance memories ' +
+      'that have decayed below threshold while preserving causally important nodes. ' +
+      'Use periodically to keep memory lean and relevant.',
+    inputSchema: {
+      importance_threshold: z.number().min(0).max(0.5).optional()
+        .describe('Prune memories with effective score below this (default 0.05)'),
+    },
+  }, async ({ importance_threshold }) => {
+    if (!SERVER_MODE) {
+      return { content: [{ type: 'text' as const, text: '⚠️ timps_chrono_consolidate requires SERVER mode.' }] };
+    }
+    const data = await timpsAPI('/chrono/consolidate', 'POST', {
+      userId: TIMPS_USER_ID,
+      importanceThreshold: importance_threshold ?? 0.05,
+    });
+    return { content: [{ type: 'text' as const, text:
+      `✓ ChronosForge consolidation complete.\nPruned: ${data.pruned ?? 0} memories\nRetained: ${data.retained ?? 0} memories` }] };
+  });
+
   // ── Start ────────────────────────────────────────────────────────────────────
   const transport = new StdioServerTransport();
   await server.connect(transport);

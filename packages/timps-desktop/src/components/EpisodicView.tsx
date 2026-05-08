@@ -1,62 +1,115 @@
-import { EpisodicEntry } from '../api';
+/**
+ * TIMPS Desktop - Episodic Memory View
+ * Display session history/episodes.
+ */
+
+import { useState, useMemo } from 'react';
+import { api, EpisodicEntry } from '../api';
+import { formatDate } from '../utils/index';
 import './EpisodicView.css';
 
-interface Props {
+interface EpisodicViewProps {
   entries: EpisodicEntry[];
   loading: boolean;
 }
 
-const OUTCOME_COLOR: Record<string, string> = {
-  success: 'var(--success)',
-  failure: 'var(--danger)',
-  partial: 'var(--warning)',
-};
+export function EpisodicView({ entries, loading }: EpisodicViewProps) {
+  const [filter, setFilter] = useState<string>('all');
+  const [selectedEpisode, setSelectedEpisode] = useState<EpisodicEntry | null>(null);
 
-export function EpisodicView({ entries, loading }: Props) {
-  if (loading && entries.length === 0) {
-    return <div className="loading-state">Loading…</div>;
+  const filtered = useMemo(() => {
+    if (filter === 'all') return entries;
+    return entries.filter(e => e.outcome === filter);
+  }, [entries, filter]);
+
+  const stats = useMemo(() => {
+    const total = entries.length;
+    const success = entries.filter(e => e.outcome === 'success').length;
+    const failure = entries.filter(e => e.outcome === 'failure').length;
+    const partial = entries.filter(e => e.outcome === 'partial').length;
+    return { total, success, failure, partial, successRate: total ? Math.round((success / total) * 100) : 0 };
+  }, [entries]);
+
+  if (loading) {
+    return <div className="episodic-view"><div className="loading">Loading...</div></div>;
   }
-
-  const sorted = [...entries].reverse(); // newest first in display
 
   return (
     <div className="episodic-view">
       <div className="view-header">
-        <h2 className="view-title">Episodic Memory</h2>
-        <span className="count-badge">{entries.length} sessions</span>
+        <h2>Session History</h2>
+        <select value={filter} onChange={e => setFilter(e.target.value)}>
+          <option value="all">All Sessions</option>
+          <option value="success">Successful</option>
+          <option value="failure">Failed</option>
+          <option value="partial">Partial</option>
+        </select>
       </div>
 
-      {sorted.length === 0 ? (
-        <div className="loading-state">No episodes yet.</div>
-      ) : (
-        <div className="timeline">
-          {sorted.map((e, i) => (
-            <div className="timeline-item" key={e.id}>
-              <div className="timeline-dot" style={{ background: OUTCOME_COLOR[e.outcome] ?? 'var(--text-muted)' }} />
-              {i < sorted.length - 1 && <div className="timeline-line" />}
-              <div className="timeline-content">
-                <div className="ep-meta">
-                  <span
-                    className="ep-outcome"
-                    style={{ color: OUTCOME_COLOR[e.outcome] ?? 'var(--text-muted)' }}
-                  >
-                    {e.outcome}
-                  </span>
-                  <span className="ep-date">
-                    {new Date(e.timestamp).toLocaleString()}
-                  </span>
-                </div>
-                <p className="ep-summary">{e.summary}</p>
-                {e.tags.length > 0 && (
-                  <div className="entry-tags">
-                    {e.tags.map((t) => (
-                      <span key={t} className="tag">{t}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
+      <div className="session-stats">
+        <div className="stat-card">
+          <span className="stat-value">{stats.total}</span>
+          <span className="stat-label">Total</span>
+        </div>
+        <div className="stat-card success">
+          <span className="stat-value">{stats.success}</span>
+          <span className="stat-label">Successful</span>
+        </div>
+        <div className="stat-card failure">
+          <span className="stat-value">{stats.failure}</span>
+          <span className="stat-label">Failed</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-value">{stats.successRate}%</span>
+          <span className="stat-label">Success Rate</span>
+        </div>
+      </div>
+
+      <div className="sessions-list">
+        {filtered.map(entry => (
+          <div 
+            key={entry.id}
+            className={`session-card outcome-${entry.outcome}`}
+            onClick={() => setSelectedEpisode(entry)}
+          >
+            <div className="session-header">
+              <span className={`outcome-badge ${entry.outcome}`}>{entry.outcome}</span>
+              <span className="session-date">{formatDate(entry.timestamp)}</span>
             </div>
-          ))}
+            <div className="session-summary">{entry.summary}</div>
+            {entry.tags.length > 0 && (
+              <div className="session-tags">
+                {entry.tags.map(tag => (
+                  <span key={tag} className="session-tag">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {selectedEpisode && (
+        <div className="episode-detail-overlay" onClick={() => setSelectedEpisode(null)}>
+          <div className="episode-detail" onClick={e => e.stopPropagation()}>
+            <div className="detail-header">
+              <span className={`outcome-badge ${selectedEpisode.outcome}`}>
+                {selectedEpisode.outcome}
+              </span>
+              <button onClick={() => setSelectedEpisode(null)}>✕</button>
+            </div>
+            <div className="detail-summary">{selectedEpisode.summary}</div>
+            <div className="detail-meta">
+              <span>ID: {selectedEpisode.id}</span>
+              <span>Date: {formatDate(selectedEpisode.timestamp)}</span>
+            </div>
+            {selectedEpisode.tags.length > 0 && (
+              <div className="detail-tags">
+                {selectedEpisode.tags.map(tag => (
+                  <span key={tag} className="session-tag">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

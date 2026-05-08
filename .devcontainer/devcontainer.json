@@ -1,0 +1,81 @@
+{
+  "name": "timps-workspace",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "docker-in-docker": {
+      "version": "5",
+      "description": "Includes Docker"
+    },
+    "git": {
+      "enabled": true,
+      "description": "Git build support"
+    }
+  },
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "files.exclude": {
+      "**/.git':": true
+    }
+  },
+  "postCreateCommand": "npm install && echo 'TIMPS Workspace Ready'",
+  "remoteUser": "node",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-eslint",
+        "rust-lang.rust-analyzer",
+        "seriod.trust-store",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "github.copilot"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": "source.fixAll.eslint",
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "eslint.format.enable": true,
+        "eslint.validate": [
+          "javascript",
+          "typescript",
+          "typescriptreact"
+        ]
+      }
+    }
+  },
+  " mounts": [
+    {
+      "source": "${env:HOME}/.timps",
+      "target": "/home/node/.timps",
+      "type": "bind"
+    }
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Application",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Preview",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "notify",
+      "requireLocalPort": true
+    },
+    "6333": {
+      "label": "Qdrant",
+      "onAutoForward": "notify"
+    },
+    "11434": {
+      "label": "Ollama",
+      "onAutoForward": "notify"
+    }
+  }
+}

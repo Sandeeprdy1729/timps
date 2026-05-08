@@ -1,7 +1,9 @@
 //! xAI / Grok provider — uses OpenAI-compatible endpoint.
-use crate::{compat::OpenAICompat, Message, Provider, ProviderStream, ToolCall};
+use crate::{compat::OpenAICompat, Message, Provider, ProviderStream};
 use anyhow::Result;
 use async_trait::async_trait;
+use serde_json::Value;
+use tokio::sync::mpsc;
 
 pub struct XaiProvider {
     api_key: String,
@@ -25,15 +27,14 @@ impl Provider for XaiProvider {
     async fn complete(
         &self,
         system: &str,
-        messages: Vec<Message>,
-        tools: &[ToolCall],
+        messages: &[Message],
+        tools: &[Value],
     ) -> Result<ProviderStream> {
-        let compat = OpenAICompat {
-            base_url: "https://api.x.ai/v1".to_string(),
-            api_key: self.api_key.clone(),
-            model: self.model.clone(),
-        };
-        compat.complete(system, messages, tools).await
+        let (tx, rx) = mpsc::channel(64);
+        let compat = OpenAICompat::new("https://api.x.ai/v1", &self.api_key, &self.model);
+        let (s, m, t) = (system.to_string(), messages.to_vec(), tools.to_vec());
+        tokio::spawn(async move { let _ = compat.complete(&s, &m, &t, tx).await; });
+        Ok(rx)
     }
 
     async fn list_models(&self) -> Result<Vec<String>> {
@@ -44,3 +45,4 @@ impl Provider for XaiProvider {
         ])
     }
 }
+

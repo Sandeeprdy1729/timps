@@ -1,0 +1,148 @@
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slider-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.slider-value {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.slider-track-container {
+  position: relative;
+  height: 20px;
+}
+
+.slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+.slider-input {
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.slider-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slider-input:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.range-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.range-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.range-slider-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.range-slider-values {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.range-slider-track-container {
+  position: relative;
+  height: 20px;
+}
+
+.range-slider-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  transform: translateY(-50%);
+}
+
+.range-slider-range {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+}
+
+.range-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s;
+}
+
+.range-slider-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.range-slider-container.disabled {
+  opacity: 0.5;
+}
+
+.range-slider-container.disabled .range-slider-thumb {
+  cursor: not-allowed;
+}

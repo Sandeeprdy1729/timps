@@ -2,55 +2,68 @@
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| 2.x (latest) | ✅ Active support |
-| 1.x | ⚠️ Security fixes only |
-| < 1.0 | ❌ No longer supported |
+| Version | Supported | Notes |
+|---------|-----------|-------|
+| 1.x | ✅ | Current stable |
+| 0.x | ❌ | End of life |
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+If you discover a security vulnerability, please report it responsibly:
 
-Report security vulnerabilities via email to: **security@timps.ai** (or open a [GitHub Security Advisory](https://github.com/Sandeeprdy1729/timps/security/advisories/new)).
+1. **DO NOT** create a public GitHub issue
+2. Email security@timps.dev with details:
+   - Description of the vulnerability
+   - Steps to reproduce
+   - Potential impact
+   - Any fix suggestions (optional)
 
-Include in your report:
-- Description of the vulnerability
-- Steps to reproduce
-- Affected component (`timps-code`, `timps-mcp`, `timps-vscode`, or `sandeep-ai`)
-- Potential impact
-- Any suggested mitigations
+3. We aim to respond within 48 hours
 
-You can expect:
-- Acknowledgement within **48 hours**
-- Status update within **7 days**
-- A fix or mitigation within **30 days** for critical issues
+4. We coordinate disclosure:
+   - Report to security@timps.dev
+   - Wait for acknowledgment before disclosing
+   - We request 90 days to fix before public disclosure
+   - Credit in security advisory (unless requested otherwise)
 
-We credit researchers who responsibly disclose issues in the release notes.
+## Scope
 
-## Security Considerations
+This policy applies to:
+- `@timps/core` - Core agent
+- `@timps/memory-core` - Memory system
+- `@timps/plugin-sdk` - Plugin development
+- `@timps/timps-desktop` - Desktop application
+- All official integrations
 
-### Command execution
-`timps-code` executes shell commands on your machine via the `run_bash` tool. By default:
-- All shell commands require your explicit approval before running (you will be prompted)
-- The agent cannot execute commands silently without your confirmation
-- Use `timps --safe-mode` to require approval for every file write as well
+Out of scope:
+- Third-party integrations (report to their maintainers)
+- User-created plugins
+- Community forks
 
-### API keys
-- TIMPS reads API keys from environment variables or `~/.timps/config.json`
-- Config files are stored with `chmod 600` permissions (user-only read)
-- Keys are never logged or sent to any TIMPS-controlled server
-- When using Ollama (default), no keys are required and no data leaves your machine
+## Security Principles
 
-### MCP server (`timps-mcp`)
-- The MCP server exposes a local socket — it is not designed to be exposed to the internet
-- Use a firewall or Docker network to restrict access if running in a shared environment
+1. **Least Privilege** - Plugins run with minimal permissions
+2. **Defense in Depth** - Multiple security layers
+3. **Fail Secure** - Default deny, explicit allow
+4. **Data Minimization** - Only collect necessary data
 
-### Supply chain
-- All GitHub Actions workflows pin dependencies to commit SHAs to prevent supply chain attacks
-- Dependabot is configured to send weekly PRs for dependency updates
-- We run OSV vulnerability scanning on every push
+## Data Handling
 
-## Dependency Scanning
+- **In Transit:** All API calls use HTTPS/TLS 1.3
+- **At Rest:** Sensitive data encrypted
+- **Memory:** Credentials cleared after use
 
-Automated dependency scanning runs on every push and pull request via the `supply-chain-audit` workflow. Known-vulnerable packages will block merging.
+## Authorization
+
+- OAuth tokens stored securely (keychain/credential manager)
+- API keys encrypted
+- Webhook secrets validated
+
+## Known Issues
+
+See [Security Advisories](https://github.com/Sandeeprdy1729/timps/security/advisories) for past disclosures.
+
+## Attribution
+
+Thanks to security researchers who have helped improve TIMPS:
+- (Your name here)

@@ -1,0 +1,19 @@
+{
+  "tauri": {
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "mac": {
+    "certificate": "",
+    "identity": "",
+    "providerShortName": "",
+    "teamId": ""
+  },
+  "linux": {
+    "certificate": "",
+    "keyPass": ""
+  }
+}

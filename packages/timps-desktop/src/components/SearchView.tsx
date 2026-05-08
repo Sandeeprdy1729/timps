@@ -1,85 +1,125 @@
-import { useState, useCallback } from 'react';
+/**
+ * TIMPS Desktop - Search View
+ * Search across memory entries.
+ */
+
+import { useState, useMemo } from 'react';
 import { api, SemanticEntry } from '../api';
+import { formatDate, truncate } from '../utils/index';
 import './SearchView.css';
 
-interface Props {
+interface SearchViewProps {
   projectPath: string;
   semanticEntries: SemanticEntry[];
 }
 
-export function SearchView({ projectPath, semanticEntries }: Props) {
+export function SearchView({ projectPath, semanticEntries }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SemanticEntry[]>([]);
-  const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
 
-  const runSearch = useCallback(async () => {
+  const handleSearch = async () => {
     if (!query.trim()) return;
-    setLoading(true);
+    setSearching(true);
     try {
-      const res = await api.searchMemory(projectPath, query, 20);
-      setResults(res);
-      setSearched(true);
+      const found = await api.searchMemory(projectPath, query, 50);
+      setResults(found);
+    } catch (err) {
+      console.error('Search error:', err);
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
-  }, [projectPath, query]);
+  };
 
-  // Local filter fallback when native search returns empty but we have entries in memory
-  const displayResults =
-    results.length > 0
-      ? results
-      : searched && semanticEntries.length > 0 && query.trim()
-        ? semanticEntries.filter((e) =>
-            e.content.toLowerCase().includes(query.toLowerCase()) ||
-            e.tags.some((t) => t.toLowerCase().includes(query.toLowerCase())),
-          ).slice(0, 20)
-        : [];
+  const localResults = useMemo(() => {
+    if (!query.trim()) return semanticEntries.slice(0, 20);
+    const q = query.toLowerCase();
+    return semanticEntries.filter(
+      e => e.content.toLowerCase().includes(q) ||
+           e.tags.some(t => t.toLowerCase().includes(q))
+    ).slice(0, 20);
+  }, [query, semanticEntries]);
+
+  const displayResults = results.length > 0 ? results : localResults;
 
   return (
     <div className="search-view">
-      <h2 className="view-title">Search Memory</h2>
+      <h2>Search Memory</h2>
 
-      <div className="search-bar">
-        <input
-          className="search-input"
-          type="text"
-          placeholder="Search semantic memory…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void runSearch();
-          }}
-        />
-        <button className="btn-primary" onClick={() => void runSearch()} disabled={loading || !query.trim()}>
-          {loading ? '…' : 'Search'}
-        </button>
+      <div className="search-form">
+        <div className="search-input-wrap">
+          <input
+            type="text"
+            placeholder="Search memories..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          />
+          <button 
+            className="search-btn"
+            onClick={handleSearch}
+            disabled={searching || !query.trim()}
+          >
+            {searching ? '...' : '🔍'}
+          </button>
+        </div>
+        <div className="search-hint">
+          Search in content and tags across all {semanticEntries.length} memories
+        </div>
       </div>
 
-      {searched && (
-        <p className="search-meta">
-          {displayResults.length} result{displayResults.length !== 1 ? 's' : ''} for "{query}"
-        </p>
-      )}
+      <div className="search-results">
+        <div className="results-header">
+          {displayResults.length} {displayResults.length === 1 ? 'result' : 'results'}
+        </div>
 
-      <div className="result-list">
-        {displayResults.map((e) => (
-          <div className="result-card" key={e.id}>
-            <div className="result-meta">
-              <span className="result-type">{e.type}</span>
-              <span className="result-date">{new Date(e.timestamp).toLocaleDateString()}</span>
+        {displayResults.map((entry, index) => (
+          <div key={entry.id || index} className="result-card">
+            <div className="result-header">
+              <span className={`result-type type-${entry.type}`}>{entry.type}</span>
+              <span className="result-date">{formatDate(entry.timestamp)}</span>
             </div>
-            <p className="result-content">{e.content}</p>
-            {e.tags.length > 0 && (
+            <div className="result-content">
+              {highlightMatch(entry.content, query)}
+            </div>
+            {entry.tags.length > 0 && (
               <div className="result-tags">
-                {e.tags.map((t) => (
-                  <span key={t} className="tag">{t}</span>
+                {entry.tags.map(tag => (
+                  <span 
+                    key={tag} 
+                    className={`result-tag ${query && tag.toLowerCase().includes(query.toLowerCase()) ? 'highlight' : ''}`}
+                  >
+                    {tag}
+                  </span>
                 ))}
+              </div>
+            )}
+            {entry.score !== undefined && (
+              <div className="result-score">
+                Score: {entry.score.toFixed(2)}
               </div>
             )}
           </div>
         ))}
+
+        {displayResults.length === 0 && query && (
+          <div className="no-results">
+            No results found for "{query}"
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  
+  const parts = text.split(new RegExp(`(${query})`, 'gi'));
+  
+  return parts.map((part, i) => 
+    part.toLowerCase() === query.toLowerCase() 
+      ? <mark key={i}>{part}</mark>
+      : part
   );
 }

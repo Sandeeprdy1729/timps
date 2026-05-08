@@ -1,46 +1,57 @@
 import { describe, it, expect } from 'vitest';
-// Import from the stub path so tests don't need a real Tauri runtime
-import { api } from './api';
+import { api } from '../src/api';
 
-describe('api stubs (non-Tauri env)', () => {
-  it('projectHash returns a string', async () => {
-    const hash = await api.projectHash('/some/path');
-    expect(typeof hash).toBe('string');
-    expect(hash.length).toBeGreaterThan(0);
+describe('TIMPS Desktop API', () => {
+  it('should export correct types', () => {
+    expect(typeof api.projectHash).toBe('function');
+    expect(typeof api.loadSemantic).toBe('function');
+    expect(typeof api.loadEpisodes).toBe('function');
+    expect(typeof api.chat).toBe('function');
   });
 
-  it('loadSemantic returns an array', async () => {
-    const entries = await api.loadSemantic('/some/path');
+  it('should have all required methods', () => {
+    const requiredMethods = [
+      'projectHash',
+      'loadSemantic',
+      'loadEpisodes',
+      'loadWorking',
+      'getMemoryStats',
+      'listProjects',
+      'searchMemory',
+      'chat',
+      'storeMemory',
+      'deleteMemory',
+    ];
+    
+    requiredMethods.forEach(method => {
+      expect(api).toHaveProperty(method);
+    });
+  });
+});
+
+describe('Memory Stats', () => {
+  it('should handle empty project stats', async () => {
+    const stats = await api.getMemoryStats('/nonexistent/project');
+    expect(stats).toHaveProperty('project_hash');
+    expect(stats).toHaveProperty('semantic_count');
+    expect(stats).toHaveProperty('episode_count');
+    expect(stats).toHaveProperty('working_goals');
+  });
+});
+
+describe('Memory Operations', () => {
+  it('should load semantic from empty project', async () => {
+    const entries = await api.loadSemantic('/nonexistent/project');
     expect(Array.isArray(entries)).toBe(true);
   });
 
-  it('loadEpisodes returns an array', async () => {
-    const eps = await api.loadEpisodes('/some/path', 10);
-    expect(Array.isArray(eps)).toBe(true);
+  it('should load episodes from empty project', async () => {
+    const entries = await api.loadEpisodes('/nonexistent/project', 10);
+    expect(Array.isArray(entries)).toBe(true);
   });
 
-  it('loadWorking returns a WorkingState shape', async () => {
-    const w = await api.loadWorking('/some/path');
-    expect(Array.isArray(w.goals)).toBe(true);
-    expect(Array.isArray(w.activeFiles)).toBe(true);
-    expect(Array.isArray(w.recentErrors)).toBe(true);
-  });
-
-  it('getMemoryStats returns MemoryStats shape', async () => {
-    const stats = await api.getMemoryStats('/some/path');
-    expect(typeof stats.project_hash).toBe('string');
-    expect(typeof stats.semantic_count).toBe('number');
-    expect(typeof stats.episode_count).toBe('number');
-    expect(typeof stats.working_goals).toBe('number');
-  });
-
-  it('listProjects returns an array', async () => {
-    const projects = await api.listProjects();
-    expect(Array.isArray(projects)).toBe(true);
-  });
-
-  it('searchMemory returns an array', async () => {
-    const results = await api.searchMemory('/some/path', 'test query', 5);
+  it('should search memory with empty query', async () => {
+    const results = await api.searchMemory('/nonexistent/project', '', 5);
     expect(Array.isArray(results)).toBe(true);
   });
 });

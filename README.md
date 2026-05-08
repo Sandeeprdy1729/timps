@@ -287,6 +287,24 @@ timps/
 
 ---
 
+## Community
+
+Join our growing community:
+
+- **[Discord](https://discord.gg/timps)** — real-time chat, help, announcements
+- **[GitHub Discussions](https://github.com/Sandeeprdy1729/timps/discussions)** — Q&A, ideas
+- **[X/Twitter](https://x.com/timpsai)** — announcements
+
+### Contributor of the Month
+
+Each month, we recognize outstanding contributors in the README and on Discord.
+
+### Bounty Program
+
+We run periodic bounty contests for new integrations and plugins. Check Discord for active bounties!
+
+---
+
 ## Contributing
 
 See [contributing.md](contributing.md). Issues and PRs welcome — the project is MIT licensed.

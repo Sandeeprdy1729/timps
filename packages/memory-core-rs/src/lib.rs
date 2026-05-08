@@ -1,497 +1,900 @@
-// ── TIMPS memory-core-rs ──
-// Native Rust implementations of memory-core's hot-path operations,
-// exposed to Node.js via NAPI-RS. All functions mirror the TypeScript
-// equivalents in @timps/memory-core exactly.
+// ──────────────────────────────────────────────────────────────────────────────
+// TIMPS Local AI - llama.cpp bindings and inference engine
+// Provides offline LLM inference for coding assistance
+// ──────────────────────────────────────────────────────────────────────────────
 
-#![deny(clippy::all)]
-#![allow(clippy::new_without_default)]
+use std::collections::VecDeque;
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::Path;
+use std::process::Command;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use napi_derive::napi;
-use sha2::{Digest, Sha256};
-use std::collections::HashSet;
-use std::fs;
-use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use serde::{Deserialize, Serialize};
 
-// ──────────────────────────────────────────────────────────────────────────────
-// project_hash — SHA-256 of canonicalized path, first 12 hex chars
-// ──────────────────────────────────────────────────────────────────────────────
-
-#[napi]
-pub fn project_hash(path: String) -> String {
-    let canonical = fs::canonicalize(&path)
-        .unwrap_or_else(|_| Path::new(&path).to_path_buf());
-    let canonical_str = canonical.to_string_lossy();
-    let mut hasher = Sha256::new();
-    hasher.update(canonical_str.as_bytes());
-    let digest = hasher.finalize();
-    hex::encode(&digest[..6]) // 6 bytes = 12 hex chars
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Semantic memory (semantic.json)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Read semantic.json, returns raw JSON string (array). Empty array on missing/error.
-#[napi]
-pub fn load_semantic(dir: String) -> String {
-    let p = format!("{}/semantic.json", dir);
-    fs::read_to_string(&p).unwrap_or_else(|_| "[]".to_string())
-}
-
-/// Write semantic.json, trimming array to 500 most recent entries.
-#[napi]
-pub fn save_semantic(dir: String, json: String) -> napi::Result<()> {
-    let trimmed = trim_json_array_str(&json, 500);
-    let p = format!("{}/semantic.json", dir);
-    fs::write(&p, trimmed.as_bytes()).map_err(|e| napi::Error::from_reason(e.to_string()))
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Working memory (working.json)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Read working.json, returns raw JSON string. Default object on missing/error.
-#[napi]
-pub fn load_working(dir: String) -> String {
-    let p = format!("{}/working.json", dir);
-    fs::read_to_string(&p).unwrap_or_else(|_| {
-        r#"{"activeFiles":[],"recentErrors":[],"discoveredPatterns":[]}"#.to_string()
-    })
-}
-
-/// Write working.json.
-#[napi]
-pub fn save_working(dir: String, json: String) -> napi::Result<()> {
-    let p = format!("{}/working.json", dir);
-    fs::write(&p, json.as_bytes()).map_err(|e| napi::Error::from_reason(e.to_string()))
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Episodic memory (episodes.jsonl)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/// Read last `count` lines from episodes.jsonl, return as JSON array string.
-/// Entries are returned in file order (oldest of the window first), matching
-/// the TypeScript storage.loadEpisodes() contract.
-#[napi]
-pub fn load_episodes(dir: String, count: u32) -> String {
-    let p = format!("{}/episodes.jsonl", dir);
-    let file = match fs::File::open(&p) {
-        Ok(f) => f,
-        Err(_) => return "[]".to_string(),
-    };
-    let lines: Vec<String> = BufReader::new(file)
-        .lines()
-        .filter_map(|l| l.ok())
-        .filter(|l| !l.trim().is_empty())
-        .collect();
-
-    let count_usize = count as usize;
-    let start = lines.len().saturating_sub(count_usize);
-    let selected = &lines[start..];
-    // File order (oldest in window first) — matches TypeScript behaviour
-    let items: Vec<&str> = selected.iter().map(|s| s.as_str()).collect();
-    format!("[{}]", items.join(","))
-}
-
-/// Append one JSON episode line to episodes.jsonl, then trim to 100 lines.
-#[napi]
-pub fn append_episode(dir: String, json: String) -> napi::Result<()> {
-    let p = format!("{}/episodes.jsonl", dir);
-    let mut file = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&p)
-        .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-    writeln!(file, "{}", json).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-    trim_jsonl_file(&p, 100);
-    Ok(())
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// jaccard_similarity — Jaccard on word sets (words >2 chars)
-// ──────────────────────────────────────────────────────────────────────────────
-
-#[napi]
-pub fn jaccard_similarity(a: String, b: String) -> f64 {
-    let sa = a.to_lowercase();
-    let sb = b.to_lowercase();
-    let set_a: HashSet<&str> = sa.split_whitespace().filter(|w| w.len() > 2).collect();
-    let set_b: HashSet<&str> = sb.split_whitespace().filter(|w| w.len() > 2).collect();
-
-    if set_a.is_empty() && set_b.is_empty() {
-        return 1.0;
+mod tokenizer {
+    // Simple BPE tokenizer (simplified - in production use proper implementation)
+    pub fn encode(text: &str) -> Vec<i32> {
+        text.split_whitespace()
+            .map(|s| s.len() as i32)
+            .collect()
     }
-    if set_a.is_empty() || set_b.is_empty() {
+
+    pub fn decode(tokens: &[i32]) -> String {
+        tokens.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" ")
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Model Management
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LocalModel {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub size_mb: f64,
+    pub context_size: u32,
+    pub quantization: String,
+    pub vocab_size: u32,
+    pub embedding_size: u32,
+    pub layers: u32,
+    pub is_loaded: bool,
+    pub memory_required_mb: f64,
+}
+
+impl LocalModel {
+    pub fn from_path(path: &str) -> Option<Self> {
+        let p = Path::new(path);
+        if !p.exists() {
+            return None;
+        }
+
+        let metadata = fs::metadata(p).ok()?;
+        let size_mb = metadata.len() as f64 / 1_048_576.0;
+        let name = p.file_stem()?.to_str()?.to_string();
+        
+        let (quantization, context_size) = if path.contains("Q2_K") {
+            ("Q2_K", 2048)
+        } else if path.contains("Q3_K") {
+            ("Q3_K", 3072)
+        } else if path.contains("Q4_0") {
+            ("Q4_0", 2048)
+        } else if path.contains("Q4_K") {
+            ("Q4_K", 4096)
+        } else if path.contains("Q5") {
+            ("Q5_K", 4096)
+        } else if path.contains("Q6") {
+            ("Q6_K", 4096)
+        } else if path.contains("Q8") {
+            ("Q8_0", 4096)
+        } else {
+            ("F16", 4096)
+        };
+
+        let memory_required_mb = size_mb * 1.5;
+
+        Some(LocalModel {
+            id: format!("model_{}", name),
+            name: name.clone(),
+            path: path.to_string(),
+            size_mb: (size_mb * 100.0).round() / 100.0,
+            context_size,
+            quantization: quantization.to_string(),
+            vocab_size: 32000,
+            embedding_size: 4096,
+            layers: if quantization.starts_with("Q") { 32 } else { 40 },
+            is_loaded: false,
+            memory_required_mb: (memory_required_mb * 100.0).round() / 100.0,
+        })
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Inference Configuration
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct InferenceConfig {
+    pub model_path: String,
+    pub max_tokens: u32,
+    pub temperature: f32,
+    pub top_p: f32,
+    pub top_k: u32,
+    pub repeat_penalty: f32,
+    pub frequency_penalty: f32,
+    pub presence_penalty: f32,
+    pub context_window: u32,
+    pub threads: u32,
+    pub use_gpu: bool,
+    pub cache_prompt: bool,
+}
+
+impl Default for InferenceConfig {
+    fn default() -> Self {
+        Self {
+            model_path: String::new(),
+            max_tokens: 512,
+            temperature: 0.7,
+            top_p: 0.9,
+            top_k: 40,
+            repeat_penalty: 1.1,
+            frequency_penalty: 0.0,
+            presence_penalty: 0.0,
+            context_window: 4096,
+            threads: 4,
+            use_gpu: true,
+            cache_prompt: true,
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Inference Result
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct InferenceResult {
+    pub text: String,
+    pub tokens: u32,
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub duration_ms: u64,
+    pub tokens_per_second: f32,
+    pub finish_reason: String,
+    pub model: String,
+    pub logprobs: Option<Vec<f32>>,
+}
+
+impl InferenceResult {
+    pub fn new(text: String, duration_ms: u64, model: &str) -> Self {
+        let tokens = text.split_whitespace().count() as u32;
+        let tps = if duration_ms > 0 {
+            (tokens as f32 / (duration_ms as f32 / 1000.0)) * 1000.0
+        } else {
+            0.0
+        };
+
+        Self {
+            text,
+            tokens,
+            prompt_tokens: 0,
+            completion_tokens: tokens,
+            duration_ms,
+            tokens_per_second: tps,
+            finish_reason: "stop".to_string(),
+            model: model.to_string(),
+            logprobs: None,
+        }
+    }
+
+    pub fn error(message: String, model: &str) -> Self {
+        Self {
+            text: format!("Error: {}", message),
+            tokens: 0,
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            duration_ms: 0,
+            tokens_per_second: 0.0,
+            finish_reason: "error".to_string(),
+            model: model.to_string(),
+            logprobs: None,
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Chat Message
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+impl ChatMessage {
+    pub fn user(content: &str) -> Self {
+        Self {
+            role: "user".to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    pub fn assistant(content: &str) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    pub fn system(content: &str) -> Self {
+        Self {
+            role: "system".to_string(),
+            content: content.to_string(),
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Chat Context
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatContext {
+    pub messages: Vec<ChatMessage>,
+    pub system_prompt: Option<String>,
+    pub max_history: u32,
+}
+
+impl Default for ChatContext {
+    fn default() -> Self {
+        Self {
+            messages: Vec::new(),
+            system_prompt: Some(
+                "You are TIMPS, an AI coding assistant that helps with software development. 
+You have persistent memory and remember patterns and conventions from past sessions.
+Provide helpful, accurate responses focused on code and technical content.".to_string(),
+            ),
+            max_history: 10,
+        }
+    }
+}
+
+impl ChatContext {
+    pub fn add_message(&mut self, role: &str, content: &str) {
+        self.messages.push(ChatMessage {
+            role: role.to_string(),
+            content: content.to_string(),
+        });
+
+        while self.messages.len() > self.max_history as usize * 2 {
+            self.messages.remove(0);
+        }
+    }
+
+    pub fn to_prompt(&self) -> String {
+        let mut prompt = String::new();
+
+        if let Some(ref system) = self.system_prompt {
+            prompt.push_str(&format!("system: {}\n\n", system));
+        }
+
+        for msg in &self.messages {
+            prompt.push_str(&format!("{}: {}\n", msg.role, msg.content));
+        }
+
+        prompt.push_str("assistant: ");
+        prompt
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Streaming Callback
+// ──────────────────────────────────────────────────────────────────────────────
+
+pub type StreamCallback = Box<dyn Fn(String) + Send + Sync>;
+
+pub struct StreamHandler {
+    callbacks: Vec<Arc<Mutex<Box<dyn Fn(String) + Send + Sync>>>>,
+}
+
+impl StreamHandler {
+    pub fn new() -> Self {
+        Self {
+            callbacks: Vec::new(),
+        }
+    }
+
+    pub fn add_callback(&mut self, callback: Box<dyn Fn(String) + Send + Sync>) {
+        self.callbacks.push(Arc::new(Mutex::new(callback)));
+    }
+
+    pub fn emit(&self, token: String) {
+        for cb in &self.callbacks {
+            if let Ok(callback) = cb.lock() {
+                callback(token.clone());
+            }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Model Loader
+// ─────────────────────────────────────────────────────────────────���─���──────────
+
+pub struct ModelLoader {
+    loaded_model: Option<LocalModel>,
+    config: InferenceConfig,
+    context: ChatContext,
+    is_inferencing: Arc<Mutex<bool>>,
+}
+
+impl ModelLoader {
+    pub fn new() -> Self {
+        Self {
+            loaded_model: None,
+            config: InferenceConfig::default(),
+            context: ChatContext::default(),
+            is_inferencing: Arc::new(Mutex::new(false)),
+        }
+    }
+
+    pub fn load_model(&mut self, path: &str) -> Result<LocalModel, String> {
+        let model = LocalModel::from_path(path)
+            .ok_or_else(|| format!("Failed to load model from {}", path))?;
+
+        self.loaded_model = Some(LocalModel {
+            is_loaded: true,
+            ..model
+        });
+
+        Ok(model)
+    }
+
+    pub fn unload_model(&mut self) {
+        self.loaded_model = None;
+    }
+
+    pub fn get_model(&self) -> Option<&LocalModel> {
+        self.loaded_model.as_ref()
+    }
+
+    pub fn is_loaded(&self) -> bool {
+        self.loaded_model.as_ref().map(|m| m.is_loaded).unwrap_or(false)
+    }
+
+    pub fn set_system_prompt(&mut self, prompt: &str) {
+        self.context.system_prompt = Some(prompt.to_string());
+    }
+
+    pub fn infer_sync(&mut self, prompt: &str) -> InferenceResult {
+        let model = match &self.loaded_model {
+            Some(m) => m,
+            None => return InferenceResult::error("No model loaded", ""),
+        };
+
+        let is_busy = self.is_inferencing.lock().unwrap();
+        if *is_busy {
+            return InferenceResult::error("Already inferencing", &model.name);
+        }
+        *is_busy = true;
+        drop(is_busy);
+
+        let start = Instant::now();
+        let mut full_prompt = self.context.to_prompt();
+        full_prompt.push_str(prompt);
+
+        let mut cmd = Command::new("llama-cli");
+        cmd.arg("-m").arg(&model.path)
+           .arg("-p").arg(&full_prompt)
+           .arg("-n").arg(self.config.max_tokens.to_string())
+           .arg("--temp").arg(self.config.temperature.to_string())
+           .arg("--top-p").arg(self.config.top_p.to_string())
+           .arg("--top-k").arg(self.config.top_k.to_string())
+           .arg("--repeat-penalty").arg(self.config.repeat_penalty.to_string())
+           .arg("-c").arg(self.config.context_window.to_string());
+
+        if self.config.threads > 0 {
+            cmd.arg("-t").arg(self.config.threads.to_string());
+        }
+
+        if !self.config.use_gpu {
+            cmd.arg("--no-mmap");
+        }
+
+        let output = cmd.output();
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        let mut is_inferencing = self.is_inferencing.lock().unwrap();
+        *is_inferencing = false;
+
+        match output {
+            Ok(out) => {
+                if out.status.success() {
+                    let text = String::from_utf8_lossy(&out.stdout).to_string().trim().to_string();
+                    self.context.add_message("user", prompt);
+                    self.context.add_message("assistant", &text);
+                    InferenceResult::new(text, duration_ms, &model.name)
+                } else {
+                    let err = String::from_utf8_lossy(&out.stderr).to_string();
+                    InferenceResult::error(&err, &model.name)
+                }
+            }
+            Err(e) => InferenceResult::error(&e.to_string(), &model.name),
+        }
+    }
+
+    pub fn infer_streaming(&mut self, prompt: &str, callbacks: &StreamHandler) -> InferenceResult {
+        let result = self.infer_sync(prompt);
+        callbacks.emit(result.text.clone());
+        result
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Prompt Templates
+// ──────────────────────────────────────────────────────────────────────────────
+
+pub struct PromptTemplate {
+    name: String,
+    template: String,
+    variables: Vec<String>,
+}
+
+impl PromptTemplate {
+    pub fn code_review() -> Self {
+        Self {
+            name: "code_review".to_string(),
+            template: r#"Review the following code for the PR:
+
+## Changes
+{diff}
+
+## Context
+{context}
+
+Provide a review with:
+1. Security issues
+2. Performance concerns  
+3. Code quality suggestions
+4. Best practices violations
+
+Be specific and provide actionable feedback."#.to_string(),
+            variables: vec!["diff".to_string(), "context".to_string()],
+        }
+    }
+
+    pub fn code_explain() -> Self {
+        Self {
+            name: "code_explain".to_string(),
+            template: r#"Explain the following code:
+
+```{language}
+{code}
+```
+
+Provide:
+1. Overall purpose
+2. Key components
+3. How it works
+4. Any notable patterns used"#.to_string(),
+            variables: vec!["language".to_string(), "code".to_string()],
+        }
+    }
+
+    pub fn code_refactor() -> Self {
+        Self {
+            name: "code_refactor".to_string(),
+            template: r#"Refactor the following code to be cleaner and more maintainable:
+
+```{language}
+{code}
+```
+
+Goals:
+1. Improve readability
+2. Follow best practices
+3. Reduce complexity
+4. Add comments where helpful
+
+Provide the refactored code with explanations."#.to_string(),
+            variables: vec!["language".to_string(), "code".to_string()],
+        }
+    }
+
+    pub fn generate_tests() -> Self {
+        Self {
+            name: "generate_tests".to_string(),
+            template: r#"Generate unit tests for the following code:
+
+```{language}
+{code}
+```
+
+Use {framework} testing framework. Cover:
+1. Happy path
+2. Edge cases
+3. Error conditions
+
+Provide only the test code."#.to_string(),
+            variables: vec!["language".to_string(), "code".to_string(), "framework".to_string()],
+        }
+    }
+
+    pub fn generate_docs() -> Self {
+        Self {
+            name: "generate_docs".to_string(),
+            template: r#"Generate documentation for:
+
+```{language}
+{code}
+```
+
+Include:
+1. Overview
+2. Parameters
+3. Return value
+4. Examples"#.to_string(),
+            variables: vec!["language".to_string(), "code".to_string()],
+        }
+    }
+
+    pub fn apply(&self, variables: &std::collections::HashMap<String, String>) -> String {
+        let mut result = self.template.clone();
+        for (key, value) in variables {
+            result = result.replace(&format!("{{{}}}", key), value);
+        }
+        result
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Embeddings
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EmbeddingResult {
+    pub embeddings: Vec<f32>,
+    pub model: String,
+    pub tokens: u32,
+}
+
+pub fn get_embedding(text: &str) -> EmbeddingResult {
+    let tokens = tokenizer::encode(text);
+    let dim = 4096;
+    let mut embeddings = vec![0.0f32; dim];
+    
+    for (i, token) in tokens.iter().take(dim).enumerate() {
+        let val = (*token as f32 / 1000.0).sin();
+        embeddings[i] = val;
+    }
+
+    EmbeddingResult {
+        embeddings,
+        model: "local".to_string(),
+        tokens: tokens.len() as u32,
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Similarity
+// ──────────────────────────────────────────────────────────────────────────────
+
+pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
 
-    let intersection = set_a.intersection(&set_b).count();
-    let union = set_a.len() + set_b.len() - intersection;
-    intersection as f64 / union as f64
+    let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+    let mag_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let mag_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+    if mag_a == 0.0 || mag_b == 0.0 {
+        return 0.0;
+    }
+
+    dot / (mag_a * mag_b)
+}
+
+// ───────────────────────────────────────────────────────────��─��────────────────
+// Context Window Management
+// ──────────────────────────────────────────────────────────────────────────────
+
+pub struct ContextWindow {
+    tokens: VecDeque<String>,
+    max_tokens: u32,
+}
+
+impl ContextWindow {
+    pub fn new(max_tokens: u32) -> Self {
+        Self {
+            tokens: VecDeque::new(),
+            max_tokens,
+        }
+    }
+
+    pub fn add(&mut self, text: &str) {
+        let new_tokens: Vec<String> = text.split_whitespace().map(String::from).collect();
+        
+        for token in new_tokens {
+            self.tokens.push_back(token);
+            while self.tokens.len() > self.max_tokens as usize {
+                self.tokens.pop_front();
+            }
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        self.tokens.iter().cloned().collect::<Vec<_>>().join(" ")
+    }
+
+    pub fn clear(&mut self) {
+        self.tokens.clear();
+    }
+
+    pub fn tokens(&self) -> usize {
+        self.tokens.len()
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// search_entries — fast keyword search over MemoryEntry[] JSON
-// Implements TF-weighted scoring: content×2, tags×1, type×0.5
-// Returns JSON array string of matching entries, up to `limit`, scored descending.
+// NAPI Exports
 // ──────────────────────────────────────────────────────────────────────────────
 
 #[napi]
-pub fn search_entries(entries_json: String, query: String, limit: u32) -> String {
-    let entries: Vec<serde_json::Value> = match serde_json::from_str(&entries_json) {
-        Ok(v) => v,
-        Err(_) => return "[]".to_string(),
-    };
+pub fn is_llama_available() -> bool {
+    which::which("llama-cli").is_ok() 
+        || which::which("llama").is_ok() 
+        || std::path::Path::new("./models").exists()
+}
 
-    if query.trim().is_empty() {
-        let end = (limit as usize).min(entries.len());
-        return serde_json::to_string(&entries[..end]).unwrap_or_else(|_| "[]".to_string());
+#[napi]
+pub fn list_local_models() -> String {
+    let models_dir = std::path::Path::new("./models");
+    if !models_dir.is_dir() {
+        return "[]".to_string();
     }
 
-    let q_lower = query.to_lowercase();
-    let query_words: Vec<String> = q_lower
-        .split_whitespace()
-        .filter(|w| w.len() > 2)
-        .map(|w| w.to_string())
+    let models: Vec<LocalModel> = fs::read_dir(models_dir)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    let path = e.path();
+                    matches!(
+                        path.extension().and_then(|s| s.to_str()),
+                        Some("gguf") | Some("bin") | Some("ggml")
+                    )
+                })
+                .filter_map(|e| {
+                    let path = e.path();
+                    LocalModel::from_path(&path.to_string_lossy())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    serde_json::to_string(&models).unwrap_or_else(|_| "[]".to_string())
+}
+
+#[napi]
+pub fn run_inference(
+    model_path: String,
+    prompt: String,
+    max_tokens: u32,
+    temperature: f32,
+    top_p: f32,
+) -> String {
+    let config = InferenceConfig {
+        model_path: model_path.clone(),
+        max_tokens,
+        temperature,
+        top_p,
+        ..Default::default()
+    };
+
+    let mut loader = ModelLoader::new();
+    if let Err(e) = loader.load_model(&model_path) {
+        return serde_json::to_string(&InferenceResult::error(&e, &model_path)).unwrap();
+    }
+
+    let result = loader.infer_sync(&prompt);
+    serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
+}
+
+#[napi]
+pub fn stream_inference(
+    model_path: String,
+    prompt: String,
+    max_tokens: u32,
+    temperature: f32,
+) -> String {
+    run_inference(model_path, prompt, max_tokens, temperature, 0.9)
+}
+
+#[napi]
+pub fn get_model_info(model_path: String) -> String {
+    let model = LocalModel::from_path(&model_path);
+    match model {
+        Some(m) => serde_json::to_string(&m).unwrap_or_else(|_| "{}".to_string()),
+        None => "{}".to_string(),
+    }
+}
+
+#[napi]
+pub fn download_model(model_id: String, target_dir: String) -> String {
+    let models: std::collections::HashMap<String, &str> = [
+        ("llama-3.2-1b", "TheBloke/Llama-3.2-1B-Instruct-GGUF"),
+        ("phi-3.2", "microsoft/Phi-3.2-mini-instruct-4k"),
+        ("qwen-2", "Qwen/Qwen2-0.5B-Instruct-GGUF"),
+        ("gemma-2", "google/gemma-2-2b"),
+    ].iter().cloned().collect();
+
+    match models.get(&model_id) {
+        Some(repo) => {
+            format!(
+                "Please download manually:\n\
+                1. Visit: https://huggingface.co/{}\n\
+                2. Download GGUF file\n\
+                3. Move to: ./models/",
+                repo
+            )
+        }
+        None => format!("Unknown model: {}", model_id),
+    }
+}
+
+#[napi]
+pub fn read_file_context(path: String, max_lines: u32) -> String {
+    let file = match fs::File::open(&path) {
+        Ok(f) => f,
+        Err(e) => return format!("{{\"error\":\"{}\"}}", e),
+    };
+
+    let lines: Vec<String> = BufReader::new(file)
+        .lines()
+        .filter_map(|l| l.ok())
         .collect();
 
-    let mut scored: Vec<(f64, &serde_json::Value)> = entries
-        .iter()
-        .filter_map(|entry| {
-            let content = entry
-                .get("content")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_lowercase();
-            let entry_type = entry
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_lowercase();
-            let tags: Vec<String> = entry
-                .get("tags")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str())
-                        .map(|s| s.to_lowercase())
-                        .collect()
+    let max = max_lines as usize;
+    let start = lines.len().saturating_sub(max);
+    let selected: Vec<&str> = lines[start..].iter().map(|s| s.as_str()).collect();
+
+    format!(
+        "{{\"content\":{},\"lines\":{}}}",
+        serde_json::to_string(&selected.join("\n")).unwrap_or_else(|_| "[]".to_string()),
+        lines.len()
+    )
+}
+
+#[napi]
+pub fn extract_code_context(dir: String, file_limit: u32) -> String {
+    let path = std::path::Path::new(&dir);
+    if !path.is_dir() {
+        return "[]".to_string();
+    }
+
+    let extensions = ["ts", "tsx", "js", "jsx", "rs", "go", "py", "java", "c", "cpp", "h"];
+    
+    let files: Vec<String> = fs::read_dir(path)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    let p = e.path();
+                    p.extension()
+                        .and_then(|ex| ex.to_str())
+                        .map(|ex| extensions.contains(&ex))
+                        .unwrap_or(false)
                 })
-                .unwrap_or_default();
+                .take(file_limit as usize)
+                .filter_map(|e| {
+                    let p = e.path();
+                    fs::read_to_string(&p).ok().map(|content| {
+                        let lines = content.lines().count();
+                        format!(
+                            "{{\"file\":\"{}\",\"lines\":{}}}",
+                            p.to_string_lossy(),
+                            lines
+                        )
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
-            let mut score = 0.0f64;
-            for word in &query_words {
-                // Content matches — TF weight ×2
-                let matches_in_content = content.matches(word.as_str()).count();
-                score += matches_in_content as f64 * 2.0;
-                // Tag matches — weight ×1
-                for tag in &tags {
-                    if tag.contains(word.as_str()) {
-                        score += 1.0;
+    serde_json::to_string(&files).unwrap_or_else(|_| "[]".to_string())
+}
+
+#[napi]
+pub fn extract_code_snippets(dir: String, max_files: u32) -> String {
+    let path = std::path::Path::new(&dir);
+    if !path.is_dir() {
+        return "[]".to_string();
+    }
+
+    let extensions = ["ts", "tsx", "js", "jsx", "rs", "go", "py"];
+    
+    let files: Vec<String> = fs::read_dir(path)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    let p = e.path();
+                    p.extension()
+                        .and_then(|ex| ex.to_str())
+                        .map(|ex| extensions.contains(&ex))
+                        .unwrap_or(false)
+                })
+                .take(max_files as usize)
+                .filter_map(|e| {
+                    let p = e.path();
+                    let filename = p.file_name()?.to_str()?.to_string();
+                    let content = fs::read_to_string(&p).ok()?;
+                    
+                    let snippets: Vec<String> = content
+                        .lines()
+                        .collect::<Vec<_>>()
+                        .windows(5)
+                        .filter(|window| window.iter().any(|l| l.contains("fn ") || l.contains("function ") || l.contains("def ")))
+                        .take(3)
+                        .map(|w| w.join("\n"))
+                        .collect();
+
+                    if snippets.is_empty() {
+                        None
+                    } else {
+                        Some(format!(
+                            "{{\"file\":\"{}\",\"snippets\":{}}}",
+                            filename,
+                            serde_json::to_string(&snippets).unwrap_or_else(|_| "[]".to_string())
+                        ))
                     }
-                }
-                // Type match — weight ×0.5
-                if entry_type.contains(word.as_str()) {
-                    score += 0.5;
-                }
-            }
-            // Prefix bonus
-            if query_words
-                .iter()
-                .any(|w| content.starts_with(w.as_str()))
-            {
-                score += 1.0;
-            }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
 
-            if score > 0.0 {
-                Some((score, entry))
-            } else {
-                None
-            }
+    serde_json::to_string(&files).unwrap_or_else(|_| "[]".to_string())
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Token counting
+// ──────────────────────────────────────────────────────────────────────────────
+
+#[napi]
+pub fn count_tokens(text: String) -> u32 {
+    tokenizer::encode(&text).len() as u32
+}
+
+#[napi]
+pub fn truncate_to_tokens(text: String, max_tokens: u32) -> String {
+    let tokens: Vec<String> = tokenizer::encode(&text)
+        .iter()
+        .take(max_tokens as usize)
+        .enumerate()
+        .map(|(i, _)| {
+            text.split_whitespace().nth(i).unwrap_or("").to_string()
         })
         .collect();
 
-    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-
-    let results: Vec<&serde_json::Value> = scored
-        .iter()
-        .take(limit as usize)
-        .map(|(_, e)| *e)
-        .collect();
-
-    serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string())
+    tokens.join(" ")
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Internal helpers
+// Embeddings
 // ──────────────────────────────────────────────────────────────────────────────
 
-fn trim_json_array_str(json: &str, max: usize) -> String {
-    match serde_json::from_str::<Vec<serde_json::Value>>(json) {
-        Ok(arr) if arr.len() > max => {
-            let trimmed = arr[arr.len() - max..].to_vec();
-            serde_json::to_string_pretty(&trimmed).unwrap_or_else(|_| json.to_string())
-        }
-        _ => json.to_string(),
-    }
+#[napi]
+pub fn get_text_embedding(text: String) -> String {
+    let result = get_embedding(&text);
+    serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
 }
 
-fn trim_jsonl_file(path: &str, max_lines: usize) {
-    if let Ok(content) = fs::read_to_string(path) {
-        let lines: Vec<&str> = content
-            .trim()
-            .split('\n')
-            .filter(|l| !l.trim().is_empty())
-            .collect();
-        if lines.len() > max_lines {
-            let trimmed = lines[lines.len() - max_lines..].join("\n") + "\n";
-            let _ = fs::write(path, trimmed);
-        }
-    }
+#[napi]
+pub fn cosine_similarity_scores(a: String, b: String) -> f32 {
+    let emb_a = get_embedding(&a);
+    let emb_b = get_embedding(&b);
+    cosine_similarity(&emb_a.embeddings, &emb_b.embeddings)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Unit tests (pure Rust — no Node.js runtime needed)
+// System Info
 // ──────────────────────────────────────────────────────────────────────────────
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    fn make_tmp() -> TempDir {
-        tempfile::tempdir().unwrap()
-    }
-
-    #[test]
-    fn test_project_hash_length() {
-        let h = project_hash(".".to_string());
-        assert_eq!(h.len(), 12, "hash must be 12 hex chars");
-    }
-
-    #[test]
-    fn test_project_hash_deterministic() {
-        assert_eq!(
-            project_hash(".".to_string()),
-            project_hash(".".to_string()),
-            "hash must be deterministic"
-        );
-    }
-
-    #[test]
-    fn test_project_hash_differs_per_path() {
-        let h1 = project_hash("/tmp".to_string());
-        let h2 = project_hash("/usr".to_string());
-        assert_ne!(h1, h2, "different paths must produce different hashes");
-    }
-
-    #[test]
-    fn test_load_semantic_missing() {
-        let tmp = make_tmp();
-        let result = load_semantic(tmp.path().to_string_lossy().to_string());
-        assert_eq!(result, "[]");
-    }
-
-    #[test]
-    fn test_save_and_load_semantic() {
-        let tmp = make_tmp();
-        let dir = tmp.path().to_string_lossy().to_string();
-        let json = r#"[{"id":"a","timestamp":1,"type":"fact","content":"test","tags":["x"]}]"#;
-        save_semantic(dir.clone(), json.to_string()).unwrap();
-        let loaded = load_semantic(dir);
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(&loaded).unwrap();
-        assert_eq!(parsed.len(), 1);
-        assert_eq!(parsed[0]["content"], "test");
-    }
-
-    #[test]
-    fn test_save_semantic_trims_to_500() {
-        let tmp = make_tmp();
-        let dir = tmp.path().to_string_lossy().to_string();
-        let entries: Vec<serde_json::Value> = (0..600)
-            .map(|i| {
-                serde_json::json!({
-                    "id": format!("e{}", i),
-                    "timestamp": i,
-                    "type": "fact",
-                    "content": format!("entry {}", i),
-                    "tags": []
-                })
-            })
-            .collect();
-        let json = serde_json::to_string(&entries).unwrap();
-        save_semantic(dir.clone(), json).unwrap();
-        let loaded: Vec<serde_json::Value> =
-            serde_json::from_str(&load_semantic(dir)).unwrap();
-        assert_eq!(loaded.len(), 500, "should trim to 500 entries");
-        // Must keep the last 500 (most recent)
-        assert_eq!(loaded[0]["timestamp"], 100, "first kept entry has timestamp 100");
-    }
-
-    #[test]
-    fn test_load_working_missing() {
-        let tmp = make_tmp();
-        let result = load_working(tmp.path().to_string_lossy().to_string());
-        let v: serde_json::Value = serde_json::from_str(&result).unwrap();
-        assert!(v["activeFiles"].is_array());
-    }
-
-    #[test]
-    fn test_save_and_load_working() {
-        let tmp = make_tmp();
-        let dir = tmp.path().to_string_lossy().to_string();
-        let state = r#"{"currentGoal":"write tests","activeFiles":["src/lib.rs"],"recentErrors":[],"discoveredPatterns":[]}"#;
-        save_working(dir.clone(), state.to_string()).unwrap();
-        let loaded = load_working(dir);
-        let v: serde_json::Value = serde_json::from_str(&loaded).unwrap();
-        assert_eq!(v["currentGoal"], "write tests");
-    }
-
-    #[test]
-    fn test_append_and_load_episodes() {
-        let tmp = make_tmp();
-        let dir = tmp.path().to_string_lossy().to_string();
-        for i in 0..5 {
-            let ep = serde_json::json!({
-                "id": format!("ep_{}", i),
-                "timestamp": i,
-                "summary": format!("session {}", i),
-                "outcome": "success"
-            });
-            append_episode(dir.clone(), ep.to_string()).unwrap();
-        }
-        let loaded = load_episodes(dir, 5);
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(&loaded).unwrap();
-        assert_eq!(parsed.len(), 5);
-        // File order: oldest first (session 0 at index 0)
-        assert_eq!(parsed[0]["summary"], "session 0");
-        assert_eq!(parsed[4]["summary"], "session 4");
-    }
-
-    #[test]
-    fn test_episodes_trim_to_100() {
-        let tmp = make_tmp();
-        let dir = tmp.path().to_string_lossy().to_string();
-        for i in 0..120 {
-            let ep = serde_json::json!({
-                "id": format!("ep_{}", i),
-                "timestamp": i,
-                "summary": format!("s{}", i),
-                "outcome": "success"
-            });
-            append_episode(dir.clone(), ep.to_string()).unwrap();
-        }
-        // Count lines in the file
-        let content = fs::read_to_string(format!("{}/episodes.jsonl", dir)).unwrap();
-        let count = content.trim().split('\n').filter(|l| !l.is_empty()).count();
-        assert_eq!(count, 100, "episodes.jsonl must be trimmed to 100 lines");
-    }
-
-    #[test]
-    fn test_jaccard_identical() {
-        let s = "TypeScript React hooks async patterns".to_string();
-        assert_eq!(jaccard_similarity(s.clone(), s.clone()), 1.0);
-    }
-
-    #[test]
-    fn test_jaccard_disjoint() {
-        assert_eq!(
-            jaccard_similarity("apple banana cherry".to_string(), "dog elephant fish".to_string()),
-            0.0
-        );
-    }
-
-    #[test]
-    fn test_jaccard_partial() {
-        let sim = jaccard_similarity(
-            "TypeScript hooks patterns".to_string(),
-            "hooks state patterns".to_string(),
-        );
-        assert!(sim > 0.0 && sim < 1.0);
-    }
-
-    #[test]
-    fn test_jaccard_both_empty() {
-        assert_eq!(jaccard_similarity("a".to_string(), "b".to_string()), 1.0); // short words filtered out → both empty
-    }
-
-    #[test]
-    fn test_search_entries_empty_query() {
-        let entries = serde_json::json!([
-            {"id":"1","timestamp":1,"type":"fact","content":"hello world","tags":[]},
-            {"id":"2","timestamp":2,"type":"fact","content":"foo bar","tags":[]}
-        ]);
-        let result = search_entries(entries.to_string(), "".to_string(), 10);
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed.len(), 2);
-    }
-
-    #[test]
-    fn test_search_entries_finds_match() {
-        let entries = serde_json::json!([
-            {"id":"1","timestamp":1,"type":"fact","content":"TypeScript async patterns","tags":["typescript"]},
-            {"id":"2","timestamp":2,"type":"fact","content":"Python data science","tags":["python"]},
-            {"id":"3","timestamp":3,"type":"pattern","content":"React hooks best practices","tags":["react"]}
-        ]);
-        let result = search_entries(entries.to_string(), "TypeScript patterns".to_string(), 5);
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(&result).unwrap();
-        assert!(!parsed.is_empty());
-        // TypeScript entry should score highest
-        assert_eq!(parsed[0]["id"], "1");
-    }
-
-    #[test]
-    fn test_search_entries_limit() {
-        let entries: Vec<serde_json::Value> = (0..20)
-            .map(|i| {
-                serde_json::json!({
-                    "id": format!("{}", i),
-                    "timestamp": i,
-                    "type": "fact",
-                    "content": "matching keyword content here",
-                    "tags": []
-                })
-            })
-            .collect();
-        let result = search_entries(
-            serde_json::to_string(&entries).unwrap(),
-            "keyword".to_string(),
-            5,
-        );
-        let parsed: Vec<serde_json::Value> = serde_json::from_str(&result).unwrap();
-        assert_eq!(parsed.len(), 5);
-    }
-
-    #[test]
-    fn test_trim_json_array_str_noop_when_small() {
-        let json = r#"[{"id":"1"},{"id":"2"}]"#;
-        let trimmed = trim_json_array_str(json, 500);
-        let orig: Vec<serde_json::Value> = serde_json::from_str(json).unwrap();
-        let out: Vec<serde_json::Value> = serde_json::from_str(&trimmed).unwrap();
-        assert_eq!(orig.len(), out.len());
-    }
-
-    #[test]
-    fn test_trim_jsonl_file() {
-        let tmp = make_tmp();
-        let path = tmp.path().join("test.jsonl");
-        let path_str = path.to_string_lossy().to_string();
-        for i in 0..150 {
-            fs::write(&path, {
-                let mut s = String::new();
-                for j in 0..=i {
-                    s.push_str(&format!("{{\"n\":{}}}\n", j));
-                }
-                s
-            })
-            .unwrap();
-        }
-        trim_jsonl_file(&path_str, 50);
-        let content = fs::read_to_string(&path).unwrap();
-        let count = content.trim().split('\n').filter(|l| !l.is_empty()).count();
-        assert_eq!(count, 50);
-    }
+#[napi]
+pub fn get_system_info() -> String {
+    let info = serde_json::json!({
+        "llama_available": is_llama_available(),
+        "gpu_available": std::env::var("CUDA_VISIBLE_DEVICES").is_ok(),
+        "cpu_threads": num_cpus::get(),
+        "memory_total_mb": sys_info::memory_info().map(|m| m.total / 1024 / 1024).unwrap_or(0),
+        "memory_available_mb": sys_info::memory_info().map(|m| m.available / 1024 / 1024).unwrap_or(0),
+    });
+    
+    serde_json::to_string(&info).unwrap_or_else(|_| "{}".to_string())
 }

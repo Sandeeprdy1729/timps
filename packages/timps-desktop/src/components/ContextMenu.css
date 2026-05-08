@@ -1,0 +1,59 @@
+.context-menu {
+  position: fixed;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+}
+
+.context-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-item:hover {
+  background: var(--bg-hover);
+}
+
+.context-item.danger {
+  color: var(--error);
+}
+
+.context-item.danger:hover {
+  background: var(--error-bg);
+}
+
+.context-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.context-item .item-icon {
+  width: 16px;
+  text-align: center;
+}
+
+.context-item .item-shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.context-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}

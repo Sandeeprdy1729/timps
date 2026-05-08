@@ -1,0 +1,119 @@
+.select {
+  position: relative;
+  display: inline-block;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.select-trigger:hover {
+  border-color: var(--border-light);
+}
+
+.select.open .select-trigger {
+  border-color: var(--accent);
+}
+
+.select.disabled .select-trigger {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.select-placeholder {
+  color: var(--text-tertiary);
+}
+
+.select-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.select-icon {
+  width: 16px;
+}
+
+.select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-option:hover {
+  background: var(--bg-hover);
+}
+
+.select-option.selected {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.select-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.select-checkbox:hover {
+  background: var(--bg-hover);
+}
+
+.select-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.autocomplete {
+  width: 100%;
+}
+
+.select-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

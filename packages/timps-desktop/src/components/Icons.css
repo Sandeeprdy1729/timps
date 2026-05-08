@@ -1,0 +1,21 @@
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+}
+
+.icon-xs { font-size: 12px; }
+.icon-sm { font-size: 16px; }
+.icon-md { font-size: 20px; }
+.icon-lg { font-size: 24px; }
+.icon-xl { font-size: 32px; }
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

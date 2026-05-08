@@ -1,0 +1,25 @@
+{
+  "name": "Integration Generator",
+  "description": "Generate a new TIMPS integration with tests, docs, and settings UI",
+  "prompt": "Create a new integration for TIMPS",
+  "questions": [
+    {
+      "type": "input",
+      "name": "name",
+      "label": "Integration name (e.g., github, slack)"
+    },
+    {
+      "type": "input",
+      "label": "Display name (e.g., GitHub, Slack)"
+    },
+    {
+      "type": "select",
+      "label": "Auth type",
+      "options": ["oauth2", "api-key", "webhook", "basic"]
+    },
+    {
+      "type": "input",
+      "label": "API base URL"
+    }
+  ]
+}

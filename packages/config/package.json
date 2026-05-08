@@ -1,0 +1,17 @@
+{
+  "name": "@timps/config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "nock": "^13.5.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}

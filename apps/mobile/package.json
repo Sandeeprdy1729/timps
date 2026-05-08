@@ -1,0 +1,31 @@
+{
+  "name": "@timps/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/main.tsx",
+  "scripts": {
+    "dev": "expo start",
+    "build": "expo build",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "dependencies": {
+    "expo": "~50.0.0",
+    "react": "18.2.0",
+    "react-native": "0.73.4",
+    "@react-navigation/native": "^6.1.0",
+    "@react-navigation/native-stack": "^6.9.0",
+    "expo-linear-gradient": "~12.7.0",
+    "expo-speech": "~11.7.0",
+    "expo-voice": "~12.9.0",
+    "@expo/vector-icons": "^14.0.0",
+    "expo-local-authentication": "~13.8.0",
+    "date-fns": "^3.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "typescript": "^5.3.3",
+    "@types/react": "^18.2.48",
+    "@types/react-native": "^0.73.0"
+  }
+}

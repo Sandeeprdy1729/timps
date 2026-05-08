@@ -1,74 +1,136 @@
-import { useState } from 'react';
-import { SemanticEntry } from '../api';
+/**
+ * TIMPS Desktop - Semantic Memory View
+ * Display and manage semantic memory entries.
+ */
+
+import { useState, useMemo } from 'react';
+import { api, SemanticEntry } from '../api';
+import { formatDate, truncate } from '../utils/index';
 import './SemanticView.css';
 
-interface Props {
+interface SemanticViewProps {
   entries: SemanticEntry[];
   loading: boolean;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  fact: '#3fb950',
-  pattern: '#58a6ff',
-  error: '#f85149',
-  architecture: '#d29922',
-};
+export function SemanticView({ entries, loading }: SemanticViewProps) {
+  const [filter, setFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'timestamp' | 'type'>('timestamp');
+  const [selectedEntry, setSelectedEntry] = useState<SemanticEntry | null>(null);
 
-export function SemanticView({ entries, loading }: Props) {
-  const [filter, setFilter] = useState('');
+  const filtered = useMemo(() => {
+    let result = [...entries];
+    
+    if (filter !== 'all') {
+      result = result.filter(e => e.type === filter);
+    }
+    
+    if (sortBy === 'timestamp') {
+      result.sort((a, b) => b.timestamp - a.timestamp);
+    } else {
+      result.sort((a, b) => a.type.localeCompare(b.type));
+    }
+    
+    return result;
+  }, [entries, filter, sortBy]);
 
-  const visible = filter
-    ? entries.filter(
-        (e) =>
-          e.content.toLowerCase().includes(filter.toLowerCase()) ||
-          e.tags.some((t) => t.toLowerCase().includes(filter.toLowerCase())),
-      )
-    : entries;
+  const types = useMemo(() => {
+    const set = new Set(entries.map(e => e.type));
+    return ['all', ...Array.from(set).sort()];
+  }, [entries]);
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Delete this memory?')) {
+      await api.deleteMemory('', id);
+    }
+  };
+
+  if (loading) {
+    return <div className="semantic-view"><div className="loading">Loading...</div></div>;
+  }
 
   return (
     <div className="semantic-view">
       <div className="view-header">
-        <h2 className="view-title">Semantic Memory</h2>
-        <span className="count-badge">{visible.length} / {entries.length}</span>
+        <h2>Semantic Memory</h2>
+        <div className="view-controls">
+          <select value={filter} onChange={e => setFilter(e.target.value)}>
+            {types.map(t => (
+              <option key={t} value={t}>{t === 'all' ? 'All Types' : t}</option>
+            ))}
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value as 'timestamp' | 'type')}>
+            <option value="timestamp">Newest First</option>
+            <option value="type">By Type</option>
+          </select>
+        </div>
       </div>
 
-      <input
-        className="filter-input"
-        type="text"
-        placeholder="Filter entries…"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+      <div className="entries-count">
+        {filtered.length} {filtered.length === 1 ? 'entry' : 'entries'}
+      </div>
 
-      {loading && entries.length === 0 ? (
-        <div className="loading-state">Loading…</div>
-      ) : visible.length === 0 ? (
-        <div className="loading-state">No entries found.</div>
-      ) : (
-        <div className="entry-list">
-          {visible.map((e) => (
-            <div className="entry-card" key={e.id}>
-              <div className="entry-meta">
-                <span
-                  className="entry-type"
-                  style={{ color: TYPE_COLORS[e.type] ?? 'var(--text-muted)' }}
-                >
-                  {e.type}
-                </span>
-                <span className="entry-date">
-                  {new Date(e.timestamp).toLocaleDateString()}
-                </span>
-              </div>
-              <p className="entry-content">{e.content}</p>
-              {e.tags.length > 0 && (
-                <div className="entry-tags">
-                  {e.tags.map((t) => (
-                    <span key={t} className="tag">{t}</span>
-                  ))}
-                </div>
-              )}
+      <div className="entries-list">
+        {filtered.map(entry => (
+          <div 
+            key={entry.id} 
+            className={`entry-card ${selectedEntry?.id === entry.id ? 'selected' : ''}`}
+            onClick={() => setSelectedEntry(entry)}
+          >
+            <div className="entry-header">
+              <span className={`entry-type type-${entry.type}`}>{entry.type}</span>
+              <span className="entry-date">{formatDate(entry.timestamp)}</span>
             </div>
-          ))}
+            <div className="entry-content">
+              {truncate(entry.content, 150)}
+            </div>
+            {entry.tags.length > 0 && (
+              <div className="entry-tags">
+                {entry.tags.map(tag => (
+                  <span key={tag} className="entry-tag">{tag}</span>
+                ))}
+              </div>
+            )}
+            {entry.score !== undefined && (
+              <div className="entry-score">
+                <div 
+                  className="score-bar" 
+                  style={{ width: `${entry.score * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {selectedEntry && (
+        <div className="entry-detail-overlay" onClick={() => setSelectedEntry(null)}>
+          <div className="entry-detail" onClick={e => e.stopPropagation()}>
+            <div className="detail-header">
+              <span className={`entry-type type-${selectedEntry.type}`}>{selectedEntry.type}</span>
+              <button onClick={() => setSelectedEntry(null)}>✕</button>
+            </div>
+            <div className="detail-content">{selectedEntry.content}</div>
+            <div className="detail-meta">
+              <span>ID: {selectedEntry.id}</span>
+              <span>Created: {formatDate(selectedEntry.timestamp)}</span>
+            </div>
+            {selectedEntry.tags.length > 0 && (
+              <div className="detail-tags">
+                {selectedEntry.tags.map(tag => (
+                  <span key={tag} className="entry-tag">{tag}</span>
+                ))}
+              </div>
+            )}
+            <div className="detail-actions">
+              <button 
+                className="btn btn-danger"
+                onClick={() => handleDelete(selectedEntry.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
