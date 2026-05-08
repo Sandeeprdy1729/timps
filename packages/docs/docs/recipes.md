@@ -1,71 +1,129 @@
----
-sidebar_position: 5
----
+# TIMPS Recipe: Git Workflow Automation
 
-# Recipes
+## Use Case
 
-Recipes are YAML workflow files that define multi-step agentic tasks. Each step's output is available to subsequent steps via `{step_name.output}` interpolation.
+Automate common Git operations using TIMPS with memory.
 
-## Example
+## Prerequisites
 
-```yaml
-name: code-review
-description: Review staged changes
-memory_context: true
+- TIMPS installed
+- Git repository
 
-steps:
-  - name: get_diff
-    prompt: "Run git diff --staged and return the raw diff"
+## Steps
 
-  - name: review
-    prompt: |
-      Review this diff for bugs:
-      {get_diff.output}
-```
-
-## Run a recipe
+### 1. Setup Integration
 
 ```bash
-timps run workflow_recipes/code-review.yaml
+timps connect github --token YOUR_TOKEN
 ```
 
-## Built-in recipes
-
-| Recipe | Description |
-| --- | --- |
-| `code-review.yaml` | Review staged/branch changes for bugs and security issues |
-| `deploy-check.yaml` | Pre-deployment checklist: tests, build, env, migrations |
-| `debug-session.yaml` | Systematic debugging: reproduce → isolate → fix → verify |
-| `feature-plan.yaml` | Plan and scaffold a new feature with tests |
-
-## Recipe format
-
-```yaml
-name: string              # Recipe name
-description: string       # Human description
-memory_context: boolean   # Inject project memories into each step
-
-steps:
-  - name: string          # Step identifier (used for {name.output} references)
-    prompt: string        # Prompt template; supports {prev_step.output}
-    provider: string      # Optional: override default provider for this step
-    model: string         # Optional: model override
-    skip_if_output_contains: string  # Skip if any previous output contains this
-```
-
-## Custom recipes
-
-Create any `.yaml` file in `workflow_recipes/` and run it with `timps run`.
+### 2. Create Workflow Recipe
 
 ```bash
-cat > workflow_recipes/my-workflow.yaml << 'EOF'
-name: my-workflow
-steps:
-  - name: step1
-    prompt: "List all TypeScript files in the project"
-  - name: step2
-    prompt: "For each file listed below, estimate its complexity:\n{step1.output}"
-EOF
+# Create workflow file
+timps file write .timps/workflows/git-automation.ts
 
-timps run workflow_recipes/my-workflow.yaml
+# Add automation
+export const gitWorkflow = {
+  name: 'Git Automation',
+  triggers: ['on-commit', 'on-pr'],
+  steps: [
+    {
+      name: 'Check formatting',
+      tool: 'shell',
+      command: 'npm run format --check'
+    },
+    {
+      name: 'Run tests',
+      tool: 'shell', 
+      command: 'npm test'
+    },
+    {
+      name: 'Build',
+      tool: 'shell',
+      command: 'npm run build'
+    }
+  ]
+};
 ```
+
+### 3. Configure Triggers
+
+```yaml
+# .github/workflows/timps.yml
+name: TIMPS Automation
+on: [push, pull_request]
+jobs:
+  timps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run TIMPS
+        run: timps run --trigger ${{ github.event_name }}
+```
+
+## Complete Example
+
+```typescript
+import { Timps } from '@timps/core';
+
+const timps = new Timps();
+
+async function automateGit() {
+  // Connect integrations
+  await timps.connect('github');
+  
+  // Create automation
+  const workflow = timps.createWorkflow({
+    name: 'git-automation',
+    triggers: ['onCommit', 'onPR'],
+    steps: [
+      // Lint
+      {
+        name: 'Lint',
+        run: 'npm run lint'
+      },
+      // Test
+      {
+        name: 'Test',
+        run: 'npm test',
+        continueOnFailure: false
+      },
+      // Build
+      {
+        name: 'Build',
+        run: 'npm run build'
+      },
+      // Commit changes if needed
+      {
+        name: 'Auto-fix',
+        condition: 'lint-changes',
+        run: 'npm run lint --fix && git commit -am "fix: lint fixes"'
+      }
+    ]
+  });
+  
+  // Execute on each push
+  await timps.on('push', async () => {
+    await workflow.execute();
+  });
+}
+
+automateGit();
+```
+
+## Testing
+
+```bash
+# Test workflow
+timps run --workflow .timps/workflows/git-automation.ts
+
+# Dry run
+timps run --workflow .timps/workflows/git-automation.ts --dry-run
+```
+
+## Troubleshooting
+
+- **Timeout**: Increase step timeout
+- **Auth errors**: Verify integration tokens
+- **Memory errors**: Run `timps doctor`

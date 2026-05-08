@@ -1,0 +1,130 @@
+.settings-page {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 32px;
+  color: var(--text-primary, #e4e4ef);
+}
+
+.settings-section {
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--bg-secondary, #252535);
+  border-radius: 12px;
+}
+
+.settings-section h2 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #999);
+  margin-bottom: 16px;
+}
+
+.settings-field {
+  margin-bottom: 16px;
+}
+
+.settings-field label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary, #999);
+  margin-bottom: 8px;
+}
+
+.settings-field input,
+.settings-field select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-primary, #1e1e2e);
+  border: 1px solid var(--border, #3a3a5c);
+  border-radius: 8px;
+  color: var(--text-primary, #e4e4ef);
+  font-size: 14px;
+}
+
+.settings-field input:focus,
+.settings-field select:focus {
+  outline: none;
+  border-color: var(--accent, #6366f1);
+}
+
+.theme-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-primary, #1e1e2e);
+  border: 1px solid var(--border, #3a3a5c);
+  border-radius: 8px;
+  color: var(--text-primary, #e4e4ef);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-btn:hover {
+  border-color: var(--accent, #6366f1);
+}
+
+.theme-btn.active {
+  background: var(--accent, #6366f1);
+  border-color: var(--accent, #6366f1);
+  color: white;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-primary, #1e1e2e);
+  border-radius: 8px;
+}
+
+.shortcut-row kbd {
+  padding: 6px 12px;
+  background: var(--bg-hover, #2a2a3c);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.about-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.about-info span:first-child {
+  color: var(--text-secondary, #999);
+}
+
+.about-info span:nth-child(2) {
+  color: var(--text-primary, #e4e4ef);
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+}

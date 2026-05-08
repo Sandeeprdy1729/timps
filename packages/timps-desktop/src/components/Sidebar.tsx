@@ -1,42 +1,81 @@
-import { Tab } from '../App';
-import { MemoryStats } from '../api';
+/**
+ * TIMPS Desktop - Sidebar Component
+ * Main navigation sidebar with stats and navigation.
+ */
+
+import { useState } from 'react';
+import { api, MemoryStats } from '../api';
 import './Sidebar.css';
 
-interface Props {
-  activeTab: Tab;
-  onTabChange: (t: Tab) => void;
+interface SidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
   stats: MemoryStats | null;
 }
 
-const tabs: { id: Tab; label: string; icon: string }[] = [
-  { id: 'chat', label: 'Chat', icon: '◉' },
-  { id: 'stats', label: 'Overview', icon: '◈' },
-  { id: 'semantic', label: 'Semantic', icon: '⬡' },
-  { id: 'episodic', label: 'Episodic', icon: '⌚' },
-  { id: 'search', label: 'Search', icon: '⌕' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
+const tabs = [
+  { id: 'chat', icon: '💬', label: 'Chat' },
+  { id: 'semantic', icon: '🧠', label: 'Memory' },
+  { id: 'episodic', icon: '📜', label: 'Sessions' },
+  { id: 'stats', icon: '📊', label: 'Stats' },
+  { id: 'search', icon: '🔍', label: 'Search' },
+  { id: 'settings', icon: '⚙️', label: 'Settings' },
 ];
 
-export function Sidebar({ activeTab, onTabChange, stats }: Props) {
+export function Sidebar({ activeTab, onTabChange, stats }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <nav className="sidebar">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          className={`nav-item ${activeTab === t.id ? 'active' : ''}`}
-          onClick={() => onTabChange(t.id)}
-          title={t.label}
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <button 
+          className="collapse-btn"
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? 'Expand' : 'Collapse'}
         >
-          <span className="nav-icon">{t.icon}</span>
-          <span className="nav-label">{t.label}</span>
-          {t.id === 'semantic' && stats && (
-            <span className="badge">{stats.semantic_count}</span>
-          )}
-          {t.id === 'episodic' && stats && (
-            <span className="badge">{stats.episode_count}</span>
-          )}
+          {collapsed ? '→' : '←'}
         </button>
-      ))}
-    </nav>
+      </div>
+
+      <nav className="sidebar-nav">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => onTabChange(tab.id)}
+            title={tab.label}
+          >
+            <span className="nav-icon">{tab.icon}</span>
+            {!collapsed && <span className="nav-label">{tab.label}</span>}
+          </button>
+        ))}
+      </nav>
+
+      {stats && !collapsed && (
+        <div className="sidebar-stats">
+          <div className="stat-item">
+            <span className="stat-value">{stats.semantic_count}</span>
+            <span className="stat-label">Memories</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.episode_count}</span>
+            <span className="stat-label">Sessions</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.working_goals}</span>
+            <span className="stat-label">Goals</span>
+          </div>
+        </div>
+      )}
+
+      <div className="sidebar-footer">
+        {!collapsed && (
+          <div className="project-hash">
+            <span className="hash-label">Project</span>
+            <code className="hash-value">{stats?.project_hash || '—'}</code>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 }

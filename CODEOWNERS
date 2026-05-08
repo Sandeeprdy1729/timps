@@ -1,0 +1,33 @@
+# CODEOWNERS
+
+This file defines who owns which parts of TIMPS.
+
+## Default owners
+
+* @anomalyco @maintainers
+
+## Area ownership
+
+# Core Agent
+timps-code/src/core/ @anomalyco
+timps-code/src/agent/ @anomalyco
+
+# Integrations
+packages/integration-*/ @maintainers/integrations
+
+# Desktop
+packages/timps-desktop/ @maintainers/desktop
+
+# MCP Server
+timps-mcp/ @maintainers/mcp
+
+# Documentation
+docs/ @maintainers/docs
+README.md @anomalyco
+GOVERNANCE.md @anomalyco
+MAINTAINERS.md @anomalyco
+
+# Configuration
+.github/ @anomalyco
+.eslint* @anomalyco
+tsconfig* @anomalyco

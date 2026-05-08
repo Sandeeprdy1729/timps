@@ -41,7 +41,7 @@ impl Tool for GetMemoryTool {
         let limit = args["limit"].as_u64().unwrap_or(10) as usize;
         match self.0.search_relevant(query, limit).await {
             Ok(entries) => {
-                if entries.is_empty() { return ToolResult::ok("No matching memories found."); }
+                if entries.is_empty() { return ToolResult::ok("No matching memories found.".to_string()); }
                 let out = entries.iter()
                     .map(|e| format!("[{}] {} (importance: {:.1})", e.key, e.value, e.importance))
                     .collect::<Vec<_>>().join("\n");

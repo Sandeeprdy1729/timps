@@ -1,0 +1,134 @@
+.steps {
+  display: flex;
+  gap: 16px;
+}
+
+.steps-horizontal {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.steps-vertical {
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  position: relative;
+}
+
+.step.clickable {
+  cursor: pointer;
+}
+
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.step.completed .step-indicator {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.step.current .step-indicator {
+  background: #2563eb;
+  color: #fff;
+}
+
+.step-number {
+  font-size: 14px;
+}
+
+.step-content {
+  flex: 1;
+  padding-left: 12px;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.step.completed .step-title,
+.step.current .step-title {
+  color: #111827;
+}
+
+.step-description {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.step-line {
+  position: absolute;
+  top: 16px;
+  left: 32px;
+  right: 0;
+  height: 2px;
+  background: #e5e7eb;
+}
+
+.step.completed .step-line {
+  background: #3b82f6;
+}
+
+.steps-vertical .step {
+  padding-bottom: 24px;
+}
+
+.steps-vertical .step-line {
+  position: absolute;
+  top: 32px;
+  left: 15px;
+  right: auto;
+  bottom: 0;
+  width: 2px;
+  height: auto;
+}
+
+.stepper {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepper-progress {
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stepper-fill {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+.stepper-content {
+  display: flex;
+  margin-top: 16px;
+}
+
+.stepper-step {
+  display: none;
+}
+
+.stepper-step.active {
+  display: block;
+}

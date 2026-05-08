@@ -44,6 +44,9 @@ struct ChatRequest {
     prompt: String,
     provider: Option<String>,
     model: Option<String>,
+    /// Absolute path to the project whose memory should be used.
+    /// Falls back to the server's cwd when absent.
+    project_path: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -75,9 +78,18 @@ async fn chat(
     let provider = state.providers.get(provider_name)
         .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("Unknown provider: {provider_name}")))?;
 
+    // Use project-specific memory when project_path is provided
+    let memory: Arc<MemoryStore> = match &req.project_path {
+        Some(path) => Arc::new(
+            MemoryStore::open(path)
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        ),
+        None => state.memory.clone(),
+    };
+
     let agent = AgentBuilder::new()
         .provider(provider)
-        .memory(state.memory.clone())
+        .memory(memory)
         .opts(AgentOptions::default())
         .build()
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

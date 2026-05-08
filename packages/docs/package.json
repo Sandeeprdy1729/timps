@@ -1,12 +1,14 @@
 {
-  "name": "@timps/docs",
+  "name": "@timps/docusaurus",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "start": "docusaurus start",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
-    "deploy": "docusaurus deploy"
+    "deploy": "docusaurus deploy",
+    "write-translations": "docusaurus write-translations",
+    "write-localization": "docusaurus write-translations --locale ja"
   },
   "dependencies": {
     "@docusaurus/core": "^3.6.0",

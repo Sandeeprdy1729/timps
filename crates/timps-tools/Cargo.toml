@@ -5,9 +5,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-tokio       = { workspace = true }
-serde       = { workspace = true }
-serde_json  = { workspace = true }
-anyhow      = { workspace = true }
-async-trait = { workspace = true }
-tracing     = { workspace = true }
+tokio        = { workspace = true }
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+anyhow       = { workspace = true }
+async-trait  = { workspace = true }
+tracing      = { workspace = true }
+reqwest      = { workspace = true }
+timps-memory = { path = "../timps-memory" }

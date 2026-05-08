@@ -14,3 +14,5 @@ reqwest     = { workspace = true }
 tracing     = { workspace = true }
 futures     = { workspace = true }
 async-trait = { workspace = true }
+dirs        = { workspace = true }
+toml        = "0.8"

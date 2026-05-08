@@ -8,6 +8,7 @@ import { positionStore } from '../tools/positionStore';
 import { nexusForge } from '../core/nexusForge';
 import { chronosVeil, ChronosSignal } from '../core/chronosVeil';
 import { synapseMetabolon, MetabolicSignal } from '../core/synapseMetabolon';
+import { chronosForge } from '../memory/chronosForge.js';
 
 const router = Router();
 const contradictionTool = new ContradictionTool();
@@ -880,6 +881,65 @@ router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) 
     }
 
     const result = await synapseMetabolon.runConsolidationCycle(userId, projectId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ── ChronosForge Routes ────────────────────────────────────────────────────
+
+router.post('/chrono/query', async (req: Request, res: Response) => {
+  try {
+    const { userId, atTime, domain, limit } = req.body;
+    if (!userId || !atTime) {
+      res.status(400).json({ error: 'userId and atTime are required' });
+      return;
+    }
+    const result = await chronosForge.queryAt(
+      parseInt(userId, 10),
+      req.body.projectId || 'default',
+      Number(atTime),
+      { domain, limit: limit ?? 10 }
+    );
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/chrono/foresight', async (req: Request, res: Response) => {
+  try {
+    const { userId, domain, lookbackDays, steps } = req.body;
+    if (!userId || !domain) {
+      res.status(400).json({ error: 'userId and domain are required' });
+      return;
+    }
+    const result = await chronosForge.simulateForesight(
+      parseInt(userId, 10),
+      req.body.projectId || 'default',
+      domain,
+      { lookbackDays, steps }
+    );
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/chrono/consolidate', async (req: Request, res: Response) => {
+  try {
+    const { userId, importanceThreshold } = req.body;
+    if (!userId) {
+      res.status(400).json({ error: 'userId is required' });
+      return;
+    }
+    const result = await chronosForge.consolidate(
+      parseInt(userId, 10),
+      req.body.projectId || 'default',
+      importanceThreshold ?? 0.05
+    );
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

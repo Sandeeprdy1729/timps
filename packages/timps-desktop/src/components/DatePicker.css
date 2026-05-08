@@ -1,0 +1,88 @@
+.date-picker {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.date-picker-header button {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.date-picker-header span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.date-picker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.date-picker-weekdays span {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.date-picker-days button {
+  padding: 6px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.date-picker-days button:hover {
+  background: var(--bg-hover);
+}
+
+.date-picker-days button.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.time-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-picker select {
+  padding: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
+.time-picker span {
+  font-size: 18px;
+}
+
+.date-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}

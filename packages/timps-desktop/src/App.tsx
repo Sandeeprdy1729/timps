@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
 import { Sidebar } from './components/Sidebar';
 import { SemanticView } from './components/SemanticView';
@@ -7,6 +8,8 @@ import { StatsView } from './components/StatsView';
 import { SearchView } from './components/SearchView';
 import { ChatView } from './components/ChatView';
 import { SettingsView } from './components/SettingsView';
+import { QuickCapture } from './components/QuickCapture';
+import { CommandBar } from './components/CommandBar';
 import './App.css';
 
 export type Tab = 'chat' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings';
@@ -21,6 +24,8 @@ export default function App() {
   const [episodes, setEpisodes] = useState<EpisodicEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const [showCommandBar, setShowCommandBar] = useState(false);
 
   const refresh = useCallback(async (path: string) => {
     if (!path.trim()) return;
@@ -48,6 +53,36 @@ export default function App() {
       void refresh(projectPath);
     }
   }, [projectPath, refresh]);
+
+  // Listen for Tauri events for Quick Capture and Settings
+  useEffect(() => {
+    const unlistenQuickCapture = listen('show-quick-capture', () => {
+      setShowQuickCapture(true);
+    });
+    const unlistenSettings = listen('show-settings', () => {
+      setActiveTab('settings');
+    });
+    
+    // Keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        setShowQuickCapture(true);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandBar(true);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      unlistenQuickCapture.then(fn => fn());
+      unlistenSettings.then(fn => fn());
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <div className="app">
@@ -128,6 +163,18 @@ export default function App() {
           )}
         </main>
       </div>
+
+      <QuickCapture
+        isOpen={showQuickCapture}
+        onClose={() => setShowQuickCapture(false)}
+        projectPath={projectPath}
+      />
+
+      <CommandBar
+        isOpen={showCommandBar}
+        onClose={() => setShowCommandBar(false)}
+        projectPath={projectPath}
+      />
     </div>
   );
 }

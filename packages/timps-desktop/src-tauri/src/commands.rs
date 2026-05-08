@@ -271,11 +271,18 @@ pub fn delete_memory(project_path: String, key: String) -> Result<usize, String>
 
 /// Chat with the TIMPS server (requires timps-server running at http://localhost:3000)
 #[tauri::command]
-pub async fn chat(prompt: String, provider: Option<String>) -> Result<String, String> {
-    // Delegate to the timps-server REST API (Phase 12)
+pub async fn chat(
+    prompt: String,
+    project_path: Option<String>,
+    provider: Option<String>,
+) -> Result<String, String> {
     let url = std::env::var("TIMPS_SERVER_URL")
         .unwrap_or_else(|_| "http://localhost:3000".to_string());
-    let body = serde_json::json!({ "prompt": prompt, "provider": provider });
+    let body = serde_json::json!({
+        "prompt": prompt,
+        "provider": provider,
+        "project_path": project_path,
+    });
     let resp = reqwest::Client::new()
         .post(format!("{url}/chat"))
         .json(&body)
@@ -288,4 +295,29 @@ pub async fn chat(prompt: String, provider: Option<String>) -> Result<String, St
     } else {
         Err(format!("Server error: {}", resp.status()))
     }
+}
+
+/// Get the current TIMPS version
+#[tauri::command]
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Get the current LLM provider
+#[tauri::command]
+pub fn get_provider() -> String {
+    std::env::var("TIMPS_PROVIDER").unwrap_or_else(|_| "ollama".to_string())
+}
+
+/// Set the LLM provider
+#[tauri::command]
+pub fn set_provider(provider: String) -> Result<(), String> {
+    std::env::set_var("TIMPS_PROVIDER", &provider);
+    Ok(())
+}
+
+/// Install update (placeholder for auto-updater)
+#[tauri::command]
+pub fn install_update() -> Result<(), String> {
+    Err("Auto-updater not yet configured. Check GitHub Releases for updates.".to_string())
 }

@@ -4,6 +4,7 @@ import { curateTier, CurationInput } from './curateTier';
 import { provenForge } from './provenForge';
 import { governTier, GovernanceEvent } from './governTier';
 import { chronosVeil } from './chronosVeil';
+import { chronosForge } from '../memory/chronosForge.js';
 import { weaveForge } from './weaveForge';
 import { skillWeave } from './skillWeave';
 import { atomChain } from './atomChain';
@@ -292,8 +293,11 @@ Return JSON array:
 	    metadata: { importance, source_module: sourceModule },
 	  };
 
-	  await Promise.allSettled([
-	    chronosVeil.ingestEvent(signal, sourceModule),
+	  await Promise.allSettled([    chronosForge.weave(content, userId, projectId, {
+      tags,
+      baseImportance: outcomeScore,
+      domain: undefined, // auto-inferred from content
+    }),	    chronosVeil.ingestEvent(signal, sourceModule),
 	    weaveForge.weaveSignal(signal, sourceModule, { userId, projectId, outcomeScore }),
 	    skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
 	    atomChain.executeAtomic(signal, sourceModule, importance >= 4 ? 'consolidate' : 'create', outcomeScore),

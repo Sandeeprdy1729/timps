@@ -41,7 +41,10 @@ impl Tool for WebFetchTool {
             .unwrap();
         match client.get(&url).send().await {
             Ok(resp) => match resp.text().await {
-                Ok(text) => ToolResult::ok(text.chars().take(8000).collect::<String>()),
+                Ok(text) => {
+                    let truncated: String = text.chars().take(8000).collect();
+                    ToolResult::ok(truncated)
+                }
                 Err(e) => ToolResult::err(format!("Read error: {e}")),
             },
             Err(e) => ToolResult::err(format!("Fetch error: {e}")),

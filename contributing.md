@@ -363,4 +363,59 @@ If your change affects how TIMPs is configured, launched, or used, please update
 - **[GitHub Issues](https://github.com/Sandeeprdy1729/timps/issues)** — bugs, feature requests, and questions
 - **[GitHub Discussions](https://github.com/Sandeeprdy1729/timps/discussions)** — general ideas and conversation
 
+---
+
+## Contributor Labels
+
+We use labels to help contributors find suitable issues:
+
+| Label | Description |
+|-------|-------------|
+| `good first issue` | Beginner-friendly, well-documented |
+| `help wanted` | Needs community help |
+| `bug` | Bug to fix |
+| `feature` | New feature request |
+| `documentation` | Docs improvement |
+| `integration` | New integration |
+| `plugin` | Plugin development |
+
+### Finding Your First Issue
+
+1. Go to [Issues](https://github.com/Sandeeprdy1729/timps/issues)
+2. Filter by `good first issue`
+3. Comment to claim
+
+---
+
+## Sandbox Development Environment
+
+For quick start without local setup:
+
+```bash
+# Using GitHub Codespaces
+# 1. Fork the repo
+# 2. Create codespace on main branch
+# 3. Run: npm install && npm run dev
+```
+
+Or use VS Code Dev Containers:
+
+```bash
+# 1. Install Dev Containers extension
+# 2. Open in Container (Cmd+Shift+P > "Dev Containers: Open in Container")
+```
+
+---
+
+## Recognition
+
+Contributors are recognized in:
+
+- README Contributors section
+- Release notes (CHANGELOG.md)
+- Monthly community calls
+- "Contributor of the Month" on Discord
+
+---
+
 We're happy to help you get your contribution across the line. Thanks for contributing to TIMPs!

@@ -1,0 +1,27 @@
+{
+  "navbar": {
+    "link": "Docs",
+    "href": "GitHub"
+  },
+  "footer": {
+    "copyright": "Copyright © TIMPS. MIT License."
+  },
+  "homepage": "Start",
+  "docs": "Docs",
+  "plugin": {
+    "development": "Plugin Development",
+    "api": "API Reference"
+  },
+  "integration": {
+    "guide": "Integration Guide",
+    "settings": "Settings",
+    "connect": "Connect",
+    "disconnect": "Disconnect"
+  },
+  "common": {
+    "learnMore": "Learn More",
+    "github": "GitHub",
+    "edit": "Edit this page",
+    "translate": "Translate this page"
+  }
+}

@@ -162,7 +162,7 @@ impl Agent {
                         assistant_text.push_str(&t);
                     }
                     timps_providers::StreamEvent::ToolCall(tc) => {
-                        pending_tool_calls.push(tc);
+                        pending_tool_calls.push(ToolCall { id: tc.id, name: tc.name, args: tc.args });
                     }
                     timps_providers::StreamEvent::Done => break,
                     timps_providers::StreamEvent::Error(e) => {

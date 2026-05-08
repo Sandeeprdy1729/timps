@@ -14,9 +14,9 @@ pub struct ProviderConfig {
 
 impl ProviderConfig {
     pub fn load() -> Self {
-        let config_path = home_dir()
+        let config_path: Option<std::path::PathBuf> = home_dir()
             .map(|h| h.join(".timps").join("config.toml"))
-            .filter(|p| p.exists());
+            .filter(|p: &std::path::PathBuf| p.exists());
 
         if let Some(path) = config_path {
             if let Ok(content) = fs::read_to_string(&path) {

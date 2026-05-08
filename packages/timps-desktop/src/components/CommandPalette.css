@@ -1,0 +1,99 @@
+.command-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 1000;
+}
+
+.command-palette,
+.quick-switcher {
+  width: 90%;
+  max-width: 600px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.command-palette input,
+.quick-switcher input {
+  width: 100%;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.command-palette input:focus,
+.quick-switcher input:focus {
+  outline: none;
+}
+
+.command-list,
+.quick-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.command-item,
+.quick-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.command-item:hover,
+.quick-item:hover,
+.command-item.selected,
+.quick-item.selected {
+  background: var(--bg-hover);
+}
+
+.command-item.selected {
+  background: var(--accent-light);
+}
+
+.command-icon {
+  font-size: 16px;
+}
+
+.command-label {
+  flex: 1;
+}
+
+.command-item kbd,
+.quick-item kbd {
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.command-empty,
+.quick-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

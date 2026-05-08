@@ -1,0 +1,95 @@
+.drag-drop-zone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.drag-drop-zone:hover {
+  border-color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.drag-drop-zone.dragging {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.drag-drop-zone.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drag-drop-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.drag-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.drag-drop-icon {
+  font-size: 32px;
+}
+
+.drag-drop-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.drag-drop-subtext {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.drag-drop-accept,
+.drag-drop-size {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.drag-drop-errors {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+.sortable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sortable-item {
+  cursor: grab;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.sortable-item.dragging {
+  opacity: 0.5;
+}
+
+.sortable-item.target {
+  border-top: 2px solid #3b82f6;
+}

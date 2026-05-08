@@ -1,10 +1,18 @@
+/**
+ * TIMPS Desktop - Chat View
+ * Interactive chat with TIMPS agent.
+ */
+
 import { useState, useRef, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { api } from '../api';
+import { formatRelativeTime } from '../utils/index';
 import './ChatView.css';
 
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
+  timestamp: number;
 }
 
 interface ChatViewProps {
@@ -14,112 +22,132 @@ interface ChatViewProps {
 export function ChatView({ projectPath }: ChatViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState('ollama');
-  const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
 
-  async function sendMessage() {
-    const trimmed = input.trim();
-    if (!trimmed || loading) return;
+  const handleSend = async () => {
+    if (!input.trim() || sending) return;
+
+    const userMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: input.trim(),
+      timestamp: Date.now(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setError(null);
-    const userMsg: Message = { role: 'user', content: trimmed };
-    setMessages(prev => [...prev, userMsg]);
-    setLoading(true);
+    setSending(true);
+
     try {
-      const output = await invoke<string>('chat', { prompt: trimmed, provider });
-      setMessages(prev => [...prev, { role: 'assistant', content: output }]);
+      const response = await api.chat(userMessage.content, projectPath);
+      
+      const assistantMessage: Message = {
+        id: `msg-${Date.now()}-assistant`,
+        role: 'assistant',
+        content: response,
+        timestamp: Date.now(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
-      setError(String(err));
-      // Remove the user message on failure
-      setMessages(prev => prev.slice(0, -1));
+      const errorMessage: Message = {
+        id: `msg-${Date.now()}-error`,
+        role: 'assistant',
+        content: `Error: ${err}`,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setLoading(false);
+      setSending(false);
     }
-  }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+  };
 
   return (
     <div className="chat-view">
-      <div className="chat-toolbar">
-        <label htmlFor="provider-select">Provider</label>
-        <select
-          id="provider-select"
-          value={provider}
-          onChange={e => setProvider(e.target.value)}
-        >
-          <option value="ollama">Ollama (local)</option>
-          <option value="claude">Claude</option>
-          <option value="openai">OpenAI</option>
-          <option value="gemini">Gemini</option>
-          <option value="groq">Groq</option>
-          <option value="openrouter">OpenRouter</option>
-        </select>
-        <button
-          className="btn-ghost"
-          onClick={() => setMessages([])}
-          disabled={messages.length === 0}
-          title="Clear conversation"
-        >
-          Clear
-        </button>
+      <div className="chat-header">
+        <h2>Chat</h2>
+        {messages.length > 0 && (
+          <button className="clear-btn" onClick={clearChat}>
+            Clear
+          </button>
+        )}
       </div>
 
-      {error && (
-        <div className="chat-error">
-          <span>⚠ {error}</span>
-          <button onClick={() => setError(null)}>✕</button>
-        </div>
-      )}
-
-      <div className="chat-messages">
-        {messages.length === 0 && (
+      <div className="messages-container">
+        {messages.length === 0 ? (
           <div className="chat-empty">
-            <div className="empty-icon">◈</div>
-            <p>Ask TIMPS anything about your project</p>
-            <p className="hint">Requires <code>timps-server</code> running on port 3000</p>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`message message-${msg.role}`}>
-            <div className="message-label">{msg.role === 'user' ? 'You' : 'TIMPS'}</div>
-            <div className="message-content">{msg.content}</div>
-          </div>
-        ))}
-        {loading && (
-          <div className="message message-assistant">
-            <div className="message-label">TIMPS</div>
-            <div className="message-content typing">
-              <span /><span /><span />
+            <div className="empty-icon">💬</div>
+            <h3>Start a conversation</h3>
+            <p>Ask questions about your code, request changes, or get explanations.</p>
+            <div className="suggestions">
+              <button onClick={() => setInput("What's in this project?")}>
+                What's in this project?
+              </button>
+              <button onClick={() => setInput("Explain how the memory system works")}>
+                Explain how the memory system works
+              </button>
             </div>
           </div>
+        ) : (
+          messages.map(msg => (
+            <div key={msg.id} className={`message ${msg.role}`}>
+              <div className="message-avatar">
+                {msg.role === 'user' ? '👤' : '◈'}
+              </div>
+              <div className="message-content">
+                <div className="message-bubble">{msg.content}</div>
+                <div className="message-time">
+                  {formatRelativeTime(msg.timestamp)}
+                </div>
+              </div>
+            </div>
+          ))
         )}
-        <div ref={bottomRef} />
+        <div ref={messagesEndRef} />
       </div>
 
-      <form
-        className="chat-input-area"
-        onSubmit={e => { e.preventDefault(); void sendMessage(); }}
-      >
-        <textarea
-          className="chat-input"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); }
-          }}
-          placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
-          rows={2}
-          disabled={loading}
-        />
-        <button type="submit" className="btn-primary" disabled={loading || !input.trim()}>
-          {loading ? '…' : 'Send'}
-        </button>
-      </form>
+      <div className="chat-input-container">
+        <div className="chat-input-wrap">
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            rows={1}
+            disabled={sending}
+          />
+          <button
+            className="send-btn"
+            onClick={handleSend}
+            disabled={sending || !input.trim()}
+          >
+            {sending ? '...' : '→'}
+          </button>
+        </div>
+        <div className="input-hint">
+          Enter to send • Shift+Enter for new line
+        </div>
+      </div>
     </div>
   );
 }

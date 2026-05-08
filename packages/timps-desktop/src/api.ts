@@ -52,6 +52,9 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     get_memory_stats: { project_hash: 'devcafe123456', semantic_count: 0, episode_count: 0, working_goals: 0 },
     list_projects: [],
     search_memory: [],
+    chat: '(stub) timps-server not running in dev mode',
+    store_memory: undefined,
+    delete_memory: 0,
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -79,4 +82,18 @@ export const api = {
 
   searchMemory: (projectPath: string, query: string, limit = 20) =>
     invoke<SemanticEntry[]>('search_memory', { projectPath, query, limit }),
+
+  chat: (prompt: string, projectPath?: string, provider?: string) =>
+    invoke<string>('chat', { prompt, projectPath, provider }),
+
+  storeMemory: (
+    projectPath: string,
+    key: string,
+    value: string,
+    importance: number,
+    tags: string[],
+  ) => invoke<void>('store_memory', { projectPath, key, value, importance, tags }),
+
+  deleteMemory: (projectPath: string, key: string) =>
+    invoke<number>('delete_memory', { projectPath, key }),
 };

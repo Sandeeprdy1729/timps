@@ -10,7 +10,19 @@ const config = {
   projectName: 'timps',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  i18n: { defaultLocale: 'en', locales: ['en'] },
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'ja', 'es', 'fr', 'de', 'pt', 'hi'],
+    localeConfigs: {
+      en: { label: 'English' },
+      ja: { label: '日本語' },
+      es: { label: 'Español' },
+      fr: { label: 'Français' },
+      de: { label: 'Deutsch' },
+      pt: { label: 'Português' },
+      hi: { label: 'हिंदी' },
+    },
+  },
 
   presets: [
     [

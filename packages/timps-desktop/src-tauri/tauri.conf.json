@@ -7,7 +7,8 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build",
+    "devtools": true
   },
   "app": {
     "windows": [
@@ -32,6 +33,22 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbXB1dGUgODkuMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwCmVkMjU1MTktMDAwMDAwMDA6ODkwMDAwMDA6MDAwLTAwMDA6MDAwMDA6MDAwMDAwMDAwMDAwCg==",
+      "endpoints": [
+        "https://github.com/Sandeeprdy1729/timps/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
