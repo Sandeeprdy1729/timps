@@ -17,6 +17,7 @@
   "packageManager": "npm@10.9.4",
   "workspaces": [
     "packages/*",
+    "apps/*",
     "timps-code",
     "timps-mcp",
     "docs"

@@ -121,7 +121,7 @@ export default function App() {
       )}
 
       <div className="app-body">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} stats={stats} />
+        <Sidebar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} stats={stats} />
 
         <main className="main-content">
           {!projectPath && (

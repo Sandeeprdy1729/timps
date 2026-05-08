@@ -1,4 +1,35 @@
 import 'dotenv/config';
+
+const modelProviders = ['openai', 'gemini', 'ollama', 'openrouter'] as const;
+const embeddingProviders = ['ollama', 'gemini'] as const;
+const logLevels = ['debug', 'info', 'warn', 'error'] as const;
+
+function readInt(name: string, fallback: number): number {
+  const value = process.env[name];
+  if (!value) return fallback;
+  const parsed = parseInt(value, 10);
+  if (Number.isFinite(parsed)) return parsed;
+  console.warn(`[config] Invalid integer for ${name}: ${value}. Using ${fallback}.`);
+  return fallback;
+}
+
+function readFloat(name: string, fallback: number): number {
+  const value = process.env[name];
+  if (!value) return fallback;
+  const parsed = parseFloat(value);
+  if (Number.isFinite(parsed)) return parsed;
+  console.warn(`[config] Invalid number for ${name}: ${value}. Using ${fallback}.`);
+  return fallback;
+}
+
+function readEnum<T extends string>(name: string, allowed: readonly T[], fallback: T): T {
+  const value = process.env[name];
+  if (!value) return fallback;
+  if ((allowed as readonly string[]).includes(value)) return value as T;
+  console.warn(`[config] Invalid value for ${name}: ${value}. Using ${fallback}.`);
+  return fallback;
+}
+
 export interface Config {
   port: number;
   nodeEnv: string;
@@ -128,12 +159,12 @@ export interface Config {
 
 export function loadConfig(): Config {
   return {
-    port: parseInt(process.env.PORT || '3000', 10),
+    port: readInt('PORT', 3000),
     nodeEnv: process.env.NODE_ENV || 'development',
     
     postgres: {
       host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+      port: readInt('POSTGRES_PORT', 5432),
       database: process.env.POSTGRES_DB || 'sandeep_ai',
       user: process.env.POSTGRES_USER || 'postgres',
       password: process.env.POSTGRES_PASSWORD || 'postgres',
@@ -147,12 +178,12 @@ export function loadConfig(): Config {
     
     redis: process.env.REDIS_HOST ? {
       host: process.env.REDIS_HOST,
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      port: readInt('REDIS_PORT', 6379),
       password: process.env.REDIS_PASSWORD,
     } : undefined,
     
     models: {
-      defaultProvider: (process.env.DEFAULT_MODEL_PROVIDER as any) || 'ollama',
+      defaultProvider: readEnum('DEFAULT_MODEL_PROVIDER', modelProviders, 'ollama'),
       openai: process.env.OPENAI_API_KEY ? {
         apiKey: process.env.OPENAI_API_KEY,
         defaultModel: process.env.OPENAI_DEFAULT_MODEL || 'gpt-4-turbo-preview',
@@ -172,85 +203,85 @@ export function loadConfig(): Config {
     },
     
     embeddings: {
-      provider: (process.env.EMBEDDINGS_PROVIDER || 'ollama') as 'ollama' | 'gemini',
+      provider: readEnum('EMBEDDINGS_PROVIDER', embeddingProviders, 'ollama'),
       model: process.env.EMBEDDINGS_MODEL || 'nomic-embed-text',
-      dimension: parseInt(process.env.EMBEDDINGS_DIMENSION || '768', 10),
+      dimension: readInt('EMBEDDINGS_DIMENSION', 768),
     },
     
     memory: {
-      shortTermTokenLimit: parseInt(process.env.SHORT_TERM_TOKEN_LIMIT || '4000', 10),
-      shortTermMaxMessages: parseInt(process.env.SHORT_TERM_MAX_MESSAGES || '20', 10),
-      longTermTopResults: parseInt(process.env.LONG_TERM_TOP_RESULTS || '5', 10),
-      reflectionThreshold: parseInt(process.env.REFLECTION_THRESHOLD || '10', 10),
+      shortTermTokenLimit: readInt('SHORT_TERM_TOKEN_LIMIT', 4000),
+      shortTermMaxMessages: readInt('SHORT_TERM_MAX_MESSAGES', 20),
+      longTermTopResults: readInt('LONG_TERM_TOP_RESULTS', 5),
+      reflectionThreshold: readInt('REFLECTION_THRESHOLD', 10),
     },
 
     forgeLink: {
       enabled: process.env.ENABLE_FORGELINK !== 'false',
-      minEdgeConfidence: parseFloat(process.env.FORGELINK_MIN_CONFIDENCE || '0.3'),
-      maxEdgesPerProcess: parseInt(process.env.FORGELINK_MAX_EDGES || '20', 10),
-      evolveIntervalHours: parseInt(process.env.FORGELINK_EVOLVE_INTERVAL || '24', 10),
+      minEdgeConfidence: readFloat('FORGELINK_MIN_CONFIDENCE', 0.3),
+      maxEdgesPerProcess: readInt('FORGELINK_MAX_EDGES', 20),
+      evolveIntervalHours: readInt('FORGELINK_EVOLVE_INTERVAL', 24),
     },
     
     aetherForge: {
       enabled: process.env.ENABLE_AETHERFORGE !== 'false',
-      maxTraverseSteps: parseInt(process.env.AETHERFORGE_MAX_TRAVERSE || '8', 10),
-      confidenceThreshold: parseFloat(process.env.AETHERFORGE_CONFIDENCE_THRESHOLD || '0.65'),
-      refusalThreshold: parseFloat(process.env.AETHERFORGE_REFUSAL_THRESHOLD || '0.15'),
-      maxSummaryLength: parseInt(process.env.AETHERFORGE_MAX_SUMMARY || '500', 10),
+      maxTraverseSteps: readInt('AETHERFORGE_MAX_TRAVERSE', 8),
+      confidenceThreshold: readFloat('AETHERFORGE_CONFIDENCE_THRESHOLD', 0.65),
+      refusalThreshold: readFloat('AETHERFORGE_REFUSAL_THRESHOLD', 0.15),
+      maxSummaryLength: readInt('AETHERFORGE_MAX_SUMMARY', 500),
     },
 
     veilForge: {
       enabled: process.env.ENABLE_VEILFORGE !== 'false',
-      maxTraverseSteps: parseInt(process.env.VEILFORGE_MAX_TRAVERSE || '8', 10),
-      confidenceThreshold: parseFloat(process.env.VEILFORGE_CONFIDENCE_THRESHOLD || '0.65'),
-      refusalThreshold: parseFloat(process.env.VEILFORGE_REFUSAL_THRESHOLD || '0.15'),
-      maxSummaryLength: parseInt(process.env.VEILFORGE_MAX_SUMMARY || '500', 10),
+      maxTraverseSteps: readInt('VEILFORGE_MAX_TRAVERSE', 8),
+      confidenceThreshold: readFloat('VEILFORGE_CONFIDENCE_THRESHOLD', 0.65),
+      refusalThreshold: readFloat('VEILFORGE_REFUSAL_THRESHOLD', 0.15),
+      maxSummaryLength: readInt('VEILFORGE_MAX_SUMMARY', 500),
     },
 
     temporaTree: {
       enabled: process.env.ENABLE_TEMPORATREE !== 'false',
-      bmmThreshold: parseFloat(process.env.TEMPORATREE_BMM_THRESHOLD || '0.55'),
-      maxTreeDepth: parseInt(process.env.TEMPORATREE_MAX_DEPTH || '4', 10),
-      policyLearnRate: parseFloat(process.env.TEMPORATREE_POLICY_RATE || '0.1'),
+      bmmThreshold: readFloat('TEMPORATREE_BMM_THRESHOLD', 0.55),
+      maxTreeDepth: readInt('TEMPORATREE_MAX_DEPTH', 4),
+      policyLearnRate: readFloat('TEMPORATREE_POLICY_RATE', 0.1),
     },
 
     bindWeave: {
       enabled: process.env.ENABLE_BINDWEAVE !== 'false',
-      inductionThreshold: parseFloat(process.env.BINDWEAVE_INDUCTION_THRESHOLD || '0.45'),
-      maxWeaveDegree: parseInt(process.env.BINDWEAVE_MAX_DEGREE || '6', 10),
-      reflectionDepth: parseInt(process.env.BINDWEAVE_REFLECTION_DEPTH || '3', 10),
+      inductionThreshold: readFloat('BINDWEAVE_INDUCTION_THRESHOLD', 0.45),
+      maxWeaveDegree: readInt('BINDWEAVE_MAX_DEGREE', 6),
+      reflectionDepth: readInt('BINDWEAVE_REFLECTION_DEPTH', 3),
     },
 
     echoForge: {
       enabled: process.env.ENABLE_ECHOFORGE !== 'false',
-      minConfidence: parseFloat(process.env.ECHOFORGE_MIN_CONFIDENCE || '0.65'),
-      maxEchoDepth: parseInt(process.env.ECHOFORGE_MAX_DEPTH || '4', 10),
-      reflectionDepth: parseInt(process.env.ECHOFORGE_REFLECTION_DEPTH || '3', 10),
+      minConfidence: readFloat('ECHOFORGE_MIN_CONFIDENCE', 0.65),
+      maxEchoDepth: readInt('ECHOFORGE_MAX_DEPTH', 4),
+      reflectionDepth: readInt('ECHOFORGE_REFLECTION_DEPTH', 3),
     },
 
     aetherWeft: {
       enabled: process.env.ENABLE_AETHERWEFT !== 'false',
-      maturityThreshold: parseFloat(process.env.AETHERWEFT_MATURITY_THRESHOLD || '0.6'),
-      decayRate: parseFloat(process.env.AETHERWEFT_DECAY_RATE || '0.02'),
-      maxRiverDepth: parseInt(process.env.AETHERWEFT_MAX_RIVER_DEPTH || '5', 10),
+      maturityThreshold: readFloat('AETHERWEFT_MATURITY_THRESHOLD', 0.6),
+      decayRate: readFloat('AETHERWEFT_DECAY_RATE', 0.02),
+      maxRiverDepth: readInt('AETHERWEFT_MAX_RIVER_DEPTH', 5),
     },
 
     apexSynapse: {
       enabled: process.env.ENABLE_APEXSYNAPSE !== 'false',
-      maxResolutionSteps: parseInt(process.env.APEXSYNAPSE_MAX_STEPS || '8', 10),
-      minConfidence: parseFloat(process.env.APEXSYNAPSE_MIN_CONFIDENCE || '0.6'),
-      maxPropagationDepth: parseInt(process.env.APEXSYNAPSE_MAX_PROPAGATION || '3', 10),
+      maxResolutionSteps: readInt('APEXSYNAPSE_MAX_STEPS', 8),
+      minConfidence: readFloat('APEXSYNAPSE_MIN_CONFIDENCE', 0.6),
+      maxPropagationDepth: readInt('APEXSYNAPSE_MAX_PROPAGATION', 3),
     },
 
     quaternaryForge: {
       enabled: process.env.ENABLE_QUATERNARYFORGE !== 'false',
-      wisdomThreshold: parseFloat(process.env.QUATERNARYFORGE_WISDOM_THRESHOLD || '0.65'),
-      memoryDecayRate: parseFloat(process.env.QUATERNARYFORGE_MEMORY_DECAY || '0.03'),
-      intelligenceMaxAge: parseInt(process.env.QUATERNARYFORGE_INTELLIGENCE_AGE || '30', 10),
+      wisdomThreshold: readFloat('QUATERNARYFORGE_WISDOM_THRESHOLD', 0.65),
+      memoryDecayRate: readFloat('QUATERNARYFORGE_MEMORY_DECAY', 0.03),
+      intelligenceMaxAge: readInt('QUATERNARYFORGE_INTELLIGENCE_AGE', 30),
     },
 
     logging: {
-      level: (process.env.LOG_LEVEL as any) || 'info',
+      level: readEnum('LOG_LEVEL', logLevels, 'info'),
     },
   };
 }

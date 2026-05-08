@@ -137,7 +137,7 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(({
         const container = document.querySelector('.range-slider-track');
         if (!container) return;
         const rect = container.getBoundingClientRect();
-        const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
+        const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const newValue = min + percentage * (max - min);
         const snappedValue = Math.round(newValue / step) * step;
         handleChange(dragIndex, snappedValue);

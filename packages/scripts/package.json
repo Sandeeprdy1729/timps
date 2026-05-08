@@ -1,5 +1,5 @@
 {
-  "name": "TIMPS - Development Scripts",
+  "name": "@timps/scripts",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -14,9 +14,9 @@
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "echo 'no TypeScript sources in scripts package'",
     "format": "prettier --write src/**/*.ts",
-    "build": "tsc",
+    "build": "echo 'no build step for scripts package'",
     "build:watch": "tsc --watch",
     "clean": "rm -rf dist coverage",
     "clean:all": "rm -rf dist coverage node_modules",

@@ -38,10 +38,15 @@ async function chat(message: string, username?: string): Promise<string> {
 
 async function main() {
   const server = new McpServer({ name: 'timps-mcp', version: '1.0.0' });
+  const registerTool = server.registerTool.bind(server) as (
+    name: string,
+    config: { description: string; inputSchema: Record<string, unknown> },
+    handler: (args: any) => any
+  ) => void;
 
   // ── Core Memory ─────────────────────────────────────────────────────────────
 
-  server.registerTool('timps_chat', {
+  registerTool('timps_chat', {
     description: 'Send a message to TIMPs with full memory context. Automatically activates contradiction detection, burnout analysis, bug patterns, and other intelligence tools.',
     inputSchema: {
       message: z.string().describe('Message to send to TIMPs'),
@@ -51,7 +56,7 @@ async function main() {
     content: [{ type: 'text' as const, text: await chat(message, username) }],
   }));
 
-  server.registerTool('timps_get_memories', {
+  registerTool('timps_get_memories', {
     description: 'Get all stored memories, goals, and preferences. Use before starting a complex task.',
     inputSchema: {},
   }, async () => {
@@ -84,7 +89,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text }] };
   });
 
-  server.registerTool('timps_store_memory', {
+  registerTool('timps_store_memory', {
     description: 'Store an important fact in TIMPs long-term memory.',
     inputSchema: {
       content: z.string().describe('Memory to store'),
@@ -101,7 +106,7 @@ async function main() {
 
   // ── Contradiction Detection ──────────────────────────────────────────────────
 
-  server.registerTool('timps_check_contradiction', {
+  registerTool('timps_check_contradiction', {
     description: 'Check if a statement contradicts past positions. Use before any opinion or decision.',
     inputSchema: {
       text: z.string().describe('Statement to check'),
@@ -111,7 +116,7 @@ async function main() {
       const result = localEngine.contradiction.check(text, true);
       if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
         const score = Math.round((result.contradiction_score || 0) * 100);
-        const claim = result.conflicting_position?.extracted_claim || 'a past position';
+        const claim = result.matched_position?.extracted_claim || 'a past position';
         return { content: [{ type: 'text' as const, text:
           `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
       }
@@ -131,7 +136,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
   });
 
-  server.registerTool('timps_get_positions', {
+  registerTool('timps_get_positions', {
     description: 'List all tracked positions with conflict counts.',
     inputSchema: {},
   }, async () => {
@@ -156,7 +161,7 @@ async function main() {
 
   // ── Regret Oracle ────────────────────────────────────────────────────────────
 
-  server.registerTool('timps_check_regret', {
+  registerTool('timps_check_regret', {
     description: 'Warn before repeating a past regretted decision.',
     inputSchema: { decision: z.string().describe('Decision being considered') },
   }, async ({ decision }) => {
@@ -165,14 +170,14 @@ async function main() {
       if (result.warning && result.matching_past_decision) {
         const d = result.matching_past_decision;
         return { content: [{ type: 'text' as const, text:
-          `⚠️ REGRET WARNING (${Math.round(result.similarity_score * 100)}% match)\n\nPast decision: "${d.description}"\nRegret score: ${d.regret_score}/1\n\n${result.message}` }] };
+          `⚠️ REGRET WARNING (${Math.round(result.similarity_score * 100)}% match)\n\nPast decision: "${d}"\n\n${result.message}` }] };
       }
       return { content: [{ type: 'text' as const, text: result.message }] };
     }
     return { content: [{ type: 'text' as const, text: await chat(`Regret Oracle: am I about to repeat a regretted decision? "${decision}"`) }] };
   });
 
-  server.registerTool('timps_log_decision', {
+  registerTool('timps_log_decision', {
     description: 'Log a decision outcome to build the Regret Oracle knowledge base.',
     inputSchema: {
       description: z.string().describe('The decision made'),
@@ -190,7 +195,7 @@ async function main() {
 
   // ── Burnout Seismograph ──────────────────────────────────────────────────────
 
-  server.registerTool('timps_burnout_analyze', {
+  registerTool('timps_burnout_analyze', {
     description: 'Analyze burnout risk vs personal baseline. Use when user mentions stress or exhaustion.',
     inputSchema: {},
   }, async () => {
@@ -202,7 +207,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat('Burnout Seismograph: analyze my current risk vs personal baseline.') }] };
   });
 
-  server.registerTool('timps_record_signal', {
+  registerTool('timps_record_signal', {
     description: 'Log a behavioral signal for burnout tracking.',
     inputSchema: {
       signal_type: z.string().describe('focus_hours | energy_level | enthusiasm_score | commits_per_day'),
@@ -219,7 +224,7 @@ async function main() {
 
   // ── Bug Pattern Prophet ──────────────────────────────────────────────────────
 
-  server.registerTool('timps_warn_bug_pattern', {
+  registerTool('timps_warn_bug_pattern', {
     description: 'Check if coding context matches personal bug triggers. Use before writing code under pressure.',
     inputSchema: { context: z.string().describe('Current coding context and conditions') },
   }, async ({ context }) => {
@@ -234,7 +239,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`Bug Pattern Prophet: check my triggers for: ${context}`) }] };
   });
 
-  server.registerTool('timps_record_bug', {
+  registerTool('timps_record_bug', {
     description: 'Record a bug to build personal pattern profile.',
     inputSchema: {
       bug_type: z.string().describe('race_condition | null_pointer | off_by_one | memory_leak | etc.'),
@@ -251,7 +256,7 @@ async function main() {
 
   // ── Tech Debt Seismograph ────────────────────────────────────────────────────
 
-  server.registerTool('timps_check_tech_debt', {
+  registerTool('timps_check_tech_debt', {
     description: 'Check if code pattern matches past codebase incidents. Use during code review.',
     inputSchema: {
       pattern: z.string().describe('Code pattern or approach'),
@@ -269,7 +274,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`Tech Debt Seismograph for ${project_id || 'default'}: "${pattern}"`) }] };
   });
 
-  server.registerTool('timps_record_incident', {
+  registerTool('timps_record_incident', {
     description: 'Record a production incident to build pattern library.',
     inputSchema: {
       pattern: z.string().describe('Code pattern that caused the incident'),
@@ -287,7 +292,7 @@ async function main() {
 
   // ── API Archaeologist ────────────────────────────────────────────────────────
 
-  server.registerTool('timps_lookup_api', {
+  registerTool('timps_lookup_api', {
     description: 'Look up known quirks for an API before using it.',
     inputSchema: { api_name: z.string().describe('API name: Stripe, GitHub, etc.') },
   }, async ({ api_name }) => {
@@ -300,7 +305,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`API Archaeologist: quirks for ${api_name}?`) }] };
   });
 
-  server.registerTool('timps_record_api_quirk', {
+  registerTool('timps_record_api_quirk', {
     description: 'Save a discovered API quirk for future reference.',
     inputSchema: {
       api_name: z.string().describe('API name'),
@@ -319,7 +324,7 @@ async function main() {
 
   // ── Meeting Ghost ────────────────────────────────────────────────────────────
 
-  server.registerTool('timps_extract_commitments', {
+  registerTool('timps_extract_commitments', {
     description: 'Extract commitments from meeting notes. Use after any meeting.',
     inputSchema: {
       meeting_notes: z.string().describe('Raw meeting notes or transcript'),
@@ -331,7 +336,7 @@ async function main() {
     ) }],
   }));
 
-  server.registerTool('timps_get_pending_commitments', {
+  registerTool('timps_get_pending_commitments', {
     description: 'List all pending commitments not yet completed.',
     inputSchema: {},
   }, async () => ({
@@ -340,7 +345,7 @@ async function main() {
 
   // ── Relationship Intelligence ────────────────────────────────────────────────
 
-  server.registerTool('timps_relationship_check', {
+  registerTool('timps_relationship_check', {
     description: 'Check relationship health and drift alerts. Use when user mentions a person.',
     inputSchema: {
       contact_name: z.string().optional().describe('Person name — omit for all drift alerts'),
@@ -355,7 +360,7 @@ async function main() {
 
   // ── Dead Reckoning ───────────────────────────────────────────────────────────
 
-  server.registerTool('timps_simulate_decision', {
+  registerTool('timps_simulate_decision', {
     description: 'Simulate future outcomes for a decision based on actual history.',
     inputSchema: {
       scenario: z.string().describe('Decision or situation to simulate'),
@@ -369,7 +374,7 @@ async function main() {
 
   // ── Living Manifesto ─────────────────────────────────────────────────────────
 
-  server.registerTool('timps_get_manifesto', {
+  registerTool('timps_get_manifesto', {
     description: 'Get the Living Manifesto — actual values from behavioral patterns, not stated beliefs.',
     inputSchema: {},
   }, async () => ({
@@ -378,7 +383,7 @@ async function main() {
 
   // ── Chronos Veil (Temporal Apex Veil) ─────────────────────────────────────
 
-  server.registerTool('timps_chronos_ingest', {
+  registerTool('timps_chronos_ingest', {
     description: 'Ingest a signal into Chronos Veil with layered persistence. Auto-classifies into knowledge/memory/wisdom/intelligence with entity linking.',
     inputSchema: {
       content: z.string().describe('The signal or event to ingest'),
@@ -398,7 +403,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Event ${data.eventId} → layer: ${data.layer}, entities: ${(data.entities || []).join(', ')}` }] };
   });
 
-  server.registerTool('timps_chronos_query', {
+  registerTool('timps_chronos_query', {
     description: 'Query Chronos Veil with the multi-tool resolution agent. Resolves conflicts and produces compact temporal summaries.',
     inputSchema: {
       query: z.string().describe('Temporal query (e.g. "how has my bug patterns evolved?", "what API decisions were superseded?")'),
@@ -426,7 +431,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
 
-  server.registerTool('timps_chronos_stats', {
+  registerTool('timps_chronos_stats', {
     description: 'Get Chronos Veil statistics: event counts by layer, recent events, and entity graph edges.',
     inputSchema: {},
   }, async () => {
@@ -445,7 +450,7 @@ async function main() {
 
   // ── NexusForge (Episodic Sub-Agent Trinity) ─────────────────────────────
 
-  server.registerTool('timps_nexus_ingest', {
+  registerTool('timps_nexus_ingest', {
     description: 'Ingest a signal into NexusForge episodic memory. Builds hybrid graph nodes with time-aware gists and factual links. Use after coding sessions, decisions, or notable events.',
     inputSchema: {
       content: z.string().describe('The signal or event to ingest'),
@@ -463,7 +468,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: data.success ? `✓ Episodic node created: ${data.nodeId}` : 'NexusForge ingest failed or disabled' }] };
   });
 
-  server.registerTool('timps_nexus_query', {
+  registerTool('timps_nexus_query', {
     description: 'Query NexusForge episodic memory with agentic iterative retrieval. Returns episodic nodes with spatiotemporal context, refusal when evidence is insufficient.',
     inputSchema: {
       query: z.string().describe('Episodic query (e.g. "what coding sessions led to burnout signals?", "show my regret patterns around API decisions")'),
@@ -488,7 +493,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
 
-  server.registerTool('timps_nexus_stats', {
+  registerTool('timps_nexus_stats', {
     description: 'Get NexusForge episodic memory statistics: node counts, edge counts, and source breakdown.',
     inputSchema: {},
   }, async () => {
@@ -505,7 +510,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text }] };
   });
 
-  server.registerTool('timps_nexus_graph', {
+  registerTool('timps_nexus_graph', {
     description: 'Get the episodic graph structure (nodes + edges) for visualization. Returns recent episodic nodes and their temporal/causal links.',
     inputSchema: {
       limit: z.number().optional().describe('Max nodes to return (default 30)'),
@@ -528,7 +533,7 @@ async function main() {
 
   // ── SynapseMetabolon (Spreading Activation Metabolic Graph) ─────────────
 
-  server.registerTool('timps_synapse_ingest', {
+  registerTool('timps_synapse_ingest', {
     description: 'Ingest a signal into SynapseMetabolon spreading activation graph. Classifies into interaction/reasoning/audit layers with automatic entity linking and activation spread.',
     inputSchema: {
       content: z.string().describe('The signal or event to ingest'),
@@ -548,7 +553,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Node ${data.nodeId} → layer: ${data.layer}, activation: ${(data.activation || 0).toFixed(2)}, entities: ${(data.entities || []).join(', ')}` }] };
   });
 
-  server.registerTool('timps_synapse_query', {
+  registerTool('timps_synapse_query', {
     description: 'Query SynapseMetabolon with spreading activation. Spreads from seed nodes through relational edges, runs metabolic cycle, and returns activated nodes with confidence scores.',
     inputSchema: {
       query: z.string().describe('Metabolic graph query (e.g. "how do my coding sessions relate to burnout?", "show patterns around API decisions")'),
@@ -575,7 +580,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
 
-  server.registerTool('timps_synapse_stats', {
+  registerTool('timps_synapse_stats', {
     description: 'Get SynapseMetabolon statistics: node counts, edge counts, layer breakdown, and average activation.',
     inputSchema: {},
   }, async () => {
@@ -594,7 +599,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text }] };
   });
 
-  server.registerTool('timps_synapse_graph', {
+  registerTool('timps_synapse_graph', {
     description: 'Get the metabolic graph structure (nodes + edges) for visualization. Returns nodes with activation scores and layer information.',
     inputSchema: {
       limit: z.number().optional().describe('Max nodes to return (default 30)'),
@@ -615,7 +620,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text }] };
   });
 
-  server.registerTool('timps_synapse_consolidate', {
+  registerTool('timps_synapse_consolidate', {
     description: 'Run a metabolic consolidation cycle. Consolidates high-activation nodes, audits low-utility nodes, refreshes stale nodes, and decays inactive ones.',
     inputSchema: {},
   }, async () => {
@@ -634,7 +639,7 @@ async function main() {
 
   // ── Phase 2: Session & Context Tools ────────────────────────────────────────
 
-  server.registerTool('timps_get_session_history', {
+  registerTool('timps_get_session_history', {
     description: 'Retrieve what you were working on in recent sessions. Use before starting a task to restore context.',
     inputSchema: {
       days_back: z.number().int().min(1).max(30).optional().describe('How many days back (default: 7)'),
@@ -649,14 +654,14 @@ async function main() {
       if (!recent.length) return { content: [{ type: 'text' as const, text: `No sessions in the last ${days_back || 7} days.` }] };
       const lines = recent.slice(0, 20).map(e => {
         const d = new Date(e.timestamp).toLocaleDateString();
-        return `- [${d}] [${e.type}] ${e.content.slice(0, 100)}`;
+        return `- [${d}] [${e.outcome}] ${e.summary.slice(0, 100)}`;
       });
       return { content: [{ type: 'text' as const, text: `**Session history (last ${days_back || 7} days):**\n${lines.join('\n')}` }] };
     }
     return { content: [{ type: 'text' as const, text: await chat(`What was I working on in the last ${days_back || 7} days? Summarize my session history.`) }] };
   });
 
-  server.registerTool('timps_get_architecture_decisions', {
+  registerTool('timps_get_architecture_decisions', {
     description: 'Retrieve past architecture decisions and design choices. Use when making structural code decisions.',
     inputSchema: {
       topic: z.string().optional().describe('Filter by topic (e.g. auth, database, state)'),
@@ -672,7 +677,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`What architecture decisions have we made${topic ? ` about ${topic}` : ''}?`) }] };
   });
 
-  server.registerTool('timps_get_code_patterns', {
+  registerTool('timps_get_code_patterns', {
     description: 'Retrieve personal coding patterns and conventions I always use.',
     inputSchema: {
       context: z.string().optional().describe('Filter by context or language'),
@@ -687,7 +692,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`What coding patterns and conventions do I always use${context ? ` for ${context}` : ''}?`) }] };
   });
 
-  server.registerTool('timps_record_pattern', {
+  registerTool('timps_record_pattern', {
     description: 'Store a reusable code pattern or convention for future recall.',
     inputSchema: {
       pattern: z.string().describe('The code pattern or convention to store'),
@@ -703,7 +708,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Pattern stored` }] };
   });
 
-  server.registerTool('timps_get_patterns_for_context', {
+  registerTool('timps_get_patterns_for_context', {
     description: 'Retrieve code patterns relevant to the current file or task context.',
     inputSchema: {
       file_path: z.string().optional().describe('Current file path'),
@@ -711,13 +716,14 @@ async function main() {
     },
   }, async ({ file_path, task_description }) => {
     if (!SERVER_MODE) {
-      const query = [task_description, file_path].filter(Boolean).join(' ');
+      const taskDescription = String(task_description);
+      const query = [taskDescription, file_path].filter(Boolean).join(' ');
       const results = localEngine.recall(query, { limit: 5 });
       const patterns = localEngine.patternLearner.getAll();
       // score patterns by jaccard similarity to task
-      const taskTokens = new Set(task_description.toLowerCase().split(/\W+/));
+      const taskTokens = new Set<string>(taskDescription.toLowerCase().split(/\W+/));
       const scored = patterns.map(p => {
-        const pTokens = new Set(p.content.toLowerCase().split(/\W+/));
+        const pTokens = new Set<string>(p.content.toLowerCase().split(/\W+/));
         const inter = [...taskTokens].filter(t => pTokens.has(t)).length;
         const union = new Set([...taskTokens, ...pTokens]).size;
         return { p, score: inter / (union || 1) };
@@ -737,7 +743,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`What patterns are relevant for: ${task_description}${file_path ? ` in ${file_path}` : ''}?`) }] };
   });
 
-  server.registerTool('timps_detect_architecture_drift', {
+  registerTool('timps_detect_architecture_drift', {
     description: 'Compare current code structure against past architectural decisions and detect drift.',
     inputSchema: {
       current_patterns: z.array(z.string()).describe('Patterns observed in current codebase'),
@@ -746,18 +752,18 @@ async function main() {
   }, async ({ current_patterns, project_id }) => {
     if (!SERVER_MODE) {
       const r = localEngine.architectureDrift.driftCheck(current_patterns, project_id || 'default');
-      if (r.drift_detected) {
-        const drifts = r.drifted_patterns.map((d: any) => `  • ${d.pattern}: expected "${d.expected}" → got "${d.observed}"`).join('\n');
-        return { content: [{ type: 'text' as const, text: `⚠️ ARCHITECTURE DRIFT DETECTED (score: ${Math.round(r.drift_score * 100)}%)\n\n${drifts}\n\nRecommendation: ${r.recommendation}` }] };
+      if (r.hasDrift) {
+        const drifts = r.driftedAreas.map((area: string) => `  • ${area}`).join('\n');
+        return { content: [{ type: 'text' as const, text: `⚠️ ARCHITECTURE DRIFT DETECTED\n\n${drifts}\n\n${r.explanation}` }] };
       }
-      return { content: [{ type: 'text' as const, text: `✓ No drift. Codebase matches ${r.matched_patterns.length} known patterns.` }] };
+      return { content: [{ type: 'text' as const, text: `✓ No drift. Codebase matches ${r.alignedWith.length} known patterns.` }] };
     }
     return { content: [{ type: 'text' as const, text: await chat(`Detect architecture drift. Current patterns: ${current_patterns.join(', ')}`) }] };
   });
 
   // ── Phase 2: Risk Tools ──────────────────────────────────────────────────────
 
-  server.registerTool('timps_predict_bug_risk', {
+  registerTool('timps_predict_bug_risk', {
     description: 'Predict bug risk for a planned change based on past incident history.',
     inputSchema: {
       change_description: z.string().describe('What you are about to change or add'),
@@ -784,7 +790,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`Predict bug risk for: ${change_description}. Files: ${(files_affected || []).join(', ')}`) }] };
   });
 
-  server.registerTool('timps_get_incident_timeline', {
+  registerTool('timps_get_incident_timeline', {
     description: 'Show past incidents and bugs in a specific module or area.',
     inputSchema: {
       module: z.string().describe('Module name or area (e.g. auth, payment, queue)'),
@@ -805,7 +811,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`Show incident timeline for the ${module} module.`) }] };
   });
 
-  server.registerTool('timps_check_deployment_risk', {
+  registerTool('timps_check_deployment_risk', {
     description: 'Check if a deployment pattern has caused issues before.',
     inputSchema: {
       pattern: z.string().describe('Deployment approach or config being used'),
@@ -823,7 +829,7 @@ async function main() {
 
   // ── Phase 2: Developer Intelligence Tools ───────────────────────────────────
 
-  server.registerTool('timps_get_velocity_trend', {
+  registerTool('timps_get_velocity_trend', {
     description: 'Show productivity trend — am I faster or slower this week vs baseline?',
     inputSchema: {},
   }, async () => {
@@ -844,7 +850,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat('Velocity trend: am I faster or slower this week vs my baseline?') }] };
   });
 
-  server.registerTool('timps_get_context_switches', {
+  registerTool('timps_get_context_switches', {
     description: 'Count and analyze context switches in current session.',
     inputSchema: {},
   }, async () => {
@@ -853,7 +859,7 @@ async function main() {
       const today = new Date().toDateString();
       const todayEps = episodes.filter(e => new Date(e.timestamp).toDateString() === today);
       const types = todayEps.reduce((acc: Record<string, number>, e) => {
-        acc[e.type] = (acc[e.type] || 0) + 1;
+        acc[e.outcome] = (acc[e.outcome] || 0) + 1;
         return acc;
       }, {});
       const switches = todayEps.length;
@@ -866,7 +872,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat('How many context switches have I done today? Is it affecting my focus?') }] };
   });
 
-  server.registerTool('timps_record_learning', {
+  registerTool('timps_record_learning', {
     description: 'Store something you learned today for future reference.',
     inputSchema: {
       learning: z.string().describe('What you learned'),
@@ -874,7 +880,7 @@ async function main() {
     },
   }, async ({ learning, topic }) => {
     if (!SERVER_MODE) {
-      localEngine.store({ content: learning, type: 'learning', tags: topic ? [topic] : [] });
+      localEngine.store({ content: learning, type: 'fact', tags: ['learning', ...(topic ? [topic] : [])] });
       localEngine.velocityTracker.observe('learning', learning);
       return { content: [{ type: 'text' as const, text: `✓ Learning stored${topic ? ` [${topic}]` : ''}: ${learning.slice(0, 80)}` }] };
     }
@@ -882,7 +888,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Learning stored` }] };
   });
 
-  server.registerTool('timps_get_shared_decisions', {
+  registerTool('timps_get_shared_decisions', {
     description: 'Retrieve team-level architecture decisions. Scoped to the current project.',
     inputSchema: {
       topic: z.string().optional().describe('Filter by topic'),
@@ -890,7 +896,7 @@ async function main() {
   }, async ({ topic }) => {
     if (!SERVER_MODE) {
       const query = topic ? `team decision ${topic}` : 'team architecture decision';
-      const results = localEngine.recall(query, { limit: 10, type: 'decision' });
+      const results = localEngine.recall(query, { limit: 10 });
       const archInsights = localEngine.architectureDrift.cultureReport('default');
       const lines: string[] = [];
       if (results.length) {
@@ -909,7 +915,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: await chat(`What team architecture decisions exist${topic ? ` about ${topic}` : ''}?`) }] };
   });
 
-  server.registerTool('timps_record_review_pattern', {
+  registerTool('timps_record_review_pattern', {
     description: 'Store something you consistently flag or look for during code reviews.',
     inputSchema: {
       pattern: z.string().describe('What you always check or flag in reviews'),
@@ -927,7 +933,7 @@ async function main() {
 
   // ── ChronosForge: Temporal Causal Memory ─────────────────────────────────────
 
-  server.registerTool('timps_temporal_query', {
+  registerTool('timps_temporal_query', {
     description:
       'Query memories that were valid at a specific point in time. ' +
       'Use for historical reconstruction ("what did I believe on March 15?"), ' +
@@ -964,7 +970,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
 
-  server.registerTool('timps_chrono_foresight', {
+  registerTool('timps_chrono_foresight', {
     description:
       'Run a Monte-Carlo foresight simulation to predict future risk trajectories. ' +
       'Use for burnout prediction ("am I heading toward burnout?"), ' +
@@ -998,7 +1004,7 @@ async function main() {
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
 
-  server.registerTool('timps_chrono_consolidate', {
+  registerTool('timps_chrono_consolidate', {
     description:
       'Run the Ebbinghaus adaptive consolidation pass — prunes low-importance memories ' +
       'that have decayed below threshold while preserving causally important nodes. ' +

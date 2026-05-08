@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -8,6 +9,16 @@ pnpm-debug.log*
 # Build outputs
 dist/
 build/
+out/
+target/
+**/dist/
+**/build/
+**/out/
+**/target/
+*.js.map
+*.d.ts.map
+*.node
+*.vsix
 *.tsbuildinfo
 
 # Environment variables
@@ -33,6 +44,11 @@ logs/
 
 # Caches
 .cache/
+.next/
+.turbo/
+**/.next/
+**/.turbo/
+**/.cache/
 .eslintcache
 
 # Testing

@@ -1,6 +1,7 @@
 {
-  "name": "@timps/enterprise",
+  "name": "@timps/enterprise-legacy",
   "version": "1.0.0",
+  "private": true,
   "description": "Enterprise multi-tenant features for TIMPS",
   "main": "src/index.ts",
   "scripts": {
