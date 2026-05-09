@@ -8,8 +8,8 @@ interface HelpPanelProps {
 export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
   return (
     <Box flexDirection="column" padding={1}>
-      <Box borderStyle="round" borderColor="cyan" flexDirection="column" padding={1}>
-        <Text bold color="cyan">TIMPS Code — Commands</Text>
+      <Box borderStyle="round" borderColor="#2D5A4F" flexDirection="column" padding={1}>
+        <Text bold color="#2D5A4F">🤖 TIMPS Code — Commands</Text>
         <Newline />
         
         <Text dimColor>━━━ General ━━━</Text>

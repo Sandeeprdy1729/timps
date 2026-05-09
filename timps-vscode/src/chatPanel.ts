@@ -225,92 +225,127 @@ export class TIMPsChatPanel {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src data: https:;"/>
 <title>TIMPS Chat</title>
 <style>
+/* ── Robot mascot color palette ── */
 :root {
-  --bg:    #1e1e1e; --bg2: #252526; --bg3: #2d2d2d; --bg-input: #3c3c3c;
-  --text:  #d4d4d4; --text2: #9cdcfe; --muted: #808080;
-  --accent: #7c6af7; --accent2: #a78bfa; --green: #4ade80;
-  --user-bg: #264f78; --user-border: #3574a7;
-  --err-bg: #4b1a1a; --err-border: #c53535;
-  --code-bg: #0d1117;
+  --bg:       #F5F0E1;   /* paper/cream */
+  --bg2:      #EDE8D5;   /* slightly darker paper */
+  --bg3:      #E3DECE;   /* even darker paper */
+  --bg-input: #FAF7F0;   /* input bg */
+  --text:     #1C1C1C;   /* ink */
+  --muted:    #6A6A6A;   /* muted ink */
+  --accent:   #2D5A4F;   /* robot screen teal */
+  --accent2:  #4A8C7A;   /* mid teal */
+  --tan:      #C8BF8C;   /* robot body tan */
+  --user-bg:  #EDE8D0;   /* user message bg */
+  --user-border: #2D5A4F;
+  --err-bg:   #FDE8E8;
+  --err-border: #C83838;
+  --code-bg:  #1C1C1C;   /* dark code bg */
 }
+/* ── Robot animations ── */
+@keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+@keyframes robotBlink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
+@keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
 /* Header */
-.header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg2); border-bottom:1px solid #3c3c3c; flex-shrink:0; }
-.logo { font-size:15px; font-weight:700; background:linear-gradient(135deg,#7c6af7,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.model-badge { font-size:11px; background:var(--bg3); padding:2px 8px; border-radius:10px; color:var(--muted); border:1px solid #404040; cursor:pointer; }
-.model-badge:hover { border-color:var(--accent); color:var(--accent2); }
+.header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg2); border-bottom:2px solid var(--text); flex-shrink:0; }
+.logo { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:0.03em; }
+.logo-robot { animation:robotFloat 3s ease-in-out infinite; image-rendering:pixelated; }
+.logo-robot-eye { animation:robotBlink 4s ease-in-out infinite; transform-origin:center; }
+.model-badge { font-size:10px; background:var(--bg3); padding:2px 8px; border-radius:2px; color:var(--muted); border:1.5px solid var(--text); cursor:pointer; font-family:'JetBrains Mono',monospace; font-weight:600; box-shadow:1px 1px 0 var(--text); }
+.model-badge:hover { border-color:var(--accent); color:var(--accent); }
 .header-actions { display:flex; gap:4px; }
-.hbtn { background:transparent; border:1px solid #404040; color:var(--text2); padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; }
-.hbtn:hover { background:var(--bg3); border-color:var(--accent); color:var(--accent2); }
-.hbtn.danger:hover { border-color:#c53535; color:#c53535; }
+.hbtn { background:var(--bg); border:1.5px solid var(--text); color:var(--text); padding:4px 10px; border-radius:2px; cursor:pointer; font-size:11px; font-weight:600; box-shadow:1px 1px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
+.hbtn:hover { transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); }
+.hbtn:active { transform:none; box-shadow:none; }
+.hbtn.danger { border-color:var(--err-border); color:var(--err-border); }
+
 /* Skills bar */
-.skills-bar { display:flex; gap:4px; padding:6px 10px; background:var(--bg2); border-bottom:1px solid #3c3c3c; overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+.skills-bar { display:flex; gap:4px; padding:6px 10px; background:var(--bg2); border-bottom:2px solid var(--text); overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
 .skills-bar::-webkit-scrollbar { display:none; }
-.sbtn { display:flex; align-items:center; gap:4px; padding:4px 9px; background:rgba(255,255,255,0.04); border:1px solid #3c3c3c; border-radius:5px; color:var(--muted); font-size:11px; cursor:pointer; white-space:nowrap; }
-.sbtn:hover { background:rgba(124,106,247,0.15); border-color:var(--accent); color:var(--text); }
+.sbtn { display:flex; align-items:center; gap:4px; padding:4px 9px; background:var(--bg); border:1.5px solid var(--text); border-radius:2px; color:var(--muted); font-size:11px; cursor:pointer; white-space:nowrap; font-weight:600; box-shadow:1px 1px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
+.sbtn:hover { background:var(--bg3); color:var(--accent); transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); }
+
 /* Messages */
-.msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
-.msgs::-webkit-scrollbar { width:6px; } .msgs::-webkit-scrollbar-thumb { background:#424242; border-radius:3px; }
-.msg { max-width:88%; border-radius:8px; padding:10px 13px; line-height:1.65; font-size:13px; animation:fadeIn 0.18s ease; }
-@keyframes fadeIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
-.msg.user { align-self:flex-end; background:var(--user-bg); border:1px solid var(--user-border); color:#e8e8e8; border-radius:8px 8px 3px 8px; }
-.msg.assistant { align-self:flex-start; background:var(--bg2); border:1px solid #3c3c3c; color:var(--text); border-radius:3px 8px 8px 8px; }
-.msg.error { align-self:center; background:var(--err-bg); border:1px solid var(--err-border); color:#f48771; font-size:12px; }
-.msg.system-msg { align-self:center; background:transparent; color:var(--muted); font-size:11px; font-style:italic; padding:3px 8px; border:none; }
-.role-label { font-size:11px; font-weight:600; margin-bottom:4px; opacity:0.7; }
-.msg.user .role-label { color:#9cdcfe; } .msg.assistant .role-label { color:var(--accent2); }
-/* Code blocks — FIX #2: rendered correctly */
-.code-wrap { position:relative; margin:8px 0; border-radius:6px; overflow:hidden; border:1px solid #404040; }
-.code-head { display:flex; justify-content:space-between; align-items:center; background:#0d1117; padding:4px 12px; font-size:11px; color:var(--muted); }
-.code-head .lang { text-transform:uppercase; font-weight:600; letter-spacing:0.5px; color:var(--accent2); }
+.msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
+.msgs::-webkit-scrollbar { width:4px; } .msgs::-webkit-scrollbar-thumb { background:var(--tan); border-radius:2px; }
+.msg { max-width:88%; border-radius:2px; padding:10px 13px; line-height:1.65; font-size:13px; animation:fadeIn 0.18s ease; border:2px solid var(--text); }
+.msg.user { align-self:flex-end; background:var(--user-bg); border-color:var(--user-border); box-shadow:3px 3px 0 var(--user-border); }
+.msg.assistant { align-self:flex-start; background:var(--bg2); border-color:var(--text); box-shadow:3px 3px 0 var(--text); }
+.msg.error { align-self:center; background:var(--err-bg); border-color:var(--err-border); color:var(--err-border); font-size:12px; box-shadow:2px 2px 0 var(--err-border); }
+.msg.system-msg { align-self:center; background:transparent; color:var(--muted); font-size:11px; font-style:italic; padding:3px 8px; border:none; box-shadow:none; }
+.role-label { font-size:11px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
+.msg.user .role-label { color:var(--accent2); }
+.msg.assistant .role-label { color:var(--accent); }
+
+/* Code blocks */
+.code-wrap { position:relative; margin:8px 0; border-radius:2px; overflow:hidden; border:2px solid var(--text); box-shadow:2px 2px 0 var(--text); }
+.code-head { display:flex; justify-content:space-between; align-items:center; background:var(--code-bg); padding:4px 12px; font-size:11px; color:var(--tan); }
+.code-head .lang { text-transform:uppercase; font-weight:700; letter-spacing:0.8px; color:var(--tan); font-family:'JetBrains Mono',monospace; }
 .code-btns { display:flex; gap:4px; }
-.cbtn { background:transparent; border:1px solid #555; color:var(--muted); padding:2px 7px; border-radius:3px; cursor:pointer; font-size:10px; }
-.cbtn:hover { background:rgba(124,106,247,0.2); border-color:var(--accent); color:var(--accent2); }
-.cbtn.apply { background:rgba(74,222,128,0.1); border-color:#4ade80; color:#4ade80; }
-.cbtn.apply:hover { background:rgba(74,222,128,0.25); }
-.code-body { background:var(--code-bg); padding:12px; overflow-x:auto; font-family:'Cascadia Code','Fira Code','Consolas',monospace; font-size:12px; line-height:1.5; white-space:pre; }
-.icode { background:var(--bg3); padding:1px 5px; border-radius:3px; font-family:monospace; font-size:12px; color:#ce9178; }
+.cbtn { background:transparent; border:1px solid #555; color:#aaa; padding:2px 7px; border-radius:2px; cursor:pointer; font-size:10px; font-weight:600; }
+.cbtn:hover { border-color:var(--accent2); color:var(--accent2); }
+.cbtn.apply { border-color:var(--accent2); color:var(--accent2); }
+.cbtn.apply:hover { background:rgba(45,90,79,0.2); }
+.code-body { background:var(--code-bg); padding:12px; overflow-x:auto; font-family:'JetBrains Mono','Cascadia Code','Fira Code',monospace; font-size:12px; line-height:1.5; white-space:pre; color:#e0e0e0; }
+.icode { background:var(--bg3); padding:1px 5px; border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent); border:1px solid var(--bg3); }
+
 /* Memory cards */
-.mem-card { background:rgba(124,106,247,0.07); border-left:2px solid var(--accent); border-radius:0 5px 5px 0; padding:7px 10px; margin:3px 0; font-size:12px; }
-.mem-meta { color:var(--muted); font-size:10px; margin-top:3px; }
+.mem-card { background:var(--tan-pale,#EDE8D0); border-left:3px solid var(--accent); padding:7px 10px; margin:3px 0; font-size:12px; border-radius:0 2px 2px 0; }
+.mem-meta { color:var(--muted); font-size:10px; margin-top:3px; font-family:'JetBrains Mono',monospace; }
+
 /* Typing */
-.typing { display:flex; align-items:center; gap:8px; padding:8px 13px; color:var(--muted); font-size:12px; }
+.typing { display:flex; align-items:center; gap:8px; padding:4px 0; color:var(--muted); font-size:12px; }
 .dots { display:flex; gap:3px; }
 .dots span { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:bounce 1.2s infinite; }
 .dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
-@keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-/* Welcome */
-.welcome { text-align:center; padding:28px 16px; }
-.welcome h2 { font-size:22px; background:linear-gradient(135deg,#7c6af7,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:6px; }
+
+/* Welcome panel — retro window */
+.welcome { text-align:center; padding:20px 16px; }
+.welcome-window { background:var(--bg2); border:2px solid var(--text); border-radius:4px; overflow:hidden; box-shadow:4px 4px 0 var(--text); max-width:340px; margin:0 auto; }
+.welcome-bar { display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--bg3); border-bottom:2px solid var(--text); }
+.welcome-dot { width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(0,0,0,0.2); }
+.welcome-dot.r { background:#ff5f57; } .welcome-dot.y { background:#febc2e; } .welcome-dot.g { background:#28c840; }
+.welcome-title { font-size:11px; font-weight:600; color:var(--muted); flex:1; text-align:center; font-family:'JetBrains Mono',monospace; }
+.welcome-body { padding:20px 16px; }
+.welcome-robot { animation:robotFloat 3s ease-in-out infinite; display:inline-block; margin-bottom:10px; image-rendering:pixelated; }
+.welcome h2 { font-size:18px; font-weight:700; color:var(--accent); margin-bottom:6px; }
 .welcome p { color:var(--muted); font-size:12px; margin-bottom:14px; line-height:1.6; }
-.qactions { display:flex; flex-direction:column; gap:5px; text-align:left; }
-.qa { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid #3c3c3c; border-radius:7px; cursor:pointer; font-size:12px; }
-.qa:hover { background:rgba(124,106,247,0.1); border-color:var(--accent); }
+.qactions { display:flex; flex-direction:column; gap:6px; text-align:left; }
+.qa { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg); border:1.5px solid var(--text); border-radius:2px; cursor:pointer; font-size:12px; transition:transform 0.1s, box-shadow 0.1s; box-shadow:1px 1px 0 var(--text); }
+.qa:hover { background:var(--bg3); transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); border-color:var(--accent); }
 .qa-icon { font-size:15px; width:22px; text-align:center; }
-.qa-title { font-weight:600; color:var(--text); font-size:12px; }
+.qa-title { font-weight:700; color:var(--text); font-size:12px; }
 .qa-desc { color:var(--muted); font-size:11px; }
+
 /* Input */
-.input-area { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border-top:1px solid #3c3c3c; flex-shrink:0; }
-.input-area textarea { flex:1; background:var(--bg-input); border:1px solid #4a4a4a; border-radius:6px; color:var(--text); padding:9px 12px; font-size:13px; font-family:inherit; resize:none; outline:none; min-height:38px; max-height:120px; line-height:1.4; }
+.input-area { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border-top:2px solid var(--text); flex-shrink:0; }
+.input-area textarea { flex:1; background:var(--bg-input); border:2px solid var(--text); border-radius:2px; color:var(--text); padding:9px 12px; font-size:13px; font-family:inherit; resize:none; outline:none; min-height:38px; max-height:120px; line-height:1.4; box-shadow:inset 1px 1px 0 rgba(0,0,0,0.05); }
 .input-area textarea:focus { border-color:var(--accent); }
 .input-area textarea::placeholder { color:var(--muted); }
-.send-btn,.stop-btn { width:38px; height:38px; border-radius:6px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; align-self:flex-end; }
-.send-btn { background:var(--accent); color:#fff; }
-.send-btn:hover { background:var(--accent2); }
-.send-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.stop-btn { background:#c53535; color:#fff; }
-.stop-btn:hover { background:#d94848; }
+.send-btn,.stop-btn { width:38px; height:38px; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; align-self:flex-end; border:2px solid var(--text); font-weight:700; box-shadow:2px 2px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
+.send-btn { background:var(--accent); color:var(--bg); }
+.send-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--text); }
+.send-btn:active,.stop-btn:active { transform:none; box-shadow:none; }
+.send-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:2px 2px 0 var(--text); }
+.stop-btn { background:var(--err-border); color:#fff; }
+.stop-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--text); }
 .hidden { display:none; }
+
 /* MD formatting */
-.mc strong { color:#e8e8e8; } .mc em { color:#b5cea8; }
-.mc h1 { font-size:17px; color:var(--text2); margin:10px 0 5px; }
-.mc h2 { font-size:14px; color:var(--text2); margin:9px 0 4px; }
-.mc h3 { font-size:13px; color:var(--text2); margin:8px 0 4px; }
+.mc strong { color:var(--accent); font-weight:700; }
+.mc em { color:var(--accent2); }
+.mc h1 { font-size:17px; color:var(--accent); margin:10px 0 5px; border-bottom:2px solid var(--text); padding-bottom:4px; }
+.mc h2 { font-size:14px; color:var(--accent); margin:9px 0 4px; }
+.mc h3 { font-size:13px; color:var(--accent2); margin:8px 0 4px; }
 .mc ul,.mc ol { padding-left:18px; margin:5px 0; }
 .mc li { margin:2px 0; }
-.mc blockquote { border-left:3px solid var(--accent); padding-left:10px; color:var(--muted); margin:6px 0; }
-.mc hr { border:none; border-top:1px solid #3c3c3c; margin:10px 0; }
+.mc blockquote { border-left:3px solid var(--tan); padding-left:10px; color:var(--muted); margin:6px 0; background:var(--bg3); }
+.mc hr { border:none; border-top:2px solid var(--text); margin:10px 0; }
 .mc a { color:var(--accent2); text-decoration:underline; }
 .mc p { margin-bottom:6px; }
 .mc p:last-child { margin-bottom:0; }
@@ -319,7 +354,21 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 <body>
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
-    <span class="logo">⚡ TIMPS</span>
+    <div class="logo">
+      <!-- Animated pixel robot logo -->
+      <svg class="logo-robot" viewBox="0 0 16 18" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
+        <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
+        <rect class="logo-robot-eye" x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
+        <rect class="logo-robot-eye" x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
+        <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
+        <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
+        <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
+        <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+      </svg>
+      TIMPS
+    </div>
     <span class="model-badge" id="modelBadge" title="Click to change model">Loading...</span>
   </div>
   <div class="header-actions">
@@ -343,21 +392,51 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 
 <div class="msgs" id="msgs">
   <div class="welcome" id="welcome">
-    <div style="font-size:28px;margin-bottom:6px">⚡</div>
-    <h2>TIMPS Agent</h2>
-    <p>Powered by TIMPS-Coder — your open-source AI coding partner.<br/>Memory-aware · Skill-powered · Runs locally via Ollama</p>
-    <div class="qactions">
-      <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
-        <span class="qa-icon">🐛</span>
-        <div><div class="qa-title">Fix Bug</div><div class="qa-desc">TIMPS-Coder explains + fixes root cause</div></div>
+    <div class="welcome-window">
+      <div class="welcome-bar">
+        <div class="welcome-dot r"></div>
+        <div class="welcome-dot y"></div>
+        <div class="welcome-dot g"></div>
+        <span class="welcome-title">timps — chat</span>
       </div>
-      <div class="qa" onclick="sendQ('Review this code with 🔴 Critical / 🟡 Warning / 🟢 Suggestion format.')">
-        <span class="qa-icon">👁</span>
-        <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
-      </div>
-      <div class="qa" onclick="sendQ('!audit')">
-        <span class="qa-icon">🧠</span>
-        <div><div class="qa-title">!audit — Memory</div><div class="qa-desc">See what TIMPS remembers</div></div>
+      <div class="welcome-body">
+        <!-- Animated pixel robot mascot -->
+        <div class="welcome-robot">
+          <svg viewBox="0 0 48 56" width="72" height="72" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+            <rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/>
+            <rect x="22" y="0" width="4" height="8" fill="#4A8C7A"/>
+            <rect x="6" y="6" width="36" height="26" rx="3" fill="#2D5A4F"/>
+            <rect x="9" y="9" width="30" height="20" rx="2" fill="#3D7A6A"/>
+            <rect x="13" y="13" width="6" height="6" fill="#C8BF8C"/>
+            <rect x="15" y="15" width="2" height="2" fill="#2D5A4F"/>
+            <rect x="29" y="13" width="6" height="6" fill="#C8BF8C"/>
+            <rect x="31" y="15" width="2" height="2" fill="#2D5A4F"/>
+            <rect x="13" y="22" width="22" height="2" fill="#C8BF8C"/>
+            <rect x="11" y="20" width="2" height="2" fill="#C8BF8C"/>
+            <rect x="35" y="20" width="2" height="2" fill="#C8BF8C"/>
+            <rect x="9" y="32" width="30" height="16" rx="2" fill="#C8BF8C"/>
+            <rect x="12" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
+            <rect x="27" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
+            <rect x="0" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
+            <rect x="40" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
+          </svg>
+        </div>
+        <h2>TIMPS Agent</h2>
+        <p>Powered by TIMPS-Coder — your open-source AI coding partner.<br/>Memory-aware · Skill-powered · Runs locally via Ollama</p>
+        <div class="qactions">
+          <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
+            <span class="qa-icon">🐛</span>
+            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">TIMPS-Coder explains + fixes root cause</div></div>
+          </div>
+          <div class="qa" onclick="sendQ('Review this code with 🔴 Critical / 🟡 Warning / 🟢 Suggestion format.')">
+            <span class="qa-icon">👁</span>
+            <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
+          </div>
+          <div class="qa" onclick="sendQ('!audit')">
+            <span class="qa-icon">🧠</span>
+            <div><div class="qa-title">!audit — Memory</div><div class="qa-desc">See what TIMPS remembers</div></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -412,7 +491,7 @@ function addMsg(role, content, id) {
     const d = document.createElement('div');
     d.className = 'msg ' + role;
     if (id) d.id = 'msg-' + id;
-    const label = role === 'user' ? 'You' : role === 'assistant' ? '⚡ TIMPS' : '';
+    const label = role === 'user' ? '❯ You' : role === 'assistant' ? '🤖 TIMPS' : '';
     let html = label ? '<div class="role-label">'+label+'</div>' : '';
     html += '<div class="mc">' + (role === 'assistant' ? md(content) : esc(content).replace(/\\n/g,'<br>')) + '</div>';
     d.innerHTML = html;
@@ -426,7 +505,7 @@ function addMem(mems, title) {
     const c = document.getElementById('msgs');
     const d = document.createElement('div');
     d.className = 'msg assistant';
-    let html = '<div class="role-label">⚡ TIMPS — ' + esc(title) + '</div><div class="mc">';
+    let html = '<div class="role-label">🤖 TIMPS — ' + esc(title) + '</div><div class="mc">';
     if (!mems || mems.length === 0) {
         html += '<em>No memories found.</em>';
     } else {
@@ -533,7 +612,7 @@ window.addEventListener('message', e => {
         case 'streamAborted':
             setStreaming(false);
             const ael = document.getElementById('msg-' + m.id);
-            if (ael) { const mc = ael.querySelector('.mc'); if(mc) mc.innerHTML += '<br><span style="color:#c53535;font-style:italic">[Stopped]</span>'; }
+            if (ael) { const mc = ael.querySelector('.mc'); if(mc) mc.innerHTML += '<br><span style="color:#C83838;font-style:italic">[Stopped]</span>'; }
             break;
         case 'showError':
             hideWelcome();
@@ -543,10 +622,10 @@ window.addEventListener('message', e => {
         case 'clearChat':
             document.getElementById('msgs').innerHTML = '';
             setStreaming(false); curId=''; curContent=''; codeCount=0;
-            // Re-add welcome
+            // Re-add welcome with robot
             const w = document.createElement('div');
             w.className='welcome'; w.id='welcome';
-            w.innerHTML='<div style="font-size:28px;margin-bottom:6px">⚡</div><h2>TIMPS Agent</h2><p>Chat cleared. Ready for a new session.</p>';
+            w.innerHTML='<div class="welcome-window"><div class="welcome-bar"><div class="welcome-dot r"></div><div class="welcome-dot y"></div><div class="welcome-dot g"></div><span class="welcome-title">timps — chat</span></div><div class="welcome-body"><div class="welcome-robot"><svg viewBox="0 0 48 56" width="56" height="56" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated"><rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/><rect x="6" y="6" width="36" height="26" rx="3" fill="#2D5A4F"/><rect x="9" y="9" width="30" height="20" rx="2" fill="#3D7A6A"/><rect x="13" y="13" width="6" height="6" fill="#C8BF8C"/><rect x="29" y="13" width="6" height="6" fill="#C8BF8C"/><rect x="13" y="22" width="22" height="2" fill="#C8BF8C"/><rect x="9" y="32" width="30" height="16" rx="2" fill="#C8BF8C"/></svg></div><h2>TIMPS Agent</h2><p>Chat cleared. Ready for a new session.</p></div></div>';
             document.getElementById('msgs').appendChild(w);
             break;
         case 'memoryAudit':
@@ -578,7 +657,6 @@ document.getElementById('inp').focus();
 </html>`;
     }
 }
-
 function getNonce(): string {
     let t = '';
     const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

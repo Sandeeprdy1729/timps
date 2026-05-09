@@ -1,49 +1,52 @@
-/* TIMPS Desktop Global Styles */
+/* TIMPS Desktop Global Styles — Robot pixel mascot color palette */
 
 :root {
-  /* Dark theme (default) */
-  --bg-primary: #1e1e2e;
-  --bg-secondary: #252535;
-  --bg-tertiary: #2a2a3c;
-  --bg-hover: #313145;
-  --bg-active: #3a3a5c;
+  /* Robot pixel mascot colors — retro/vintage aesthetic */
+  --bg-primary: #F5F0E1;      /* paper/cream — robot bg */
+  --bg-secondary: #EDE8D5;    /* slightly darker paper */
+  --bg-tertiary: #E3DECE;     /* even darker paper */
+  --bg-hover: #DDD8C4;        /* hover state */
+  --bg-active: #C8BF8C30;     /* active — tan tint */
   
-  --text-primary: #e4e4ef;
-  --text-secondary: #9999aa;
-  --text-tertiary: #666677;
-  --text-disabled: #444455;
+  --text-primary: #1C1C1C;    /* ink — robot outline color */
+  --text-secondary: #4A4A4A;  /* medium ink */
+  --text-tertiary: #6A6A6A;   /* light ink */
+  --text-disabled: #AAAAAA;   /* disabled */
   
-  --border: #3a3a5c;
-  --border-light: #4a4a6c;
-  --border-focus: #6366f1;
+  --border: #1C1C1C;          /* bold ink border */
+  --border-light: #3A3A3A;    /* slightly lighter */
+  --border-focus: #2D5A4F;    /* teal focus border */
   
-  --accent: #6366f1;
-  --accent-hover: #5558e3;
-  --accent-light: rgba(99, 102, 241, 0.15);
-  --accent-subtle: rgba(99, 102, 241, 0.1);
+  --accent: #2D5A4F;          /* robot screen teal — primary brand */
+  --accent-hover: #3D7A6A;    /* lighter teal hover */
+  --accent-light: rgba(45,90,79,0.12);
+  --accent-subtle: rgba(45,90,79,0.07);
   
-  --error: #ef4444;
-  --error-bg: rgba(239, 68, 68, 0.15);
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.15);
-  --info: #3b82f6;
-  --info-bg: rgba(59, 130, 246, 0.15);
+  --tan: #C8BF8C;             /* robot body color */
+  --tan-pale: #EDE8D0;        /* light tan */
   
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+  --error: #C83838;
+  --error-bg: rgba(200,56,56,0.1);
+  --warning: #E8C94A;
+  --warning-bg: rgba(232,201,74,0.12);
+  --success: #28A070;
+  --success-bg: rgba(40,160,112,0.12);
+  --info: #4A8C7A;
+  --info-bg: rgba(74,140,122,0.12);
   
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --shadow-sm: 2px 2px 0px var(--border);
+  --shadow-md: 3px 3px 0px var(--border);
+  --shadow-lg: 4px 4px 0px var(--border);
+  --shadow-xl: 6px 6px 0px var(--border);
+  
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
   
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'SF Mono', Monaco, 'Courier New', monospace;
+  --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Courier New', monospace;
   
   --z-dropdown: 100;
   --z-modal: 200;
@@ -53,44 +56,6 @@
   --transition-fast: 0.1s ease;
   --transition-base: 0.2s ease;
   --transition-slow: 0.3s ease;
-}
-
-/* Light theme */
-[data-theme="light"],
-[data-theme="system"]:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #eeeeee;
-  --bg-hover: #e5e5e5;
-  --bg-active: #dddddd;
-  
-  --text-primary: #1a1a2e;
-  --text-secondary: #555566;
-  --text-tertiary: #888899;
-  --text-disabled: #bbbbbb;
-  
-  --border: #dddddd;
-  --border-light: #cccccc;
-  --border-focus: #4f46e5;
-  
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-light: rgba(79, 70, 229, 0.1);
-  --accent-subtle: rgba(79, 70, 229, 0.05);
-  
-  --error: #dc2626;
-  --error-bg: rgba(220, 38, 38, 0.1);
-  --warning: #d97706;
-  --warning-bg: rgba(217, 119, 6, 0.1);
-  --success: #16a34a;
-  --success-bg: rgba(22, 163, 74, 0.1);
-  --info: #2563eb;
-  --info-bg: rgba(37, 99, 235, 0.1);
-  
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Global reset */
@@ -200,14 +165,27 @@ button:disabled {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-md);
+  border: 2px solid var(--text-primary);
   transition: all var(--transition-base);
+  box-shadow: 2px 2px 0 var(--text-primary);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--text-primary);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(0, 0);
+  box-shadow: none;
 }
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -217,7 +195,7 @@ button:disabled {
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border-color: var(--text-primary);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -226,30 +204,36 @@ button:disabled {
 
 .btn-ghost {
   color: var(--text-secondary);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .btn-ghost:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-primary);
+  box-shadow: none;
 }
 
 .btn-danger {
   background: var(--error);
   color: white;
+  border-color: var(--text-primary);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #dc2626;
+  background: #a02828;
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+  box-shadow: 1px 1px 0 var(--text-primary);
 }
 
 .btn-lg {
   padding: 0.75rem 1.5rem;
-  font-size: 1.125rem;
+  font-size: 1rem;
+  box-shadow: 3px 3px 0 var(--text-primary);
 }
 
 .btn-icon {

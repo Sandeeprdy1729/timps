@@ -1,16 +1,16 @@
-/* TIMPS Desktop — global styles */
+/* TIMPS Desktop — global styles — Robot mascot palette */
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #7d8590;
-  --accent: #58a6ff;
-  --accent-dim: #1f3d6e;
-  --success: #3fb950;
-  --warning: #d29922;
-  --danger: #f85149;
-  --radius: 8px;
+  --bg: #F5F0E1;         /* paper/cream */
+  --surface: #EDE8D5;    /* slightly darker paper */
+  --border: #1C1C1C;     /* bold ink border */
+  --text: #1C1C1C;       /* ink */
+  --text-muted: #6A6A6A; /* muted ink */
+  --accent: #2D5A4F;     /* robot teal */
+  --accent-dim: #C8BF8C40; /* tan tint */
+  --success: #28A070;
+  --warning: #E8C94A;
+  --danger: #C83838;
+  --radius: 4px;
 }
 
 * {
@@ -24,7 +24,7 @@ body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Space Grotesk', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
