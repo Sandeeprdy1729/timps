@@ -1,7 +1,7 @@
 /* TIMPS Desktop — App layout — Retro robot mascot theme */
 
 /* Google Fonts import for retro feel */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap&font-display=swap');
 
 /* Robot mascot animations */
 @keyframes robotFloat {
@@ -15,6 +15,18 @@
 @keyframes robotGlow {
   0%, 100% { filter: drop-shadow(0 0 3px rgba(45,90,79,0.4)); }
   50%       { filter: drop-shadow(0 0 8px rgba(45,90,79,0.8)); }
+}
+
+/* Respect user's reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .logo-robot,
+  .empty-icon,
+  .empty-icon svg {
+    animation: none !important;
+  }
+  .logo-robot-eye {
+    animation: none !important;
+  }
 }
 
 .app {
