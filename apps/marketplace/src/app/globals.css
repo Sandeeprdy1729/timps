@@ -306,7 +306,8 @@ button {
 }
 
 .card-stats {
-  display: flex align-items: center;
+  display: flex;
+  align-items: center;
   gap: 16px;
 }
 
