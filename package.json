@@ -25,18 +25,14 @@
   "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
   "main": "dist/main.js",
   "scripts": {
-    "build": "turbo run build",
-    "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean",
+    "build": "turbo run build --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
+    "test": "turbo run test --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
+    "typecheck": "turbo run typecheck --filter=!@timps/mobile",
+    "clean": "turbo run clean --filter=!@timps/mobile",
     "docs": "turbo run build --filter=@timps/docs",
     "dashboard": "turbo run dev --filter=@timps/memory-dashboard",
-    "start": "node dist/main.js",
-    "dev": "ts-node main.ts",
-    "cli": "ts-node main.ts cli",
-    "tui": "ts-node main.ts cli --tui",
-    "server": "ts-node main.ts server",
-    "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
+    "cli": "cd timps-code && npm run dev",
+    "tui": "cd timps-code && npm run dev"
   },
   "keywords": [
     "ai",

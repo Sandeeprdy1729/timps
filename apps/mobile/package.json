@@ -17,7 +17,6 @@
     "@react-navigation/native-stack": "^6.9.0",
     "expo-linear-gradient": "~12.7.0",
     "expo-speech": "~11.7.0",
-    "expo-voice": "~12.9.0",
     "@expo/vector-icons": "^14.0.0",
     "expo-local-authentication": "~13.8.0",
     "date-fns": "^3.3.1"
