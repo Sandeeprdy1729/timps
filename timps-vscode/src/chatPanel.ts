@@ -222,8 +222,11 @@ export class TIMPsChatPanel {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src data: https:;"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-${nonce}'; img-src data: https:;"/>
 <title>TIMPS Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* ── Robot mascot color palette ── */
 :root {
@@ -348,7 +351,12 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .mc hr { border:none; border-top:2px solid var(--text); margin:10px 0; }
 .mc a { color:var(--accent2); text-decoration:underline; }
 .mc p { margin-bottom:6px; }
-.mc p:last-child { margin-bottom:0; }
+/* Respect user's reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .logo-robot, .welcome-robot { animation: none !important; }
+  .logo-robot-eye { animation: none !important; }
+  .dots span { animation: none !important; }
+}
 </style>
 </head>
 <body>

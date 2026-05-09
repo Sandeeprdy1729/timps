@@ -59,6 +59,22 @@
   50%       { box-shadow: 0 0 20px rgba(45,90,79,0.7), 0 0 40px rgba(45,90,79,0.3); }
 }
 
+/* Respect user's reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .robot-mascot,
+  .logo-box,
+  .nav-robot,
+  .welcome-robot,
+  .pixel-parade-bot svg {
+    animation: none !important;
+    transform: none !important;
+  }
+  .robot-eye,
+  .robot-arm-l {
+    animation: none !important;
+  }
+}
+
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
