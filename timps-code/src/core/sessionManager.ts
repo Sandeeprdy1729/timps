@@ -133,7 +133,7 @@ export class SessionManager {
   
   async saveMessages(sessionId: string, messages: SessionMessage[]): Promise<void> {
     const sessionPath = this.getSessionPath(sessionId);
-    this.ensureDir();
+    fs.mkdirSync(sessionPath, { recursive: true });
     fs.writeFileSync(
       path.join(sessionPath, 'messages.json'),
       JSON.stringify(messages, null, 2)
@@ -237,7 +237,7 @@ export class SessionManager {
     
     // Keep first system message and last messages
     const systemMessages = messages.filter(m => m.role === 'system');
-    const recentMessages = messages.slice(-20);
+    const recentMessages = messages.slice(-20).filter(m => m.role !== 'system');
     
     const compressed: SessionMessage[] = [
       ...systemMessages,
