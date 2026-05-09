@@ -11,7 +11,7 @@
     "events": "^3.3.4"
   },
   "devDependencies": {
-    "@types/events": "^2.2.4",
+    "@types/events": "^3.0.3",
     "typescript": "^5.3.3"
   }
 }
