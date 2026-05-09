@@ -8,10 +8,10 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "events": "^3.3.4"
+    "events": "^3.3.0"
   },
   "devDependencies": {
-    "@types/events": "^2.2.4",
+    "@types/events": "^3.0.3",
     "typescript": "^5.3.3"
   }
 }

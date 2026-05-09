@@ -1067,6 +1067,225 @@ const memorySearch: RegisteredTool = {
 };
 
 // ══════════════════════════════════════════
+// 26. memory_benchmark — run retrieval benchmark
+// ══════════════════════════════════════════
+const memoryBenchmark: RegisteredTool = {
+  definition: {
+    name: 'memory_benchmark',
+    description: 'Run the memory retrieval benchmark comparing hybrid search vs linear search. Measures Recall@K, MRR, and token efficiency.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      const report = mem.runBenchmark();
+      return { content: report, isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 27. memory_compress — token-budgeted context
+// ══════════════════════════════════════════
+const memoryCompress: RegisteredTool = {
+  definition: {
+    name: 'memory_compress',
+    description: 'Get a token-budgeted memory context. Set budget in tokens (default: 2000). Uses relevance × recency × importance to rank and compress memories.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query for relevance scoring' },
+        budget: { type: 'number', description: 'Token budget (default: 2000)' },
+      },
+      required: ['query'],
+    },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      const compressed = mem.getContextCompressed(String(args.query), Number(args.budget) || 2000);
+      return { content: compressed, isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 28. memory_kg_query — knowledge graph query
+// ══════════════════════════════════════════
+const memoryKgQuery: RegisteredTool = {
+  definition: {
+    name: 'memory_kg_query',
+    description: 'Query the knowledge graph with multi-hop traversal. Ask questions like "What technologies do we use for APIs that caused incidents?"',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'Natural language question' },
+        entity: { type: 'string', description: 'Starting entity for multi-hop' },
+        hops: { type: 'number', description: 'Max hops (default: 3)' },
+      },
+    },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      if (args.entity) {
+        const results = mem.multiHopQuery(String(args.entity), []);
+        if (results.length === 0) return { content: 'No paths found.', isError: false };
+        const formatted = results.map(r => `${r.path.join(' → ')} (score: ${r.score.toFixed(2)})`).join('\n');
+        return { content: formatted, isError: false };
+      }
+      if (args.question) {
+        const result = mem.queryKnowledgeGraph(String(args.question));
+        return { content: `Answer: ${result.answer}\nConfidence: ${Math.round(result.confidence * 100)}% | Hops: ${result.hops}`, isError: false };
+      }
+      return { content: 'Provide either question or entity parameter.', isError: true };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 29. memory_timeline — get belief evolution
+// ══════════════════════════════════════════
+const memoryTimeline: RegisteredTool = {
+  definition: {
+    name: 'memory_timeline',
+    description: 'Get the evolution timeline of a memory entry — how opinions/approaches changed over time. Also shows recent memory diffs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entryId: { type: 'string', description: 'Memory entry ID' },
+        days: { type: 'number', description: 'Show changes from last N days (default: 7)' },
+      },
+    },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      if (args.entryId) {
+        const timeline = mem.getBeliefsTimeline(String(args.entryId));
+        return { content: timeline || 'No history for this entry.', isError: false };
+      }
+      const changes = mem.getRecentChanges(Number(args.days) || 7);
+      if (changes.length === 0) return { content: 'No recent changes.', isError: false };
+      const formatted = changes.map(c => `${new Date(c.changedAt).toLocaleDateString()}: ${c.was} → ${c.now}`).join('\n');
+      return { content: formatted, isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 30. memory_predict — predictive pre-fetch
+// ══════════════════════════════════════════
+const memoryPredict: RegisteredTool = {
+  definition: {
+    name: 'memory_predict',
+    description: 'Pre-fetch memories based on current task context similarity to past sessions. Uses session profiles and file similarity.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        goal: { type: 'string', description: 'Current task goal' },
+      },
+      required: ['goal'],
+    },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      const prediction = mem.predictNext(String(args.goal));
+      if (prediction.confidence === 0) return { content: 'No similar past sessions found.', isError: false };
+      const parts: string[] = [`Confidence: ${Math.round(prediction.confidence * 100)}%`];
+      if (prediction.episodicSummaries.length > 0) parts.push('Similar sessions:\n' + prediction.episodicSummaries.map(s => `• ${s}`).join('\n'));
+      if (prediction.semanticFacts.length > 0) parts.push('Relevant facts:\n' + prediction.semanticFacts.map(f => `• ${f.slice(0, 100)}`).join('\n'));
+      return { content: parts.join('\n'), isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 31. memory_stats — comprehensive memory stats
+// ══════════════════════════════════════════
+const memoryStats: RegisteredTool = {
+  definition: {
+    name: 'memory_stats',
+    description: 'Get comprehensive memory statistics: semantic count, episodes, procedural traces, knowledge graph nodes, decay stats, benchmark results.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      const stats = mem.getStats();
+      const decay = mem.decay.getStats();
+      const procedural = mem.procedural.getStats();
+      const graph = mem.graph.getStats();
+      const affective = mem.affective.getStats();
+      const report = mem.benchmark.loadLatestReport();
+      const lines = [
+        'Memory Statistics:',
+        `  Semantic entries: ${stats.semanticCount}`,
+        `  Episodes: ${stats.episodeCount}`,
+        `  Procedural traces: ${procedural.totalTraces}`,
+        `  Knowledge graph nodes: ${graph.nodeCount}, edges: ${graph.edgeCount}`,
+        `  Active memories: ${decay.activeCount} | Archived: ${decay.archivedCount}`,
+        `  Avg importance: ${decay.avgImportance}/10`,
+        `  Session samples: ${affective.sampleCount}`,
+      ];
+      if (report) {
+        lines.push(`  Benchmark R@5: ${(report.recallAt5 * 100).toFixed(1)}%`);
+        lines.push(`  Token efficiency: ${report.tokenEfficiency.toFixed(0)} tok/query`);
+      }
+      return { content: lines.join('\n'), isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
+// 32. memory_decay — trigger decay cycle
+// ══════════════════════════════════════════
+const memoryDecay: RegisteredTool = {
+  definition: {
+    name: 'memory_decay',
+    description: 'Trigger Ebbinghaus decay cycle. Archives low-recall memories to crypt layer. Run periodically to keep memory lean.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  risk: 'low',
+  async execute(args, cwd) {
+    try {
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      mem.applyDecay();
+      const stats = mem.getStats();
+      return { content: `Decay cycle complete. ${stats.semanticCount} active entries remain.`, isError: false };
+    } catch (e) {
+      return { content: `Error: ${(e as Error).message}`, isError: true };
+    }
+  },
+};
+
+// ══════════════════════════════════════════
 // Registry
 // ══════════════════════════════════════════
 
@@ -1076,6 +1295,8 @@ export const ALL_TOOLS: RegisteredTool[] = [
   gitDiff, gitLog, gitStash, patchFile, think,
   webSearch, fetchUrl, notebook, runDiagnostics, askUser,
   projectInfo, todoWrite, todoRead, memoryStore, memorySearch,
+  memoryBenchmark, memoryCompress, memoryKgQuery, memoryTimeline,
+  memoryPredict, memoryStats, memoryDecay,
 ];
 
 const LOCAL_TOOLS = ['read_file', 'write_file', 'edit_file', 'list_directory', 'bash', 'search_code', 'find_files'];
