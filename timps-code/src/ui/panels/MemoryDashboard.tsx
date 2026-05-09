@@ -9,9 +9,9 @@ interface MemoryDashboardProps {
 
 export const MemoryDashboard = ({ memoryCount, openTodos, cwd }: MemoryDashboardProps) => {
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1} marginBottom={1}>
+    <Box flexDirection="column" borderStyle="round" borderColor="#2D5A4F" paddingX={1} marginBottom={1}>
       <Box>
-        <Text bold color="cyan">TIMPS Dashboard</Text>
+        <Text bold color="#2D5A4F">🤖 TIMPS Dashboard</Text>
       </Box>
       <Box flexDirection="row">
         <Box flexDirection="column" marginRight={4}>
@@ -20,11 +20,11 @@ export const MemoryDashboard = ({ memoryCount, openTodos, cwd }: MemoryDashboard
         </Box>
         <Box flexDirection="column" marginRight={4}>
           <Text color="grey">Memory Items:</Text>
-          <Text color={memoryCount > 0 ? 'green' : 'grey'}>{memoryCount}</Text>
+          <Text color={memoryCount > 0 ? '#4A8C7A' : 'grey'}>{memoryCount}</Text>
         </Box>
         <Box flexDirection="column">
           <Text color="grey">Open Tasks:</Text>
-          <Text color={openTodos > 0 ? 'yellow' : 'green'}>{openTodos}</Text>
+          <Text color={openTodos > 0 ? '#E8C94A' : '#4A8C7A'}>{openTodos}</Text>
         </Box>
       </Box>
     </Box>

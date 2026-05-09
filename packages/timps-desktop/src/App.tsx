@@ -88,7 +88,18 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-logo">
-          <span className="logo-icon">◈</span>
+          {/* Animated pixel robot mascot logo */}
+          <svg className="logo-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
+            <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
+            <rect className="logo-robot-eye" x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
+            <rect className="logo-robot-eye" x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
+            <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
+            <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
+            <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
+            <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
+            <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+          </svg>
           <span className="logo-text">TIMPS</span>
           <span className="logo-sub">Memory Cockpit</span>
         </div>
@@ -126,7 +137,27 @@ export default function App() {
         <main className="main-content">
           {!projectPath && (
             <div className="empty-state">
-              <div className="empty-icon">◈</div>
+              <div className="empty-icon">
+                {/* Pixel robot for empty state */}
+                <svg viewBox="0 0 64 72" width="80" height="80" xmlns="http://www.w3.org/2000/svg" style={{imageRendering: 'pixelated'}}>
+                  <rect x="28" y="0" width="8" height="4" fill="#4A8C7A"/>
+                  <rect x="30" y="0" width="4" height="8" fill="#4A8C7A"/>
+                  <rect x="8" y="6" width="48" height="36" rx="4" fill="#2D5A4F"/>
+                  <rect x="12" y="10" width="40" height="28" rx="2" fill="#3D7A6A"/>
+                  <rect x="18" y="16" width="8" height="8" fill="#C8BF8C"/>
+                  <rect x="20" y="18" width="4" height="4" fill="#2D5A4F"/>
+                  <rect x="38" y="16" width="8" height="8" fill="#C8BF8C"/>
+                  <rect x="40" y="18" width="4" height="4" fill="#2D5A4F"/>
+                  <rect x="18" y="29" width="28" height="3" fill="#C8BF8C"/>
+                  <rect x="16" y="26" width="3" height="3" fill="#C8BF8C"/>
+                  <rect x="45" y="26" width="3" height="3" fill="#C8BF8C"/>
+                  <rect x="12" y="42" width="40" height="20" rx="2" fill="#C8BF8C"/>
+                  <rect x="16" y="62" width="12" height="10" rx="1" fill="#C8BF8C"/>
+                  <rect x="36" y="62" width="12" height="10" rx="1" fill="#C8BF8C"/>
+                  <rect x="0" y="44" width="10" height="6" rx="2" fill="#C8BF8C"/>
+                  <rect x="54" y="44" width="10" height="6" rx="2" fill="#C8BF8C"/>
+                </svg>
+              </div>
               <h2>Open a project</h2>
               <p>Enter the absolute path to a project above to explore its TIMPS memory.</p>
             </div>

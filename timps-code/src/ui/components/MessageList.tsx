@@ -19,8 +19,8 @@ export const MessageList = ({ messages }: MessageListProps) => {
     <Box flexDirection="column" marginY={1}>
       {visibleMessages.map((msg, idx) => (
         <Box key={idx} flexDirection="column" marginBottom={1}>
-          <Text bold color={msg.role === 'user' ? 'green' : 'blue'}>
-            {msg.role === 'user' ? 'You' : 'TIMPS'}
+          <Text bold color={msg.role === 'user' ? '#4A8C7A' : '#2D5A4F'}>
+            {msg.role === 'user' ? '❯ You' : '🤖 TIMPS'}
           </Text>
           <Box paddingLeft={1} paddingTop={0}>
             {msg.content ? (

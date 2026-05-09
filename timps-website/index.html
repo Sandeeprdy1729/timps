@@ -21,7 +21,32 @@
 <nav>
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box">T</div>
+      <div class="logo-box" title="TIMPS Robot Mascot">
+        <!-- Pixel robot SVG mascot -->
+        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <!-- body/tan -->
+          <rect x="3" y="9" width="10" height="6" fill="#C8BF8C"/>
+          <!-- legs -->
+          <rect x="4" y="15" width="3" height="3" fill="#C8BF8C"/>
+          <rect x="9" y="15" width="3" height="3" fill="#C8BF8C"/>
+          <!-- screen head (dark teal) -->
+          <rect x="2" y="1" width="12" height="9" rx="1" fill="#2D5A4F"/>
+          <!-- screen bezel -->
+          <rect x="3" y="2" width="10" height="7" fill="#3D7A6A"/>
+          <!-- eyes -->
+          <rect class="robot-eye" x="5" y="4" width="2" height="2" fill="#C8BF8C"/>
+          <rect class="robot-eye" x="9" y="4" width="2" height="2" fill="#C8BF8C"/>
+          <!-- smile -->
+          <rect x="5" y="7" width="6" height="1" fill="#C8BF8C"/>
+          <rect x="4" y="6" width="1" height="1" fill="#C8BF8C"/>
+          <rect x="11" y="6" width="1" height="1" fill="#C8BF8C"/>
+          <!-- antenna -->
+          <rect x="7" y="0" width="2" height="1" fill="#4A8C7A"/>
+          <!-- outline/shadow -->
+          <rect x="2" y="1" width="12" height="9" rx="1" fill="none" stroke="#1C1C1C" stroke-width="0.5"/>
+          <rect x="3" y="9" width="10" height="6" fill="none" stroke="#1C1C1C" stroke-width="0.5"/>
+        </svg>
+      </div>
       TIMPS
     </a>
     <ul class="nav-links">
@@ -45,6 +70,42 @@
       <!-- Left -->
       <div class="hero-left">
         <div class="hero-badge">✦ Open Source · MIT License · Free with Ollama</div>
+        <!-- Animated robot mascot in hero -->
+        <div class="robot-mascot" style="margin-bottom: 24px;" title="Hi! I'm TIMPS Robot 🤖">
+          <svg viewBox="0 0 64 72" width="96" height="96" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated;display:block;">
+            <!-- antenna -->
+            <rect x="28" y="0" width="8" height="4" fill="#4A8C7A"/>
+            <rect x="30" y="0" width="4" height="8" fill="#4A8C7A"/>
+            <!-- robot head / screen (dark teal) -->
+            <rect x="8" y="6" width="48" height="36" rx="4" fill="#2D5A4F"/>
+            <!-- screen inner (lighter teal) -->
+            <rect x="12" y="10" width="40" height="28" rx="2" fill="#3D7A6A"/>
+            <!-- left eye -->
+            <rect class="robot-eye" x="18" y="16" width="8" height="8" fill="#C8BF8C"/>
+            <rect class="robot-eye" x="20" y="18" width="4" height="4" fill="#2D5A4F"/>
+            <!-- right eye -->
+            <rect class="robot-eye" x="38" y="16" width="8" height="8" fill="#C8BF8C"/>
+            <rect class="robot-eye" x="40" y="18" width="4" height="4" fill="#2D5A4F"/>
+            <!-- smile -->
+            <rect x="18" y="29" width="28" height="3" fill="#C8BF8C"/>
+            <rect x="16" y="26" width="3" height="3" fill="#C8BF8C"/>
+            <rect x="45" y="26" width="3" height="3" fill="#C8BF8C"/>
+            <!-- body (tan) -->
+            <rect x="12" y="42" width="40" height="20" rx="2" fill="#C8BF8C"/>
+            <!-- body panel -->
+            <rect x="22" y="47" width="20" height="10" rx="1" fill="#EDE8D0" stroke="#1C1C1C" stroke-width="1"/>
+            <!-- legs -->
+            <rect x="16" y="62" width="12" height="10" rx="1" fill="#C8BF8C"/>
+            <rect x="36" y="62" width="12" height="10" rx="1" fill="#C8BF8C"/>
+            <!-- arm left -->
+            <rect class="robot-arm-l" x="0" y="44" width="10" height="6" rx="2" fill="#C8BF8C"/>
+            <!-- arm right -->
+            <rect x="54" y="44" width="10" height="6" rx="2" fill="#C8BF8C"/>
+            <!-- outline -->
+            <rect x="8" y="6" width="48" height="36" rx="4" fill="none" stroke="#1C1C1C" stroke-width="1.5"/>
+            <rect x="12" y="42" width="40" height="20" rx="2" fill="none" stroke="#1C1C1C" stroke-width="1.5"/>
+          </svg>
+        </div>
         <h1>The AI coding<br>agent that<br><span class="display">remembers.</span></h1>
         <p class="hero-sub">Claude Code forgets everything when you close it. TIMPS builds a permanent memory of your project — across every session, every day.</p>
         <div class="hero-actions">
@@ -872,7 +933,19 @@ open http://localhost:3000</div>
     <div class="footer-grid">
       <div class="footer-brand">
         <a href="index.html" class="nav-logo">
-          <div class="logo-box">T</div>
+          <div class="logo-box" title="TIMPS Robot Mascot">
+            <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+              <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
+              <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
+              <rect x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
+              <rect x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
+              <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
+              <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
+              <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
+              <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
+              <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+            </svg>
+          </div>
           TIMPS
         </a>
         <p>The open-source AI coding agent that remembers.<br>Free with Ollama. MIT licensed.</p>
