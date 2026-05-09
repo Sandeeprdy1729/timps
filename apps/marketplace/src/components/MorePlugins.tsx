@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { PluginCard } from './PluginCard';
 
 const morePlugins = [
@@ -139,7 +140,7 @@ const morePlugins = [
 ];
 
 export function PluginGrid({ category = 'all', searchQuery = '' }: { category?: string; searchQuery?: string }) {
-  const [basePlugins] = React.useState(() => require('../IntegrationGrid').integrations || []);
+  const [basePlugins] = useState(() => require('../IntegrationGrid').integrations || []);
   const allPlugins = [...basePlugins, ...morePlugins];
   
   const filtered = allPlugins.filter((p) => {
