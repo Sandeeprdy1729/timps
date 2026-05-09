@@ -311,7 +311,7 @@ const searchCode: RegisteredTool = {
     try {
       const p = String(args.pattern);
       const searchPath = args.path ? resolvePath(String(args.path), cwd) : cwd;
-      const ctx = Number(args.contextLines) ?? 2;
+      const ctx = Number(args.contextLines) || 2;
       const max = Number(args.maxResults) || 50;
       const cs = String(args.caseSensitive) === 'true';
 
@@ -563,20 +563,20 @@ const patchFile: RegisteredTool = {
   },
   risk: 'medium',
   async execute(args, cwd) {
+    const fp = resolvePath(String(args.path), cwd);
+    const tmpPatch = path.join(os.tmpdir(), `timps_patch_${Date.now()}.patch`);
+    fs.writeFileSync(tmpPatch, String(args.patch), 'utf-8');
     try {
-      const fp = resolvePath(String(args.path), cwd);
-      const patchFile = path.join(os.tmpdir(), `timps_patch_${Date.now()}.patch`);
-      fs.writeFileSync(patchFile, String(args.patch), 'utf-8');
-
       const result = childProcess.execSync(
-        `patch ${shellEscape(fp)} < ${shellEscape(patchFile)}`,
+        `patch ${shellEscape(fp)} < ${shellEscape(tmpPatch)}`,
         { cwd, encoding: 'utf-8', timeout: 10000 }
       ).trim();
-      fs.unlinkSync(patchFile);
       return { content: result || 'Patch applied successfully', isError: false, filesModified: [fp] };
     } catch (e: unknown) {
       const err = e as { stderr?: string; message: string };
       return { content: err.stderr?.toString() || err.message, isError: true };
+    } finally {
+      try { fs.unlinkSync(tmpPatch); } catch { /* ignore */ }
     }
   },
 };
@@ -775,9 +775,9 @@ const notebook: RegisteredTool = {
     const code = String(args.code);
     const lang = String(args.language || 'js');
 
+    let tmpFile: string | undefined;
     try {
       let cmd: string;
-      let tmpFile: string;
 
       switch (lang) {
         case 'python': {
@@ -805,12 +805,13 @@ const notebook: RegisteredTool = {
         cwd, encoding: 'utf-8', timeout: 30000, maxBuffer: 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
 
-      try { fs.unlinkSync(tmpFile!); } catch { /* ignore */ }
       return { content: result || '(no output)', isError: false };
     } catch (e: unknown) {
       const err = e as { stderr?: string; stdout?: string; message: string };
       const out = [err.stdout?.toString().trim(), err.stderr?.toString().trim()].filter(Boolean).join('\n');
       return { content: out || err.message, isError: true };
+    } finally {
+      if (tmpFile) { try { fs.unlinkSync(tmpFile); } catch { /* ignore */ } }
     }
   },
 };

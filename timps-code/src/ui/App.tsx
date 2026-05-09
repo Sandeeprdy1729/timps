@@ -225,7 +225,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
           <MemoryDashboard memoryCount={memoryCount} openTodos={openTodos} cwd={cwd} />
           
           <Box marginBottom={1}>
-            <Text color="cyan" bold>TIMPS Code</Text>
+            <Text color="#2D5A4F" bold>🤖 TIMPS Code</Text>
             <Text dimColor> — {currentProvider?.name || 'agent'} / {currentProvider?.model || 'Local Agent'}</Text>
           </Box>
 
@@ -242,7 +242,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
               <Text color="yellow">? User Input Required: </Text>
               <Text>{pendingQuestion}</Text>
               <Box marginTop={1}>
-                <Text color="green">❯ </Text>
+                <Text color="#4A8C7A" bold>❯ </Text>
                 <TextInput
                   value={answerInput}
                   onChange={setAnswerInput}
@@ -259,7 +259,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
 
           {!isProcessing && !pendingQuestion && (
             <Box marginTop={1}>
-              <Text color="green">❯ </Text>
+              <Text color="#4A8C7A" bold>❯ </Text>
               <TextInput
                 value={input}
                 onChange={setInput}

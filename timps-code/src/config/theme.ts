@@ -1,106 +1,117 @@
 import chalk from 'chalk';
 
 // ═══════════════════════════════════════
-// Color Palette — Deep space violet + electric cyan
+// Color Palette — Robot pixel mascot colors
+// Dark teal screen + cream/tan body
 // ═══════════════════════════════════════
 
-const purple  = '#7C3AED';
-const violet  = '#8B5CF6';
-const indigo  = '#6366F1';
-const cyan    = '#06B6D4';
-const teal    = '#14B8A6';
-const green   = '#10B981';
-const yellow  = '#FBBF24';
-const orange  = '#F59E0B';
-const red     = '#EF4444';
-const blue    = '#3B82F6';
-const pink    = '#EC4899';
-const lime    = '#84CC16';
-const slate   = '#64748B';
-const zinc    = '#71717A';
-const dimGray = '#4B5563';
-const darkGray = '#374151';
+const tealDark  = '#2D5A4F';   // robot screen face
+const tealMid   = '#4A8C7A';   // accent teal
+const tealLight = '#7EC8B8';   // highlight teal
+const cream     = '#F5F0E1';   // paper background
+const tan       = '#C8BF8C';   // robot body
+const ink       = '#1C1C1C';   // dark outline
+const green     = '#28A070';   // success
+const yellow    = '#E8C94A';   // warning
+const orange    = '#D4703A';   // orange
+const red       = '#C83838';   // error
+const slate     = '#64747A';   // muted
+const zinc      = '#8A9098';   // dimmer muted
 
 export const t = {
-  // Brand
-  brand: chalk.hex(purple),
-  brandBold: chalk.hex(purple).bold,
-  brandDim: chalk.hex(violet).dim,
-  accent: chalk.hex(cyan),
-  accentBold: chalk.hex(cyan).bold,
-  glow: chalk.hex(pink),
+  // Brand — teal from robot screen
+  brand: chalk.hex(tealDark),
+  brandBold: chalk.hex(tealDark).bold,
+  brandDim: chalk.hex(tealMid).dim,
+  accent: chalk.hex(tealMid),
+  accentBold: chalk.hex(tealMid).bold,
+  glow: chalk.hex(tealLight),
 
   // Status
   success: chalk.hex(green),
-  warning: chalk.hex(orange),
+  warning: chalk.hex(yellow),
   error: chalk.hex(red),
-  info: chalk.hex(blue),
+  info: chalk.hex(tealLight),
 
   // Text
   dim: chalk.dim,
-  muted: chalk.gray,
+  muted: chalk.hex(slate),
   bold: chalk.bold,
   italic: chalk.italic,
   white: chalk.white,
 
   // Code
-  code: chalk.hex(yellow),
-  file: chalk.hex(cyan).underline,
-  tool: chalk.hex(violet).bold,
-  key: chalk.hex(teal),
+  code: chalk.hex(tan),
+  file: chalk.hex(tealLight).underline,
+  tool: chalk.hex(tealMid).bold,
+  key: chalk.hex(tealLight),
   lineNum: chalk.hex(zinc),
-  string: chalk.hex(lime),
+  string: chalk.hex(tan),
 
   // UI
-  border: chalk.hex(dimGray),
-  borderLight: chalk.hex(slate),
-  header: chalk.bold.hex(purple),
-  prompt: chalk.hex(purple).bold,
-  separator: chalk.hex(darkGray)('─'.repeat(60)),
-  separatorDouble: chalk.hex(darkGray)('═'.repeat(60)),
+  border: chalk.hex(slate),
+  borderLight: chalk.hex(zinc),
+  header: chalk.bold.hex(tealDark),
+  prompt: chalk.hex(tealMid).bold,
+  separator: chalk.hex(slate)('─'.repeat(60)),
+  separatorDouble: chalk.hex(slate)('═'.repeat(60)),
 
-  //Diff
+  // Diff
   diffAdd: chalk.hex(green),
   diffRem: chalk.hex(red),
   diffCtx: chalk.hex('#9CA3AF'),
 
   // Gradient helpers
   gradient: (text: string) => {
-    const colors = [purple, indigo, cyan, teal];
+    const colors = [tealDark, tealMid, tealLight, tan];
     return [...text].map((ch, i) => chalk.hex(colors[i % colors.length])(ch)).join('');
   },
 };
 
 // ═══════════════════════════════════════
-// ASCII Art Logos
+// ASCII Art Robot Mascot + Logo
 // ═══════════════════════════════════════
+
+// Pixel robot art matching the mascot image
+const robot = [
+  chalk.hex(ink)('   ┌──────┐   '),
+  chalk.hex(tealDark)('   │') + chalk.hex(tealLight)(' ◉  ◉ ') + chalk.hex(tealDark)('│   '),
+  chalk.hex(tealDark)('   │') + chalk.hex(tealLight)('  ‿   ') + chalk.hex(tealDark)('│   '),
+  chalk.hex(ink)('   └──────┘   '),
+  chalk.hex(tan) ('    ║    ║    '),
+  chalk.hex(tan) ('  ┌─┴────┴─┐ '),
+  chalk.hex(tan) ('  │        │ '),
+  chalk.hex(tan) ('  └─┬────┬─┘ '),
+  chalk.hex(ink)('    ██    ██  '),
+];
 
 export const LOGO_LARGE = [
   '',
-  `  ${t.brand('┌──────────────────────────────────────────────────────────┐')}`,
-  `  ${t.brand('│')}                                                          ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('████████╗')}${chalk.hex(indigo).bold('██╗')}${chalk.hex(blue).bold('███╗   ███╗')}${chalk.hex(cyan).bold('██████╗ ')}${chalk.hex(teal).bold('███████╗')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('╚══██╔══╝')}${chalk.hex(indigo).bold('██║')}${chalk.hex(blue).bold('████╗ ████║')}${chalk.hex(cyan).bold('██╔══██╗')}${chalk.hex(teal).bold('██╔════╝')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('   ██║   ')}${chalk.hex(indigo).bold('██║')}${chalk.hex(blue).bold('██╔████╔██║')}${chalk.hex(cyan).bold('██████╔╝')}${chalk.hex(teal).bold('███████╗')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('   ██║   ')}${chalk.hex(indigo).bold('██║')}${chalk.hex(blue).bold('██║╚██╔╝██║')}${chalk.hex(cyan).bold('██╔═══╝ ')}${chalk.hex(teal).bold('╚════██║')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('   ██║   ')}${chalk.hex(indigo).bold('██║')}${chalk.hex(blue).bold('██║ ╚═╝ ██║')}${chalk.hex(cyan).bold('██║     ')}${chalk.hex(teal).bold('███████║')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(violet).bold('   ╚═╝   ')}${chalk.hex(indigo).bold('╚═╝')}${chalk.hex(blue).bold('╚═╝     ╚═╝')}${chalk.hex(cyan).bold('╚═╝     ')}${chalk.hex(teal).bold('╚══════╝')}       ${t.brand('│')}`,
-  `  ${t.brand('│')}                                                          ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${chalk.hex(pink)('⚡')} ${chalk.bold.hex(violet)('C O D E')}  ${t.dim('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')}     ${t.brand('│')}`,
-  `  ${t.brand('│')}                                                          ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${t.dim('▸')} ${chalk.hex(cyan)('AI-Powered Coding Agent')}                            ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${t.dim('▸')} ${chalk.hex(teal)('Persistent Memory Across Sessions')}                  ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${t.dim('▸')} ${chalk.hex(green)('Self-Correcting · Auto-Healing')}                     ${t.brand('│')}`,
-  `  ${t.brand('│')}    ${t.dim('▸')} ${chalk.hex(blue)('Local-First · 100% Private')}                         ${t.brand('│')}`,
-  `  ${t.brand('│')}                                                          ${t.brand('│')}`,
-  `  ${t.brand('└──────────────────────────────────────────────────────────┘')}`,
+  `  ${t.brand('╔══════════════════════════════════════════════════════════╗')}`,
+  `  ${t.brand('║')}                                                          ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[0] + `  ${chalk.hex(tealDark).bold('████████╗')}${chalk.hex(tealMid).bold('██╗')}${chalk.hex(tealMid).bold('███╗   ███╗')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[1] + `  ${chalk.hex(tealDark).bold('╚══██╔══╝')}${chalk.hex(tealMid).bold('██║')}${chalk.hex(tealMid).bold('████╗ ████║')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[2] + `  ${chalk.hex(tealDark).bold('   ██║   ')}${chalk.hex(tealMid).bold('██║')}${chalk.hex(tealMid).bold('██╔████╔██║')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[3] + `  ${chalk.hex(tealDark).bold('   ██║   ')}${chalk.hex(tealMid).bold('██║')}${chalk.hex(tealMid).bold('██║╚██╔╝██║')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[4] + `  ${chalk.hex(tealDark).bold('   ██║   ')}${chalk.hex(tealMid).bold('██║')}${chalk.hex(tealMid).bold('██║ ╚═╝ ██║')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[5] + `  ${chalk.hex(tealDark).bold('   ╚═╝   ')}${chalk.hex(tealMid).bold('╚═╝')}${chalk.hex(tealMid).bold('╚═╝     ╚═╝')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[6] + `                                ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[7] + `  ${t.accent('C O D E')}  ${t.dim('━━━━━━━━━━━━━━━━━━━━━')}  ${t.brand('║')}`,
+  `  ${t.brand('║')}  ` + robot[8] + `                                ${t.brand('║')}`,
+  `  ${t.brand('║')}                                                          ${t.brand('║')}`,
+  `  ${t.brand('║')}    ${t.dim('▸')} ${chalk.hex(tealLight)('AI-Powered Coding Agent')}                            ${t.brand('║')}`,
+  `  ${t.brand('║')}    ${t.dim('▸')} ${chalk.hex(tealMid)('Persistent Memory Across Sessions')}                  ${t.brand('║')}`,
+  `  ${t.brand('║')}    ${t.dim('▸')} ${chalk.hex(green)('Self-Correcting · Auto-Healing')}                     ${t.brand('║')}`,
+  `  ${t.brand('║')}    ${t.dim('▸')} ${chalk.hex(tan)('Local-First · 100% Private')}                         ${t.brand('║')}`,
+  `  ${t.brand('║')}                                                          ${t.brand('║')}`,
+  `  ${t.brand('╚══════════════════════════════════════════════════════════╝')}`,
   '',
 ].join('\n');
 
 // Compact logo for in-session use
 export const LOGO = LOGO_LARGE;
 
-export const SMALL_LOGO = `  ${chalk.hex(pink)('⚡')} ${chalk.bold.hex(violet)('TIMPS Code')} ${t.dim('v1.0.0')}`;
+export const SMALL_LOGO = `  ${chalk.hex(tealDark)('🤖')} ${chalk.bold.hex(tealDark)('TIMPS Code')} ${t.dim('v1.0.0')}`;
 
 export const icons = {
   // Core
