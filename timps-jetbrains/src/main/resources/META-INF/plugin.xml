@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+  <id>com.timps.jetbrains</id>
+  <name>TIMPS</name>
+  <version>0.0.1</version>
+  <vendor>Sandeep Reddy</vendor>
+  <description>World #1 AI Coding Agent - JetBrains IDE Integration</description>
+  <change-notes>Initial release with tool window, chat, memory explorer, and intelligence alerts.</change-notes>
+  <idea-version since-build="242" until-build="999"/>
+  <depends>com.intellij.modules.platform</depends>
+  <actions>
+    <group id="TIMPS.Actions" text="TIMPS" description="TIMPS coding agent actions">
+      <add-to-group group-id="MainMenu" anchor="last"/>
+      <action id="TIMPS.RunTIMPS" class="actions.RunTIMPSAction" text="Open TIMPS"/>
+      <action id="TIMPS.MemoryBranch" class="actions.MemoryBranchAction" text="Memory Branch"/>
+      <action id="TIMPS.SwarmPipeline" class="actions.SwarmPipelineAction" text="Swarm Pipeline"/>
+    </group>
+  </actions>
+  <toolWindow id="TIMPS" anchor="right" factoryClass="TIMPSToolWindow" canCloseContents="true"/>
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceImplementation="services.TIMPSService"/>
+    <applicationService serviceImplementation="services.MemorySyncService"/>
+    <configurable instance="agent.AgentConfigurable" id="TIMPS.AgentConfig"/>
+  </extensions>
+</idea-plugin>

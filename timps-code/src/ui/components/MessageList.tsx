@@ -12,20 +12,30 @@ export const MessageList = ({ messages }: MessageListProps) => {
     <Box flexDirection="column" marginY={1}>
       {visible.map((msg, idx) => (
         <Box key={idx} flexDirection="column" marginBottom={1}>
-          <Box>
-            {msg.role === 'user' ? (
-              <Text bold color="#7EC8B8">You</Text>
-            ) : (
-              <Text bold color="#4A8C7A">TIMPS</Text>
-            )}
-          </Box>
-          <Box paddingLeft={1}>
-            {msg.content ? (
-              <Text color={msg.role === 'user' ? '#F5F0E1' : '#C8BF8C'}>{msg.content}</Text>
-            ) : (
-              <Text dimColor italic>Thinking…</Text>
-            )}
-          </Box>
+          {msg.role === 'user' ? (
+            <Box>
+              <Text dimColor>{'> '}</Text>
+              <Text>{msg.content}</Text>
+            </Box>
+          ) : msg.role === 'thinking' ? (
+            <Box paddingLeft={2}>
+              <Text italic dimColor>{'Thinking: '}</Text>
+              <Text italic dimColor>{msg.content}</Text>
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              <Box paddingLeft={0}>
+                {msg.content ? (
+                  <Text>{msg.content}</Text>
+                ) : (
+                  <Text italic dimColor>Working…</Text>
+                )}
+              </Box>
+              <Box marginTop={1}>
+                <Text dimColor>{'\u2500'.repeat(50)}</Text>
+              </Box>
+            </Box>
+          )}
         </Box>
       ))}
     </Box>

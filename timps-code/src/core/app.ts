@@ -51,148 +51,146 @@ export async function startApp(opts: AppOptions): Promise<void> {
   const config = loadConfig();
   let ollamaModels: string[] = [];
 
-  // Hardcore mode flags
   if (opts.grpo) console.log(`${t.accent('🧠')} GRPO training loop enabled`);
   if (opts.mineBugs) console.log(`${t.accent('🔍')} Human mistake mining enabled`);
   if (opts.warRoom) console.log(`${t.warning('🔥')} WAR ROOM MODE - 19hr sessions`);
   if (opts.binarySynth) console.log(`${t.warning('⚡')} DIRECT BINARY SYNTHESIS enabled`);
 
-  // ── Step 1: Show the TIMPS banner immediately ──
+  // ── Step 1: Show compact banner ──
   console.log();
   const bannerLines = SMALL_LOGO.split('\n');
   for (const line of bannerLines) console.log(line);
   console.log();
 
-  // ── Step 2: Provider selection ──
-  // Try Ollama first (auto-detect + auto-start), then use CLI flag / saved config
+  // ── Step 2: Smart Provider Auto-Selection (Claude Code style: zero-friction) ──
   let providerName: ProviderName | undefined;
 
   if (opts.provider) {
-    // CLI flag overrides
     providerName = opts.provider;
   } else {
-    // Auto-detect Ollama first - try to start and use it silently
     const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
+
+    // Try 1: Ollama (free, local)
     const ollamaRunning = await isOllamaRunning(ollamaUrl);
-
     if (ollamaRunning) {
-      // Ollama is running - use it by default
-      providerName = 'ollama';
+      ollamaModels = await getLocalModels(ollamaUrl);
       const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-      console.log(`  ${t.success('✓')} Using ${t.accent('Ollama (local)')} ${t.dim(`(${modelName})`)}\n`);
-    } else {
-      // Try to start Ollama automatically
-      console.log(`  ${t.dim('Trying to start Ollama...')}`);
-      tryStartOllama();
-      for (let i = 0; i < 5; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        const started = await isOllamaRunning(ollamaUrl);
-        if (started) {
-          providerName = 'ollama';
-          const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-          console.log(`  ${t.success('✓')} Started Ollama ${t.dim(`(${modelName})`)}\n`);
-          break;
-        }
-      }
-
-      if (!providerName) {
-        // Ollama couldn't start - show picker
-        console.log(`\n  ${t.brandBold('Welcome to TIMPS Code!')} ${t.dim('Choose your AI provider to get started.')}\n`);
-        const picked = await pickProvider(config);
-        if (!picked) {
-          console.log(`\n  ${t.dim('No provider selected. Exiting.')}\n`);
-          process.exit(1);
-        }
-        providerName = picked;
-      }
-    }
-  }
-
-  // Fallback if still undefined
-  if (!providerName) {
-    providerName = config.defaultProvider || 'gemini';
-  }
-
-  // ── Step 3: Provider-specific setup ──
-  if (providerName === 'ollama') {
-    // Auto-install Ollama if not present, auto-start, auto-pull qwen coder
-    const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-
-    if (!isOllamaInstalled()) {
-      console.log(`\n  ${t.accent('⚡ Setting up Ollama (local AI)...')}`);
-      const installed = await installOllama();
-      if (!installed) {
-        console.log(`\n  ${t.dim('Ollama install failed. Choose another provider:')}\n`);
-        const picked = await pickProvider(config);
-        if (!picked) process.exit(1);
-        providerName = picked;
-      }
-    }
-
-    if (providerName === 'ollama') {
-      // Start Ollama if not running
-      let running = await isOllamaRunning(config.ollamaUrl);
-      if (!running) {
-        console.log(`  ${t.dim('Starting Ollama...')}`);
-        tryStartOllama();
-        for (let i = 0; i < 15; i++) {
-          await new Promise(r => setTimeout(r, 1000));
-          running = await isOllamaRunning(config.ollamaUrl);
-          if (running) break;
-        }
-        if (!running) {
-          console.log(`  ${t.error('Could not start Ollama.')}`);
-          console.log(`  ${t.dim('Try manually:')} ${t.accent('ollama serve')}\n`);
-          const picked = await pickProvider(config);
-          if (!picked) process.exit(1);
-          providerName = picked;
-        } else {
-          console.log(`  ${t.success(`${icons.success} Ollama running`)}`);
-        }
-      }
-    }
-
-    if (providerName === 'ollama') {
-      // Auto-pull qwen coder if no models available
-      ollamaModels = await getLocalModels(config.ollamaUrl);
-      const modelName2 = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-      const hasModel = ollamaModels.some(m => m === modelName2 || m.startsWith(modelName2.split(':')[0]));
-      if (!hasModel) {
-        console.log(`\n  ${t.accent(`📦 Pulling ${modelName2} (first time only)...`)}`);
-        const pulled = await pullModel(modelName2, config.ollamaUrl);
+      const resolvedModel = modelName.replace(':latest', ':7b');
+      const hasModel = ollamaModels.some(m => m === resolvedModel || m.startsWith(resolvedModel.split(':')[0]));
+      if (hasModel) {
+        providerName = 'ollama';
+        console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
+      } else {
+        // Try to start Ollama and pull model
+        console.log(`  ${t.dim('↻')} Ollama running, pulling ${modelName}...`);
+        const resolvedName1 = modelName.replace(':latest', ':7b');
+            const pulled = await pullModel(resolvedName1, ollamaUrl);
         if (pulled) {
-          ollamaModels = await getLocalModels(config.ollamaUrl);
-        } else {
-          console.log(`  ${t.warning('Could not pull model. Using available models or switch provider.')}`);
+          providerName = 'ollama';
+          console.log(`  ${t.success('✓')} Model ready — ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
         }
       }
     }
-  }
 
-  // ── Step 4: For cloud providers, ensure API key ──
-  const localProviders = ['ollama', 'opencode'] as ProviderName[];
-  if (!localProviders.includes(providerName) && !getApiKey(config, providerName)) {
-    console.log(`\n  ${t.warning(`${icons.key} No API key for ${providerName}`)}`);
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const key = await new Promise<string>(resolve => {
-      rl.question(`  ${t.prompt('API key:')} `, answer => { rl.close(); resolve(answer.trim()); });
-    });
-    if (key) {
-      config.keys[providerName] = key;
-      saveConfig(config);
-      console.log(`  ${t.success(`${icons.success} Key saved`)}`);
-    } else {
-      console.log(`  ${t.dim('No key provided. Exiting.')}\n`);
-      process.exit(1);
+    // Try 2: Claude (if API key available)
+    if (!providerName && getApiKey(config, 'claude')) {
+      providerName = 'claude';
+      console.log(`  ${t.success('✓')} Using ${t.accent('Claude')} ${t.dim(`— ${opts.model || getDefaultModel('claude')}`)}\n`);
+    }
+
+    // Try 3: Gemini (free tier available)
+    if (!providerName && getApiKey(config, 'gemini')) {
+      providerName = 'gemini';
+      console.log(`  ${t.success('✓')} Using ${t.accent('Gemini')} ${t.dim(`— ${opts.model || getDefaultModel('gemini')}`)}\n`);
+    }
+
+    // Try 4: OpenAI
+    if (!providerName && getApiKey(config, 'openai')) {
+      providerName = 'openai';
+      console.log(`  ${t.success('✓')} Using ${t.accent('OpenAI')} ${t.dim(`— ${opts.model || getDefaultModel('openai')}`)}\n`);
+    }
+
+    // Try 5: OpenRouter (free models)
+    if (!providerName && getApiKey(config, 'openrouter')) {
+      providerName = 'openrouter';
+      console.log(`  ${t.success('✓')} Using ${t.accent('OpenRouter')} ${t.dim(`— free models`)}\n`);
+    }
+
+    // Try 6: Start Ollama if not running
+    if (!providerName) {
+      const ollamaInstalled = isOllamaInstalled();
+      if (ollamaInstalled) {
+        console.log(`  ${t.dim('↻')} Starting Ollama...`);
+        tryStartOllama();
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, 1000));
+          const started = await isOllamaRunning(ollamaUrl);
+          if (started) {
+            const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+            console.log(`  ${t.success('✓')} Ollama ready — pulling ${modelName}...`);
+            const resolvedName1 = modelName.replace(':latest', ':7b');
+            const pulled = await pullModel(resolvedName1, ollamaUrl);
+            if (pulled) {
+              providerName = 'ollama';
+              console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Try 7: Try install Ollama
+    if (!providerName) {
+      const ollamaInstalled = isOllamaInstalled();
+      if (!ollamaInstalled) {
+        console.log(`  ${t.dim('↻')} Ollama not found — installing...`);
+        const installed = await installOllama();
+        if (installed) {
+          console.log(`  ${t.dim('↻')} Starting Ollama...`);
+          tryStartOllama();
+          for (let i = 0; i < 10; i++) {
+            await new Promise(r => setTimeout(r, 1000));
+            if (await isOllamaRunning(ollamaUrl)) {
+              const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+              console.log(`  ${t.success('✓')} Ollama installed — pulling ${modelName}...`);
+              const resolvedName2 = modelName.replace(':latest', ':7b');
+              const pulled = await pullModel(resolvedName2, ollamaUrl);
+              if (pulled) {
+                providerName = 'ollama';
+const resolved = modelName.replace(':latest', ':7b');
+        console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${resolved}`)}\n`);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback: use config default
+    if (!providerName) {
+      providerName = config.defaultProvider || 'gemini';
+      const model = opts.model || config.defaultModel || getDefaultModel(providerName);
+      console.log(`  ${t.warning('⚡')} Using ${t.accent(providerName)} ${t.dim(`— ${model}`)}\n`);
     }
   }
 
-  // Create provider
+  // ── Step 3: Provider setup (minimal — most auto-detected above) ──
   let provider: ModelProvider;
   try {
     provider = createProvider(providerName, opts.model);
   } catch (err) {
-    console.error(`\n  ${t.error((err as Error).message)}`);
+    console.error(`\n  ${t.error((err as Error).message)}\n`);
+    process.exit(1);
+  }
+
+  // Cloud providers need API key
+  const localProviders = ['ollama', 'opencode'] as ProviderName[];
+  if (!localProviders.includes(providerName) && !getApiKey(config, providerName)) {
+    console.log(`  ${t.warning('⚡')} No API key for ${providerName}`);
+    console.log(`  ${t.dim('Set in config:')} ~/.timps/config.json → keys.${providerName}`);
+    console.log(`  ${t.dim('Or set env:')} ANTHROPIC_API_KEY / GEMINI_API_KEY / OPENAI_API_KEY\n`);
     process.exit(1);
   }
 
@@ -218,83 +216,85 @@ export async function startApp(opts: AppOptions): Promise<void> {
     branchName: opts.branch,
   });
   agent.setTodoStore(todos);
-  
+
   if (opts.merge) {
-    // A signal to perform sync against provenForge when possible
     agent.setPendingMergeTarget(opts.merge);
   }
 
-  // If team config exists, auto-join team
-  let teamMemory: TeamMemory | undefined;
-  if (config.team) {
-    const rl3 = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const pw = await new Promise<string>(resolve => {
-      rl3.question(`\n  ${t.info('🔐')} Team "${config.team!.projectName}" — password: `, a => { rl3.close(); resolve(a.trim()); });
-    });
-    if (pw) {
-      try {
-        teamMemory = new TeamMemory(config.team.projectName, pw);
-        if (teamMemory.validate()) {
-          teamMemory.join(config.team.memberName);
-          agent.setTeamMemory(teamMemory);
-          console.log(`  ${t.success(`${icons.success} Joined team "${config.team.projectName}" as ${config.team.memberName}`)}`);
-        } else {
-          console.log(`  ${t.error('Wrong team password. Running without team memory.')}`);
-          teamMemory = undefined;
-        }
-      } catch (err) {
-        console.log(`  ${t.error((err as Error).message)}`);
-        teamMemory = undefined;
-      }
-    }
-  }
+  const isTTY = process.stdin.isTTY;
 
-  // Single-shot mode
-  if (opts.oneLine) {
-    await runSingleTurn(agent, opts.oneLine, provider.model);
+  // Session directory
+  const sessionDir = path.join(os.homedir(), '.timps', 'sessions', projectId);
+
+// Non-TTY with piped input = one-shot (exit after response)
+  if (!isTTY) {
+    // Use readline to reliably collect piped input before the event loop
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: false,
+    });
+    let pipedInput = '';
+    let resolved = false;
+
+    const collected = await new Promise<string>(resolve => {
+      rl.on('line', line => {
+        pipedInput += line + '\n';
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeout);
+          setTimeout(() => {
+            rl.close();
+            resolve(pipedInput.trim());
+          }, 50);
+        }
+      });
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          rl.close();
+          resolve(pipedInput.trim());
+        }
+      }, 1000);
+    });
+
+    if (collected) {
+      await runSingleTurn(agent, collected, provider.model);
+      return;
+    }
+
+    // Non-TTY without piped input → start interactive REPL
+    console.log();
+    const memoryCount = memory.query('', 999).length;
+    renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
+    process.on('SIGINT', async () => {
+      await agent.saveSession(sessionDir);
+      await agent.saveEpisode('success');
+      process.exit(0);
+    });
+    const { startInteractiveREPL } = await import('./interactive.js');
+    await startInteractiveREPL({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir }, opts.oneLine);
     return;
   }
 
-  // Session persistence directory
-  const sessionDir = path.join(os.homedir(), '.timps', 'sessions', projectId);
-
-  // Check for resumable session
-  const sessionInfo = agent.hasResumableSession(sessionDir);
-  if (sessionInfo.exists) {
-    const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await new Promise<string>(resolve => {
-      rl2.question(
-        `\n  ${t.info(icons.memory)} Previous session found (${sessionInfo.messageCount} messages, ${sessionInfo.age}). Resume? ${t.dim('[y/N]')} `,
-        a => { rl2.close(); resolve(a.trim().toLowerCase()); }
-      );
-    });
-    if (answer === 'y' || answer === 'yes') {
-      if (agent.restoreSession(sessionDir)) {
-        console.log(`  ${t.success(`${icons.success} Session restored`)}`);
-      }
-    }
-  }
-
-  // Interactive REPL — show landing page
+  // ── TTY Interactive Mode ──
+  console.log();
   const memoryCount = memory.query('', 999).length;
   renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
 
-  // Interactive REPL — Handled by Ink UI
-  process.on('SIGINT', () => {
-    agent.saveSession(sessionDir);
-    agent.saveEpisode('success').catch(() => {});
+  process.on('SIGINT', async () => {
+    await agent.saveSession(sessionDir);
+    await agent.saveEpisode('success');
     process.exit(0);
   });
 
-  const { waitUntilExit } = render(React.createElement(App, {
-    agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem: multimodalMemory
-  }));
-  await waitUntilExit();
+  const { startInteractiveREPL } = await import('./interactive.js');
+  await startInteractiveREPL({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir }, opts.oneLine);
 }
 
-// ═══════════════════════════════════════
-// Single-shot execution
-// ═══════════════════════════════════════
+  // ═══════════════════════════════════════
+  // Single-shot execution
+  // ═══════════════════════════════════════
 
 async function runSingleTurn(agent: Agent, message: string, model: string): Promise<void> {
   console.log(`  ${t.brandBold('⚡ TIMPS')} ${t.dim(model)}\n`);

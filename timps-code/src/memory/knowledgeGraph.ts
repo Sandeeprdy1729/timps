@@ -71,8 +71,31 @@ export class KnowledgeGraphStore {
   extractFromMemoryEntry(entry: MemoryEntry): void {
     const content = entry.content.toLowerCase();
 
+    const timpsConcepts = [
+      { pattern: /\b(timps|timps-code|timps-mcp)\b/gi, type: 'component' as KnowledgeNode['entityType'] },
+      { pattern: /\b(memory|memory-system|layer)\b/gi, type: 'concept' as KnowledgeNode['entityType'] },
+      { pattern: /\b(agent|swarm|coder|reviewer|orchestrator)\b/gi, type: 'concept' as KnowledgeNode['entityType'] },
+      { pattern: /\b(mcp|provider|ollama|claude|gpt|gemini)\b/gi, type: 'technology' as KnowledgeNode['entityType'] },
+      { pattern: /\b(tool|cli|vscode|neovim|jetbrains|plugin)\b/gi, type: 'concept' as KnowledgeNode['entityType'] },
+      { pattern: /\b(typescript|python|lua|kotlin|rust|go|node)\b/gi, type: 'technology' as KnowledgeNode['entityType'] },
+      { pattern: /\b(database|sqlite|postgres|mysql|redis|mongodb)\b/gi, type: 'technology' as KnowledgeNode['entityType'] },
+      { pattern: /\b(benchmark|performance|retrieval|rag|bm25|vector)\b/gi, type: 'concept' as KnowledgeNode['entityType'] },
+    ];
+
+    for (const { pattern, type } of timpsConcepts) {
+      let m: RegExpExecArray | null;
+      const r = new RegExp(pattern.source, pattern.flags);
+      while ((m = r.exec(content)) !== null) {
+        const value = m[0].toLowerCase();
+        this.addNode(value, type, { tags: entry.tags, memoryId: entry.id });
+        if (content.includes('uses') || content.includes('has') || content.includes('with')) {
+          this.addEdge(value, 'described_by', entry.content.slice(0, 100));
+        }
+      }
+    }
+
     const techPatterns = [
-      /\b(react|vue|angular|express|fastify|nest|next|nuxt|svelte|postgres|mysql|mongodb|redis|graphql|rest|docker|kubernetes|typescript|python|rust|go|java)\b/gi,
+      /\b(react|vue|angular|express|fastify|nest|next|nuxt|svelte|docker|kubernetes)\b/gi,
     ];
 
     let foundTech: string[] = [];

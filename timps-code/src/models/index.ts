@@ -4,6 +4,13 @@ import { createClaudeProvider } from './claude.js';
 import { createOpenAIProvider, createOpenRouterProvider, createDeepSeekProvider, createGroqProvider } from './openai.js';
 import { createGeminiProvider } from './gemini.js';
 import { createOllamaProvider, listOllamaModels, isCodeModel } from './ollama.js';
+import { ProviderMesh, getProviderMesh } from './providerMesh.js';
+
+export { createOllamaProvider, listOllamaModels, isCodeModel };
+export { createClaudeProvider } from './claude.js';
+export { createOpenAIProvider, createOpenRouterProvider, createDeepSeekProvider, createGroqProvider } from './openai.js';
+export { createGeminiProvider } from './gemini.js';
+export { ProviderMesh, getProviderMesh };
 
 export function createProvider(provider?: ProviderName, model?: string): ModelProvider {
   const config = loadConfig();
@@ -26,7 +33,8 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       return createGeminiProvider(key, model || config.defaultModel);
     }
     case 'ollama': {
-      return createOllamaProvider(config.ollamaUrl, model || config.defaultModel);
+      const resolvedModel = (model || config.defaultModel || 'qwen2.5-coder:7b').replace(':latest', ':7b');
+      return createOllamaProvider(config.ollamaUrl, resolvedModel);
     }
     case 'openrouter': {
       const key = getApiKey(config, 'openrouter');
@@ -45,14 +53,9 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
     }
     case 'hybrid': {
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
-      return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:latest');
+      return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:7b');
     }
     default:
       throw new Error(`Unknown provider: ${name}. Valid: claude, openai, gemini, ollama, openrouter, deepseek, groq`);
   }
 }
-
-export { createOllamaProvider, listOllamaModels, isCodeModel };
-export { createClaudeProvider } from './claude.js';
-export { createOpenAIProvider, createOpenRouterProvider, createDeepSeekProvider, createGroqProvider } from './openai.js';
-export { createGeminiProvider } from './gemini.js';

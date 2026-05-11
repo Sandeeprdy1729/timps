@@ -1,442 +1,896 @@
-import chalk from 'chalk';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import * as os from 'node:os';
-import * as childProcess from 'node:child_process';
-import type { ModelProvider } from '../config/types.js';
-import type { Memory } from '../memory/memory.js';
-import { loadConfig, saveConfig, getMemoryDir } from '../config/config.js';
-import { t, icons } from '../config/theme.js';
-import { listOllamaModels } from '../models/ollama.js';
+// ── TIMPS Code — Enhanced Slash Commands (100+ commands)
+// Comprehensive command registry inspired by Claude Code
 
-export interface CommandContext {
-  cwd: string;
-  provider: ModelProvider;
-  memory?: Memory;
-  clearHistory?: () => void;
-  getStats?: () => { turns: number; tokens: number; cost: number };
+import type { CommandDef, CommandCategory } from '../types/command.js';
+
+export const COMMAND_REGISTRY: CommandDef[] = [
+  // ═══════════════════════════════════════════════════════════
+  // GIT OPERATIONS
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'commit',
+    description: 'Create a git commit with proper attribution',
+    category: 'Git',
+    aliases: ['cm'],
+    argsHint: '<message>',
+  },
+  {
+    name: 'commit-push-pr',
+    description: 'Commit changes, push to remote, and create a PR',
+    category: 'Git',
+    aliases: ['cpp'],
+    argsHint: '<message>',
+  },
+  {
+    name: 'branch',
+    description: 'Fork/branch the current conversation to try a different approach',
+    category: 'Git',
+    aliases: ['br'],
+  },
+  {
+    name: 'diff',
+    description: 'Show a diff dialog of current changes',
+    category: 'Git',
+    aliases: ['d'],
+  },
+  {
+    name: 'tag',
+    description: 'Add/remove searchable tags to sessions',
+    category: 'Git',
+    aliases: ['t'],
+    argsHint: '<add|remove> <tag>',
+  },
+  {
+    name: 'stash',
+    description: 'Git stash operations',
+    category: 'Git',
+    aliases: ['stsh'],
+    subcommands: ['push', 'pop', 'list', 'apply', 'drop', 'show'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // SESSION MANAGEMENT
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'session',
+    description: 'Display remote session info with sharing options',
+    category: 'Session',
+    aliases: ['sess'],
+  },
+  {
+    name: 'resume',
+    description: 'Resume a previous conversation with smart project detection',
+    category: 'Session',
+    aliases: ['r'],
+    argsHint: '[session-id]',
+  },
+  {
+    name: 'rewind',
+    description: 'Rewind conversation to a specific point',
+    category: 'Session',
+    aliases: ['rw'],
+  },
+  {
+    name: 'share',
+    description: 'Share current session via URL or QR code',
+    category: 'Session',
+    aliases: ['sh'],
+  },
+  {
+    name: 'compact',
+    description: 'Manually compact conversation context',
+    category: 'Session',
+    aliases: ['cp'],
+  },
+  {
+    name: 'clear',
+    description: 'Clear conversation or caches',
+    category: 'Session',
+    aliases: ['cl'],
+    subcommands: ['conversation', 'caches', 'all'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // TASK MANAGEMENT
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'tasks',
+    description: 'Show background tasks and task list',
+    category: 'Tasks',
+    aliases: ['t'],
+  },
+  {
+    name: 'plan',
+    description: 'Enable plan mode to describe work without execution',
+    category: 'Tasks',
+    aliases: ['p'],
+    argsHint: '<task description>',
+  },
+  {
+    name: 'passes',
+    description: 'Manage guest passes / Extra Usage',
+    category: 'Tasks',
+    aliases: ['pa'],
+  },
+  {
+    name: 'todo',
+    description: 'Persistent todo tracker',
+    category: 'Tasks',
+    aliases: ['t'],
+    subcommands: ['add', 'done', 'remove', 'clear', 'all'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // CODE REVIEWS
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'review',
+    description: 'Local PR review using git diff',
+    category: 'Review',
+    aliases: ['rv'],
+    argsHint: '[pr-number]',
+  },
+  {
+    name: 'ultrareview',
+    description: 'Remote deep bug-finding review',
+    category: 'Review',
+    aliases: ['urv'],
+  },
+  {
+    name: 'security-review',
+    description: 'Security-focused review of changes',
+    category: 'Review',
+    aliases: ['sec'],
+  },
+  {
+    name: 'bughunter',
+    description: 'Automated bug pattern detection',
+    category: 'Review',
+    aliases: ['bh'],
+    isHidden: true,
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // MCP COMMANDS
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'mcp',
+    description: 'Manage MCP servers',
+    category: 'MCP',
+    aliases: [],
+    subcommands: ['add', 'remove', 'enable', 'disable', 'list', 'reconnect'],
+  },
+  {
+    name: 'mcp-add',
+    description: 'Add a new MCP server',
+    category: 'MCP',
+    aliases: ['mcpa'],
+    argsHint: '<server-name> <command> [args...]',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // REMOTE / TELEPORT
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'remote-setup',
+    description: 'Setup remote development environment',
+    category: 'Remote',
+    aliases: ['rs'],
+  },
+  {
+    name: 'remote-env',
+    description: 'Configure remote environment variables',
+    category: 'Remote',
+    aliases: ['re'],
+    argsHint: '<key> <value>',
+  },
+  {
+    name: 'teleport',
+    description: 'Teleport to a remote session',
+    category: 'Remote',
+    aliases: ['tp'],
+    isHidden: true,
+  },
+  {
+    name: 'ssh',
+    description: 'Connect via SSH to remote host',
+    category: 'Remote',
+    aliases: [],
+    argsHint: '<host> [command]',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // ENTERPRISE FEATURES
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'context',
+    description: 'Visualize context usage and token distribution',
+    category: 'Enterprise',
+    aliases: ['ctx'],
+  },
+  {
+    name: 'feedback',
+    description: 'Send feedback to the team',
+    category: 'Enterprise',
+    aliases: ['fb'],
+    argsHint: '<feedback text>',
+  },
+  {
+    name: 'release-notes',
+    description: 'Show changelog and release notes',
+    category: 'Enterprise',
+    aliases: ['rn'],
+  },
+  {
+    name: 'pr_comments',
+    description: 'Manage PR comments',
+    category: 'Enterprise',
+    aliases: ['prc'],
+    subcommands: ['list', 'add', 'resolve'],
+  },
+  {
+    name: 'policy',
+    description: 'Manage governance policies',
+    category: 'Enterprise',
+    aliases: ['pol'],
+    subcommands: ['list', 'add', 'remove', 'enable', 'disable'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // ADVISOR / AGENTS
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'advisor',
+    description: 'Configure secondary advisor model for review',
+    category: 'Team',
+    aliases: ['adv'],
+  },
+  {
+    name: 'agents',
+    description: 'Show agents menu for specialized tasks',
+    category: 'Team',
+    aliases: ['ag'],
+  },
+  {
+    name: 'swarm',
+    description: 'Run multi-agent swarm orchestration',
+    category: 'Team',
+    aliases: ['sw'],
+    subcommands: ['feature', 'bugfix', 'refactor', 'docs', 'status'],
+  },
+  {
+    name: 'team',
+    description: 'Team collaboration and shared memory',
+    category: 'Team',
+    aliases: ['tm'],
+    subcommands: ['join', 'leave', 'status', 'progress', 'share', 'add-progress', 'done'],
+  },
+  {
+    name: 'fork',
+    description: 'Fork a subagent with custom configuration',
+    category: 'Team',
+    aliases: ['fk'],
+    isHidden: true,
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // SPECIAL UTILITIES
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'btw',
+    description: 'Ask a side question without losing context',
+    category: 'Session',
+    aliases: [],
+    argsHint: '<question>',
+  },
+  {
+    name: 'thinkback',
+    description: 'Conversation replay and memory exploration',
+    category: 'Session',
+    aliases: ['tb'],
+  },
+  {
+    name: 'insights',
+    description: 'Detailed usage analytics and patterns',
+    category: 'Info',
+    aliases: ['ins'],
+  },
+  {
+    name: 'brief',
+    description: 'Toggle brief-only mode for concise output',
+    category: 'Configuration',
+    aliases: ['brf'],
+    isHidden: true,
+  },
+  {
+    name: 'think',
+    description: 'Force step-by-step thinking',
+    category: 'Session',
+    aliases: ['th'],
+    argsHint: '<question>',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // PLUGIN SYSTEM
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'plugin',
+    description: 'Plugin management hub',
+    category: 'Tools',
+    aliases: ['plg'],
+    subcommands: ['list', 'load', 'unload', 'browse', 'install', 'discover', 'settings'],
+  },
+  {
+    name: 'reload-plugins',
+    description: 'Reload all plugins',
+    category: 'Tools',
+    aliases: ['rpl'],
+  },
+  {
+    name: 'skill',
+    description: 'Skills marketplace',
+    category: 'Tools',
+    aliases: ['sk'],
+    subcommands: ['search', 'install', 'remove', 'list'],
+  },
+  {
+    name: 'hooks',
+    description: 'Manage custom hooks',
+    category: 'Tools',
+    aliases: ['hk'],
+    subcommands: ['list', 'add', 'remove', 'enable', 'disable'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'config',
+    description: 'Open settings panel',
+    category: 'Configuration',
+    aliases: ['cfg'],
+  },
+  {
+    name: 'model',
+    description: 'Model selection and configuration',
+    category: 'Configuration',
+    aliases: ['m'],
+    argsHint: '<provider> [model]',
+  },
+  {
+    name: 'provider',
+    description: 'Provider selection and status',
+    category: 'Configuration',
+    aliases: ['prov'],
+  },
+  {
+    name: 'provider-select',
+    description: 'Interactive provider picker',
+    category: 'Configuration',
+    aliases: ['ps'],
+  },
+  {
+    name: 'tech',
+    description: 'Technology stack management',
+    category: 'Configuration',
+    aliases: [],
+    subcommands: ['set', 'add', 'clear'],
+  },
+  {
+    name: 'effort',
+    description: 'Effort tracking level',
+    category: 'Configuration',
+    aliases: ['eff'],
+    argsHint: '<low|medium|high>',
+  },
+  {
+    name: 'output-style',
+    description: 'Output style configuration',
+    category: 'Configuration',
+    aliases: ['os'],
+    argsHint: '<style>',
+  },
+  {
+    name: 'theme',
+    description: 'Theme management',
+    category: 'Configuration',
+    aliases: ['th'],
+  },
+  {
+    name: 'fast',
+    description: 'Toggle fast mode for quicker responses',
+    category: 'Configuration',
+    aliases: ['f'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // AUTHENTICATION
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'login',
+    description: 'Login to TIMPS cloud services',
+    category: 'Configuration',
+    aliases: ['li'],
+  },
+  {
+    name: 'logout',
+    description: 'Logout from TIMPS cloud',
+    category: 'Configuration',
+    aliases: ['lo'],
+  },
+  {
+    name: 'api-key',
+    description: 'Manage API keys',
+    category: 'Configuration',
+    aliases: ['key'],
+    subcommands: ['set', 'get', 'remove'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // IDE INTEGRATION
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'ide',
+    description: 'IDE integration settings',
+    category: 'Tools',
+    aliases: [],
+    subcommands: ['connect', 'disconnect', 'status'],
+  },
+  {
+    name: 'chrome',
+    description: 'Chrome integration',
+    category: 'Tools',
+    aliases: ['cr'],
+    isHidden: true,
+  },
+  {
+    name: 'desktop',
+    description: 'Desktop app integration',
+    category: 'Tools',
+    aliases: ['dk'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // INFO & UTILITIES
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'status',
+    description: 'Show current session status',
+    category: 'Info',
+    aliases: ['st'],
+  },
+  {
+    name: 'version',
+    description: 'Show version information',
+    category: 'Info',
+    aliases: ['v'],
+  },
+  {
+    name: 'env',
+    description: 'Show environment variables',
+    category: 'Info',
+    aliases: ['e'],
+  },
+  {
+    name: 'keybindings',
+    description: 'View keyboard shortcuts',
+    category: 'Info',
+    aliases: ['kb'],
+  },
+  {
+    name: 'doctor',
+    description: 'System health check',
+    category: 'Info',
+    aliases: ['doc'],
+  },
+  {
+    name: 'cost',
+    description: 'Show token usage and cost',
+    category: 'Info',
+    aliases: ['cst'],
+  },
+  {
+    name: 'usage',
+    description: 'Detailed usage statistics',
+    category: 'Info',
+    aliases: ['u'],
+  },
+  {
+    name: 'stats',
+    description: 'Session statistics',
+    category: 'Info',
+    aliases: ['stat'],
+  },
+  {
+    name: 'models',
+    description: 'List available models',
+    category: 'Info',
+    aliases: ['mod'],
+  },
+  {
+    name: 'help',
+    description: 'Show help and command list',
+    category: 'Info',
+    aliases: ['h', '?'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // MEMORY & KNOWLEDGE
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'memory',
+    description: 'Memory management',
+    category: 'Tools',
+    aliases: ['mem'],
+    subcommands: ['query', 'forget', 'export', 'import', 'consolidate', 'stats'],
+  },
+  {
+    name: 'forget',
+    description: 'Clear all memories for this project',
+    category: 'Tools',
+    aliases: ['fgt'],
+  },
+  {
+    name: 'trust',
+    description: 'Trust level configuration',
+    category: 'Configuration',
+    aliases: ['tr'],
+    argsHint: '<cautious|normal|trust|yolo>',
+  },
+  {
+    name: 'undo',
+    description: 'Undo last changes from snapshots',
+    category: 'Tools',
+    aliases: [],
+    argsHint: '[count]',
+  },
+  {
+    name: 'snapshots',
+    description: 'List file snapshots',
+    category: 'Tools',
+    aliases: ['snap'],
+  },
+  {
+    name: 'forge',
+    description: 'ProvenForge version control',
+    category: 'Tools',
+    aliases: ['fg'],
+    subcommands: ['branch', 'log', 'tier', 'stats', 'lineage'],
+  },
+  {
+    name: 'govern',
+    description: 'GovernTier policy governance',
+    category: 'Enterprise',
+    aliases: ['gv'],
+    subcommands: ['stats', 'policies', 'evolve'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // GIT (EXTENDED)
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'git',
+    description: 'Git operations',
+    category: 'Git',
+    aliases: ['g'],
+    subcommands: ['status', 'log', 'diff', 'branch', 'stash', 'fetch', 'pull', 'push'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // FILES
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'files',
+    description: 'Files management',
+    category: 'Tools',
+    aliases: ['f'],
+  },
+  {
+    name: 'rename',
+    description: 'Rename files or sessions',
+    category: 'Tools',
+    aliases: ['rn'],
+    argsHint: '<old-name> <new-name>',
+  },
+  {
+    name: 'export',
+    description: 'Export data',
+    category: 'Tools',
+    aliases: ['exp'],
+    subcommands: ['memory', 'session', 'chat'],
+  },
+  {
+    name: 'add-dir',
+    description: 'Add working directory',
+    category: 'Tools',
+    aliases: ['ad'],
+    argsHint: '<path>',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // VOICE & MULTIMODAL
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'voice',
+    description: 'Voice input mode',
+    category: 'Tools',
+    aliases: ['vo'],
+  },
+  {
+    name: 'vision',
+    description: 'Vision and image analysis',
+    category: 'Tools',
+    aliases: ['vis'],
+    argsHint: '<image-path-or-url>',
+  },
+  {
+    name: 'upload',
+    description: 'Upload files for context',
+    category: 'Tools',
+    aliases: ['upl'],
+    argsHint: '<file-path>',
+  },
+  {
+    name: 'doc',
+    description: 'Parse document for Q&A',
+    category: 'Tools',
+    aliases: ['d'],
+    argsHint: '<document-path>',
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // OPTIMUS & HARDCORE
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'optimus',
+    description: 'Digital Optimus - sentence-to-product pipeline',
+    category: 'Tools',
+    aliases: ['opt'],
+    argsHint: '<product description>',
+  },
+  {
+    name: 'autonomous',
+    description: 'Autonomous GitHub integration',
+    category: 'Tools',
+    aliases: ['auto'],
+    isHidden: true,
+  },
+  {
+    name: 'macrohard',
+    description: 'Macrohard mode - full corporate employee',
+    category: 'Tools',
+    aliases: ['mh'],
+    isHidden: true,
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // PRIVACY & SECURITY
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'permissions',
+    description: 'Permissions management',
+    category: 'Configuration',
+    aliases: ['perm'],
+    subcommands: ['auto', 'ask', 'yes', 'no'],
+  },
+  {
+    name: 'privacy-settings',
+    description: 'Privacy settings',
+    category: 'Configuration',
+    aliases: ['priv'],
+  },
+  {
+    name: 'sandbox-toggle',
+    description: 'Toggle sandbox mode',
+    category: 'Configuration',
+    aliases: ['sandbox'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // SYSTEM
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'exit',
+    description: 'Exit the session',
+    category: 'Exit',
+    aliases: ['quit', 'q'],
+  },
+  {
+    name: 'cancel',
+    description: 'Cancel current operation',
+    category: 'Exit',
+    aliases: ['canc'],
+  },
+  {
+    name: 'upgrade',
+    description: 'Check for upgrades',
+    category: 'Info',
+    aliases: ['up'],
+  },
+  {
+    name: 'heapdump',
+    description: 'Generate heap dump for debugging',
+    category: 'Info',
+    aliases: ['hd'],
+    isHidden: true,
+  },
+  {
+    name: 'install',
+    description: 'Install app or extensions',
+    category: 'Configuration',
+    aliases: ['inst'],
+    subcommands: ['github-app', 'slack-app'],
+  },
+  {
+    name: 'onboarding',
+    description: 'Show onboarding flow',
+    category: 'Info',
+    aliases: ['onb'],
+  },
+  {
+    name: 'summary',
+    description: 'Generate conversation summary',
+    category: 'Session',
+    aliases: ['sum'],
+  },
+  {
+    name: 'rate-limit-options',
+    description: 'Configure rate limits',
+    category: 'Configuration',
+    aliases: ['rlo'],
+  },
+  {
+    name: 'reset-limits',
+    description: 'Reset rate limits',
+    category: 'Configuration',
+    aliases: ['rl'],
+  },
+  {
+    name: 'extra-usage',
+    description: 'Extra usage settings',
+    category: 'Configuration',
+    aliases: ['eu'],
+  },
+  {
+    name: 'perf-issue',
+    description: 'Performance issue reporting',
+    category: 'Info',
+    aliases: ['pi'],
+  },
+  {
+    name: 'ant-trace',
+    description: 'Debug trace',
+    category: 'Info',
+    aliases: ['at'],
+    isHidden: true,
+  },
+  {
+    name: 'good-claude',
+    description: 'Good Claude detection feedback',
+    category: 'Info',
+    aliases: ['gc'],
+    isHidden: true,
+  },
+  {
+    name: 'autofix-pr',
+    description: 'Auto-fix PR issues',
+    category: 'Tools',
+    aliases: ['afp'],
+    isHidden: true,
+  },
+  {
+    name: 'subscribe-pr',
+    description: 'Subscribe to PR notifications',
+    category: 'Enterprise',
+    aliases: ['spr'],
+    isHidden: true,
+  },
+  {
+    name: 'proactive',
+    description: 'Proactive mode',
+    category: 'Tools',
+    aliases: ['pro'],
+    isHidden: true,
+  },
+  {
+    name: 'workflows',
+    description: 'Workflow scripts',
+    category: 'Tools',
+    aliases: ['wf'],
+    isHidden: true,
+  },
+  {
+    name: 'peers',
+    description: 'Discover peer sessions',
+    category: 'Team',
+    aliases: [],
+    isHidden: true,
+  },
+  {
+    name: 'stickers',
+    description: 'Stickers',
+    category: 'Info',
+    aliases: [],
+    isHidden: true,
+  },
+  {
+    name: 'terminalSetup',
+    description: 'Terminal setup wizard',
+    category: 'Configuration',
+    aliases: ['tsetup'],
+  },
+  {
+    name: 'issue',
+    description: 'Issue integration',
+    category: 'Tools',
+    aliases: [],
+  },
+  {
+    name: 'vim',
+    description: 'Vim mode',
+    category: 'Configuration',
+    aliases: [],
+  },
+  {
+    name: 'mobile',
+    description: 'Mobile integration',
+    category: 'Tools',
+    aliases: [],
+  },
+  {
+    name: 'break-cache',
+    description: 'Break cache',
+    category: 'Tools',
+    aliases: ['bc'],
+  },
+  {
+    name: 'extra-usage',
+    description: 'Extra usage management',
+    category: 'Configuration',
+    aliases: ['eu'],
+  },
+  {
+    name: 'auth',
+    description: 'OAuth authentication with cloud services',
+    category: 'Configuration',
+    aliases: [],
+    subcommands: ['login', 'logout', 'status', 'refresh'],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // OAUTH & AUTHENTICATION
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: 'insights',
+    description: 'Usage insights',
+    category: 'Info',
+    aliases: ['ins'],
+  },
+];
+
+export function getCommandsByCategory(category: CommandCategory): CommandDef[] {
+  return COMMAND_REGISTRY.filter(cmd => cmd.category === category);
 }
 
-export interface Command {
-  name: string;
-  aliases?: string[];
-  description: string;
-  usage?: string;
-  execute(ctx: CommandContext, args: string): Promise<void>;
+export function getCommand(name: string): CommandDef | undefined {
+  return COMMAND_REGISTRY.find(cmd =>
+    cmd.name === name || cmd.aliases?.includes(name)
+  );
 }
 
-const COMMANDS: Command[] = [];
+export function searchCommands(query: string): CommandDef[] {
+  const q = query.toLowerCase();
+  return COMMAND_REGISTRY.filter(cmd =>
+    cmd.name.includes(q) ||
+    cmd.description.toLowerCase().includes(q) ||
+    cmd.aliases?.some(a => a.includes(q))
+  );
+}
 
-function reg(cmd: Command) { COMMANDS.push(cmd); }
-
-// ─────────────────────────────────────────
-// /help
-// ─────────────────────────────────────────
-reg({
-  name: 'help', aliases: ['h', '?'],
-  description: 'Show all available commands',
-  async execute() {
-    console.log('\n' + t.brandBold('  ⚡ TIMPS Code Commands\n'));
-    for (const cmd of COMMANDS) {
-      const alias = cmd.aliases ? chalk.dim(` (${cmd.aliases.join(', ')})`) : '';
-      console.log(`  ${t.accent('/' + cmd.name)}${alias}`);
-      console.log(`    ${t.dim(cmd.description)}`);
-      if (cmd.usage) console.log(`    ${t.dim('Usage:')} ${chalk.gray(cmd.usage)}`);
-    }
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /clear
-// ─────────────────────────────────────────
-reg({
-  name: 'clear', aliases: ['c'],
-  description: 'Clear conversation history (keeps system prompt)',
-  async execute(ctx) {
-    ctx.clearHistory?.();
-    console.log(t.success('  ✔ History cleared'));
-  },
-});
-
-// ─────────────────────────────────────────
-// /model
-// ─────────────────────────────────────────
-reg({
-  name: 'model', aliases: ['m'],
-  description: 'Show current model info',
-  async execute(ctx) {
-    const { provider } = ctx;
-    console.log(`\n  Provider : ${t.accent(provider.name)}`);
-    console.log(`  Model    : ${t.accent(provider.model)}`);
-    console.log(`  Tool use : ${provider.supportsFunctionCalling ? t.success('yes') : t.warning('no (text mode)')}\n`);
-  },
-});
-
-// ─────────────────────────────────────────
-// /models
-// ─────────────────────────────────────────
-reg({
-  name: 'models',
-  description: 'List available models (Ollama: lists local models)',
-  async execute(ctx) {
-    if (ctx.provider.name === 'ollama') {
-      const config = loadConfig();
-      console.log(t.dim('\n  Fetching Ollama models...'));
-      const models = await listOllamaModels(config.ollamaUrl);
-      if (models.length === 0) {
-        console.log(t.warning('  No models found. Run: ollama pull qwen2.5-coder:latest'));
-      } else {
-        console.log(t.bold('\n  Installed Ollama models:\n'));
-        models.forEach(m => console.log(`    ${t.accent(m)}`));
-      }
-    } else {
-      console.log(t.dim('\n  Cloud providers: models are set in config or via --model flag'));
-    }
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /status
-// ─────────────────────────────────────────
-reg({
-  name: 'status', aliases: ['s'],
-  description: 'Show session stats: token usage, cost, turns',
-  async execute(ctx) {
-    const stats = ctx.getStats?.() || { turns: 0, tokens: 0, cost: 0 };
-    console.log(`\n  ${t.bold('Session Stats')}`);
-    console.log(`  Turns  : ${t.accent(String(stats.turns))}`);
-    console.log(`  Tokens : ${t.accent(stats.tokens.toLocaleString())}`);
-    if (stats.cost > 0) console.log(`  Cost   : ${t.accent('$' + stats.cost.toFixed(4))}`);
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /memory
-// ─────────────────────────────────────────
-reg({
-  name: 'memory', aliases: ['mem'],
-  description: 'Show memory stats and recent facts',
-  usage: '/memory [clear|search <query>]',
-  async execute(ctx, args) {
-    if (!ctx.memory) {
-      console.log(t.dim('  Memory disabled.'));
-      return;
-    }
-
-    const [sub, ...rest] = args.trim().split(' ');
-
-    if (sub === 'clear') {
-      ctx.memory.clearWorking();
-      console.log(t.success('  ✔ Working memory cleared'));
-      return;
-    }
-
-    if (sub === 'search') {
-      const query = rest.join(' ');
-      if (!query) { console.log(t.dim('  Usage: /memory search <query>')); return; }
-      const results = ctx.memory.searchFacts(query, 10);
-      if (results.length === 0) {
-        console.log(t.dim('  No matching memories found.'));
-      } else {
-        console.log(t.bold(`\n  Memory search: "${query}"\n`));
-        results.forEach(r => console.log(`  ${t.dim('[' + r.type + ']')} ${r.content}`));
-      }
-      console.log();
-      return;
-    }
-
-    const stats = ctx.memory.getStats();
-    const working = ctx.memory.workingMemory;
-    const episodes = ctx.memory.loadEpisodes(5);
-
-    console.log(`\n  ${t.bold('Memory Stats')}`);
-    console.log(`  Semantic facts : ${t.accent(String(stats.semanticCount))}`);
-    console.log(`  Episodes       : ${t.accent(String(stats.episodeCount))}`);
-    console.log(`  Active files   : ${t.accent(String(stats.workingFiles))}`);
-
-    if (working.currentGoal) console.log(`\n  ${t.dim('Goal:')} ${working.currentGoal.slice(0, 80)}`);
-
-    if (episodes.length > 0) {
-      console.log(`\n  ${t.bold('Recent sessions:')}`);
-      episodes.slice(-5).forEach(e => {
-        const dt = new Date(e.timestamp).toLocaleDateString();
-        const icon = e.outcome === 'success' ? t.success('✔') : e.outcome === 'failed' ? t.error('✘') : t.warning('◐');
-        console.log(`  ${icon} ${dt} — ${e.summary.slice(0, 60)}`);
-      });
-    }
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /git
-// ─────────────────────────────────────────
-reg({
-  name: 'git',
-  description: 'Quick git status + recent commits',
-  async execute(ctx) {
-    try {
-      const status = childProcess.execSync('git status -s', { cwd: ctx.cwd, encoding: 'utf-8', timeout: 5000 }).trim();
-      const branch = childProcess.execSync('git branch --show-current', { cwd: ctx.cwd, encoding: 'utf-8', timeout: 5000 }).trim();
-      const log = childProcess.execSync('git log --oneline -5', { cwd: ctx.cwd, encoding: 'utf-8', timeout: 5000 }).trim();
-      console.log(`\n  Branch: ${t.accent(branch)}`);
-      if (status) { console.log(`\n  ${t.bold('Changes:')}\n${status.split('\n').map(l => '  ' + l).join('\n')}`); }
-      else { console.log(`  ${t.dim('Working tree clean')}`); }
-      if (log) { console.log(`\n  ${t.bold('Recent commits:')}\n${log.split('\n').map(l => '  ' + chalk.dim(l)).join('\n')}`); }
-    } catch {
-      console.log(t.dim('  Not a git repository.'));
-    }
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /todo
-// ─────────────────────────────────────────
-reg({
-  name: 'todo', aliases: ['tasks', 't'],
-  description: 'Show current todo list',
-  async execute() {
-    const todoFile = path.join(os.homedir(), '.timps', 'todos.json');
-    if (!fs.existsSync(todoFile)) { console.log(t.dim('\n  No todos.\n')); return; }
-    try {
-      const todos = JSON.parse(fs.readFileSync(todoFile, 'utf-8'));
-      if (todos.length === 0) { console.log(t.dim('\n  No todos.\n')); return; }
-      console.log(`\n  ${t.bold('Todos:')}\n`);
-      todos.forEach((todo: any) => {
-        const s = todo.status === 'completed' ? t.success('✔') : todo.status === 'in_progress' ? t.warning('◐') : t.dim('○');
-        const p = todo.priority === 'urgent' ? t.error('!') : todo.priority === 'high' ? t.warning('↑') : ' ';
-        console.log(`  ${s} ${p} ${t.dim('[' + todo.id + ']')} ${todo.title}`);
-      });
-      console.log();
-    } catch {
-      console.log(t.error('  Failed to read todos.'));
-    }
-  },
-});
-
-// ─────────────────────────────────────────
-// /doctor
-// ─────────────────────────────────────────
-reg({
-  name: 'doctor',
-  description: 'Check system health: Node, git, tools, API keys',
-  async execute(ctx) {
-    console.log(`\n  ${t.bold('⚡ TIMPS Doctor\n')}`);
-
-    const check = (label: string, ok: boolean, note?: string) => {
-      const icon = ok ? t.success('✔') : t.error('✘');
-      const msg = note ? ` ${t.dim(note)}` : '';
-      console.log(`  ${icon} ${label}${msg}`);
-    };
-
-    // Node version
-    const nodeVer = process.version;
-    const nodeMajor = parseInt(nodeVer.slice(1));
-    check('Node.js ' + nodeVer, nodeMajor >= 18, nodeMajor < 18 ? '(requires v18+)' : '');
-
-    // git
-    try { childProcess.execSync('git --version', { stdio: 'pipe' }); check('git', true); }
-    catch { check('git', false, '(not found — install git)'); }
-
-    // ripgrep (optional but fast)
-    try { childProcess.execSync('which rg', { stdio: 'pipe' }); check('ripgrep (rg)', true, '(fast search)'); }
-    catch { check('ripgrep (rg)', false, '(optional — brew install ripgrep)'); }
-
-    // API keys
-    const config = loadConfig();
-    const providers: Array<[string, string]> = [
-      ['ANTHROPIC_API_KEY', 'Claude'],
-      ['OPENAI_API_KEY', 'OpenAI'],
-      ['GEMINI_API_KEY', 'Gemini'],
-      ['OPENROUTER_API_KEY', 'OpenRouter'],
-      ['DEEPSEEK_API_KEY', 'DeepSeek'],
-      ['GROQ_API_KEY', 'Groq'],
-    ];
-    for (const [env, label] of providers) {
-      const hasKey = !!(process.env[env] || config.keys[label.toLowerCase() as import('../config/types.js').ProviderName]);
-      if (hasKey) check(label + ' API key', true);
-    }
-
-    // Ollama
-    try {
-      const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) });
-      if (res.ok) {
-        const data = await res.json() as any;
-        const count = data.models?.length || 0;
-        check(`Ollama (${count} models)`, true);
-      } else {
-        check('Ollama', false, '(not running — try: ollama serve)');
-      }
-    } catch {
-      check('Ollama', false, '(not running — optional)');
-    }
-
-    // Config file
-    const configPath = path.join(os.homedir(), '.timps', 'config.json');
-    check('Config file', fs.existsSync(configPath), fs.existsSync(configPath) ? configPath : '(run: timps --setup)');
-
-    console.log(`\n  Provider: ${t.accent(ctx.provider.name)} | Model: ${t.accent(ctx.provider.model)}\n`);
-  },
-});
-
-// ─────────────────────────────────────────
-// /compact
-// ─────────────────────────────────────────
-reg({
-  name: 'compact',
-  description: 'Manually compact conversation context to save tokens',
-  async execute(ctx) {
-    console.log(t.dim('  Context compaction is handled automatically by the agent.'));
-    console.log(t.dim('  Use /clear to completely reset the conversation.'));
-  },
-});
-
-// ─────────────────────────────────────────
-// /config
-// ─────────────────────────────────────────
-reg({
-  name: 'config',
-  description: 'Show current configuration',
-  async execute() {
-    const config = loadConfig();
-    console.log(`\n  ${t.bold('Configuration')}`);
-    console.log(`  Provider  : ${t.accent(config.defaultProvider)}`);
-    console.log(`  Model     : ${t.accent(config.defaultModel)}`);
-    console.log(`  Trust     : ${t.accent(config.trustLevel)}`);
-    console.log(`  Memory    : ${config.memoryEnabled ? t.success('enabled') : t.dim('disabled')}`);
-    console.log(`  Max ctx   : ${t.accent((config.maxContextTokens / 1000).toFixed(0) + 'k tokens')}`);
-    if (config.ollamaUrl) console.log(`  Ollama URL: ${t.dim(config.ollamaUrl)}`);
-    console.log();
-  },
-});
-
-// ─────────────────────────────────────────
-// /skills
-// ─────────────────────────────────────────
-reg({
-  name: 'skills',
-  description: 'Skills Marketplace — list, search, and install community skills',
-  usage: '/skills [list|search <query>|install <id>|show <id>]',
-  async execute(_ctx, args) {
-    const { listSkills, searchSkills, installSkill, getSkillContent } = await import('../skills/marketplace.js');
-    const [sub, ...rest] = args.trim().split(' ');
-    const CATEGORY_ICONS: Record<string, string> = {
-      framework: '🧩', language: '📘', testing: '🧪', security: '🔒',
-      database: '🗄', devops: '🐳', workflow: '🔀', patterns: '⚙', architecture: '🏗',
-    };
-
-    if (!sub || sub === 'list') {
-      const { registry, installed } = listSkills();
-      const byCategory = new Map<string, typeof registry.skills>();
-      for (const s of registry.skills) {
-        if (!byCategory.has(s.category)) byCategory.set(s.category, []);
-        byCategory.get(s.category)!.push(s);
-      }
-      console.log(`\n  ${t.brandBold('⚡ TIMPS Skills Marketplace')}  ${t.dim('v' + registry.version + ' · ' + registry.skills.length + ' skills')}\n`);
-      for (const [cat, skills] of byCategory) {
-        const icon = CATEGORY_ICONS[cat] ?? '•';
-        console.log(`  ${t.bold(icon + ' ' + cat.charAt(0).toUpperCase() + cat.slice(1))}`);
-        for (const s of skills) {
-          const tag = installed.includes(s.id) ? t.success(' [installed]') : '';
-          console.log(`    ${t.accent(s.id.padEnd(24))}${tag}`);
-          console.log(`    ${t.dim(s.description)}`);
-        }
-        console.log();
-      }
-      console.log(t.dim(`  Install: /skills install <id>   Search: /skills search <query>\n`));
-      return;
-    }
-
-    if (sub === 'search') {
-      const query = rest.join(' ');
-      if (!query) { console.log(t.dim('  Usage: /skills search <query>')); return; }
-      const results = searchSkills(query);
-      if (results.length === 0) {
-        console.log(t.dim(`\n  No skills found for "${query}"\n`));
-        return;
-      }
-      console.log(`\n  ${t.bold('Search results for "')}${t.accent(query)}${t.bold('"')}\n`);
-      for (const s of results) {
-        console.log(`  ${t.accent(s.id.padEnd(24))} ${t.dim('[' + s.category + ']')}`);
-        console.log(`  ${t.dim(s.description)}`);
-        console.log(`  ${t.dim('Tags: ' + s.tags.join(', '))}\n`);
-      }
-      return;
-    }
-
-    if (sub === 'install') {
-      const skillId = rest[0];
-      if (!skillId) { console.log(t.dim('  Usage: /skills install <id>')); return; }
-      const result = installSkill(skillId);
-      if (!result) {
-        console.log(t.error(`  ✘ Skill not found: ${skillId}`));
-        console.log(t.dim('  Run /skills list to see available skills.'));
-        return;
-      }
-      if (result.alreadyInstalled) {
-        console.log(t.warning(`  ↻ Updated skill: ${result.skill.name} (${skillId})`));
-      } else {
-        console.log(t.success(`  ✔ Installed: ${result.skill.name}`));
-      }
-      console.log(t.dim(`  ${result.skill.description}`));
-      console.log(t.dim(`  Run /skills show ${skillId} to view the skill content.\n`));
-      return;
-    }
-
-    if (sub === 'show') {
-      const skillId = rest[0];
-      if (!skillId) { console.log(t.dim('  Usage: /skills show <id>')); return; }
-      const content = getSkillContent(skillId);
-      if (!content) {
-        console.log(t.warning(`  Skill "${skillId}" is not installed. Run: /skills install ${skillId}`));
-        return;
-      }
-      console.log(`\n${content}\n`);
-      return;
-    }
-
-    console.log(t.error(`  Unknown subcommand: ${sub}`) + t.dim(' — try: list, search, install, show'));
-  },
-});
-
-// ─────────────────────────────────────────
-// /exit / /quit
-// ─────────────────────────────────────────
-reg({
-  name: 'exit', aliases: ['quit', 'q'],
-  description: 'Exit TIMPS Code',
-  async execute() {
-    console.log(t.dim('\n  Goodbye.\n'));
-    process.exit(0);
-  },
-});
-
-// ─────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────
-
-export function getAllCommands(): Command[] { return COMMANDS; }
-
-export async function handleCommand(
-  input: string,
-  ctx: CommandContext
-): Promise<{ handled: boolean }> {
-  if (!input.startsWith('/')) return { handled: false };
-
-  const [rawName, ...rest] = input.slice(1).split(' ');
-  const name = rawName.toLowerCase();
-  const args = rest.join(' ');
-
-  const cmd = COMMANDS.find(c => c.name === name || c.aliases?.includes(name));
-  if (!cmd) {
-    console.log(t.error(`  Unknown command: /${name}`) + t.dim(' (try /help)'));
-    return { handled: true };
-  }
-
-  await cmd.execute(ctx, args);
-  return { handled: true };
+export function getCommandCategories(): CommandCategory[] {
+  return [
+    'Git', 'Session', 'Tasks', 'Review', 'MCP',
+    'Remote', 'Enterprise', 'Team', 'Tools',
+    'Configuration', 'Info', 'Exit',
+  ];
 }

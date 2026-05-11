@@ -1289,6 +1289,25 @@ const memoryDecay: RegisteredTool = {
 // Registry
 // ══════════════════════════════════════════
 
+// Import new tools
+import { sleepTool } from './sleep/index.js';
+import { browserTool } from './browser/index.js';
+import { workflowTool } from './workflow/index.js';
+import { taskCreateTool } from './taskCreate/index.js';
+import { taskGetTool } from './taskGet/index.js';
+import { taskListTool } from './taskList/index.js';
+import { taskUpdateTool } from './taskUpdate/index.js';
+import { taskOutputTool } from './taskOutput/index.js';
+import { taskStopTool } from './taskStop/index.js';
+import { skillTool } from './skill/index.js';
+import { scheduleCronTool } from './scheduleCron/index.js';
+import { toolSearchTool } from './toolSearch/index.js';
+import { webFetchTool } from './webFetch/index.js';
+import { remoteTriggerTool } from './remoteTrigger/index.js';
+import { teamCreateTool } from './teamCreate/index.js';
+import { teamDeleteTool } from './teamDelete/index.js';
+import { syntheticOutputTool } from './syntheticOutput/index.js';
+
 export const ALL_TOOLS: RegisteredTool[] = [
   readFile, writeFile, editFile, multiEdit, listDirectory,
   bash, searchCode, findFiles, gitStatus, gitCommit,
@@ -1297,6 +1316,12 @@ export const ALL_TOOLS: RegisteredTool[] = [
   projectInfo, todoWrite, todoRead, memoryStore, memorySearch,
   memoryBenchmark, memoryCompress, memoryKgQuery, memoryTimeline,
   memoryPredict, memoryStats, memoryDecay,
+  sleepTool, browserTool, workflowTool,
+  taskCreateTool, taskGetTool, taskListTool, taskUpdateTool,
+  taskOutputTool, taskStopTool,
+  skillTool, scheduleCronTool, toolSearchTool,
+  webFetchTool, remoteTriggerTool, teamCreateTool, teamDeleteTool,
+  syntheticOutputTool,
 ];
 
 const LOCAL_TOOLS = ['read_file', 'write_file', 'edit_file', 'list_directory', 'bash', 'search_code', 'find_files'];
@@ -1314,4 +1339,8 @@ export function getTool(name: string): RegisteredTool | undefined {
 
 export function getToolRisk(name: string): RiskLevel {
   return getTool(name)?.risk || 'high';
+}
+
+export function getToolByName(name: string): RegisteredTool | undefined {
+  return ALL_TOOLS.find(t => t.definition.name === name);
 }

@@ -108,10 +108,27 @@ export const LOGO_LARGE = [
   '',
 ].join('\n');
 
-// Compact logo for in-session use
-export const LOGO = LOGO_LARGE;
-
 export const SMALL_LOGO = `  ${chalk.hex(tealDark)('🤖')} ${chalk.bold.hex(tealDark)('TIMPS Code')} ${t.dim('v1.0.0')}`;
+
+// ═══════════════════════════════════════
+// OpenCode-style clean block logo — no robot, no box
+// ═══════════════════════════════════════
+
+export const LOGO_TIMPS = [
+  '',
+  `  ${chalk.hex(tealMid).bold('████████╗')}${chalk.hex(tealDark).bold('██╗')}${chalk.hex(tealMid).bold('███╗   ███╗')}${chalk.hex(tealDark).bold('██████╗ ')}${chalk.hex(tealLight).bold('███████╗')}`,
+  `  ${chalk.hex(tealMid).bold('   ██╔══╝')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('████╗ ████║')}${chalk.hex(tealDark).bold('██╔══██╗')}${chalk.hex(tealLight).bold('██╔════╝')}`,
+  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██╔████╔██║')}${chalk.hex(tealDark).bold('██████╔╝')}${chalk.hex(tealLight).bold('███████╗')}`,
+  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██║╚██╔╝██║')}${chalk.hex(tealDark).bold('██╔═══╝ ')}${chalk.hex(tealLight).bold('╚════██║')}`,
+  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██║ ╚═╝ ██║')}${chalk.hex(tealDark).bold('██║     ')}${chalk.hex(tealLight).bold('███████║')}`,
+  `  ${chalk.hex(tealMid).bold('   ╚═╝   ')}${chalk.hex(tealDark).bold('╚═╝')}${chalk.hex(tealMid).bold('╚═╝     ╚═╝')}${chalk.hex(tealDark).bold('╚═╝     ')}${chalk.hex(tealLight).bold('╚══════╝')}`,
+  '',
+  `                    ${chalk.hex(tealMid)('c o d e')}`,
+  '',
+].join('\n');
+
+// Compact logo for in-session use — points to the new clean block logo
+export const LOGO = LOGO_TIMPS;
 
 export const icons = {
   // Core

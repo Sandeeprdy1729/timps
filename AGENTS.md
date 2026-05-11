@@ -47,24 +47,50 @@ timps/
 
 ### Tools architecture (timps-code)
 - All tools extend the `Tool` interface in `src/tools/tools.ts`
-- Tools export a `schema` (JSON Schema for parameters) and an `execute` function
+- Tools export a `definition` (JSON Schema for parameters) and `execute` function
 - The agent picks tools by matching the task intent to tool descriptions — keep descriptions accurate
+- Tools are registered in `ALL_TOOLS` array and exported via `getToolDefinitions()` and `getTool()`
+
+### Provider Mesh (`src/models/providerMesh.ts`)
+- `ProviderMesh` class auto-discovers 75+ providers: Ollama, LM Studio, Jan, vLLM, Claude, GPT, Gemini, DeepSeek, Groq, OpenRouter, AWS Bedrock, Azure OpenAI, GitHub Copilot
+- `route()` method uses task-type analysis to pick the optimal provider
+- `streamWithFallback()` implements automatic fallback chains
+- Cost tracking per session with `getCostReport()`
 
 ### Memory architecture
-- **Working memory** — `src/memory/snapshot.ts` — in-memory, reset on process exit
-- **Episodic memory** — `src/memory/memory.ts` — persisted to `~/.timps/memory/<hash>/episodes.jsonl`
-- **Semantic memory** — `src/memory/memory.ts` — persisted to `~/.timps/memory/<hash>/semantic.json`
+- **Working memory** — `src/memory/memory.ts` — in-memory, reset on process exit
+- **Episodic memory** — `~/.timps/memory/<hash>/episodes.jsonl` — conversation summaries
+- **Semantic memory** — `~/.timps/memory/<hash>/semantic.json` — facts, patterns, conventions
+- **Procedural memory** — `src/memory/proceduralMemory.ts` — auto-extracted workflows
+- **Knowledge graph** — `src/memory/knowledgeGraph.ts` — (S,R,O) triples with multi-hop traversal
+- **Chronos Veil** — `src/memory/chronosVeil.ts` — temporal 4-layer classification (knowledge/memory/wisdom/intelligence)
+- **SQLite store** — `src/memory/sqliteStore.ts` — high-performance SQLite backend with VSS vector search
+- **Hybrid retriever** — `src/memory/hybridRetriever.ts` — BM25 + Vector + Graph with RRF fusion
 - Memory keys are scoped per project using a hash of the absolute project path
 
 ### Agent loop (timps-code)
-1. User input → `src/core/app.ts` → `AgentLoop.run()`
+1. User input → `src/core/app.ts` → AgentLoop.run()
 2. Agent calls `src/core/agent.ts` with tools + system prompt
 3. Tools execute via `src/tools/tools.ts` router
 4. Results stream back to the TUI via `src/ui/App.tsx`
+5. Intelligence tools activate via `src/memory/memory.ts` getters (lazy-init)
+6. `PredictiveAgent` (`src/agent/predictiveAgent.ts`) adds pre-flight bug/debt checks
+
+### Swarm system (`src/swarm/`)
+- 10 specialized agents with DAG-based orchestration
+- `SwarmExecutor` (`src/swarm/executor.ts`) handles real distributed execution
+- Pipelines: feature, bugfix, refactor, docs
+- Agent-to-agent communication via message queue
+
+### MCP ecosystem (`src/tools/mcpDiscovery.ts`)
+- Auto-discovers MCP servers from package.json, requirements.txt, Cargo.toml
+- Marketplace with 40+ pre-configured servers
+- MCP composer for chaining servers into skills
 
 ### Error handling
 - Tool errors are caught and fed back to the agent as observations, not thrown
-- The agent retries up to 3 times with a revised approach on tool failure
+- The agent retries up to 3 times with exponential backoff for transient errors
+- Non-transient errors trigger self-correction attempts
 - Fatal errors surface to the user via the TUI error panel
 
 ## Testing

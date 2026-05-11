@@ -9,12 +9,14 @@ interface ToolActivityProps {
 export const ToolActivity = ({ toolName }: ToolActivityProps) => {
   return (
     <Box>
-      <Text color="#C8B94F">
+      <Text color="#58A6FF">
         <Spinner type="dots" />
       </Text>
-      <Text dimColor>  Running </Text>
-      <Text color="#4A8C7A" bold>{toolName}</Text>
-      <Text dimColor>…</Text>
+      <Box marginLeft={1}>
+        <Text dimColor>
+          <Text color="#39D353">{toolName}</Text>
+        </Text>
+      </Box>
     </Box>
   );
 };
