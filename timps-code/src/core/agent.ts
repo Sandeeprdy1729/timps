@@ -773,6 +773,13 @@ ${historyText}`;
     return this.messages.length;
   }
 
+  popLastMessage(): void {
+    // Remove the last non-system message (one exchange = user + assistant pair)
+    if (this.messages.length > 1) {
+      this.messages.pop();
+    }
+  }
+
   clearHistory(): void {
     const sysMsg = this.messages[0];
     this.messages = [sysMsg];
