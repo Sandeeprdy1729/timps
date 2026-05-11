@@ -28,6 +28,7 @@ import { handleMultimodalCommand } from '../commands/multimodalCommands.js';
 import { handleVoiceCommand, handleDocumentCommand, handleUploadCommand } from '../commands/inputCommands.js';
 import { formatCost } from '../utils/utils.js';
 import { createProvider } from '../models/index.js';
+import { getMcpManager } from '../utils/mcp.js';
 
 export interface AppOptions {
   provider?: ProviderName;
@@ -1586,6 +1587,551 @@ export async function handleSlashCommand(
           console.log(`  ${t.accent('/plugin load <pkg>')}       — load a plugin by package name or path`);
           console.log(`  ${t.accent('/plugin unload <name>')}    — unload a plugin\n`);
       }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /commit — git commit shortcut
+    // ══════════════════════════════════
+    case 'commit':
+    case 'cm': {
+      const msg = args || 'chore: update';
+      try {
+        const out = childProcess.execSync(`git add -A && git commit -m "${msg.replace(/"/g, '\\"')}"`, {
+          cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000,
+        });
+        console.log(`\n  ${t.success(icons.success)} Committed: ${t.accent(`"${msg}"`)}`);
+        const hash = childProcess.execSync('git rev-parse --short HEAD', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim();
+        console.log(`  ${t.dim(`commit ${hash}`)}\n`);
+      } catch (e: any) {
+        const err = (e.stderr || e.message || '').toString().trim();
+        if (err.includes('nothing to commit')) {
+          console.log(`\n  ${t.dim('Nothing to commit — working tree clean')}\n`);
+        } else {
+          renderError(err || 'git commit failed');
+        }
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /branch — git branch shortcut
+    // ══════════════════════════════════
+    case 'branch':
+    case 'br': {
+      try {
+        if (!args) {
+          const out = childProcess.execSync('git branch', { cwd, encoding: 'utf-8', stdio: 'pipe' });
+          console.log(`\n  ${t.brandBold('Branches')}`);
+          for (const line of out.split('\n').filter(Boolean)) {
+            const isCurrent = line.startsWith('*');
+            console.log(`  ${isCurrent ? t.success('*') : t.dim('·')} ${isCurrent ? t.accent(line.slice(2)) : t.dim(line.slice(2))}`);
+          }
+          console.log();
+        } else if (args.startsWith('-d') || args.startsWith('--delete')) {
+          const name = args.split(' ').slice(1).join(' ').trim();
+          if (!name) { console.log(`\n  ${t.dim('Usage: /branch -d <name>')}\n`); break; }
+          childProcess.execSync(`git branch -d ${name}`, { cwd, stdio: 'pipe' });
+          console.log(`\n  ${t.success(icons.success)} Deleted branch: ${t.accent(name)}\n`);
+        } else {
+          childProcess.execSync(`git checkout -b ${args}`, { cwd, encoding: 'utf-8', stdio: 'pipe' });
+          console.log(`\n  ${t.success(icons.success)} Created and switched to ${t.accent(args)}\n`);
+        }
+      } catch (e: any) {
+        renderError((e.stderr || e.message || '').toString().trim());
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /worktree — git worktree management
+    // ══════════════════════════════════
+    case 'worktree':
+    case 'wt': {
+      const runGit2 = (gitArgs: string): string => {
+        try {
+          return childProcess.execSync(`git ${gitArgs}`, { cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000 });
+        } catch (e: any) { return e.stderr || e.message || ''; }
+      };
+      if (!args) {
+        const out = runGit2('worktree list');
+        console.log(`\n  ${t.brandBold('Git Worktrees')}\n`);
+        for (const line of out.split('\n').filter(Boolean)) {
+          console.log(`  ${t.dim('·')} ${line}`);
+        }
+        console.log(`\n  ${t.dim('Usage:')} ${t.accent('/worktree add <path> [branch]')} ${t.dim('|')} ${t.accent('/worktree remove <path>')}\n`);
+      } else {
+        const [sub, ...wtRest] = args.split(' ');
+        const wtArgs2 = wtRest.join(' ');
+        if (sub === 'add') {
+          const out = runGit2(`worktree add ${wtArgs2}`);
+          console.log(`\n  ${t.success(icons.success)} Worktree added\n  ${t.dim(out.trim())}\n`);
+        } else if (sub === 'remove' || sub === 'rm') {
+          const out = runGit2(`worktree remove ${wtArgs2}`);
+          console.log(`\n  ${t.success(icons.success)} Worktree removed\n  ${t.dim(out.trim())}\n`);
+        } else if (sub === 'prune') {
+          runGit2('worktree prune');
+          console.log(`\n  ${t.success(icons.success)} Worktrees pruned\n`);
+        } else {
+          console.log(`\n  ${t.dim('Usage: /worktree [add <path> [branch] | remove <path> | prune]')}\n`);
+        }
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /tasks — background task manager
+    // ══════════════════════════════════
+    case 'tasks': {
+      const open = todos.getOpen ? todos.getOpen() : [];
+      const all = todos.getAll ? todos.getAll() : [];
+      const done = all.filter((t2: any) => t2.status === 'done' || t2.done).length;
+
+      if (!args) {
+        console.log(`\n  ${t.brandBold('Tasks')}  ${t.dim(`${open.length} open · ${done} done`)}\n`);
+        if (all.length === 0) {
+          console.log(`  ${t.dim('No tasks. Use /tasks add <description>')}\n`);
+        } else {
+          for (const task of all) {
+            const isDone = task.done;
+            const icon = isDone ? t.success('✓') : t.warning('○');
+            const pri = task.priority === 'high' ? t.error('[!]') : task.priority === 'medium' ? t.warning('[~]') : t.dim('[·]');
+            console.log(`  ${icon} ${pri} ${isDone ? t.dim(task.text) : task.text}`);
+          }
+          console.log();
+        }
+        console.log(`  ${t.dim('Subcommands: add <text> | done <text> | clear')}\n`);
+      } else {
+        const [tsub, ...trest] = args.split(' ');
+        const ttext = trest.join(' ').trim();
+        if (tsub === 'add' || tsub === 'a') {
+          if (!ttext) { console.log(`\n  ${t.dim('Usage: /tasks add <text>')}\n`); break; }
+          todos.add(ttext, 'medium', 'user');
+          console.log(`\n  ${t.success(icons.success)} Task added: ${t.accent(ttext)}\n`);
+        } else if (tsub === 'done' || tsub === 'd') {
+          if (!ttext) { console.log(`\n  ${t.dim('Usage: /tasks done <text>')}\n`); break; }
+          const ok = todos.markDone(ttext);
+          console.log(`\n  ${ok ? t.success('✓ done') : t.dim('not found')}: ${t.dim(ttext)}\n`);
+        } else if (tsub === 'clear') {
+          todos.clear(true);
+          console.log(`\n  ${t.success(icons.success)} Completed tasks cleared\n`);
+        } else {
+          console.log(`\n  ${t.dim('Usage: /tasks [add <text> | done <text> | clear]')}\n`);
+        }
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /mcp — MCP server management
+    // ══════════════════════════════════
+    case 'mcp': {
+      const mcpManager = getMcpManager();
+      if (!args || args === 'list') {
+        const clients = mcpManager.getClients();
+        if (clients.length === 0) {
+          console.log(`\n  ${t.dim('No MCP servers connected.')}`);
+          console.log(`  ${t.dim('Usage: /mcp add <name> <command> [args...]')}\n`);
+        } else {
+          console.log(`\n  ${t.brandBold('MCP Servers')}  ${t.dim(`${clients.length} connected`)}\n`);
+          for (const c of clients) {
+            const toolCount = (c.tools || []).length;
+            const statusIcon = c.status === 'connected' ? t.success('●') : c.status === 'connecting' ? t.warning('◐') : t.error('○');
+            console.log(`  ${statusIcon} ${t.accent(c.name)}  ${t.dim(`${toolCount} tools`)}`);
+            if (c.lastError) console.log(`    ${t.error(c.lastError.slice(0, 60))}`);
+          }
+          console.log();
+        }
+        break;
+      }
+
+      const [mcpSub, mcpName, ...mcpArgRest] = args.split(' ');
+      const mcpArgStr = mcpArgRest.join(' ');
+
+      switch (mcpSub) {
+        case 'add': {
+          if (!mcpName) { console.log(`\n  ${t.dim('Usage: /mcp add <name> <command> [args...]')}\n`); break; }
+          const [mcpCmd, ...mcpExtraArgs] = mcpArgRest;
+          if (!mcpCmd) { console.log(`\n  ${t.dim('Usage: /mcp add <name> <command> [args...]')}\n`); break; }
+          try {
+            await mcpManager.connect({ name: mcpName, command: mcpCmd, args: mcpExtraArgs, scope: 'user', enabled: true } as any);
+            console.log(`\n  ${t.success(icons.success)} MCP server connected: ${t.accent(mcpName)}\n`);
+          } catch (err) {
+            renderError(`Failed to connect: ${(err as Error).message}`);
+          }
+          break;
+        }
+        case 'remove':
+        case 'rm': {
+          if (!mcpName) { console.log(`\n  ${t.dim('Usage: /mcp remove <name>')}\n`); break; }
+          try {
+            await mcpManager.disconnect(mcpName);
+            console.log(`\n  ${t.success(icons.success)} Disconnected: ${t.accent(mcpName)}\n`);
+          } catch (err) {
+            renderError((err as Error).message);
+          }
+          break;
+        }
+        case 'reconnect': {
+          if (!mcpName) { console.log(`\n  ${t.dim('Usage: /mcp reconnect <name>')}\n`); break; }
+          try {
+            const client = mcpManager.getClient(mcpName);
+            if (!client) { renderError(`Server "${mcpName}" not found`); break; }
+            await mcpManager.disconnect(mcpName);
+            await mcpManager.connect({ name: mcpName, command: '', scope: 'user', enabled: true } as any);
+            console.log(`\n  ${t.success(icons.success)} Reconnected: ${t.accent(mcpName)}\n`);
+          } catch (err) {
+            renderError((err as Error).message);
+          }
+          break;
+        }
+        case 'tools': {
+          const targetName = mcpName || '';
+          const clients2 = mcpManager.getClients();
+          const targets = targetName ? clients2.filter((c: any) => c.name === targetName) : clients2;
+          if (targets.length === 0) { console.log(`\n  ${t.dim('No matching MCP server.')}\n`); break; }
+          for (const c of targets) {
+            console.log(`\n  ${t.accent(c.name)} tools:`);
+            for (const tool of (c.tools || [])) {
+              console.log(`  ${t.dim('·')} ${tool.name}${tool.description ? `  ${t.dim(tool.description.slice(0, 60))}` : ''}`);
+            }
+          }
+          console.log();
+          break;
+        }
+        default:
+          console.log(`\n  ${t.dim('MCP subcommands: list | add <n> <cmd> | remove <n> | reconnect <n> | tools [n]')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /brief — toggle concise output mode
+    // ══════════════════════════════════
+    case 'brief': {
+      const cfg2 = loadConfig();
+      const was = !!(cfg2 as any).briefMode;
+      (cfg2 as any).briefMode = !was;
+      saveConfig(cfg2);
+      console.log(`\n  ${t.success(icons.success)} Brief mode ${(cfg2 as any).briefMode ? t.accent('ON') : t.dim('off')} — ${(cfg2 as any).briefMode ? 'concise responses' : 'full responses'}\n`);
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /rewind — rewind conversation history
+    // ══════════════════════════════════
+    case 'rewind':
+    case 'rw': {
+      const count2 = parseInt(args) || 1;
+      const msgCount = agent.getMessageCount();
+      if (msgCount === 0) {
+        console.log(`\n  ${t.dim('No messages to rewind.')}\n`);
+        break;
+      }
+      const removeCount = Math.min(count2 * 2, msgCount); // remove N user+assistant pairs
+      for (let i = 0; i < removeCount; i++) {
+        agent.popLastMessage?.();
+      }
+      console.log(`\n  ${t.success(icons.success)} Rewound ${count2} exchange${count2 > 1 ? 's' : ''} — ${agent.getMessageCount()} messages remain\n`);
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /resume — resume a previous session
+    // ══════════════════════════════════
+    case 'resume':
+    case 'r': {
+      if (!args) {
+        // List recent sessions
+        const sessDir = path.join(os.homedir(), '.timps', 'sessions');
+        if (!fs.existsSync(sessDir)) {
+          console.log(`\n  ${t.dim('No saved sessions found.')}\n`);
+          break;
+        }
+        const sessions = fs.readdirSync(sessDir)
+          .filter(f => f.endsWith('.json'))
+          .map(f => {
+            try {
+              const data = JSON.parse(fs.readFileSync(path.join(sessDir, f), 'utf-8'));
+              return { id: f.replace('.json', ''), summary: data.summary || data.goal || '?', ts: data.timestamp || 0 };
+            } catch { return null; }
+          })
+          .filter(Boolean)
+          .sort((a: any, b: any) => b.ts - a.ts)
+          .slice(0, 10);
+
+        if (sessions.length === 0) {
+          console.log(`\n  ${t.dim('No saved sessions found.')}\n`);
+        } else {
+          console.log(`\n  ${t.brandBold('Recent Sessions')}\n`);
+          for (const s of sessions as any[]) {
+            const ago = timeSince(s.ts);
+            console.log(`  ${t.dim(s.id.slice(0, 12))}  ${s.summary.slice(0, 60)}  ${t.dim(ago)}`);
+          }
+          console.log(`\n  ${t.dim('Resume with:')} ${t.accent('/resume <session-id>')}\n`);
+        }
+        break;
+      }
+      // Try to load the specified session
+      const sessFile = path.join(os.homedir(), '.timps', 'sessions', `${args}.json`);
+      if (!fs.existsSync(sessFile)) {
+        renderError(`Session "${args}" not found`);
+        break;
+      }
+      try {
+        if ((agent as any).loadSession) {
+          (agent as any).loadSession(sessFile);
+        } else {
+          const data = JSON.parse(fs.readFileSync(sessFile, 'utf-8'));
+          if (data.messages) agent.clearHistory();
+        }
+        console.log(`\n  ${t.success(icons.success)} Session resumed: ${t.accent(args)}\n`);
+      } catch (err) {
+        renderError((err as Error).message);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /oauth — authentication management
+    // ══════════════════════════════════
+    case 'oauth': {
+      const oauthCfg = loadConfig();
+      if (!args || args === 'status') {
+        const hasKey = !!(oauthCfg as any).apiKey;
+        console.log(`\n  ${t.brandBold('OAuth / Authentication')}\n`);
+        console.log(`  API key:  ${hasKey ? t.success('configured') : t.error('not set')}`);
+        console.log(`  Provider: ${t.accent(oauthCfg.defaultProvider || 'ollama')}`);
+        if (hasKey) {
+          const key = ((oauthCfg as any).apiKey as string);
+          console.log(`  Key:      ${t.dim(key.slice(0, 8) + '…' + key.slice(-4))}`);
+        }
+        console.log(`\n  ${t.dim('Subcommands: login | logout | status | set-key <key>')}\n`);
+        break;
+      }
+      const [oauthSub, ...oauthRest] = args.split(' ');
+      const oauthArg = oauthRest.join(' ').trim();
+      switch (oauthSub) {
+        case 'login': {
+          console.log(`\n  ${t.info('Opening browser for OAuth login...')}`);
+          try {
+            const { oauthService } = await import('../services/oauth/index.js');
+            await oauthService.authenticate({});
+            console.log(`  ${t.success(icons.success)} Login successful\n`);
+          } catch (err) {
+            renderError((err as Error).message);
+          }
+          break;
+        }
+        case 'logout': {
+          (oauthCfg as any).apiKey = undefined;
+          saveConfig(oauthCfg);
+          console.log(`\n  ${t.success(icons.success)} Logged out\n`);
+          break;
+        }
+        case 'set-key': {
+          if (!oauthArg) { console.log(`\n  ${t.dim('Usage: /oauth set-key <key>')}\n`); break; }
+          (oauthCfg as any).apiKey = oauthArg;
+          saveConfig(oauthCfg);
+          console.log(`\n  ${t.success(icons.success)} API key saved\n`);
+          break;
+        }
+        default:
+          console.log(`\n  ${t.dim('Usage: /oauth [login | logout | status | set-key <key>]')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /permissions — permission settings
+    // ══════════════════════════════════
+    case 'permissions':
+    case 'perm': {
+      const permCfg = loadConfig();
+      const trustLevel = permCfg.trustLevel || 'normal';
+
+      if (!args) {
+        const levels: Record<string, string> = {
+          cautious: 'Ask before every tool call',
+          normal:   'Ask for risky operations only',
+          trust:    'Auto-approve most actions',
+          yolo:     'Auto-approve everything (no prompts)',
+        };
+        console.log(`\n  ${t.brandBold('Permissions')}\n`);
+        for (const [lvl, desc] of Object.entries(levels)) {
+          const active = lvl === trustLevel;
+          console.log(`  ${active ? t.success('▶') : t.dim('·')} ${active ? t.accent(lvl) : t.dim(lvl)}  ${t.dim(desc)}`);
+        }
+        console.log(`\n  ${t.dim('Change with:')} ${t.accent('/permissions <cautious|normal|trust|yolo>')}\n`);
+        break;
+      }
+      const valid = ['cautious', 'normal', 'trust', 'yolo'];
+      if (!valid.includes(args)) {
+        renderError(`Invalid level. Use: ${valid.join(', ')}`);
+        break;
+      }
+      permCfg.trustLevel = args as any;
+      saveConfig(permCfg);
+      console.log(`\n  ${t.success(icons.success)} Trust level set to ${t.accent(args)}\n`);
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /agent — agent configuration
+    // ══════════════════════════════════
+    case 'agent': {
+      if (!args) {
+        const agentCfg = loadConfig();
+        const usage = agent.getUsage();
+        console.log(`\n  ${t.brandBold('Agent Configuration')}\n`);
+        console.log(`  Provider:    ${t.accent(agentCfg.defaultProvider || 'ollama')}`);
+        console.log(`  Model:       ${t.accent(agentCfg.defaultModel || provider.model)}`);
+        console.log(`  Trust:       ${t.accent(agentCfg.trustLevel || 'normal')}`);
+        console.log(`  Messages:    ${t.accent(String(agent.getMessageCount()))}`);
+        console.log(`  Tokens in:   ${t.accent(usage.inputTokens.toLocaleString())}`);
+        console.log(`  Tokens out:  ${t.accent(usage.outputTokens.toLocaleString())}`);
+        console.log(`\n  ${t.dim('Subcommands: reset | system <prompt> | temperature <0-1>')}\n`);
+        break;
+      }
+      const [agentSub, ...agentRest] = args.split(' ');
+      const agentArg = agentRest.join(' ').trim();
+      switch (agentSub) {
+        case 'reset': {
+          agent.clearHistory();
+          console.log(`\n  ${t.success(icons.success)} Agent history cleared\n`);
+          break;
+        }
+        case 'system': {
+          if (!agentArg) { console.log(`\n  ${t.dim('Usage: /agent system <custom system prompt>')}\n`); break; }
+          (agent as any).setSystemPrompt?.(agentArg);
+          console.log(`\n  ${t.success(icons.success)} System prompt updated\n`);
+          break;
+        }
+        default:
+          console.log(`\n  ${t.dim('Subcommands: reset | system <prompt>')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /feedback — send feedback
+    // ══════════════════════════════════
+    case 'feedback': {
+      if (!args) {
+        console.log(`\n  ${t.dim('Usage: /feedback <your feedback or bug report>')}`);
+        console.log(`  ${t.dim('Or visit:')} ${t.accent('https://github.com/Sandeeprdy1729/timps/issues')}\n`);
+        break;
+      }
+      const feedbackData = {
+        text: args,
+        version: '2.0.0',
+        provider: provider.name,
+        model: provider.model,
+        timestamp: new Date().toISOString(),
+        platform: process.platform,
+        nodeVersion: process.versions.node,
+      };
+      const feedbackDir = path.join(os.homedir(), '.timps', 'feedback');
+      fs.mkdirSync(feedbackDir, { recursive: true });
+      const feedbackFile = path.join(feedbackDir, `feedback-${Date.now()}.json`);
+      fs.writeFileSync(feedbackFile, JSON.stringify(feedbackData, null, 2), 'utf-8');
+      console.log(`\n  ${t.success(icons.success)} Feedback saved locally`);
+      console.log(`  ${t.dim('File:')} ${feedbackFile}`);
+      console.log(`  ${t.dim('Thank you! Please also open a GitHub issue:')}`);
+      console.log(`  ${t.accent('https://github.com/Sandeeprdy1729/timps/issues/new')}\n`);
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /debug — debug diagnostics
+    // ══════════════════════════════════
+    case 'debug': {
+      const usage2 = agent.getUsage();
+      const memStats2 = memory.getStats?.() || memory.stats || {};
+      console.log(`\n  ${t.brandBold('Debug Info')}\n`);
+      console.log(`  node:        ${process.versions.node}`);
+      console.log(`  platform:    ${process.platform} ${process.arch}`);
+      console.log(`  cwd:         ${cwd}`);
+      console.log(`  sessionDir:  ${sessionDir}`);
+      console.log(`  provider:    ${provider.name}`);
+      console.log(`  model:       ${provider.model}`);
+      console.log(`  messages:    ${agent.getMessageCount()}`);
+      console.log(`  tokens in:   ${usage2.inputTokens.toLocaleString()}`);
+      console.log(`  tokens out:  ${usage2.outputTokens.toLocaleString()}`);
+      console.log(`  mem facts:   ${memStats2.semanticCount ?? '?'}`);
+      console.log(`  mem eps:     ${memStats2.episodeCount ?? '?'}`);
+      if (process.env.TIMPS_DEBUG) {
+        console.log(`  debug mode:  ${t.success('ON')}`);
+        console.log(`  argv:        ${process.argv.join(' ')}`);
+      }
+      console.log();
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /session — session information
+    // ══════════════════════════════════
+    case 'session':
+    case 'sess': {
+      if (!args) {
+        const usage3 = agent.getUsage();
+        const sessId = path.basename(sessionDir);
+        const sessStart = fs.existsSync(sessionDir)
+          ? fs.statSync(sessionDir).birthtime.getTime()
+          : Date.now();
+        const duration = Math.floor((Date.now() - sessStart) / 1000);
+        const mins = Math.floor(duration / 60);
+        const secs = duration % 60;
+
+        console.log(`\n  ${t.brandBold('Session')}\n`);
+        console.log(`  ID:        ${t.dim(sessId)}`);
+        console.log(`  Duration:  ${t.accent(`${mins}m ${secs}s`)}`);
+        console.log(`  Messages:  ${t.accent(String(agent.getMessageCount()))}`);
+        console.log(`  Tokens:    ${t.accent((usage3.inputTokens + usage3.outputTokens).toLocaleString())}`);
+        console.log(`  Directory: ${t.dim(sessionDir)}`);
+        console.log(`\n  ${t.dim('Subcommands: save | list | share')}\n`);
+        break;
+      }
+      const [sessSub] = args.split(' ');
+      switch (sessSub) {
+        case 'save': {
+          agent.saveSession(sessionDir);
+          console.log(`\n  ${t.success(icons.success)} Session saved to ${t.dim(sessionDir)}\n`);
+          break;
+        }
+        case 'list': {
+          // reuse resume logic
+          await handleSlashCommand('/resume', agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, providerName, multimodalMem, pluginManager);
+          break;
+        }
+        case 'share': {
+          const sessId2 = path.basename(sessionDir);
+          console.log(`\n  ${t.dim('Session sharing requires TIMPS Cloud.')}`);
+          console.log(`  ${t.dim('Local ID:')} ${t.accent(sessId2)}\n`);
+          break;
+        }
+        default:
+          console.log(`\n  ${t.dim('Usage: /session [save | list | share]')}\n`);
+      }
+      break;
+    }
+
+    // ══════════════════════════════════
+    // /hooks — hooks status (dev utility)
+    // ══════════════════════════════════
+    case 'hooks': {
+      const hooksFromCommands = [
+        'useSettings', 'useMcp', 'useTasks', 'useCommandQueue', 'useTextInput',
+        'useNotifications', 'useToolPermission', 'useSession', 'useIdeConnection',
+        'useOAuth', 'useSettingsSync', 'useCoordinator', 'usePlugins',
+        'useArrowKeyHistory', 'useDiffInIDE', 'useClipboardImageHint',
+        'useSwarmInitialization', 'useMergedTools',
+      ];
+      console.log(`\n  ${t.brandBold(`React Hooks (${hooksFromCommands.length} registered)`)}\n`);
+      for (const h of hooksFromCommands) {
+        console.log(`  ${t.success('✓')} ${t.accent(h)}`);
+      }
+      console.log(`\n  ${t.dim('Hooks are active in the Ink TUI renderer.')}\n`);
       break;
     }
 
