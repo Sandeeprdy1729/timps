@@ -35,27 +35,53 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Apply theme CSS variables
     if (resolvedTheme === 'dark') {
-      root.style.setProperty('--bg-primary', '#1e1e2e');
-      root.style.setProperty('--bg-secondary', '#252535');
-      root.style.setProperty('--bg-hover', '#2a2a3c');
-      root.style.setProperty('--text-primary', '#e4e4ef');
-      root.style.setProperty('--text-secondary', '#999');
-      root.style.setProperty('--border', '#3a3a5c');
-      root.style.setProperty('--accent', '#6366f1');
-      root.style.setProperty('--accent-hover', '#5558e3');
-      root.style.setProperty('--error', '#ef4444');
-      root.style.setProperty('--success', '#22c55e');
+      root.style.setProperty('--bg-primary',    '#111310');
+      root.style.setProperty('--bg-secondary',  '#181B16');
+      root.style.setProperty('--bg-tertiary',   '#1F231D');
+      root.style.setProperty('--bg-hover',      '#232720');
+      root.style.setProperty('--text-primary',  '#E8E0B0');
+      root.style.setProperty('--text-secondary','#9CA88A');
+      root.style.setProperty('--text-tertiary', '#64747A');
+      root.style.setProperty('--border',        '#2D5A4F');
+      root.style.setProperty('--accent',        '#4A8C7A');
+      root.style.setProperty('--accent-light',  'rgba(45,90,79,0.18)');
+      root.style.setProperty('--accent-hover',  '#7EC8B8');
+      root.style.setProperty('--tan',           '#C8BF8C');
+      root.style.setProperty('--cream',         '#F5F0E1');
+      root.style.setProperty('--error',         '#C83838');
+      root.style.setProperty('--error-bg',      '#1a0808');
+      root.style.setProperty('--success',       '#28A070');
+      root.style.setProperty('--warning',       '#E8C94A');
+      root.style.setProperty('--dot-red',       '#FF5F57');
+      root.style.setProperty('--dot-yellow',    '#FEBC2E');
+      root.style.setProperty('--dot-green',     '#28C840');
+      root.style.setProperty('--radius-sm',     '2px');
+      root.style.setProperty('--radius-md',     '2px');
+      root.style.setProperty('--radius-lg',     '4px');
     } else {
-      root.style.setProperty('--bg-primary', '#ffffff');
-      root.style.setProperty('--bg-secondary', '#f5f5f5');
-      root.style.setProperty('--bg-hover', '#eeeeee');
-      root.style.setProperty('--text-primary', '#1a1a2e');
-      root.style.setProperty('--text-secondary', '#666666');
-      root.style.setProperty('--border', '#dddddd');
-      root.style.setProperty('--accent', '#4f46e5');
-      root.style.setProperty('--accent-hover', '#4338ca');
-      root.style.setProperty('--error', '#dc2626');
-      root.style.setProperty('--success', '#16a34a');
+      root.style.setProperty('--bg-primary',    '#F5F0E1');
+      root.style.setProperty('--bg-secondary',  '#EDE8D8');
+      root.style.setProperty('--bg-tertiary',   '#E4DFC8');
+      root.style.setProperty('--bg-hover',      '#DDD8C0');
+      root.style.setProperty('--text-primary',  '#1C1C1C');
+      root.style.setProperty('--text-secondary','#3A3A2A');
+      root.style.setProperty('--text-tertiary', '#64747A');
+      root.style.setProperty('--border',        '#2D5A4F');
+      root.style.setProperty('--accent',        '#2D5A4F');
+      root.style.setProperty('--accent-light',  'rgba(45,90,79,0.12)');
+      root.style.setProperty('--accent-hover',  '#4A8C7A');
+      root.style.setProperty('--tan',           '#8A7E50');
+      root.style.setProperty('--cream',         '#F5F0E1');
+      root.style.setProperty('--error',         '#C83838');
+      root.style.setProperty('--error-bg',      '#FDECEA');
+      root.style.setProperty('--success',       '#28A070');
+      root.style.setProperty('--warning',       '#B89020');
+      root.style.setProperty('--dot-red',       '#FF5F57');
+      root.style.setProperty('--dot-yellow',    '#FEBC2E');
+      root.style.setProperty('--dot-green',     '#28C840');
+      root.style.setProperty('--radius-sm',     '2px');
+      root.style.setProperty('--radius-md',     '2px');
+      root.style.setProperty('--radius-lg',     '4px');
     }
   }, [resolvedTheme]);
 

@@ -88,17 +88,20 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-logo">
-          {/* Animated pixel robot mascot logo */}
-          <svg className="logo-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
-            <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
-            <rect className="logo-robot-eye" x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
-            <rect className="logo-robot-eye" x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
-            <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
-            <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
-            <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
-            <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
-            <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+          {/* Animated pixel robot mascot logo — teal screen, tan body */}
+          <svg className="logo-robot" viewBox="0 0 16 20" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+            <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+            <rect className="logo-robot-eye" x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect className="logo-robot-eye" x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+            <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+            <rect x="0" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <rect x="14" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+            <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
           </svg>
           <span className="logo-text">TIMPS</span>
           <span className="logo-sub">Memory Cockpit</span>

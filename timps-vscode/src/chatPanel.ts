@@ -228,450 +228,783 @@ export class TIMPsChatPanel {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* ── TIMPS Robot dark teal palette (matches CLI) ── */
+/* ── TIMPS Retro OS — System 7 pixel aesthetic ── */
 :root {
-  --bg:       #14140F;   /* very dark ink background */
-  --bg2:      #1C1C14;   /* robot body dark surface */
-  --bg3:      #252518;   /* slightly lighter surface */
-  --bg-input: #1C1C14;   /* input background */
-  --text:     #F5F0E1;   /* cream paper */
-  --muted:    #64747A;   /* muted slate */
-  --accent:   #4A8C7A;   /* robot screen mid-teal */
-  --accent2:  #7EC8B8;   /* light teal highlight */
-  --tan:      #C8BF8C;   /* robot body tan */
-  --user-bg:  #1C2820;   /* user message bg — teal tint */
-  --user-border: #2D5A4F;
-  --err-bg:   #2A1414;
-  --err-border: #C83838;
-  --code-bg:  #0F0F0A;   /* dark code block */
+  --bg:       #111310;
+  --bg2:      #181B16;
+  --bg3:      #1F231D;
+  --panel-bg: #1A1D18;
+  --text:     #E8E0B0;   /* cream */
+  --muted:    #64747A;
+  --teal:     #2D5A4F;   /* robot screen */
+  --tealMid:  #4A8C7A;
+  --tealLt:   #7EC8B8;
+  --tan:      #C8BF8C;   /* robot body */
+  --cream:    #F5F0E1;
+  --border:   #2D5A4F;
+  --success:  #28A070;
+  --error:    #C83838;
+  --warning:  #E8C94A;
+  --dotR:     #FF5F57;
+  --dotY:     #FEBC2E;
+  --dotG:     #28C840;
+  --code-bg:  #0C0E0A;
+  --user-bg:  #162018;
 }
-/* ── Robot animations ── */
-@keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-@keyframes robotBlink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
-@keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-@keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+@keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+@keyframes robotBlink { 0%,85%,100%{transform:scaleY(1)} 92%{transform:scaleY(0.08)} }
+@keyframes bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} }
+@keyframes fadeSlide { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100%)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@media (prefers-reduced-motion: reduce) {
+  .logo-robot, .welcome-robot, [class*="robot"] { animation: none !important; }
+  .dot-blink { animation: none !important; }
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 13px;
+}
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+/* ── Menubar ── */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 10px;
+  height: 28px;
+  background: var(--teal);
+  flex-shrink: 0;
+  border-bottom: 2px solid var(--border);
+}
+.menubar-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: 0.08em;
+  padding-right: 14px;
+  border-right: 1px solid rgba(255,255,255,0.15);
+  margin-right: 8px;
+}
+.logo-robot {
+  animation: robotFloat 3s ease-in-out infinite;
+  image-rendering: pixelated;
+}
+.logo-robot-eye {
+  animation: robotBlink 4s ease-in-out infinite;
+  transform-origin: center;
+}
+.menu-item {
+  padding: 0 10px;
+  height: 28px;
+  line-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(245,240,225,0.75);
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+.menu-item:hover { background: rgba(255,255,255,0.12); color: var(--cream); }
+.menu-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.model-badge {
+  font-size: 10px;
+  background: rgba(0,0,0,0.3);
+  padding: 2px 8px;
+  border-radius: 2px;
+  color: var(--tan);
+  border: 1px solid rgba(200,191,140,0.25);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  cursor: pointer;
+}
+.model-badge:hover { border-color: var(--tan); }
+.online-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--dotG);
+  animation: pulse 2s ease-in-out infinite;
+}
 
-/* Header */
-.header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg2); border-bottom:1px solid var(--user-border); flex-shrink:0; }
-.logo { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:0.03em; }
-.logo-robot { animation:robotFloat 3s ease-in-out infinite; image-rendering:pixelated; }
-.logo-robot-eye { animation:robotBlink 4s ease-in-out infinite; transform-origin:center; }
-.model-badge { font-size:10px; background:var(--bg3); padding:2px 8px; border-radius:2px; color:var(--muted); border:1px solid var(--user-border); cursor:pointer; font-family:'JetBrains Mono',monospace; font-weight:600; }
-.model-badge:hover { border-color:var(--accent); color:var(--accent); }
-.header-actions { display:flex; gap:4px; }
-.hbtn { background:var(--bg3); border:1px solid var(--user-border); color:var(--text); padding:4px 10px; border-radius:2px; cursor:pointer; font-size:11px; font-weight:600; transition:border-color 0.1s, color 0.1s; }
-.hbtn:hover { border-color:var(--accent); color:var(--accent); }
-.hbtn:active { opacity:0.7; }
-.hbtn.danger { border-color:var(--err-border); color:var(--err-border); }
+/* ── Main layout: chat + activity log ── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
 
-/* Skills bar */
-.skills-bar { display:flex; gap:4px; padding:6px 10px; background:var(--bg2); border-bottom:1px solid var(--user-border); overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
-.skills-bar::-webkit-scrollbar { display:none; }
-.sbtn { display:flex; align-items:center; gap:4px; padding:4px 9px; background:var(--bg3); border:1px solid var(--user-border); border-radius:2px; color:var(--muted); font-size:11px; cursor:pointer; white-space:nowrap; font-weight:600; transition:border-color 0.1s, color 0.1s; }
-.sbtn:hover { border-color:var(--accent); color:var(--accent); }
+/* ── Chat pane ── */
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+/* Window chrome title bar */
+.win-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.win-dot { width: 10px; height: 10px; border-radius: 50%; cursor: pointer; }
+.win-dot.r { background: var(--dotR); }
+.win-dot.y { background: var(--dotY); }
+.win-dot.g { background: var(--dotG); }
+.win-title { font-size: 11px; font-weight: 700; color: var(--muted); flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
+
+/* Skills pills */
+.skills-bar {
+  display: flex;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.skills-bar::-webkit-scrollbar { display: none; }
+.spill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  transition: border-color 0.1s, color 0.1s;
+}
+.spill:hover { border-color: var(--tealLt); color: var(--tealLt); }
 
 /* Messages */
-.msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
-.msgs::-webkit-scrollbar { width:4px; } .msgs::-webkit-scrollbar-thumb { background:var(--user-border); border-radius:2px; }
-.msg { max-width:88%; border-radius:2px; padding:10px 13px; line-height:1.65; font-size:13px; animation:fadeIn 0.18s ease; border-left:2px solid transparent; }
-.msg.user { align-self:flex-end; background:var(--user-bg); border-color:var(--user-border); }
-.msg.assistant { align-self:flex-start; background:var(--bg2); border-color:var(--accent); }
-.msg.error { align-self:center; background:var(--err-bg); border-color:var(--err-border); color:var(--err-border); font-size:12px; }
-.msg.system-msg { align-self:center; background:transparent; color:var(--muted); font-size:11px; font-style:italic; padding:3px 8px; border:none; }
-.role-label { font-size:11px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
-.msg.user .role-label { color:var(--accent2); }
-.msg.assistant .role-label { color:var(--accent); }
+.msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg);
+}
+.msgs::-webkit-scrollbar { width: 4px; }
+.msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.msg {
+  max-width: 92%;
+  border-radius: 2px;
+  padding: 9px 12px;
+  line-height: 1.65;
+  font-size: 13px;
+  animation: fadeSlide 0.2s ease;
+  position: relative;
+}
+.msg.user {
+  align-self: flex-end;
+  background: var(--user-bg);
+  border: 1px solid var(--teal);
+  border-left: 3px solid var(--tealMid);
+}
+.msg.assistant {
+  align-self: flex-start;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--tealLt);
+}
+.msg.error {
+  align-self: center;
+  background: #1a0a0a;
+  border: 1px solid var(--error);
+  color: var(--error);
+  font-size: 12px;
+}
+.msg.system-msg {
+  align-self: center;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  padding: 2px 6px;
+  border: none;
+}
+.role-label {
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.msg.user .role-label { color: var(--tealLt); }
+.msg.assistant .role-label { color: var(--tealMid); }
 
-/* Code blocks */
-.code-wrap { position:relative; margin:8px 0; border-radius:2px; overflow:hidden; border:1px solid var(--user-border); }
-.code-head { display:flex; justify-content:space-between; align-items:center; background:var(--code-bg); padding:4px 12px; font-size:11px; color:var(--tan); }
-.code-head .lang { text-transform:uppercase; font-weight:700; letter-spacing:0.8px; color:var(--tan); font-family:'JetBrains Mono',monospace; }
-.code-btns { display:flex; gap:4px; }
-.cbtn { background:transparent; border:1px solid #3a3a3a; color:#888; padding:2px 7px; border-radius:2px; cursor:pointer; font-size:10px; font-weight:600; }
-.cbtn:hover { border-color:var(--accent2); color:var(--accent2); }
-.cbtn.apply { border-color:var(--accent); color:var(--accent); }
-.cbtn.apply:hover { background:rgba(74,140,122,0.15); }
-.code-body { background:var(--code-bg); padding:12px; overflow-x:auto; font-family:'JetBrains Mono','Cascadia Code','Fira Code',monospace; font-size:12px; line-height:1.5; white-space:pre; color:#d4cfa8; }
-.icode { background:var(--bg3); padding:1px 5px; border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent2); border:1px solid var(--user-border); }
+/* Code */
+.code-wrap { position: relative; margin: 8px 0; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.code-head { display: flex; justify-content: space-between; align-items: center; background: #08100D; padding: 4px 10px; font-size: 10px; color: var(--tan); border-bottom: 1px solid var(--border); }
+.code-head .lang { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.code-btns { display: flex; gap: 4px; }
+.cbtn { background: transparent; border: 1px solid #2a3a38; color: var(--muted); padding: 2px 7px; border-radius: 2px; cursor: pointer; font-size: 10px; font-weight: 700; transition: border-color 0.1s, color 0.1s; }
+.cbtn:hover { border-color: var(--tealLt); color: var(--tealLt); }
+.cbtn.apply { border-color: var(--tealMid); color: var(--tealMid); }
+.cbtn.apply:hover { background: rgba(74,140,122,0.15); }
+.code-body { background: var(--code-bg); padding: 10px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre; color: #d4cfa8; }
+.icode { background: var(--bg3); padding: 1px 4px; border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tealLt); border: 1px solid var(--border); }
 
 /* Memory cards */
-.mem-card { background:var(--tan-pale,#EDE8D0); border-left:3px solid var(--accent); padding:7px 10px; margin:3px 0; font-size:12px; border-radius:0 2px 2px 0; }
-.mem-meta { color:var(--muted); font-size:10px; margin-top:3px; font-family:'JetBrains Mono',monospace; }
+.mem-card { background: rgba(45,90,79,0.12); border-left: 3px solid var(--tealMid); padding: 6px 10px; margin: 3px 0; font-size: 12px; border-radius: 0 2px 2px 0; }
+.mem-meta { color: var(--muted); font-size: 10px; margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
 
 /* Typing */
-.typing { display:flex; align-items:center; gap:8px; padding:4px 0; color:var(--muted); font-size:12px; }
-.dots { display:flex; gap:3px; }
-.dots span { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:bounce 1.2s infinite; }
-.dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
+.typing { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.dots { display: flex; gap: 3px; }
+.dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--tealMid); animation: bounce 1.2s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
 
-/* Welcome panel — dark teal style */
-.welcome { text-align:center; padding:20px 16px; }
-.welcome-window { background:var(--bg2); border:1px solid var(--user-border); border-radius:4px; overflow:hidden; max-width:360px; margin:0 auto; }
-.welcome-bar { display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--bg3); border-bottom:1px solid var(--user-border); }
-.welcome-dot { width:10px; height:10px; border-radius:50%; }
-.welcome-dot.r { background:#ff5f57; } .welcome-dot.y { background:#febc2e; } .welcome-dot.g { background:#28c840; }
-.welcome-title { font-size:11px; font-weight:600; color:var(--muted); flex:1; text-align:center; font-family:'JetBrains Mono',monospace; }
-.welcome-body { padding:20px 16px; }
-.welcome-robot { animation:robotFloat 3s ease-in-out infinite; display:inline-block; margin-bottom:10px; image-rendering:pixelated; }
-.welcome h2 { font-size:18px; font-weight:700; color:var(--accent); margin-bottom:6px; }
-.welcome p { color:var(--muted); font-size:12px; margin-bottom:14px; line-height:1.6; }
-.qactions { display:flex; flex-direction:column; gap:6px; text-align:left; }
-.qa { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg3); border:1px solid var(--user-border); border-radius:2px; cursor:pointer; font-size:12px; transition:border-color 0.1s; }
-.qa:hover { border-color:var(--accent); }
-.qa-icon { font-size:15px; width:22px; text-align:center; }
-.qa-title { font-weight:700; color:var(--text); font-size:12px; }
-.qa-desc { color:var(--muted); font-size:11px; }
-
-/* Input */
-.input-area { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border-top:1px solid var(--user-border); flex-shrink:0; }
-.input-area textarea { flex:1; background:var(--bg-input); border:1px solid var(--user-border); border-radius:2px; color:var(--text); padding:9px 12px; font-size:13px; font-family:inherit; resize:none; outline:none; min-height:38px; max-height:120px; line-height:1.4; }
-.input-area textarea:focus { border-color:var(--accent); }
-.input-area textarea::placeholder { color:var(--muted); }
-.send-btn,.stop-btn { width:38px; height:38px; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; align-self:flex-end; border:1px solid var(--user-border); font-weight:700; transition:opacity 0.1s; }
-.send-btn { background:var(--accent); color:var(--bg); border-color:var(--accent); }
-.send-btn:hover { opacity:0.85; }
-.send-btn:disabled { opacity:0.35; cursor:not-allowed; }
-.stop-btn { background:var(--err-border); color:#fff; border-color:var(--err-border); }
-.stop-btn:hover { opacity:0.85; }
-.hidden { display:none; }
-
-/* MD formatting */
-.mc strong { color:var(--accent2); font-weight:700; }
-.mc em { color:var(--tan); }
-.mc h1 { font-size:17px; color:var(--accent); margin:10px 0 5px; border-bottom:1px solid var(--user-border); padding-bottom:4px; }
-.mc h2 { font-size:14px; color:var(--accent); margin:9px 0 4px; }
-.mc h3 { font-size:13px; color:var(--accent2); margin:8px 0 4px; }
-.mc ul,.mc ol { padding-left:18px; margin:5px 0; }
-.mc li { margin:2px 0; }
-.mc blockquote { border-left:2px solid var(--user-border); padding-left:10px; color:var(--muted); margin:6px 0; background:var(--bg3); }
-.mc hr { border:none; border-top:1px solid var(--user-border); margin:10px 0; }
-.mc a { color:var(--accent2); text-decoration:underline; }
-.mc p { margin-bottom:6px; }
-/* Respect user's reduced motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  .logo-robot, .welcome-robot { animation: none !important; }
-  .logo-robot-eye { animation: none !important; }
-  .dots span { animation: none !important; }
+/* Welcome — retro window style */
+.welcome { padding: 16px; animation: fadeSlide 0.3s ease; }
+.welcome-window {
+  background: var(--bg2);
+  border: 1px solid var(--teal);
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 380px;
+  margin: 0 auto;
+  box-shadow: 4px 4px 0px rgba(45,90,79,0.3);
 }
+.welcome-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  background: var(--teal);
+  border-bottom: 1px solid rgba(0,0,0,0.3);
+}
+.w-dot { width: 10px; height: 10px; border-radius: 50%; }
+.w-dot.r { background: var(--dotR); }
+.w-dot.y { background: var(--dotY); }
+.w-dot.g { background: var(--dotG); }
+.welcome-title { font-size: 11px; font-weight: 700; color: rgba(245,240,225,0.85); flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; }
+.welcome-body { padding: 20px 16px 16px; text-align: center; }
+.welcome-robot { animation: robotFloat 3s ease-in-out infinite; display: inline-block; margin-bottom: 12px; image-rendering: pixelated; }
+.welcome h2 { font-size: 17px; font-weight: 700; color: var(--tealLt); margin-bottom: 4px; letter-spacing: 0.02em; }
+.welcome p { color: var(--muted); font-size: 12px; margin-bottom: 14px; line-height: 1.6; }
+.qa-grid { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+.qa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.1s, background 0.1s;
+}
+.qa:hover { border-color: var(--tealMid); background: rgba(45,90,79,0.15); }
+.qa-icon { font-size: 14px; width: 20px; text-align: center; }
+.qa-title { font-weight: 700; color: var(--text); font-size: 12px; }
+.qa-desc { color: var(--muted); font-size: 11px; }
+
+/* Input area */
+.input-area {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cmd-hint {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0 4px;
+  align-self: center;
+  flex-shrink: 0;
+}
+.input-area textarea {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  min-height: 36px;
+  max-height: 110px;
+  line-height: 1.4;
+}
+.input-area textarea:focus { border-color: var(--tealMid); }
+.input-area textarea::placeholder { color: var(--muted); }
+.send-btn, .stop-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  align-self: flex-end;
+  font-weight: 700;
+  border: 1px solid;
+  transition: opacity 0.1s;
+}
+.send-btn { background: var(--tealMid); color: var(--bg); border-color: var(--tealMid); }
+.send-btn:hover { opacity: 0.85; }
+.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.stop-btn { background: var(--error); color: #fff; border-color: var(--error); }
+.stop-btn:hover { opacity: 0.85; }
+.hidden { display: none !important; }
+
+/* ── Activity Log pane (right) ── */
+.log-pane {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  flex-shrink: 0;
+}
+.log-pane .win-titlebar {
+  border-bottom: 1px solid var(--border);
+}
+.log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.log-entries::-webkit-scrollbar { display: none; }
+.log-entry {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(45,90,79,0.2);
+  animation: fadeSlide 0.2s ease;
+}
+.log-time { color: var(--teal); flex-shrink: 0; }
+.log-text { color: var(--muted); line-height: 1.4; word-break: break-word; }
+.log-text.ok  { color: var(--success); }
+.log-text.err { color: var(--error); }
+.log-text.inf { color: var(--tealLt); }
+
+/* Stats bar at bottom of log pane */
+.stats-bar {
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.stat-row { display: flex; justify-content: space-between; color: var(--muted); }
+.stat-val { color: var(--tan); font-weight: 700; }
+
+/* MD */
+.mc strong { color: var(--tealLt); font-weight: 700; }
+.mc em { color: var(--tan); }
+.mc h1 { font-size: 16px; color: var(--tealLt); margin: 10px 0 5px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.mc h2 { font-size: 14px; color: var(--tealLt); margin: 9px 0 4px; }
+.mc h3 { font-size: 13px; color: var(--tealMid); margin: 8px 0 4px; }
+.mc ul, .mc ol { padding-left: 16px; margin: 4px 0; }
+.mc li { margin: 2px 0; }
+.mc blockquote { border-left: 2px solid var(--border); padding-left: 8px; color: var(--muted); margin: 5px 0; background: var(--bg3); }
+.mc hr { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.mc a { color: var(--tealLt); text-decoration: underline; }
+.mc p { margin-bottom: 5px; }
 </style>
 </head>
 <body>
-<div class="header">
-  <div style="display:flex;align-items:center;gap:8px">
-    <div class="logo">
-      <!-- Animated pixel robot logo — teal screen, cream eyes, tan body -->
-      <svg class="logo-robot" viewBox="0 0 16 20" width="24" height="28" xmlns="http://www.w3.org/2000/svg">
-        <!-- Head/screen -->
-        <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
-        <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
-        <!-- Eyes (cream) -->
-        <rect class="logo-robot-eye" x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
-        <rect class="logo-robot-eye" x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
-        <!-- Mouth -->
-        <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
-        <!-- Neck -->
-        <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
-        <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
-        <!-- Body (tan) -->
-        <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
-        <!-- Feet (dark) -->
-        <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
-        <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
-      </svg>
-      TIMPS
+<!-- ── Menu Bar ── -->
+<div class="menubar">
+  <div class="menubar-logo">
+    <!-- Pixel robot — teal screen, tan body -->
+    <svg class="logo-robot" viewBox="0 0 16 20" width="20" height="25" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+      <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+      <rect class="logo-robot-eye" x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+      <rect class="logo-robot-eye" x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+      <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+      <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+      <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+      <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+      <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+      <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+    </svg>
+    TIMPS
+  </div>
+  <div class="menu-item" onclick="sendQ('Review my code for issues')">Agent</div>
+  <div class="menu-item" onclick="sendQ('!audit')">Memory</div>
+  <div class="menu-item" onclick="sendQ('Security audit: check for injection, XSS, hardcoded secrets, auth flaws.')">Tools</div>
+  <div class="menu-right">
+    <div class="online-dot" title="Connected"></div>
+    <span class="model-badge" id="modelBadge" title="Active model">Loading…</span>
+    <div class="menu-item" onclick="clearChat()" style="color:var(--error);padding:0 6px">⌫</div>
+  </div>
+</div>
+
+<!-- ── Layout ── -->
+<div class="layout">
+
+  <!-- Chat pane -->
+  <div class="chat-pane">
+    <div class="win-titlebar">
+      <div class="win-dot r" onclick="clearChat()"></div>
+      <div class="win-dot y"></div>
+      <div class="win-dot g"></div>
+      <span class="win-title">TIMPS Chat — Active Session</span>
     </div>
-    <span class="model-badge" id="modelBadge" title="Click to change model">Loading...</span>
-  </div>
-  <div class="header-actions">
-    <button class="hbtn" onclick="sendQ('Review my code for issues')">Review</button>
-    <button class="hbtn" onclick="sendQ('Explain this file')">Explain</button>
-    <button class="hbtn danger" onclick="clearChat()">Clear</button>
-  </div>
-</div>
 
-<div class="skills-bar">
-  <button class="sbtn" onclick="sendQ('Fix the bug in my selected code. Explain the root cause first.')">🐛 Fix Bug</button>
-  <button class="sbtn" onclick="sendQ('Review this code. Use 🔴 Critical / 🟡 Warning / 🟢 Suggestion format.')">👁 Review</button>
-  <button class="sbtn" onclick="sendQ('Explain this code step by step.')">💡 Explain</button>
-  <button class="sbtn" onclick="sendQ('Refactor this code for better readability and performance.')">🔧 Refactor</button>
-  <button class="sbtn" onclick="sendQ('Write comprehensive unit tests with edge cases.')">🧪 Tests</button>
-  <button class="sbtn" onclick="sendQ('Add JSDoc/docstring documentation to all functions.')">📝 Docs</button>
-  <button class="sbtn" onclick="sendQ('Optimize this code for performance. Show complexity comparison.')">⚡ Optimize</button>
-  <button class="sbtn" onclick="sendQ('Security audit: check for injection, XSS, hardcoded secrets, auth flaws.')">🔒 Security</button>
-  <button class="sbtn" onclick="sendQ('!audit')">🧠 Memory</button>
-</div>
+    <!-- Quick-action pills -->
+    <div class="skills-bar">
+      <button class="spill" onclick="sendQ('Fix the bug in my selected code. Explain the root cause first.')">🐛 Fix Bug</button>
+      <button class="spill" onclick="sendQ('Review this code. Use 🔴 Critical / 🟡 Warning / 🟢 Suggestion.')">👁 Review</button>
+      <button class="spill" onclick="sendQ('Explain this code step by step.')">💡 Explain</button>
+      <button class="spill" onclick="sendQ('Refactor for better readability and performance.')">🔧 Refactor</button>
+      <button class="spill" onclick="sendQ('Write comprehensive unit tests with edge cases.')">🧪 Tests</button>
+      <button class="spill" onclick="sendQ('Add JSDoc documentation to all functions.')">📝 Docs</button>
+      <button class="spill" onclick="sendQ('Optimize for performance. Show complexity comparison.')">⚡ Optimize</button>
+      <button class="spill" onclick="sendQ('Security audit: injection, XSS, hardcoded secrets, auth flaws.')">🔒 Security</button>
+      <button class="spill" onclick="sendQ('!audit')">🧠 Memory</button>
+    </div>
 
-<div class="msgs" id="msgs">
-  <div class="welcome" id="welcome">
-    <div class="welcome-window">
-      <div class="welcome-bar">
-        <div class="welcome-dot r"></div>
-        <div class="welcome-dot y"></div>
-        <div class="welcome-dot g"></div>
-        <span class="welcome-title">timps — coding agent</span>
-      </div>
-      <div class="welcome-body">
-        <!-- Animated pixel robot — teal screen, tan body, cream eyes -->
-        <div class="welcome-robot">
-          <svg viewBox="0 0 16 20" width="80" height="100" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-            <!-- Head/screen (teal) -->
-            <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
-            <!-- Screen inner -->
-            <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
-            <!-- Eyes (cream/pale) -->
-            <rect x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
-            <rect x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
-            <!-- Mouth (cream) -->
-            <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
-            <!-- Neck connectors (tan) -->
-            <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
-            <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
-            <!-- Body (tan) -->
-            <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
-            <!-- Arm left (tan) -->
-            <rect x="0" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
-            <!-- Arm right (tan) -->
-            <rect x="14" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
-            <!-- Feet (dark) -->
-            <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
-            <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
-          </svg>
-        </div>
-        <h2>TIMPS Agent</h2>
-        <p>Open-source AI coding partner · Memory-aware · Runs locally</p>
-        <div class="qactions">
-          <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
-            <span class="qa-icon">🐛</span>
-            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">Diagnose and fix root cause</div></div>
+    <!-- Messages -->
+    <div class="msgs" id="msgs">
+      <div class="welcome" id="welcome">
+        <div class="welcome-window">
+          <div class="welcome-bar">
+            <div class="w-dot r"></div>
+            <div class="w-dot y"></div>
+            <div class="w-dot g"></div>
+            <span class="welcome-title">timps v2.0 — coding agent</span>
           </div>
-          <div class="qa" onclick="sendQ('Review this code with Critical / Warning / Suggestion format.')">
-            <span class="qa-icon">👁</span>
-            <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
-          </div>
-          <div class="qa" onclick="sendQ('Write comprehensive unit tests with edge cases.')">
-            <span class="qa-icon">🧪</span>
-            <div><div class="qa-title">Write Tests</div><div class="qa-desc">Generate comprehensive test cases</div></div>
-          </div>
-          <div class="qa" onclick="sendQ('!audit')">
-            <span class="qa-icon">🧠</span>
-            <div><div class="qa-title">Memory Audit</div><div class="qa-desc">See what TIMPS remembers</div></div>
+          <div class="welcome-body">
+            <!-- Large animated robot -->
+            <div class="welcome-robot">
+              <svg viewBox="0 0 48 60" width="72" height="90" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+                <rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/>
+                <rect x="22" y="0" width="4" height="8" fill="#4A8C7A"/>
+                <rect x="6" y="8" width="36" height="26" rx="3" fill="#2D5A4F"/>
+                <rect x="9" y="11" width="30" height="20" rx="2" fill="#3D7A6A"/>
+                <rect x="12" y="14" width="7" height="7" fill="#E8E0B0"/>
+                <rect x="29" y="14" width="7" height="7" fill="#E8E0B0"/>
+                <rect x="14" y="24" width="20" height="3" fill="#E8E0B0"/>
+                <rect x="11" y="22" width="3" height="3" fill="#E8E0B0"/>
+                <rect x="34" y="22" width="3" height="3" fill="#E8E0B0"/>
+                <rect x="17" y="34" width="4" height="8" fill="#C8BF8C"/>
+                <rect x="27" y="34" width="4" height="8" fill="#C8BF8C"/>
+                <rect x="6" y="36" width="42" height="20" rx="3" fill="#C8BF8C"/>
+                <rect x="0" y="38" width="7" height="14" rx="2" fill="#B0A87A"/>
+                <rect x="41" y="38" width="7" height="14" rx="2" fill="#B0A87A"/>
+                <rect x="10" y="56" width="10" height="4" rx="1" fill="#1C1C1C"/>
+                <rect x="28" y="56" width="10" height="4" rx="1" fill="#1C1C1C"/>
+              </svg>
+            </div>
+            <h2>TIMPS Agent</h2>
+            <p>Open-source AI coding partner<br>Memory-aware · Runs locally via Ollama</p>
+            <div class="qa-grid">
+              <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
+                <span class="qa-icon">🐛</span>
+                <div><div class="qa-title">Fix Bug</div><div class="qa-desc">Diagnose and fix root cause</div></div>
+              </div>
+              <div class="qa" onclick="sendQ('Review this code with Critical / Warning / Suggestion format.')">
+                <span class="qa-icon">👁</span>
+                <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
+              </div>
+              <div class="qa" onclick="sendQ('Write comprehensive unit tests with edge cases.')">
+                <span class="qa-icon">🧪</span>
+                <div><div class="qa-title">Write Tests</div><div class="qa-desc">Generate complete test suites</div></div>
+              </div>
+              <div class="qa" onclick="sendQ('!audit')">
+                <span class="qa-icon">🧠</span>
+                <div><div class="qa-title">Memory Audit</div><div class="qa-desc">See what TIMPS remembers</div></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<div class="input-area">
-  <textarea id="inp" placeholder="Ask TIMPS... (!audit, !blame &lt;kw&gt;, !forget &lt;kw&gt;)" rows="1" onkeydown="onKey(event)"></textarea>
-  <button class="send-btn" id="sendBtn" onclick="send()">↑</button>
-  <button class="stop-btn hidden" id="stopBtn" onclick="stop()">■</button>
-</div>
+    <!-- Input -->
+    <div class="input-area">
+      <span class="cmd-hint">/</span>
+      <textarea id="inp" placeholder="Ask TIMPS anything… (!audit, !blame &lt;kw&gt;, !forget &lt;kw&gt;)" rows="1" onkeydown="onKey(event)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()" title="Send (Enter)">↑</button>
+      <button class="stop-btn hidden" id="stopBtn" onclick="stop()" title="Stop generation">■</button>
+    </div>
+  </div>
+
+  <!-- Activity Log pane -->
+  <div class="log-pane">
+    <div class="win-titlebar">
+      <div class="win-dot r"></div>
+      <div class="win-dot y"></div>
+      <div class="win-dot g"></div>
+      <span class="win-title">Activity Log</span>
+    </div>
+    <div class="log-entries" id="activityLog">
+      <div class="log-entry"><span class="log-time">--:--</span><span class="log-text inf">Agent ready</span></div>
+    </div>
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-row"><span>Provider</span><span class="stat-val" id="statProvider">—</span></div>
+      <div class="stat-row"><span>Tokens</span><span class="stat-val" id="statTokens">0</span></div>
+      <div class="stat-row"><span>Messages</span><span class="stat-val" id="statMsgs">0</span></div>
+    </div>
+  </div>
+
+</div><!-- /layout -->
 
 <script nonce="${nonce}">
 const vscode = acquireVsCodeApi();
-let streaming = false, curId = '', curContent = '', codeCount = 0;
+let streaming = false, curId = '', curContent = '', codeCount = 0, msgCount = 0, totalTokens = 0;
 
 window.addEventListener('load', () => {
-    vscode.postMessage({ command: 'getConfig' }); // FIX #1
-    autoResize(document.getElementById('inp'));
+  vscode.postMessage({ command: 'getConfig' });
+  autoResize(document.getElementById('inp'));
+  logActivity('Session started', 'inf');
 });
 
+function ts() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0');
+}
+
+function logActivity(text, cls) {
+  const el = document.getElementById('activityLog');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = '<span class="log-time">[' + ts() + ']</span><span class="log-text ' + (cls||'') + '">' + esc(text) + '</span>';
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+  // Keep max 80 entries
+  while (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+function updateStats() {
+  document.getElementById('statTokens').textContent = totalTokens.toLocaleString();
+  document.getElementById('statMsgs').textContent = String(msgCount);
+}
+
 function onKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 }
 function send() {
-    const el = document.getElementById('inp');
-    const txt = el.value.trim();
-    if (!txt || streaming) return;
-    el.value = ''; resize(el);
-    vscode.postMessage({ command: 'sendMessage', text: txt });
+  const el = document.getElementById('inp');
+  const txt = el.value.trim();
+  if (!txt || streaming) return;
+  el.value = ''; resize(el);
+  vscode.postMessage({ command: 'sendMessage', text: txt });
+  logActivity('You: ' + txt.slice(0,40) + (txt.length > 40 ? '…' : ''));
 }
 function sendQ(txt) {
-    if (streaming) return;
-    vscode.postMessage({ command: 'sendMessage', text: txt });
+  if (streaming) return;
+  vscode.postMessage({ command: 'sendMessage', text: txt });
+  logActivity('Quick: ' + txt.slice(0,35) + '…');
 }
-function clearChat() { vscode.postMessage({ command: 'clearChat' }); }
-function stop() { vscode.postMessage({ command: 'stopGeneration' }); }
+function clearChat() { vscode.postMessage({ command: 'clearChat' }); logActivity('Chat cleared'); }
+function stop() { vscode.postMessage({ command: 'stopGeneration' }); logActivity('Generation stopped', 'err'); }
 
 function setStreaming(v) {
-    streaming = v;
-    document.getElementById('sendBtn').classList.toggle('hidden', v);
-    document.getElementById('stopBtn').classList.toggle('hidden', !v);
+  streaming = v;
+  document.getElementById('sendBtn').classList.toggle('hidden', v);
+  document.getElementById('stopBtn').classList.toggle('hidden', !v);
 }
 
 function hideWelcome() {
-    const w = document.getElementById('welcome');
-    if (w) { w.style.display='none'; }
+  const w = document.getElementById('welcome');
+  if (w) w.style.display = 'none';
 }
 
 function addMsg(role, content, id) {
-    hideWelcome();
-    const c = document.getElementById('msgs');
-    const d = document.createElement('div');
-    d.className = 'msg ' + role;
-    if (id) d.id = 'msg-' + id;
-    const label = role === 'user' ? '❯ You' : role === 'assistant' ? '🤖 TIMPS' : '';
-    let html = label ? '<div class="role-label">'+label+'</div>' : '';
-    html += '<div class="mc">' + (role === 'assistant' ? md(content) : esc(content).replace(/\\n/g,'<br>')) + '</div>';
-    d.innerHTML = html;
-    c.appendChild(d);
-    scroll();
-    return d;
+  hideWelcome();
+  const c = document.getElementById('msgs');
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  if (id) d.id = 'msg-' + id;
+  const label = role === 'user' ? '❯ YOU' : role === 'assistant' ? '🤖 TIMPS' : '';
+  let html = label ? '<div class="role-label">' + label + '</div>' : '';
+  html += '<div class="mc">' + (role === 'assistant' ? md(content) : esc(content).replace(/\\n/g,'<br>')) + '</div>';
+  d.innerHTML = html;
+  c.appendChild(d);
+  scroll();
+  if (role !== 'system-msg') { msgCount++; updateStats(); }
+  return d;
 }
 
 function addMem(mems, title) {
-    hideWelcome();
-    const c = document.getElementById('msgs');
-    const d = document.createElement('div');
-    d.className = 'msg assistant';
-    let html = '<div class="role-label">🤖 TIMPS — ' + esc(title) + '</div><div class="mc">';
-    if (!mems || mems.length === 0) {
-        html += '<em>No memories found.</em>';
-    } else {
-        for (const m of mems) {
-            const stars = '⭐'.repeat(Math.min(m.importance||1,5));
-            html += '<div class="mem-card"><b>['+esc(m.id||'?')+'] '+esc((m.type||'').toUpperCase())+'</b> '+stars+'<br>'+esc(m.content)+'<div class="mem-meta">'+new Date(m.createdAt||Date.now()).toLocaleString()+' · accessed '+( m.accessCount||0)+'x · '+((m.tags||[]).join(', ')||'no tags')+'</div></div>';
-        }
+  hideWelcome();
+  const c = document.getElementById('msgs');
+  const d = document.createElement('div');
+  d.className = 'msg assistant';
+  let html = '<div class="role-label">🧠 TIMPS — ' + esc(title) + '</div><div class="mc">';
+  if (!mems || mems.length === 0) {
+    html += '<em>No memories found.</em>';
+  } else {
+    for (const m of mems) {
+      const stars = '⭐'.repeat(Math.min(m.importance||1, 5));
+      html += '<div class="mem-card"><b>[' + esc(m.id||'?') + '] ' + esc((m.type||'').toUpperCase()) + '</b> ' + stars + '<br>' + esc(m.content) + '<div class="mem-meta">' + new Date(m.createdAt||Date.now()).toLocaleString() + ' · ' + (m.accessCount||0) + 'x · ' + ((m.tags||[]).join(', ')||'no tags') + '</div></div>';
     }
-    d.innerHTML = html + '</div>';
-    c.appendChild(d);
-    scroll();
+  }
+  d.innerHTML = html + '</div>';
+  c.appendChild(d);
+  scroll();
 }
 
-function scroll() { const c=document.getElementById('msgs'); c.scrollTop=c.scrollHeight; }
+function scroll() { const c = document.getElementById('msgs'); c.scrollTop = c.scrollHeight; }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// FIX #2: markdown regex corrected (was double-escaped, breaking code blocks)
 function md(text) {
-    let h = esc(text);
-    // Fenced code blocks
-    h = h.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, (_, lang, code) => {
-        const id = 'c' + (++codeCount);
-        const l = lang || 'code';
-        return '<div class="code-wrap">' +
-            '<div class="code-head"><span class="lang">'+l+'</span>' +
-            '<div class="code-btns">' +
-            '<button class="cbtn apply" onclick="applyCode(\''+id+'\')">✓ Apply</button>' +
-            '<button class="cbtn" id="cp-'+id+'" onclick="copyCode(\''+id+'\')">Copy</button>' +
-            '</div></div>' +
-            '<div class="code-body" id="'+id+'">'+code+'</div></div>';
-    });
-    // Inline code
-    h = h.replace(/\`([^\`\n]+)\`/g, '<code class="icode">$1</code>');
-    // Headers
-    h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
-    // Bold/italic
-    h = h.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
-    // Links
-    h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
-    // Blockquote
-    h = h.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
-    // HR
-    h = h.replace(/^---$/gm,'<hr>');
-    // Lists
-    h = h.replace(/^[\*\-] (.+)$/gm,'<li>$1</li>').replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
-    h = h.replace(/(<li>[\s\S]+?<\/li>)+/g, s => '<ul>' + s + '</ul>');
-    // Paragraphs
-    h = h.replace(/\n\n/g,'</p><p>');
-    h = '<p>' + h + '</p>';
-    h = h.replace(/<p>\s*(<h[123]>)/g,'$1').replace(/(<\/h[123]>)\s*<\/p>/g,'$1');
-    h = h.replace(/<p>\s*(<div)/g,'$1').replace(/(<\/div>)\s*<\/p>/g,'$1');
-    h = h.replace(/<p>\s*(<ul>)/g,'$1').replace(/(<\/ul>)\s*<\/p>/g,'$1');
-    h = h.replace(/<p>\s*(<hr>)\s*<\/p>/g,'$1');
-    h = h.replace(/<p>\s*<\/p>/g,'');
-    h = h.replace(/\n/g,'<br>');
-    return h;
+  let h = esc(text);
+  h = h.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, (_, lang, code) => {
+    const id = 'c' + (++codeCount);
+    const l = lang || 'code';
+    return '<div class="code-wrap"><div class="code-head"><span class="lang">' + l + '</span><div class="code-btns"><button class="cbtn apply" onclick="applyCode(\\'' + id + '\\')">✓ Apply</button><button class="cbtn" id="cp-' + id + '" onclick="copyCode(\\'' + id + '\\')">Copy</button></div></div><div class="code-body" id="' + id + '">' + code + '</div></div>';
+  });
+  h = h.replace(/\`([^\`\n]+)\`/g, '<code class="icode">$1</code>');
+  h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  h = h.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
+  h = h.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  h = h.replace(/^---$/gm,'<hr>');
+  h = h.replace(/^[\*\-] (.+)$/gm,'<li>$1</li>').replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  h = h.replace(/(<li>[\s\S]+?<\/li>)+/g, s => '<ul>' + s + '</ul>');
+  h = h.replace(/\n\n/g,'</p><p>');
+  h = '<p>' + h + '</p>';
+  h = h.replace(/<p>\s*(<h[123]>)/g,'$1').replace(/(<\/h[123]>)\s*<\/p>/g,'$1');
+  h = h.replace(/<p>\s*(<div)/g,'$1').replace(/(<\/div>)\s*<\/p>/g,'$1');
+  h = h.replace(/<p>\s*(<ul>)/g,'$1').replace(/(<\/ul>)\s*<\/p>/g,'$1');
+  h = h.replace(/<p>\s*(<hr>)\s*<\/p>/g,'$1');
+  h = h.replace(/<p>\s*<\/p>/g,'');
+  h = h.replace(/\n/g,'<br>');
+  return h;
 }
 
 function applyCode(id) {
-    const el = document.getElementById(id);
-    if (el) vscode.postMessage({ command: 'applyCode', code: el.textContent });
+  const el = document.getElementById(id);
+  if (el) vscode.postMessage({ command: 'applyCode', code: el.textContent });
 }
 function copyCode(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    vscode.postMessage({ command: 'copyCode', code: el.textContent, id });
+  const el = document.getElementById(id);
+  if (!el) return;
+  vscode.postMessage({ command: 'copyCode', code: el.textContent, id });
 }
 
-function autoResize(el) {
-    resize(el);
-    el.addEventListener('input', () => resize(el));
-}
-function resize(el) {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
+function autoResize(el) { resize(el); el.addEventListener('input', () => resize(el)); }
+function resize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 110) + 'px'; }
 
 window.addEventListener('message', e => {
-    const m = e.data;
-    switch (m.command) {
-        case 'setModel':
-            document.getElementById('modelBadge').textContent = m.model;
-            break;
-        case 'addMessage':
-            addMsg(m.role, m.content, m.id);
-            break;
-        case 'startStreaming':
-            curId = m.id; curContent = '';
-            const el = addMsg('assistant', '', m.id);
-            el.querySelector('.mc').innerHTML = '<div class="typing"><div class="dots"><span></span><span></span><span></span></div> Thinking...</div>';
-            setStreaming(true);
-            break;
-        case 'streamChunk':
-            curContent += m.content;
-            const cel = document.getElementById('msg-' + m.id);
-            if (cel) { cel.querySelector('.mc').innerHTML = md(curContent); scroll(); }
-            break;
-        case 'endStreaming':
-            setStreaming(false);
-            const fel = document.getElementById('msg-' + m.id);
-            if (fel) { fel.querySelector('.mc').innerHTML = md(m.content); scroll(); }
-            curId = ''; curContent = '';
-            break;
-        case 'streamAborted':
-            setStreaming(false);
-            const ael = document.getElementById('msg-' + m.id);
-            if (ael) { const mc = ael.querySelector('.mc'); if(mc) mc.innerHTML += '<br><span style="color:#C83838;font-style:italic">[Stopped]</span>'; }
-            break;
-        case 'showError':
-            hideWelcome();
-            addMsg('error', '⚠️ ' + m.message);
-            setStreaming(false);
-            break;
-        case 'clearChat':
-            document.getElementById('msgs').innerHTML = '';
-            setStreaming(false); curId=''; curContent=''; codeCount=0;
-            // Re-add welcome with robot
-            const w = document.createElement('div');
-            w.className='welcome'; w.id='welcome';
-            w.innerHTML='<div class="welcome-window"><div class="welcome-bar"><div class="welcome-dot r"></div><div class="welcome-dot y"></div><div class="welcome-dot g"></div><span class="welcome-title">timps — chat</span></div><div class="welcome-body"><div class="welcome-robot"><svg viewBox="0 0 48 56" width="56" height="56" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated"><rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/><rect x="6" y="6" width="36" height="26" rx="3" fill="#2D5A4F"/><rect x="9" y="9" width="30" height="20" rx="2" fill="#3D7A6A"/><rect x="13" y="13" width="6" height="6" fill="#C8BF8C"/><rect x="29" y="13" width="6" height="6" fill="#C8BF8C"/><rect x="13" y="22" width="22" height="2" fill="#C8BF8C"/><rect x="9" y="32" width="30" height="16" rx="2" fill="#C8BF8C"/></svg></div><h2>TIMPS Agent</h2><p>Chat cleared. Ready for a new session.</p></div></div>';
-            document.getElementById('msgs').appendChild(w);
-            break;
-        case 'memoryAudit':
-            addMem(m.memories, 'Memory Audit (!audit)');
-            break;
-        case 'blameResults':
-            addMem(m.results, '!blame "' + (m.keyword||'') + '"');
-            break;
-        case 'systemMessage':
-            hideWelcome();
-            const sd = document.createElement('div');
-            sd.className='msg system-msg';
-            sd.textContent = m.text;
-            document.getElementById('msgs').appendChild(sd);
-            scroll();
-            break;
-        case 'copyConfirmed':
-            const cb = document.getElementById('cp-' + m.id);
-            if (cb) { cb.textContent='✓ Copied!'; setTimeout(()=>{ cb.textContent='Copy'; },2000); }
-            break;
-        case 'applyConfirmed':
-            break;
-    }
+  const m = e.data;
+  switch (m.command) {
+    case 'setModel':
+      document.getElementById('modelBadge').textContent = m.model;
+      document.getElementById('statProvider').textContent = m.model.split('(')[1]?.replace(')','') || m.model.split('/')[0] || '?';
+      logActivity('Model: ' + m.model, 'inf');
+      break;
+    case 'addMessage':
+      addMsg(m.role, m.content, m.id);
+      if (m.role === 'assistant') logActivity('Response received', 'ok');
+      break;
+    case 'startStreaming':
+      curId = m.id; curContent = '';
+      const el = addMsg('assistant', '', m.id);
+      el.querySelector('.mc').innerHTML = '<div class="typing"><div class="dots"><span></span><span></span><span></span></div>&nbsp;Thinking…</div>';
+      setStreaming(true);
+      logActivity('Generating response…', 'inf');
+      break;
+    case 'streamChunk':
+      curContent += m.content;
+      const cel = document.getElementById('msg-' + m.id);
+      if (cel) { cel.querySelector('.mc').innerHTML = md(curContent); scroll(); }
+      break;
+    case 'endStreaming':
+      setStreaming(false);
+      const fel = document.getElementById('msg-' + m.id);
+      if (fel) { fel.querySelector('.mc').innerHTML = md(m.content); scroll(); }
+      curId = ''; curContent = '';
+      if (m.usage) { totalTokens += (m.usage.inputTokens||0) + (m.usage.outputTokens||0); updateStats(); }
+      logActivity('Done', 'ok');
+      break;
+    case 'streamAborted':
+      setStreaming(false);
+      const ael = document.getElementById('msg-' + m.id);
+      if (ael) { const mc = ael.querySelector('.mc'); if(mc) mc.innerHTML += '<br><em style="color:var(--error)">[Stopped]</em>'; }
+      break;
+    case 'showError':
+      hideWelcome();
+      addMsg('error', '⚠ ' + m.message);
+      setStreaming(false);
+      logActivity('Error: ' + (m.message||'').slice(0,40), 'err');
+      break;
+    case 'clearChat':
+      document.getElementById('msgs').innerHTML = '';
+      setStreaming(false); curId=''; curContent=''; codeCount=0; msgCount=0;
+      updateStats();
+      const w2 = document.createElement('div');
+      w2.className = 'welcome'; w2.id = 'welcome';
+      w2.innerHTML = '<div class="welcome-window"><div class="welcome-bar"><div class="w-dot r"></div><div class="w-dot y"></div><div class="w-dot g"></div><span class="welcome-title">timps v2.0 — new session</span></div><div class="welcome-body"><div class="welcome-robot"><svg viewBox="0 0 48 60" width="56" height="70" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated"><rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/><rect x="6" y="8" width="36" height="26" rx="3" fill="#2D5A4F"/><rect x="9" y="11" width="30" height="20" rx="2" fill="#3D7A6A"/><rect x="12" y="14" width="7" height="7" fill="#E8E0B0"/><rect x="29" y="14" width="7" height="7" fill="#E8E0B0"/><rect x="14" y="24" width="20" height="3" fill="#E8E0B0"/><rect x="6" y="36" width="42" height="20" rx="3" fill="#C8BF8C"/><rect x="10" y="56" width="10" height="4" rx="1" fill="#1C1C1C"/><rect x="28" y="56" width="10" height="4" rx="1" fill="#1C1C1C"/></svg></div><h2>New Session</h2><p>Chat cleared. Ask me anything!</p></div></div>';
+      document.getElementById('msgs').appendChild(w2);
+      break;
+    case 'memoryAudit':
+      addMem(m.memories, 'Memory Audit');
+      logActivity('Memory audit: ' + (m.memories||[]).length + ' items', 'inf');
+      break;
+    case 'blameResults':
+      addMem(m.results, '!blame "' + (m.keyword||'') + '"');
+      break;
+    case 'systemMessage':
+      hideWelcome();
+      const sd = document.createElement('div');
+      sd.className = 'msg system-msg';
+      sd.textContent = m.text;
+      document.getElementById('msgs').appendChild(sd);
+      scroll();
+      logActivity(m.text.slice(0,40));
+      break;
+    case 'copyConfirmed':
+      const cb = document.getElementById('cp-' + m.id);
+      if (cb) { cb.textContent = '✓ Copied!'; setTimeout(() => { cb.textContent = 'Copy'; }, 1800); }
+      break;
+  }
 });
 
 document.getElementById('inp').focus();

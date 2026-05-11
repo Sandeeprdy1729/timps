@@ -1,5 +1,5 @@
-// ── TIMPS Code — Enhanced Interactive REPL
-// Full-featured terminal interface with Vim mode, history, and productivity shortcuts
+// ── TIMPS Code — Retro OS Interactive REPL
+// System 7 / pixel-art aesthetic with robot mascot and rich interactivity
 
 import * as readline from 'node:readline';
 import chalk from 'chalk';
@@ -14,24 +14,40 @@ import type { TokenUsage } from '../config/types.js';
 import { getAnalytics } from '../utils/analytics.js';
 import { isFeatureEnabled } from '../utils/featureFlags.js';
 
-const W = process.stdout.columns || 120;
+// Strip ANSI escape codes for length calculation
+const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*m/g, '');
 
-// Color palette
+const W = Math.min(process.stdout.columns || 100, 100);
+
+// ── Retro OS Color Palette (matches robot mascot + System 7 aesthetic) ──────
 const c = {
-  bg: '#0D1117',
-  panel: '#161B22',
-  border: '#30363D',
-  text: '#E6EDF3',
-  dim: '#7D8590',
-  accent: '#58A6FF',
-  success: '#3FB950',
-  error: '#F85149',
-  warning: '#D29922',
-  purple: '#A371F7',
-  cyan: '#39D353',
-  bar: '#238636',
-  amber: '#D29922',
-  magenta: '#F778BA',
+  // Robot mascot colors
+  tealDark:  '#2D5A4F',   // robot screen — dark teal
+  tealMid:   '#4A8C7A',   // accent teal
+  tealLight: '#7EC8B8',   // highlight teal
+  cream:     '#F5F0E1',   // paper/cream
+  tan:       '#C8BF8C',   // robot body tan
+  ink:       '#1C1C1C',   // dark outline
+  // UI
+  bg:        '#111210',   // dark bg
+  panel:     '#1A1C18',   // panel bg
+  border:    '#2D5A4F',   // teal border
+  text:      '#E8E0B0',   // cream text
+  dim:       '#64747A',   // muted slate
+  // Status
+  success:   '#28A070',
+  error:     '#C83838',
+  warning:   '#E8C94A',
+  info:      '#7EC8B8',
+  // Retro mac dots
+  dotRed:    '#FF5F57',
+  dotYellow: '#FEBC2E',
+  dotGreen:  '#28C840',
+  // Tool colors
+  cyan:      '#7EC8B8',
+  amber:     '#E8C94A',
+  magenta:   '#F778BA',
+  purple:    '#A371F7',
 };
 
 interface MessageLine {
@@ -127,52 +143,145 @@ export class InteractiveREPL {
   }
 
   private showWelcome(): void {
-    const model = this.provider.model.slice(0, 28);
+    const w = W;
+    const line = (s = '') => `  ${chalk.hex(c.tealDark)('│')}${s}${chalk.hex(c.tealDark)('│')}`;
+    const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - stripAnsi(s).length));
+
+    // Robot pixel art (inline chalk)
+    const rd = chalk.hex(c.tealDark);
+    const rm = chalk.hex(c.tealMid);
+    const rt = chalk.hex(c.tan);
+    const rc = chalk.hex(c.cream);
+    const ri = chalk.hex(c.ink);
+    const robot = [
+      `  ${rd('┌──────┐')}  `,
+      `  ${rd('│')}${rc(' ◉  ◉ ')}${rd('│')}  `,
+      `  ${rd('│')}${rc('  ‿   ')}${rd('│')}  `,
+      `  ${rd('└──────┘')}  `,
+      `  ${rt('┆')} ${rm('░░░░')} ${rt('┆')}  `,
+      ` ${rt('┌┴──────┴┐')} `,
+      ` ${rt('│')}  ${rm('▣ ▣ ▣')}  ${rt('│')} `,
+      ` ${rt('└┬──────┬┘')} `,
+      `  ${ri('██')}      ${ri('██')}  `,
+    ];
+
+    const sep = chalk.hex(c.tealDark)('═'.repeat(w - 4));
+    const innerW = w - 4;
+
+    // Header bar
     console.log();
-    console.log(`  ${chalk.hex(c.accent).bold('TIMPS')} ${chalk.hex(c.dim)('·')} ${chalk.bold(model)}  ${chalk.hex(c.dim)('timps')}  ${chalk.hex(c.success)('○')}`);
-    console.log(`  ${chalk.hex(c.dim)('────────────────────────────────────────────────────────')}`);
-    console.log(`  ${chalk.hex(c.dim)('Commands:')} ${chalk.hex(c.accent)('/help')} ${chalk.hex(c.dim)('·')} ${chalk.hex(c.accent)('/model')} ${chalk.hex(c.dim)('·')} ${chalk.hex(c.accent)('/context')} ${chalk.hex(c.dim)('·')} ${chalk.hex(c.accent)('/memory')}`);
-    console.log(`  ${chalk.hex(c.dim)('Shortcuts:')} ${chalk.hex(c.dim)('Ctrl+C')} exit ${chalk.hex(c.dim)('·')} ${chalk.hex(c.dim)('Tab')} complete ${chalk.hex(c.dim)('·')} ${chalk.hex(c.dim)('↑↓')} history`);
-    console.log(`  ${chalk.hex(c.dim)('────────────────────────────────────────────────────────')}`);
+    console.log(`  ${chalk.hex(c.tealDark)('╔' + '═'.repeat(w - 4) + '╗')}`);
+    // Dots row
+    const dotsRow = ` ${chalk.hex(c.dotRed)('●')} ${chalk.hex(c.dotYellow)('●')} ${chalk.hex(c.dotGreen)('●')}`;
+    const title = chalk.hex(c.tealMid).bold('  TIMPS  ') + chalk.hex(c.dim)('— AI Coding Agent');
+    console.log(`  ${chalk.hex(c.tealDark)('║')}${dotsRow}  ${title}${' '.repeat(Math.max(0, innerW - 3 - stripAnsi(title).length - 3))}${chalk.hex(c.tealDark)('║')}`);
+    console.log(`  ${chalk.hex(c.tealDark)('╠' + '═'.repeat(w - 4) + '╣')}`);
+
+    // Robot + text rows
+    const textLines = [
+      `  ${chalk.hex(c.tealLight).bold('TIMPS Code')} ${chalk.hex(c.dim)('v2.0')}`,
+      ``,
+      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Persistent Memory Across Sessions')}`,
+      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('25+ Tools · Swarm · MCP Protocol')}`,
+      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Local-First · 100% Private')}`,
+      ``,
+      `  ${chalk.hex(c.dim)('Type')} ${chalk.hex(c.tealLight)('/help')} ${chalk.hex(c.dim)('for commands ·')} ${chalk.hex(c.dim)('Tab')} ${chalk.hex(c.dim)('to autocomplete')}`,
+      `  ${chalk.hex(c.dim)('↑↓')} ${chalk.hex(c.dim)('history ·')} ${chalk.hex(c.amber)('Ctrl+C')} ${chalk.hex(c.dim)('to exit')}`,
+      ``,
+    ];
+
+    for (let i = 0; i < Math.max(robot.length, textLines.length); i++) {
+      const rob = robot[i] ?? '              ';
+      const txt = textLines[i] ?? '';
+      const robRaw = stripAnsi(rob);
+      const txtRaw = stripAnsi(txt);
+      const content = `${rob}  ${txt}`;
+      const padLen = Math.max(0, innerW - robRaw.length - 2 - txtRaw.length);
+      console.log(`  ${chalk.hex(c.tealDark)('║')}${content}${' '.repeat(padLen)}${chalk.hex(c.tealDark)('║')}`);
+    }
+
+    console.log(`  ${chalk.hex(c.tealDark)('╚' + '═'.repeat(w - 4) + '╝')}`);
+    console.log();
+
+    // Quick shortcut bar
+    const shortcuts = [
+      ['/', 'command'],
+      ['Tab', 'complete'],
+      ['↑↓', 'history'],
+      ['Ctrl+L', 'clear'],
+      ['Ctrl+C', 'exit'],
+    ];
+    const shortcutStr = shortcuts.map(([k, v]) =>
+      `${chalk.hex(c.tealMid).bold(k)} ${chalk.hex(c.dim)(v)}`
+    ).join(chalk.hex(c.dim)('  ·  '));
+    console.log(`  ${chalk.hex(c.dim)('>')} ${shortcutStr}`);
     console.log();
   }
 
   private drawStatusLine(): void {
-    const model = this.provider.model.slice(0, 28);
+    const model = this.provider.model.slice(0, 30);
     const totalTok = this.totalUsage.inputTokens + this.totalUsage.outputTokens;
-    const totalK = totalTok > 0 ? `${(totalTok / 1000).toFixed(1)}K` : '';
-    const pct = Math.round((totalTok / 200000) * 100);
-    const tokInfo = totalK ? chalk.hex(c.dim)(` ${totalK} (${pct}%)`) : '';
+    const tokInfo = totalTok > 0 ? ` ${(totalTok / 1000).toFixed(1)}k tok` : '';
     const statusDot = this.isProcessing
       ? chalk.hex(c.warning)('●')
-      : chalk.hex(c.success)('○');
+      : chalk.hex(c.success)('●');
 
-    const fastIcon = this.fastMode ? chalk.hex(c.cyan)('⚡') : '';
-    const briefIcon = this.briefMode ? chalk.hex(c.amber)('◎') : '';
-    const vimIcon = this.vimMode !== 'normal' ? chalk.hex(c.magenta)(this.vimMode[0].toUpperCase()) : '';
+    const flags = [
+      this.fastMode  ? chalk.hex(c.cyan)('⚡ fast') : '',
+      this.briefMode ? chalk.hex(c.amber)('◎ brief') : '',
+      this.vimMode !== 'normal' ? chalk.hex(c.magenta)(`VIM:${this.vimMode[0].toUpperCase()}`) : '',
+    ].filter(Boolean).join(' ');
+
+    const left  = ` ${statusDot} ${chalk.hex(c.tealMid).bold('TIMPS')} ${chalk.hex(c.dim)('·')} ${chalk.hex(c.cream)(model)}`;
+    const right = `${flags}${tokInfo} ${chalk.hex(c.dim)(new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }))} `;
+
+    const leftLen  = stripAnsi(left).length;
+    const rightLen = stripAnsi(right).length;
+    const mid = ' '.repeat(Math.max(1, W - 4 - leftLen - rightLen));
 
     process.stdout.write(
-      `\n  ${chalk.hex(c.accent).bold('Build')} ${chalk.hex(c.dim)('·')} ${chalk.bold(model)}  ${chalk.hex(c.dim)('timps')}  ${statusDot}${tokInfo} ${fastIcon}${briefIcon}${vimIcon}\n`
+      `\n  ${chalk.hex(c.tealDark)('┌' + '─'.repeat(W - 4) + '┐')}\n`
+    );
+    process.stdout.write(
+      `  ${chalk.hex(c.tealDark)('│')}${left}${mid}${right}${chalk.hex(c.tealDark)('│')}\n`
+    );
+    process.stdout.write(
+      `  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4) + '┘')}\n`
     );
   }
 
   private printUserMessage(msg: string): void {
+    const label = chalk.hex(c.tealLight).bold('  ❯ You');
+    const msgLines = msg.split('\n');
     console.log();
-    console.log(`  ${chalk.hex(c.dim)('>')} ${chalk.hex(c.text)(msg)}`);
+    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 6 - stripAnsi(label).length - 2)))}`);
+    for (const line of msgLines) {
+      console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.cream)(line)}`);
+    }
+    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4))}`);
     console.log();
   }
 
   private printAssistantSeparator(): void {
     console.log();
-    console.log(`  ${chalk.hex(c.border)('─'.repeat(Math.min(W - 4, 50)))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4))}`);
+    console.log();
+  }
+
+  private printAssistantHeader(): void {
+    const label = chalk.hex(c.tealMid).bold('  🤖 TIMPS');
+    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 6 - stripAnsi(label).length - 2)))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('│')}`);
   }
 
   private printThinking(text: string): void {
     if (!this.thinkingEnabled) return;
-    const maxLen = Math.min(W - 16, 100);
+    const spinner = ['◐', '◓', '◑', '◒'];
+    const frame = spinner[Math.floor(Date.now() / 200) % spinner.length];
+    const maxLen = Math.min(W - 20, 80);
     const display = text.length > maxLen ? text.slice(0, maxLen) + '…' : text;
     process.stdout.write(
-      `\r  ${chalk.italic.hex(c.dim)('Thinking:')} ${chalk.italic.hex(c.dim)(display.padEnd(maxLen + 1))}`
+      `\r  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)(frame)} ${chalk.italic.hex(c.dim)(display.padEnd(maxLen + 2))}`
     );
   }
 
@@ -191,6 +300,8 @@ export class InteractiveREPL {
       this.currentToolCalls = [];
       const analytics = getAnalytics();
 
+      this.printAssistantHeader();
+
       for await (const event of this.agent.run(input)) {
         switch (event.type) {
           case 'thinking':
@@ -201,45 +312,57 @@ export class InteractiveREPL {
 
           case 'text':
             if (this.hasStreamedThinking && !this.hasStreamedResponse) {
-              process.stdout.write('\n\n');
+              process.stdout.write(`\r${' '.repeat(W)}\r`); // clear thinking line
+              process.stdout.write(`  ${chalk.hex(c.tealDark)('│')} `);
+            } else if (!this.hasStreamedResponse) {
+              process.stdout.write(`  ${chalk.hex(c.tealDark)('│')} `);
             }
             this.hasStreamedResponse = true;
             responseText += event.content;
-            process.stdout.write(event.content);
+            // Prefix each newline with the border char
+            process.stdout.write(event.content.replace(/\n/g, `\n  ${chalk.hex(c.tealDark)('│')} `));
             break;
 
-          case 'tool_start':
+          case 'tool_start': {
             if (this.hasStreamedThinking && !this.hasStreamedResponse) {
-              process.stdout.write('\n');
+              process.stdout.write(`\r${' '.repeat(W)}\r`);
             }
-            process.stdout.write(`\n  ${chalk.hex(c.dim)('⚙')} ${chalk.hex(c.cyan)(event.tool)}\n`);
+            const toolLine = `${chalk.hex(c.tealMid)('⚙')} ${chalk.hex(c.tan).bold(event.tool)}`;
+            process.stdout.write(`\n  ${chalk.hex(c.tealDark)('│')}  ${toolLine}\n`);
             this.currentToolCalls.push({ name: event.tool, result: '', success: true });
             analytics.trackToolCall(event.tool, 0, true);
             break;
+          }
 
           case 'tool_result':
             if (event.result) {
               const toolResult = this.currentToolCalls[this.currentToolCalls.length - 1];
               if (toolResult) toolResult.result = event.result;
-              const preview = event.result.length > 120
-                ? event.result.slice(0, 120) + '…'
+              const preview = event.result.length > 90
+                ? event.result.slice(0, 90) + '…'
                 : event.result;
-              process.stdout.write(`  ${chalk.hex(c.success)('✓')} ${chalk.hex(c.dim)(event.tool)} ${chalk.hex(c.dim)('—')} ${chalk.hex(c.dim)(preview)}\n`);
+              process.stdout.write(
+                `  ${chalk.hex(c.tealDark)('│')}  ${chalk.hex(c.success)('✔')} ${chalk.hex(c.dim)(event.tool)} ${chalk.hex(c.dim)('→')} ${chalk.hex(c.dim)(preview.replace(/\n/g, ' '))}\n`
+              );
             }
             break;
 
           case 'error':
-            process.stdout.write(`\n  ${chalk.hex(c.error)('✗')} ${event.message}\n`);
+            process.stdout.write(
+              `\n  ${chalk.hex(c.tealDark)('│')}  ${chalk.hex(c.error)('✘')} ${chalk.hex(c.error)(event.message)}\n`
+            );
             analytics.trackError();
             break;
 
           case 'ask_user':
-            process.stdout.write(`\n  ${chalk.hex(c.warning)('?')} ${event.question}\n`);
+            process.stdout.write(
+              `\n  ${chalk.hex(c.tealDark)('│')}  ${chalk.hex(c.warning)('?')} ${chalk.hex(c.amber)(event.question)}\n`
+            );
             break;
 
           case 'done':
             if (event.usage) {
-              this.totalUsage.inputTokens += event.usage.inputTokens;
+              this.totalUsage.inputTokens  += event.usage.inputTokens;
               this.totalUsage.outputTokens += event.usage.outputTokens;
               analytics.trackTokens(event.usage.inputTokens, event.usage.outputTokens);
             }
@@ -247,14 +370,15 @@ export class InteractiveREPL {
         }
       }
 
-      this.messages.push({ role: 'user', content: input, timestamp: Date.now() });
+      this.messages.push({ role: 'user',      content: input,        timestamp: Date.now() });
       if (responseText) {
         this.messages.push({ role: 'assistant', content: responseText, timestamp: Date.now() });
       }
 
       this.printAssistantSeparator();
     } catch (err) {
-      process.stdout.write(`\n  ${chalk.hex(c.error)('✗')} ${(err as Error).message}\n`);
+      process.stdout.write(`\n  ${chalk.hex(c.tealDark)('│')}  ${chalk.hex(c.error)('✘')} ${(err as Error).message}\n`);
+      this.printAssistantSeparator();
       getAnalytics().trackError();
     }
 
@@ -264,8 +388,11 @@ export class InteractiveREPL {
 
   private async replLoop(): Promise<void> {
     const prompt = () => new Promise<string>(resolve => {
-      const modeIndicator = this.vimMode !== 'normal' ? chalk.hex(c.magenta)(`(${this.vimMode}) `) : '';
-      this.rl.question(`  ${modeIndicator}${chalk.hex(c.accent)('│')} `, answer => resolve(answer));
+      const modeIndicator = this.vimMode !== 'normal'
+        ? chalk.hex(c.magenta)(`(${this.vimMode.toUpperCase()}) `)
+        : '';
+      const promptChar = chalk.hex(c.tealMid)('│');
+      this.rl.question(`  ${modeIndicator}${promptChar} `, answer => resolve(answer));
     });
 
     for (;;) {
@@ -275,14 +402,13 @@ export class InteractiveREPL {
 
         if (!trimmed) continue;
 
-        // Vim mode handling
+        // Vim normal mode single-key commands
         if (this.vimMode === 'normal') {
           if (trimmed === 'q' || trimmed === 'quit' || trimmed === 'exit') {
-            console.log(chalk.hex(c.dim)('\n  Goodbye!\n'));
+            console.log(chalk.hex(c.dim)('\n  Goodbye! Saving session…'));
             this.agent.saveSession(this.sessionDir);
             await this.agent.saveEpisode('success');
-            const analytics = getAnalytics();
-            analytics.endSession();
+            getAnalytics().endSession();
             break;
           }
         }
@@ -290,31 +416,54 @@ export class InteractiveREPL {
         if (trimmed === 'clear' || trimmed === '/clear' || trimmed === ':clear') {
           console.clear();
           this.messages = [];
+          this.showWelcome();
           continue;
         }
 
         if (trimmed === '/history' || trimmed === '/h' || trimmed === ':history') {
           console.log();
-          for (let i = 0; i < this.history.length; i++) {
-            console.log(`  ${chalk.hex(c.dim)(String(i + 1).padStart(3))}  ${this.history[i].slice(0, 80)}`);
+          const recent = this.history.slice(-20);
+          console.log(`  ${chalk.hex(c.tealDark)('┌─')}${chalk.hex(c.tealLight).bold('  History ')}${chalk.hex(c.tealDark)('─'.repeat(30))}`);
+          for (let i = 0; i < recent.length; i++) {
+            const idx = this.history.length - recent.length + i + 1;
+            console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.dim)(String(idx).padStart(3))}  ${chalk.hex(c.cream)(recent[i].slice(0, 70))}`);
           }
+          console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(38))}`);
           console.log();
           continue;
         }
 
         if (trimmed === '/todos' || trimmed === ':todos') {
-          const open = this.todos.getOpen();
+          const open = this.todos.getOpen?.() || [];
           console.log();
-          open.forEach(t => console.log(`  ${chalk.hex(c.warning)('○')} ${t}`));
-          if (open.length === 0) console.log(`  ${chalk.hex(c.dim)('No open todos')}`);
+          console.log(`  ${chalk.hex(c.tealDark)('┌─')}${chalk.hex(c.tealLight).bold('  Todos ')}${chalk.hex(c.tealDark)('─'.repeat(32))}`);
+          if (open.length === 0) {
+            console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.dim)('No open todos')}`);
+          } else {
+            for (const item of open) {
+              console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.warning)('○')} ${chalk.hex(c.cream)(String(item))}`);
+            }
+          }
+          console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(38))}`);
           console.log();
           continue;
         }
 
         if (trimmed === '/stats' || trimmed === ':stats') {
-          const s = this.memory.getStats();
+          const s  = this.memory.getStats();
           const gs = this.memory.graph.getStats();
-          console.log(`\n  ${chalk.hex(c.dim)('memory')}  ${s.semanticCount} facts · ${s.episodeCount} episodes · ${gs.nodeCount} graph nodes\n`);
+          const usage = this.agent.getUsage();
+          console.log();
+          console.log(`  ${chalk.hex(c.tealDark)('┌─')}${chalk.hex(c.tealLight).bold('  Stats ')}${chalk.hex(c.tealDark)('─'.repeat(32))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Facts')}      ${chalk.hex(c.cream)(String(s.semanticCount).padStart(6))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Episodes')}   ${chalk.hex(c.cream)(String(s.episodeCount).padStart(6))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Graph')}      ${chalk.hex(c.cream)(String(gs.nodeCount).padStart(6))} nodes`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Tokens in')}  ${chalk.hex(c.cream)(usage.inputTokens.toLocaleString().padStart(6))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Tokens out')} ${chalk.hex(c.cream)(usage.outputTokens.toLocaleString().padStart(6))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Provider')}   ${chalk.hex(c.tan)(this.provider.name)}`);
+          console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.tealMid)('Model')}      ${chalk.hex(c.tan)(this.provider.model.slice(0, 30))}`);
+          console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(38))}`);
+          console.log();
           continue;
         }
 
@@ -330,7 +479,7 @@ export class InteractiveREPL {
         await this.handleInput(trimmed);
       } catch (err) {
         if ((err as Error).message?.includes('EOF')) break;
-        console.log(`\n  ${chalk.hex(c.error)('✗')} ${(err as Error).message}`);
+        console.log(`\n  ${chalk.hex(c.error)('✘')} ${(err as Error).message}`);
       }
     }
 
