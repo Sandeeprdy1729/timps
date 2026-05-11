@@ -281,7 +281,24 @@ export default function App() {
     <div className="dashboard">
       {/* Top bar */}
       <header className="topbar">
-        <span className="topbar-logo">TIMPS</span>
+        <span className="topbar-logo">
+          {/* Pixel robot icon */}
+          <svg viewBox="0 0 16 20" width="22" height="27" xmlns="http://www.w3.org/2000/svg" style={{imageRendering:'pixelated', marginRight:6, verticalAlign:'middle'}}>
+            <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+            <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+            <rect x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+            <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+            <rect x="0" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <rect x="14" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+            <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+          </svg>
+          TIMPS
+        </span>
         <span className="topbar-subtitle">Memory Dashboard</span>
         {stats && (
           <div className="topbar-stats">

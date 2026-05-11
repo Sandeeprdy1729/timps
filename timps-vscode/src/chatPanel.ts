@@ -362,17 +362,24 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
     <div class="logo">
-      <!-- Animated pixel robot logo -->
-      <svg class="logo-robot" viewBox="0 0 16 18" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
-        <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
-        <rect class="logo-robot-eye" x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
-        <rect class="logo-robot-eye" x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
-        <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
-        <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
-        <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
-        <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
-        <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+      <!-- Animated pixel robot logo — teal screen, cream eyes, tan body -->
+      <svg class="logo-robot" viewBox="0 0 16 20" width="24" height="28" xmlns="http://www.w3.org/2000/svg">
+        <!-- Head/screen -->
+        <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+        <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+        <!-- Eyes (cream) -->
+        <rect class="logo-robot-eye" x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+        <rect class="logo-robot-eye" x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+        <!-- Mouth -->
+        <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+        <!-- Neck -->
+        <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+        <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+        <!-- Body (tan) -->
+        <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+        <!-- Feet (dark) -->
+        <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+        <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
       </svg>
       TIMPS
     </div>
@@ -404,44 +411,53 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
         <div class="welcome-dot r"></div>
         <div class="welcome-dot y"></div>
         <div class="welcome-dot g"></div>
-        <span class="welcome-title">timps — chat</span>
+        <span class="welcome-title">timps — coding agent</span>
       </div>
       <div class="welcome-body">
-        <!-- Animated pixel robot mascot -->
+        <!-- Animated pixel robot — teal screen, tan body, cream eyes -->
         <div class="welcome-robot">
-          <svg viewBox="0 0 48 56" width="72" height="72" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-            <rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/>
-            <rect x="22" y="0" width="4" height="8" fill="#4A8C7A"/>
-            <rect x="6" y="6" width="36" height="26" rx="3" fill="#2D5A4F"/>
-            <rect x="9" y="9" width="30" height="20" rx="2" fill="#3D7A6A"/>
-            <rect x="13" y="13" width="6" height="6" fill="#C8BF8C"/>
-            <rect x="15" y="15" width="2" height="2" fill="#2D5A4F"/>
-            <rect x="29" y="13" width="6" height="6" fill="#C8BF8C"/>
-            <rect x="31" y="15" width="2" height="2" fill="#2D5A4F"/>
-            <rect x="13" y="22" width="22" height="2" fill="#C8BF8C"/>
-            <rect x="11" y="20" width="2" height="2" fill="#C8BF8C"/>
-            <rect x="35" y="20" width="2" height="2" fill="#C8BF8C"/>
-            <rect x="9" y="32" width="30" height="16" rx="2" fill="#C8BF8C"/>
-            <rect x="12" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
-            <rect x="27" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
-            <rect x="0" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
-            <rect x="40" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
+          <svg viewBox="0 0 16 20" width="80" height="100" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+            <!-- Head/screen (teal) -->
+            <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+            <!-- Screen inner -->
+            <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+            <!-- Eyes (cream/pale) -->
+            <rect x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <!-- Mouth (cream) -->
+            <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+            <!-- Neck connectors (tan) -->
+            <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <!-- Body (tan) -->
+            <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+            <!-- Arm left (tan) -->
+            <rect x="0" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <!-- Arm right (tan) -->
+            <rect x="14" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <!-- Feet (dark) -->
+            <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+            <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
           </svg>
         </div>
         <h2>TIMPS Agent</h2>
-        <p>Powered by TIMPS-Coder — your open-source AI coding partner.<br/>Memory-aware · Skill-powered · Runs locally via Ollama</p>
+        <p>Open-source AI coding partner · Memory-aware · Runs locally</p>
         <div class="qactions">
           <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
             <span class="qa-icon">🐛</span>
-            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">TIMPS-Coder explains + fixes root cause</div></div>
+            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">Diagnose and fix root cause</div></div>
           </div>
-          <div class="qa" onclick="sendQ('Review this code with 🔴 Critical / 🟡 Warning / 🟢 Suggestion format.')">
+          <div class="qa" onclick="sendQ('Review this code with Critical / Warning / Suggestion format.')">
             <span class="qa-icon">👁</span>
             <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
           </div>
+          <div class="qa" onclick="sendQ('Write comprehensive unit tests with edge cases.')">
+            <span class="qa-icon">🧪</span>
+            <div><div class="qa-title">Write Tests</div><div class="qa-desc">Generate comprehensive test cases</div></div>
+          </div>
           <div class="qa" onclick="sendQ('!audit')">
             <span class="qa-icon">🧠</span>
-            <div><div class="qa-title">!audit — Memory</div><div class="qa-desc">See what TIMPS remembers</div></div>
+            <div><div class="qa-title">Memory Audit</div><div class="qa-desc">See what TIMPS remembers</div></div>
           </div>
         </div>
       </div>
