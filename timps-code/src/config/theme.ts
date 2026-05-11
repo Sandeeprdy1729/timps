@@ -72,12 +72,12 @@ export const t = {
 // ASCII Art Robot Mascot + Logo
 // ═══════════════════════════════════════
 
-// Pixel robot art matching the mascot image
+// Pixel robot art — teal screen face, tan body, cream/pale eyes, dark feet
 const robot = [
-  chalk.hex(ink)('   ┌──────┐   '),
-  chalk.hex(tealDark)('   │') + chalk.hex(tealLight)(' ◉  ◉ ') + chalk.hex(tealDark)('│   '),
-  chalk.hex(tealDark)('   │') + chalk.hex(tealLight)('  ‿   ') + chalk.hex(tealDark)('│   '),
-  chalk.hex(ink)('   └──────┘   '),
+  chalk.hex(tealDark)('   ┌──────┐   '),
+  chalk.hex(tealDark)('   │') + chalk.hex('#E8E0B0')(' ◉  ◉ ') + chalk.hex(tealDark)('│   '),
+  chalk.hex(tealDark)('   │') + chalk.hex('#E8E0B0')('  ▿   ') + chalk.hex(tealDark)('│   '),
+  chalk.hex(tealDark)('   └──────┘   '),
   chalk.hex(tan) ('    ║    ║    '),
   chalk.hex(tan) ('  ┌─┴────┴─┐ '),
   chalk.hex(tan) ('  │        │ '),

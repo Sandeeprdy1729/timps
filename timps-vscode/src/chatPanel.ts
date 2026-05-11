@@ -228,22 +228,22 @@ export class TIMPsChatPanel {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* ── Robot mascot color palette ── */
+/* ── TIMPS Robot dark teal palette (matches CLI) ── */
 :root {
-  --bg:       #F5F0E1;   /* paper/cream */
-  --bg2:      #EDE8D5;   /* slightly darker paper */
-  --bg3:      #E3DECE;   /* even darker paper */
-  --bg-input: #FAF7F0;   /* input bg */
-  --text:     #1C1C1C;   /* ink */
-  --muted:    #6A6A6A;   /* muted ink */
-  --accent:   #2D5A4F;   /* robot screen teal */
-  --accent2:  #4A8C7A;   /* mid teal */
+  --bg:       #14140F;   /* very dark ink background */
+  --bg2:      #1C1C14;   /* robot body dark surface */
+  --bg3:      #252518;   /* slightly lighter surface */
+  --bg-input: #1C1C14;   /* input background */
+  --text:     #F5F0E1;   /* cream paper */
+  --muted:    #64747A;   /* muted slate */
+  --accent:   #4A8C7A;   /* robot screen mid-teal */
+  --accent2:  #7EC8B8;   /* light teal highlight */
   --tan:      #C8BF8C;   /* robot body tan */
-  --user-bg:  #EDE8D0;   /* user message bg */
+  --user-bg:  #1C2820;   /* user message bg — teal tint */
   --user-border: #2D5A4F;
-  --err-bg:   #FDE8E8;
+  --err-bg:   #2A1414;
   --err-border: #C83838;
-  --code-bg:  #1C1C1C;   /* dark code bg */
+  --code-bg:  #0F0F0A;   /* dark code block */
 }
 /* ── Robot animations ── */
 @keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
@@ -255,47 +255,47 @@ export class TIMPsChatPanel {
 body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
 /* Header */
-.header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg2); border-bottom:2px solid var(--text); flex-shrink:0; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg2); border-bottom:1px solid var(--user-border); flex-shrink:0; }
 .logo { display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:0.03em; }
 .logo-robot { animation:robotFloat 3s ease-in-out infinite; image-rendering:pixelated; }
 .logo-robot-eye { animation:robotBlink 4s ease-in-out infinite; transform-origin:center; }
-.model-badge { font-size:10px; background:var(--bg3); padding:2px 8px; border-radius:2px; color:var(--muted); border:1.5px solid var(--text); cursor:pointer; font-family:'JetBrains Mono',monospace; font-weight:600; box-shadow:1px 1px 0 var(--text); }
+.model-badge { font-size:10px; background:var(--bg3); padding:2px 8px; border-radius:2px; color:var(--muted); border:1px solid var(--user-border); cursor:pointer; font-family:'JetBrains Mono',monospace; font-weight:600; }
 .model-badge:hover { border-color:var(--accent); color:var(--accent); }
 .header-actions { display:flex; gap:4px; }
-.hbtn { background:var(--bg); border:1.5px solid var(--text); color:var(--text); padding:4px 10px; border-radius:2px; cursor:pointer; font-size:11px; font-weight:600; box-shadow:1px 1px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
-.hbtn:hover { transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); }
-.hbtn:active { transform:none; box-shadow:none; }
+.hbtn { background:var(--bg3); border:1px solid var(--user-border); color:var(--text); padding:4px 10px; border-radius:2px; cursor:pointer; font-size:11px; font-weight:600; transition:border-color 0.1s, color 0.1s; }
+.hbtn:hover { border-color:var(--accent); color:var(--accent); }
+.hbtn:active { opacity:0.7; }
 .hbtn.danger { border-color:var(--err-border); color:var(--err-border); }
 
 /* Skills bar */
-.skills-bar { display:flex; gap:4px; padding:6px 10px; background:var(--bg2); border-bottom:2px solid var(--text); overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+.skills-bar { display:flex; gap:4px; padding:6px 10px; background:var(--bg2); border-bottom:1px solid var(--user-border); overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
 .skills-bar::-webkit-scrollbar { display:none; }
-.sbtn { display:flex; align-items:center; gap:4px; padding:4px 9px; background:var(--bg); border:1.5px solid var(--text); border-radius:2px; color:var(--muted); font-size:11px; cursor:pointer; white-space:nowrap; font-weight:600; box-shadow:1px 1px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
-.sbtn:hover { background:var(--bg3); color:var(--accent); transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); }
+.sbtn { display:flex; align-items:center; gap:4px; padding:4px 9px; background:var(--bg3); border:1px solid var(--user-border); border-radius:2px; color:var(--muted); font-size:11px; cursor:pointer; white-space:nowrap; font-weight:600; transition:border-color 0.1s, color 0.1s; }
+.sbtn:hover { border-color:var(--accent); color:var(--accent); }
 
 /* Messages */
 .msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; background:var(--bg); }
-.msgs::-webkit-scrollbar { width:4px; } .msgs::-webkit-scrollbar-thumb { background:var(--tan); border-radius:2px; }
-.msg { max-width:88%; border-radius:2px; padding:10px 13px; line-height:1.65; font-size:13px; animation:fadeIn 0.18s ease; border:2px solid var(--text); }
-.msg.user { align-self:flex-end; background:var(--user-bg); border-color:var(--user-border); box-shadow:3px 3px 0 var(--user-border); }
-.msg.assistant { align-self:flex-start; background:var(--bg2); border-color:var(--text); box-shadow:3px 3px 0 var(--text); }
-.msg.error { align-self:center; background:var(--err-bg); border-color:var(--err-border); color:var(--err-border); font-size:12px; box-shadow:2px 2px 0 var(--err-border); }
-.msg.system-msg { align-self:center; background:transparent; color:var(--muted); font-size:11px; font-style:italic; padding:3px 8px; border:none; box-shadow:none; }
+.msgs::-webkit-scrollbar { width:4px; } .msgs::-webkit-scrollbar-thumb { background:var(--user-border); border-radius:2px; }
+.msg { max-width:88%; border-radius:2px; padding:10px 13px; line-height:1.65; font-size:13px; animation:fadeIn 0.18s ease; border-left:2px solid transparent; }
+.msg.user { align-self:flex-end; background:var(--user-bg); border-color:var(--user-border); }
+.msg.assistant { align-self:flex-start; background:var(--bg2); border-color:var(--accent); }
+.msg.error { align-self:center; background:var(--err-bg); border-color:var(--err-border); color:var(--err-border); font-size:12px; }
+.msg.system-msg { align-self:center; background:transparent; color:var(--muted); font-size:11px; font-style:italic; padding:3px 8px; border:none; }
 .role-label { font-size:11px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
 .msg.user .role-label { color:var(--accent2); }
 .msg.assistant .role-label { color:var(--accent); }
 
 /* Code blocks */
-.code-wrap { position:relative; margin:8px 0; border-radius:2px; overflow:hidden; border:2px solid var(--text); box-shadow:2px 2px 0 var(--text); }
+.code-wrap { position:relative; margin:8px 0; border-radius:2px; overflow:hidden; border:1px solid var(--user-border); }
 .code-head { display:flex; justify-content:space-between; align-items:center; background:var(--code-bg); padding:4px 12px; font-size:11px; color:var(--tan); }
 .code-head .lang { text-transform:uppercase; font-weight:700; letter-spacing:0.8px; color:var(--tan); font-family:'JetBrains Mono',monospace; }
 .code-btns { display:flex; gap:4px; }
-.cbtn { background:transparent; border:1px solid #555; color:#aaa; padding:2px 7px; border-radius:2px; cursor:pointer; font-size:10px; font-weight:600; }
+.cbtn { background:transparent; border:1px solid #3a3a3a; color:#888; padding:2px 7px; border-radius:2px; cursor:pointer; font-size:10px; font-weight:600; }
 .cbtn:hover { border-color:var(--accent2); color:var(--accent2); }
-.cbtn.apply { border-color:var(--accent2); color:var(--accent2); }
-.cbtn.apply:hover { background:rgba(45,90,79,0.2); }
-.code-body { background:var(--code-bg); padding:12px; overflow-x:auto; font-family:'JetBrains Mono','Cascadia Code','Fira Code',monospace; font-size:12px; line-height:1.5; white-space:pre; color:#e0e0e0; }
-.icode { background:var(--bg3); padding:1px 5px; border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent); border:1px solid var(--bg3); }
+.cbtn.apply { border-color:var(--accent); color:var(--accent); }
+.cbtn.apply:hover { background:rgba(74,140,122,0.15); }
+.code-body { background:var(--code-bg); padding:12px; overflow-x:auto; font-family:'JetBrains Mono','Cascadia Code','Fira Code',monospace; font-size:12px; line-height:1.5; white-space:pre; color:#d4cfa8; }
+.icode { background:var(--bg3); padding:1px 5px; border-radius:2px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent2); border:1px solid var(--user-border); }
 
 /* Memory cards */
 .mem-card { background:var(--tan-pale,#EDE8D0); border-left:3px solid var(--accent); padding:7px 10px; margin:3px 0; font-size:12px; border-radius:0 2px 2px 0; }
@@ -307,11 +307,11 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .dots span { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:bounce 1.2s infinite; }
 .dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
 
-/* Welcome panel — retro window */
+/* Welcome panel — dark teal style */
 .welcome { text-align:center; padding:20px 16px; }
-.welcome-window { background:var(--bg2); border:2px solid var(--text); border-radius:4px; overflow:hidden; box-shadow:4px 4px 0 var(--text); max-width:340px; margin:0 auto; }
-.welcome-bar { display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--bg3); border-bottom:2px solid var(--text); }
-.welcome-dot { width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(0,0,0,0.2); }
+.welcome-window { background:var(--bg2); border:1px solid var(--user-border); border-radius:4px; overflow:hidden; max-width:360px; margin:0 auto; }
+.welcome-bar { display:flex; align-items:center; gap:6px; padding:8px 12px; background:var(--bg3); border-bottom:1px solid var(--user-border); }
+.welcome-dot { width:10px; height:10px; border-radius:50%; }
 .welcome-dot.r { background:#ff5f57; } .welcome-dot.y { background:#febc2e; } .welcome-dot.g { background:#28c840; }
 .welcome-title { font-size:11px; font-weight:600; color:var(--muted); flex:1; text-align:center; font-family:'JetBrains Mono',monospace; }
 .welcome-body { padding:20px 16px; }
@@ -319,36 +319,35 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
 .welcome h2 { font-size:18px; font-weight:700; color:var(--accent); margin-bottom:6px; }
 .welcome p { color:var(--muted); font-size:12px; margin-bottom:14px; line-height:1.6; }
 .qactions { display:flex; flex-direction:column; gap:6px; text-align:left; }
-.qa { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg); border:1.5px solid var(--text); border-radius:2px; cursor:pointer; font-size:12px; transition:transform 0.1s, box-shadow 0.1s; box-shadow:1px 1px 0 var(--text); }
-.qa:hover { background:var(--bg3); transform:translate(-1px,-1px); box-shadow:2px 2px 0 var(--text); border-color:var(--accent); }
+.qa { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg3); border:1px solid var(--user-border); border-radius:2px; cursor:pointer; font-size:12px; transition:border-color 0.1s; }
+.qa:hover { border-color:var(--accent); }
 .qa-icon { font-size:15px; width:22px; text-align:center; }
 .qa-title { font-weight:700; color:var(--text); font-size:12px; }
 .qa-desc { color:var(--muted); font-size:11px; }
 
 /* Input */
-.input-area { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border-top:2px solid var(--text); flex-shrink:0; }
-.input-area textarea { flex:1; background:var(--bg-input); border:2px solid var(--text); border-radius:2px; color:var(--text); padding:9px 12px; font-size:13px; font-family:inherit; resize:none; outline:none; min-height:38px; max-height:120px; line-height:1.4; box-shadow:inset 1px 1px 0 rgba(0,0,0,0.05); }
+.input-area { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border-top:1px solid var(--user-border); flex-shrink:0; }
+.input-area textarea { flex:1; background:var(--bg-input); border:1px solid var(--user-border); border-radius:2px; color:var(--text); padding:9px 12px; font-size:13px; font-family:inherit; resize:none; outline:none; min-height:38px; max-height:120px; line-height:1.4; }
 .input-area textarea:focus { border-color:var(--accent); }
 .input-area textarea::placeholder { color:var(--muted); }
-.send-btn,.stop-btn { width:38px; height:38px; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; align-self:flex-end; border:2px solid var(--text); font-weight:700; box-shadow:2px 2px 0 var(--text); transition:transform 0.1s, box-shadow 0.1s; }
-.send-btn { background:var(--accent); color:var(--bg); }
-.send-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--text); }
-.send-btn:active,.stop-btn:active { transform:none; box-shadow:none; }
-.send-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:2px 2px 0 var(--text); }
-.stop-btn { background:var(--err-border); color:#fff; }
-.stop-btn:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--text); }
+.send-btn,.stop-btn { width:38px; height:38px; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; align-self:flex-end; border:1px solid var(--user-border); font-weight:700; transition:opacity 0.1s; }
+.send-btn { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+.send-btn:hover { opacity:0.85; }
+.send-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.stop-btn { background:var(--err-border); color:#fff; border-color:var(--err-border); }
+.stop-btn:hover { opacity:0.85; }
 .hidden { display:none; }
 
 /* MD formatting */
-.mc strong { color:var(--accent); font-weight:700; }
-.mc em { color:var(--accent2); }
-.mc h1 { font-size:17px; color:var(--accent); margin:10px 0 5px; border-bottom:2px solid var(--text); padding-bottom:4px; }
+.mc strong { color:var(--accent2); font-weight:700; }
+.mc em { color:var(--tan); }
+.mc h1 { font-size:17px; color:var(--accent); margin:10px 0 5px; border-bottom:1px solid var(--user-border); padding-bottom:4px; }
 .mc h2 { font-size:14px; color:var(--accent); margin:9px 0 4px; }
 .mc h3 { font-size:13px; color:var(--accent2); margin:8px 0 4px; }
 .mc ul,.mc ol { padding-left:18px; margin:5px 0; }
 .mc li { margin:2px 0; }
-.mc blockquote { border-left:3px solid var(--tan); padding-left:10px; color:var(--muted); margin:6px 0; background:var(--bg3); }
-.mc hr { border:none; border-top:2px solid var(--text); margin:10px 0; }
+.mc blockquote { border-left:2px solid var(--user-border); padding-left:10px; color:var(--muted); margin:6px 0; background:var(--bg3); }
+.mc hr { border:none; border-top:1px solid var(--user-border); margin:10px 0; }
 .mc a { color:var(--accent2); text-decoration:underline; }
 .mc p { margin-bottom:6px; }
 /* Respect user's reduced motion preferences */
@@ -363,17 +362,24 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
     <div class="logo">
-      <!-- Animated pixel robot logo -->
-      <svg class="logo-robot" viewBox="0 0 16 18" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
-        <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
-        <rect class="logo-robot-eye" x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
-        <rect class="logo-robot-eye" x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
-        <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
-        <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
-        <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
-        <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
-        <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+      <!-- Animated pixel robot logo — teal screen, cream eyes, tan body -->
+      <svg class="logo-robot" viewBox="0 0 16 20" width="24" height="28" xmlns="http://www.w3.org/2000/svg">
+        <!-- Head/screen -->
+        <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+        <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+        <!-- Eyes (cream) -->
+        <rect class="logo-robot-eye" x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+        <rect class="logo-robot-eye" x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+        <!-- Mouth -->
+        <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+        <!-- Neck -->
+        <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+        <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+        <!-- Body (tan) -->
+        <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+        <!-- Feet (dark) -->
+        <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+        <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
       </svg>
       TIMPS
     </div>
@@ -405,44 +411,53 @@ body { font-family:'Space Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',s
         <div class="welcome-dot r"></div>
         <div class="welcome-dot y"></div>
         <div class="welcome-dot g"></div>
-        <span class="welcome-title">timps — chat</span>
+        <span class="welcome-title">timps — coding agent</span>
       </div>
       <div class="welcome-body">
-        <!-- Animated pixel robot mascot -->
+        <!-- Animated pixel robot — teal screen, tan body, cream eyes -->
         <div class="welcome-robot">
-          <svg viewBox="0 0 48 56" width="72" height="72" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-            <rect x="20" y="0" width="8" height="4" fill="#4A8C7A"/>
-            <rect x="22" y="0" width="4" height="8" fill="#4A8C7A"/>
-            <rect x="6" y="6" width="36" height="26" rx="3" fill="#2D5A4F"/>
-            <rect x="9" y="9" width="30" height="20" rx="2" fill="#3D7A6A"/>
-            <rect x="13" y="13" width="6" height="6" fill="#C8BF8C"/>
-            <rect x="15" y="15" width="2" height="2" fill="#2D5A4F"/>
-            <rect x="29" y="13" width="6" height="6" fill="#C8BF8C"/>
-            <rect x="31" y="15" width="2" height="2" fill="#2D5A4F"/>
-            <rect x="13" y="22" width="22" height="2" fill="#C8BF8C"/>
-            <rect x="11" y="20" width="2" height="2" fill="#C8BF8C"/>
-            <rect x="35" y="20" width="2" height="2" fill="#C8BF8C"/>
-            <rect x="9" y="32" width="30" height="16" rx="2" fill="#C8BF8C"/>
-            <rect x="12" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
-            <rect x="27" y="48" width="9" height="8" rx="1" fill="#C8BF8C"/>
-            <rect x="0" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
-            <rect x="40" y="34" width="8" height="5" rx="1" fill="#C8BF8C"/>
+          <svg viewBox="0 0 16 20" width="80" height="100" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+            <!-- Head/screen (teal) -->
+            <rect x="3" y="0" width="10" height="9" rx="1" fill="#2D5A4F"/>
+            <!-- Screen inner -->
+            <rect x="4" y="1" width="8" height="7" rx="1" fill="#3D7A6A"/>
+            <!-- Eyes (cream/pale) -->
+            <rect x="5" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <rect x="9" y="3" width="2" height="2" fill="#E8E0B0"/>
+            <!-- Mouth (cream) -->
+            <rect x="6" y="6" width="4" height="1" fill="#E8E0B0"/>
+            <!-- Neck connectors (tan) -->
+            <rect x="5" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <rect x="10" y="9" width="1" height="2" fill="#C8BF8C"/>
+            <!-- Body (tan) -->
+            <rect x="2" y="11" width="12" height="6" rx="1" fill="#C8BF8C"/>
+            <!-- Arm left (tan) -->
+            <rect x="0" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <!-- Arm right (tan) -->
+            <rect x="14" y="12" width="2" height="3" rx="1" fill="#C8BF8C"/>
+            <!-- Feet (dark) -->
+            <rect x="4" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
+            <rect x="9" y="17" width="3" height="3" rx="1" fill="#1C1C1C"/>
           </svg>
         </div>
         <h2>TIMPS Agent</h2>
-        <p>Powered by TIMPS-Coder — your open-source AI coding partner.<br/>Memory-aware · Skill-powered · Runs locally via Ollama</p>
+        <p>Open-source AI coding partner · Memory-aware · Runs locally</p>
         <div class="qactions">
           <div class="qa" onclick="sendQ('Fix the bug in my selected code. Explain root cause first.')">
             <span class="qa-icon">🐛</span>
-            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">TIMPS-Coder explains + fixes root cause</div></div>
+            <div><div class="qa-title">Fix Bug</div><div class="qa-desc">Diagnose and fix root cause</div></div>
           </div>
-          <div class="qa" onclick="sendQ('Review this code with 🔴 Critical / 🟡 Warning / 🟢 Suggestion format.')">
+          <div class="qa" onclick="sendQ('Review this code with Critical / Warning / Suggestion format.')">
             <span class="qa-icon">👁</span>
             <div><div class="qa-title">Code Review</div><div class="qa-desc">Deep review with severity levels</div></div>
           </div>
+          <div class="qa" onclick="sendQ('Write comprehensive unit tests with edge cases.')">
+            <span class="qa-icon">🧪</span>
+            <div><div class="qa-title">Write Tests</div><div class="qa-desc">Generate comprehensive test cases</div></div>
+          </div>
           <div class="qa" onclick="sendQ('!audit')">
             <span class="qa-icon">🧠</span>
-            <div><div class="qa-title">!audit — Memory</div><div class="qa-desc">See what TIMPS remembers</div></div>
+            <div><div class="qa-title">Memory Audit</div><div class="qa-desc">See what TIMPS remembers</div></div>
           </div>
         </div>
       </div>

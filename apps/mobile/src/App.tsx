@@ -3,16 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { HomeScreen } from './src/screens/HomeScreen';
-import { ChatScreen } from './src/screens/ChatScreen';
-import { MemoryScreen } from './src/screens/MemoryScreen';
-import { IntegrationsScreen } from './src/screens/IntegrationsScreen';
-import { SettingsScreen } from './src/screens/SettingsScreen';
-import { VoiceAssistantScreen } from './src/screens/VoiceAssistantScreen';
-import { WorkflowsScreen } from './src/screens/WorkflowsScreen';
-import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { ActivityScreen } from './src/screens/ActivityScreen';
-import { TeamScreen } from './src/screens/TeamScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { ChatScreen } from './screens/ChatScreen';
+import { MemoryScreen } from './screens/MemoryScreen';
+import { IntegrationsScreen } from './screens/IntegrationsScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
+import { VoiceAssistantScreen } from './screens/VoiceAssistantScreen';
+import { WorkflowsScreen } from './screens/WorkflowsScreen';
+import { AnalyticsScreen } from './screens/AnalyticsScreen';
+import { ActivityScreen } from './screens/ActivityScreen';
+import { TeamScreen } from './screens/TeamScreen';
 
 export type RootStackParamList = {
   Home: undefined;

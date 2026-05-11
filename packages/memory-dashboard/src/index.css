@@ -1,16 +1,18 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0f0f17;
-  --surface: #161625;
-  --border: #2a2a3d;
-  --text: #e2e2f0;
-  --text-muted: #6b6b8a;
-  --primary: #6366f1;
-  --accent: #22d3ee;
-  --success: #10b981;
-  --warn: #f59e0b;
-  --danger: #ef4444;
+  /* TIMPS robot mascot teal dark palette */
+  --bg:          #14140F;   /* very dark ink background */
+  --surface:     #1C1C14;   /* robot body dark */
+  --border:      #2D5A4F;   /* robot screen teal */
+  --text:        #F5F0E1;   /* cream paper */
+  --text-muted:  #64747A;   /* muted slate */
+  --primary:     #4A8C7A;   /* mid-teal accent */
+  --accent:      #7EC8B8;   /* light teal highlight */
+  --tan:         #C8BF8C;   /* robot body tan */
+  --success:     #28A070;   /* green success */
+  --warn:        #C8B94F;   /* golden yellow */
+  --danger:      #C83838;   /* error red */
 }
 
 html, body, #root {

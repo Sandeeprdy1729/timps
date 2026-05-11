@@ -109,7 +109,8 @@ jobs:
           npm run benchmark --if-present 2>/dev/null || echo "No benchmark script"
 
       - name: Store benchmark data
-        uses: benchmark-action/benchmark-action@v1
+        if: hashFiles('./benchmark-results.json') != ''
+        uses: actions/upload-artifact@v4
         with:
-          tool: 'jsonscript'
-          outputFilePath: ./benchmark-results.json
+          name: benchmark-results
+          path: ./benchmark-results.json
