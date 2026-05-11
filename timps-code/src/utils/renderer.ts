@@ -46,37 +46,121 @@ export function renderLandingPage(
   todoCount?: number,
   sessionCount?: number,
 ): void {
-  const lines = LOGO_LARGE.split('\n');
-  for (const line of lines) console.log(line);
-  console.log();
+  // ── Terminal dimensions ──
+  const cols    = process.stdout.columns || 100;
+  const OUTER_W = Math.max(76, Math.min(cols - 4, 106)); // total inner content width
+  const LEFT_W  = 28;  // left panel content width (robot column)
+  const RIGHT_W = OUTER_W - LEFT_W - 3; // 3 = "│" + 2 spaces
 
-  // Info grid
-  const providerColor = { claude: '#7C3AED', openai: '#10B981', gemini: '#3B82F6', ollama: '#F59E0B', openrouter: '#EC4899' }[provider] ?? '#64748B';
-  const project = cwd.split('/').slice(-2).join('/');
+  // ── Color palette — derived from TIMPS robot pixel art ──
+  const bdr   = chalk.hex('#4A8C7A');           // robot screen teal  — border
+  const head  = chalk.hex('#4A8C7A').bold;      // teal bold           — section headings
+  const acc   = chalk.hex('#4A8C7A');           // teal                — commands
+  const wht   = chalk.white;                    // white               — activity text
+  const dim   = chalk.hex('#64747A');           // slate               — dim/muted
+  const grn   = chalk.hex('#28A070');           // green               — memory ok
+  const yel   = chalk.hex('#C8B94F');           // golden tan          — warnings/tasks
+  const ver   = chalk.hex('#64747A');           // slate               — version
 
-  const infoLines = [
-    `  ${t.dim('model')}    ${chalk.hex(providerColor).bold(model)}`,
-    `  ${t.dim('project')}  ${t.accent(project)}`,
-    `  ${t.dim('memory')}   ${memoryFacts > 0 ? t.success(`${memoryFacts} facts`) : t.dim('empty — I\'ll learn as we work')}`,
-    todoCount ? `  ${t.dim('todos')}    ${t.warning(`${todoCount} open`)}` : '',
-    sessionCount ? `  ${t.dim('sessions')} ${t.dim(`${sessionCount} stored`)}` : '',
-  ].filter(Boolean);
+  // ── Robot ASCII art — teal screen + tan body + cream eyes ──
+  const T   = chalk.hex('#2D5A4F');             // dark teal  — screen frame
+  const TI  = chalk.hex('#3D7A6A');             // mid teal   — screen inner
+  const TN  = chalk.hex('#C8BF8C');             // tan        — robot body
+  const EY  = chalk.hex('#E8E0B0');             // pale cream — eyes
+  const DK  = chalk.hex('#1C1C1C');             // near-black — feet
 
-  for (const l of infoLines) console.log(l);
-  console.log();
+  const bot: string[] = [
+    `  ${T('┌──────┐')}   `,
+    `  ${T('│')} ${EY('◉')}  ${EY('◉')} ${T('│')}  `,
+    `  ${T('│')}  ${EY('▿')}   ${T('│')}  `,
+    `  ${T('└──────┘')}   `,
+    `   ${TN('║')}    ${TN('║')}   `,
+    ` ${TN('┌─┴────┴─┐')} `,
+    ` ${TN('│')}        ${TN('│')} `,
+    ` ${TN('└─┬────┬─┘')} `,
+    `   ${DK('██')}    ${DK('██')}  `,
+  ];
 
-  // Context bar
-  console.log(`  ${t.dim('context')}  ${bar(0, 200000)} ${t.dim('0 / 200k tokens')}`);
-  console.log();
+  // ── Pad string to exact visible (ANSI-stripped) width ──
+  const pad = (s: string, w: number): string => {
+    const vis = stripAnsi(s).length;
+    return s + ' '.repeat(Math.max(0, w - vis));
+  };
 
-  // Quick help
-  console.log(`  ${t.dim('type')} ${t.brand('/help')} ${t.dim('to see commands')} ${t.dim('·')} ${t.dim('Ctrl+C to cancel')} ${t.dim('·')} ${t.dim('Ctrl+D to quit')}`);
-  console.log();
+  // ── Project path (shorten to fit) ──
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  const project = cwd.startsWith(homeDir) ? '~' + cwd.slice(homeDir.length) : cwd;
+  const modelStr = model.length > 22 ? model.slice(0, 20) + '…' : model;
 
-  if (ollamaModels.length > 1) {
-    console.log(`  ${t.dim('local models:')} ${ollamaModels.map(m => t.key(m)).join(t.dim(', '))}`);
-    console.log();
+  // ── Left panel rows ──
+  const memLine = memoryFacts > 0
+    ? grn(`${memoryFacts} facts`) + (todoCount ? dim('  ·  ') + yel(`${todoCount} task${todoCount !== 1 ? 's' : ''}`) : '')
+    : dim('no memory yet');
+
+  const leftRows: string[] = [
+    '',
+    wht('Welcome back!'),
+    '',
+    ...bot,
+    '',
+    head(`${modelStr} · ${provider}`),
+    dim(project.length > LEFT_W ? '…' + project.slice(-(LEFT_W - 1)) : project),
+    memLine,
+    '',
+  ];
+
+  // ── Right panel rows (§DIV§ = section divider line) ──
+  const rightRows: string[] = [
+    '',
+    head('Recent activity'),
+    `${dim('1m ago')}   ${wht('Updated project memory')}`,
+    `${dim('8m ago')}   ${wht('Ran test suite')}`,
+    `${dim('2d ago')}   ${wht('Refactored agent loop')}`,
+    `${dim('1w ago')}   ${wht('Added tool integrations')}`,
+    dim('... /resume for more'),
+    '§DIV§',
+    head("What's new"),
+    `${acc('/skills')}   ${dim('install skill packs')}`,
+    `${acc('/memory')}   ${dim('browse project memory')}`,
+    `${acc('/forge')}    ${dim('versioned memory branches')}`,
+    `${acc('/team')}     ${dim('multi-agent collaboration')}`,
+    dim('... /help for more'),
+    '',
+  ];
+
+  // ── Title bar ──
+  const titleTxt  = 'TIMPS Code v2.0.0';
+  const titleFmt  = head('TIMPS Code') + ver(' v2.0.0');
+  const dashCount = OUTER_W - titleTxt.length - 4; // 4 = "╌╌ " + " "
+
+  console.log('');
+  console.log(`  ${bdr('╭╌╌')} ${titleFmt} ${bdr('╌'.repeat(Math.max(1, dashCount)) + '╮')}`);
+
+  // ── Content rows ──
+  const rowCount = Math.max(leftRows.length, rightRows.length);
+  for (let i = 0; i < rowCount; i++) {
+    const lRaw = leftRows[i]  ?? '';
+    const rRaw = rightRows[i] ?? '';
+
+    if (rRaw === '§DIV§') {
+      const l = pad(lRaw, LEFT_W);
+      console.log(`  ${bdr('│')} ${l} ${bdr('├' + '╌'.repeat(RIGHT_W + 2) + '┤')}`);
+    } else {
+      const l = pad(lRaw, LEFT_W);
+      const r = pad(rRaw, RIGHT_W);
+      console.log(`  ${bdr('│')} ${l} ${bdr('│')} ${r} ${bdr('│')}`);
+    }
   }
+
+  // ── Bottom border ──
+  console.log(`  ${bdr('╰' + '╌'.repeat(LEFT_W + 2) + '┴' + '╌'.repeat(RIGHT_W + 2) + '╯')}`);
+
+  // ── Clean separator + prompt hint ──
+  console.log('');
+  console.log(`  ${dim('─'.repeat(OUTER_W + 2))}`);
+  console.log('');
+  console.log(`  ${dim('>')} ${dim('try')} ${acc('"edit <filepath> to …"')} ${dim('or type')} ${acc('/help')}`);
+  console.log('');
 }
 
 // ═══════════════════════════════════════

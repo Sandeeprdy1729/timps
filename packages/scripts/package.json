@@ -42,7 +42,7 @@
     "pretest": "npm run typecheck",
     "predev": "npm run typecheck",
     "postinstall": "npm run build",
-    "prepare": "npm run typecheck && husky install",
+    "prepare": "npm run typecheck && (husky install || true)",
     "precommit": "npm run lint && npm run test"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
-/* TIMPS Desktop — App layout — Retro robot mascot theme */
+/* TIMPS Desktop — App layout — Dark teal robot mascot theme */
 
-/* Google Fonts import for retro feel */
+/* Google Fonts import */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap&font-display=swap');
 
 /* Robot mascot animations */
@@ -13,8 +13,8 @@
   95%           { transform: scaleY(0.1); }
 }
 @keyframes robotGlow {
-  0%, 100% { filter: drop-shadow(0 0 3px rgba(45,90,79,0.4)); }
-  50%       { filter: drop-shadow(0 0 8px rgba(45,90,79,0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(74,140,122,0.4)); }
+  50%       { filter: drop-shadow(0 0 8px rgba(74,140,122,0.8)); }
 }
 
 /* Respect user's reduced motion preferences */
@@ -34,7 +34,7 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--bg-primary);
 }
 
 /* ── Header ── */
@@ -43,8 +43,8 @@
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  background: var(--surface);
-  border-bottom: 2px solid var(--border);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -72,16 +72,16 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--text);
+  color: var(--accent);
   font-family: 'Space Grotesk', sans-serif;
 }
 
 .logo-sub {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   padding: 2px 8px;
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
+  background: var(--accent-light);
+  border: 1px solid var(--border);
   border-radius: 2px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
@@ -100,10 +100,10 @@
 .project-input {
   flex: 1;
   padding: 5px 10px;
-  background: var(--bg);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   outline: none;
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
@@ -112,34 +112,26 @@
 
 .project-input:focus {
   border-color: var(--accent);
-  box-shadow: 2px 2px 0 var(--accent);
 }
 
 .btn-primary {
   padding: 6px 16px;
   background: var(--accent);
-  color: var(--bg);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
+  color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   font-weight: 700;
   font-family: 'Space Grotesk', sans-serif;
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
-  box-shadow: 2px 2px 0 var(--border);
+  transition: opacity 0.1s;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--border);
-}
-
-.btn-primary:active:not(:disabled) {
-  transform: translate(0, 0);
-  box-shadow: none;
+  opacity: 0.85;
 }
 
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -149,9 +141,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background: #fde8e8;
-  border-bottom: 2px solid var(--danger);
-  color: var(--danger);
+  background: var(--error-bg);
+  border-bottom: 1px solid var(--error);
+  color: var(--error);
   font-size: 13px;
   flex-shrink: 0;
 }
@@ -159,7 +151,7 @@
 .error-banner button {
   background: none;
   border: none;
-  color: var(--danger);
+  color: var(--error);
   font-size: 14px;
   padding: 2px 6px;
   cursor: pointer;
@@ -176,7 +168,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: var(--bg);
+  background: var(--bg-primary);
 }
 
 /* ── Empty state ── */
@@ -187,7 +179,7 @@
   justify-content: center;
   height: 100%;
   gap: 16px;
-  color: var(--text-muted);
+  color: var(--text-tertiary);
   text-align: center;
 }
 

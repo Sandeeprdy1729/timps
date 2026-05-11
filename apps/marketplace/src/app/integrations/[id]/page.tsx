@@ -17,7 +17,7 @@ const integrations: Record<string, {
   features: string[];
   installation: string;
   configuration: string;
-  supported: string;
+  supported: boolean;
 }> = {
   github: {
     id: 'github',
