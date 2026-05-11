@@ -47,94 +47,94 @@ export function renderLandingPage(
   sessionCount?: number,
 ): void {
   // ── Terminal dimensions ──
-  const cols = process.stdout.columns || 100;
-  const termW = Math.max(80, Math.min(cols, 110));
-  const leftW  = 32;                   // inner content width of left panel
-  const rightW = termW - 9 - leftW;   // inner content width of right panel
-  // Total line visual width = 2 indent + 1│ + 1sp + leftW + 1sp + 1│ + 1sp + rightW + 1sp + 1│ = leftW+rightW+9
+  const cols    = process.stdout.columns || 100;
+  const OUTER_W = Math.max(76, Math.min(cols - 4, 106)); // total inner content width
+  const LEFT_W  = 28;  // left panel content width (robot column)
+  const RIGHT_W = OUTER_W - LEFT_W - 3; // 3 = "│" + 2 spaces
 
-  // ── Color helpers ──
-  const bdr = chalk.hex('#4A8C7A');
-  const acc = chalk.hex('#4A8C7A').bold;
-  const dim = chalk.hex('#64747A');
-  const wht = chalk.white;
-  const grn = chalk.hex('#28A070');
-  const yel = chalk.hex('#C8B94F');
-  const tan = chalk.hex('#C8BF8C');
-  const tealDk = chalk.hex('#2D5A4F');
+  // ── Color palette — derived from TIMPS robot pixel art ──
+  const bdr   = chalk.hex('#4A8C7A');           // robot screen teal  — border
+  const head  = chalk.hex('#4A8C7A').bold;      // teal bold           — section headings
+  const acc   = chalk.hex('#4A8C7A');           // teal                — commands
+  const wht   = chalk.white;                    // white               — activity text
+  const dim   = chalk.hex('#64747A');           // slate               — dim/muted
+  const grn   = chalk.hex('#28A070');           // green               — memory ok
+  const yel   = chalk.hex('#C8B94F');           // golden tan          — warnings/tasks
+  const ver   = chalk.hex('#64747A');           // slate               — version
 
-  // ── ASCII robot (14 visible chars per line, from mascot image) ──
-  const R: string[] = [
-    chalk.hex('#1C1C1C')('   ┌──────┐   '),
-    tealDk('   │') + tan(' ◉  ◉ ') + tealDk('│   '),
-    tealDk('   │') + tan('  ‿   ') + tealDk('│   '),
-    chalk.hex('#1C1C1C')('   └──────┘   '),
-    tan('    ║    ║    '),
-    tan('  ┌─┴────┴─┐ '),
-    tan('  │        │ '),
-    tan('  └─┬────┬─┘ '),
-    chalk.hex('#1C1C1C')('    ██    ██  '),
+  // ── Robot ASCII art — teal screen + tan body + cream eyes ──
+  const T   = chalk.hex('#2D5A4F');             // dark teal  — screen frame
+  const TI  = chalk.hex('#3D7A6A');             // mid teal   — screen inner
+  const TN  = chalk.hex('#C8BF8C');             // tan        — robot body
+  const EY  = chalk.hex('#E8E0B0');             // pale cream — eyes
+  const DK  = chalk.hex('#1C1C1C');             // near-black — feet
+
+  const bot: string[] = [
+    `  ${T('┌──────┐')}   `,
+    `  ${T('│')} ${EY('◉')}  ${EY('◉')} ${T('│')}  `,
+    `  ${T('│')}  ${EY('▿')}   ${T('│')}  `,
+    `  ${T('└──────┘')}   `,
+    `   ${TN('║')}    ${TN('║')}   `,
+    ` ${TN('┌─┴────┴─┐')} `,
+    ` ${TN('│')}        ${TN('│')} `,
+    ` ${TN('└─┬────┬─┘')} `,
+    `   ${DK('██')}    ${DK('██')}  `,
   ];
 
-  // ── Pad a string to exact visual width (strips ANSI before measuring) ──
-  const padTo = (s: string, w: number): string => {
+  // ── Pad string to exact visible (ANSI-stripped) width ──
+  const pad = (s: string, w: number): string => {
     const vis = stripAnsi(s).length;
     return s + ' '.repeat(Math.max(0, w - vis));
   };
 
-  // ── Left panel rows ──
+  // ── Project path (shorten to fit) ──
   const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-  const project = cwd.replace(homeDir, '~');
-  const modelStr = `${model.slice(0, 20)} · ${provider}`;
-  const memStr   = memoryFacts > 0 ? grn(`${memoryFacts} memory facts`) : dim('no memory yet');
-  const todoStr  = todoCount ? `  ${yel(`${todoCount} task${todoCount !== 1 ? 's' : ''}`)}` : '';
+  const project = cwd.startsWith(homeDir) ? '~' + cwd.slice(homeDir.length) : cwd;
+  const modelStr = model.length > 22 ? model.slice(0, 20) + '…' : model;
+
+  // ── Left panel rows ──
+  const memLine = memoryFacts > 0
+    ? grn(`${memoryFacts} facts`) + (todoCount ? dim('  ·  ') + yel(`${todoCount} task${todoCount !== 1 ? 's' : ''}`) : '')
+    : dim('no memory yet');
 
   const leftRows: string[] = [
     '',
-    `  ${chalk.bold.white('Welcome back!')}`,
+    wht('Welcome back!'),
     '',
-    R[0], R[1], R[2], R[3], R[4], R[5], R[6], R[7], R[8],
+    ...bot,
     '',
-    `  ${acc(modelStr)}`,
-    `  ${dim(project)}`,
-    `  ${memStr}${todoStr}`,
+    head(`${modelStr} · ${provider}`),
+    dim(project.length > LEFT_W ? '…' + project.slice(-(LEFT_W - 1)) : project),
+    memLine,
     '',
   ];
 
-  // ── Right panel rows (§DIV§ = section separator within right panel) ──
-  const recent: Array<[string, string]> = [
-    ['1m ago', 'Updated project memory'],
-    ['8m ago', 'Ran test suite'],
-    ['2d ago', 'Refactored agent loop'],
-    ['1w ago', 'Added tool integrations'],
-  ];
-  const news: Array<[string, string]> = [
-    ['/skills ', 'install skill packs'],
-    ['/memory ', 'browse project memory'],
-    ['/forge  ', 'versioned memory branches'],
-    ['/team   ', 'multi-agent collaboration'],
-  ];
-
+  // ── Right panel rows (§DIV§ = section divider line) ──
   const rightRows: string[] = [
     '',
-    acc('Recent activity'),
-    ...recent.map(([age, desc]) => `${dim(age.padEnd(8))} ${wht(desc)}`),
+    head('Recent activity'),
+    `${dim('1m ago')}   ${wht('Updated project memory')}`,
+    `${dim('8m ago')}   ${wht('Ran test suite')}`,
+    `${dim('2d ago')}   ${wht('Refactored agent loop')}`,
+    `${dim('1w ago')}   ${wht('Added tool integrations')}`,
     dim('... /resume for more'),
     '§DIV§',
-    acc("What's new"),
-    ...news.map(([cmd, desc]) => `${acc(cmd)}${dim(desc)}`),
+    head("What's new"),
+    `${acc('/skills')}   ${dim('install skill packs')}`,
+    `${acc('/memory')}   ${dim('browse project memory')}`,
+    `${acc('/forge')}    ${dim('versioned memory branches')}`,
+    `${acc('/team')}     ${dim('multi-agent collaboration')}`,
     dim('... /help for more'),
     '',
   ];
 
-  // ── Top border with title ──
-  const titleVis  = 'TIMPS Code v2.0.0';
-  const title     = acc('TIMPS Code') + dim(' v2.0.0');
-  const totalInnerW = leftW + rightW + 5; // 1sp + divider + 1sp + 2 inner-pads
-  const dashCount = totalInnerW - titleVis.length - 4; // "── " + title + " " + dashes
+  // ── Title bar ──
+  const titleTxt  = 'TIMPS Code v2.0.0';
+  const titleFmt  = head('TIMPS Code') + ver(' v2.0.0');
+  const dashCount = OUTER_W - titleTxt.length - 4; // 4 = "╌╌ " + " "
 
   console.log('');
-  console.log(`  ${bdr('╭──')} ${title} ${bdr('─'.repeat(Math.max(1, dashCount)) + '╮')}`);
+  console.log(`  ${bdr('╭╌╌')} ${titleFmt} ${bdr('╌'.repeat(Math.max(1, dashCount)) + '╮')}`);
 
   // ── Content rows ──
   const rowCount = Math.max(leftRows.length, rightRows.length);
@@ -143,25 +143,23 @@ export function renderLandingPage(
     const rRaw = rightRows[i] ?? '';
 
     if (rRaw === '§DIV§') {
-      // Horizontal divider only in the right panel
-      const l = padTo(lRaw, leftW);
-      console.log(`  ${bdr('│')} ${l} ${bdr('├' + '─'.repeat(rightW + 2) + '┤')}`);
+      const l = pad(lRaw, LEFT_W);
+      console.log(`  ${bdr('│')} ${l} ${bdr('├' + '╌'.repeat(RIGHT_W + 2) + '┤')}`);
     } else {
-      const l = padTo(lRaw, leftW);
-      const r = padTo(rRaw, rightW);
+      const l = pad(lRaw, LEFT_W);
+      const r = pad(rRaw, RIGHT_W);
       console.log(`  ${bdr('│')} ${l} ${bdr('│')} ${r} ${bdr('│')}`);
     }
   }
 
   // ── Bottom border ──
-  console.log(`  ${bdr('╰' + '─'.repeat(leftW + 2) + '┴' + '─'.repeat(rightW + 2) + '╯')}`);
+  console.log(`  ${bdr('╰' + '╌'.repeat(LEFT_W + 2) + '┴' + '╌'.repeat(RIGHT_W + 2) + '╯')}`);
 
-  // ── Prompt hint ──
+  // ── Clean separator + prompt hint ──
   console.log('');
-  console.log(`  ${dim('type')} ${acc('/help')} ${dim('for commands')}  ${dim('·')}  ${dim('Ctrl+C to quit')}`);
-  if (ollamaModels.length > 1) {
-    console.log(`  ${dim('local:')} ${ollamaModels.map(m => t.key(m)).join(dim(', '))}`);
-  }
+  console.log(`  ${dim('─'.repeat(OUTER_W + 2))}`);
+  console.log('');
+  console.log(`  ${dim('>')} ${dim('try')} ${acc('"edit <filepath> to …"')} ${dim('or type')} ${acc('/help')}`);
   console.log('');
 }
 

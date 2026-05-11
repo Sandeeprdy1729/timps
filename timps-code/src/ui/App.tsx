@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, Newline } from 'ink';
+import { Box, Text, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
 import { MessageList } from './components/MessageList.js';
 import { ToolActivity } from './components/ToolActivity.js';
@@ -9,7 +9,6 @@ import { renderModelsList, renderMemoryPanel } from '../utils/renderer.js';
 import { createProvider } from '../models/index.js';
 import { getDefaultModel, loadConfig, saveConfig } from '../config/config.js';
 
-import { MemoryDashboard } from './panels/MemoryDashboard.js';
 import { HelpPanel } from './panels/HelpPanel.js';
 import { ProviderSelect } from './panels/ProviderSelect.js';
 
@@ -25,32 +24,99 @@ interface AppProps {
   multimodalMem?: any;
 }
 
-// ── Welcome screen shown in the Ink TUI when no messages yet ──
-const WelcomeHint = ({ provider }: { provider: ModelProvider }) => (
-  <Box flexDirection="column" paddingX={1} marginBottom={1}>
-    <Box borderStyle="single" borderColor="#2D5A4F" paddingX={2} paddingY={1} flexDirection="column">
-      <Box>
-        <Text bold color="#4A8C7A">Quick commands  </Text>
-        <Text dimColor>— or just describe your task</Text>
-      </Box>
-      <Newline />
-      <Box flexDirection="row" gap={6}>
-        <Box flexDirection="column">
-          <Box><Text color="#4A8C7A">/help     </Text><Text dimColor>show all commands</Text></Box>
-          <Box><Text color="#4A8C7A">/memory   </Text><Text dimColor>browse project memory</Text></Box>
-          <Box><Text color="#4A8C7A">/todo     </Text><Text dimColor>manage tasks</Text></Box>
-          <Box><Text color="#4A8C7A">/git      </Text><Text dimColor>git status</Text></Box>
+// ── TIMPS robot colors from the pixel art mascot ──
+const C_TEAL    = '#4A8C7A'; // robot screen teal  — accent
+const C_TEAL_DK = '#2D5A4F'; // dark teal           — border
+const C_TAN     = '#C8BF8C'; // robot body tan      — secondary text
+const C_CREAM   = '#F5F0E1'; // cream               — primary text
+const C_DIM     = '#64747A'; // slate               — muted
+const C_GREEN   = '#28A070'; // success green
+const C_YELLOW  = '#C8B94F'; // golden tan
+
+// ── Slash command grid shown when no messages exist (OpenCode style) ──
+const commands = [
+  { cmd: '/new    ', desc: 'new session' },
+  { cmd: '/help   ', desc: 'show help' },
+  { cmd: '/memory ', desc: 'project memory' },
+  { cmd: '/models ', desc: 'list models' },
+  { cmd: '/skills ', desc: 'skill packs' },
+  { cmd: '/forge  ', desc: 'version branches' },
+  { cmd: '/agents ', desc: 'multi-agent' },
+  { cmd: '/git    ', desc: 'git status' },
+];
+
+const WelcomeScreen = () => (
+  <Box flexDirection="column" alignItems="center" paddingY={2}>
+    {/* Pixel robot — teal screen + tan body */}
+    <Box flexDirection="column" alignItems="center" marginBottom={2}>
+      <Text color={C_TEAL_DK}>   ┌──────┐   </Text>
+      <Text><Text color={C_TEAL_DK}>   │ </Text><Text color="#E8E0B0">◉  ◉</Text><Text color={C_TEAL_DK}> │   </Text></Text>
+      <Text><Text color={C_TEAL_DK}>   │  </Text><Text color="#E8E0B0">▿  </Text><Text color={C_TEAL_DK}> │   </Text></Text>
+      <Text color={C_TEAL_DK}>   └──────┘   </Text>
+      <Text color={C_TAN}>    ║    ║    </Text>
+      <Text color={C_TAN}>  ┌─┴────┴─┐ </Text>
+      <Text color={C_TAN}>  │        │ </Text>
+      <Text color={C_TAN}>  └─┬────┬─┘ </Text>
+      <Text color="#1C1C1C">    ██    ██  </Text>
+    </Box>
+
+    {/* Brand name */}
+    <Box marginBottom={1}>
+      <Text bold color={C_TEAL}>TIMPS</Text>
+      <Text bold color={C_CREAM}>CODE</Text>
+    </Box>
+
+    {/* Command grid — 2 columns */}
+    <Box flexDirection="column" marginBottom={2}>
+      {commands.map((c, i) => (
+        <Box key={i}>
+          <Text color={C_TEAL} bold>{c.cmd}</Text>
+          <Text color={C_DIM}>{c.desc}</Text>
+          {i % 2 === 0 && i + 1 < commands.length ? (
+            <>
+              <Text>{'     '}</Text>
+              <Text color={C_TEAL} bold>{commands[i + 1].cmd}</Text>
+              <Text color={C_DIM}>{commands[i + 1].desc}</Text>
+            </>
+          ) : null}
         </Box>
-        <Box flexDirection="column">
-          <Box><Text color="#4A8C7A">/skills   </Text><Text dimColor>install skill packs</Text></Box>
-          <Box><Text color="#4A8C7A">/provider </Text><Text dimColor>switch AI model</Text></Box>
-          <Box><Text color="#4A8C7A">/doctor   </Text><Text dimColor>system health check</Text></Box>
-          <Box><Text color="#4A8C7A">/forge    </Text><Text dimColor>versioned memory</Text></Box>
-        </Box>
-      </Box>
+      )).filter((_, i) => i % 2 === 0)}
     </Box>
   </Box>
 );
+
+// ── Bottom status bar — always visible ──
+const StatusBar = ({
+  model,
+  provider,
+  cwd,
+  memoryCount,
+  openTodos,
+}: {
+  model: string;
+  provider: string;
+  cwd: string;
+  memoryCount: number;
+  openTodos: number;
+}) => {
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  const project = cwd.startsWith(homeDir) ? '~' + cwd.slice(homeDir.length) : cwd;
+  const modelShort = model.length > 20 ? model.slice(0, 18) + '…' : model;
+  return (
+    <Box borderStyle="single" borderColor={C_TEAL_DK} paddingX={1}>
+      <Text bold color={C_TEAL}>timps</Text>
+      <Text color={C_DIM}>  {provider} · {modelShort}</Text>
+      <Text color={C_DIM}>  {project}</Text>
+      {memoryCount > 0 && <Text color={C_GREEN}>  ·  {memoryCount}m</Text>}
+      {openTodos > 0   && <Text color={C_YELLOW}>  ·  {openTodos}t</Text>}
+      <Box flexGrow={1} />
+      <Text color={C_DIM}>tab /help  </Text>
+      <Box borderStyle="single" borderColor={C_TEAL}>
+        <Text bold color={C_TEAL}> BUILD AGENT </Text>
+      </Box>
+    </Box>
+  );
+};
 
 export const App = ({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem }: AppProps) => {
   const [currentProvider, setCurrentProvider] = useState<ModelProvider>(provider);
@@ -60,48 +126,27 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showProviderSelect, setShowProviderSelect] = useState(false);
-  
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [answerInput, setAnswerInput] = useState('');
 
   useEffect(() => {
     const handleKeyPress = (data: any) => {
-      if (showHelp && data.toString() === '\r') {
-        setShowHelp(false);
-      }
+      if (showHelp && data.toString() === '\r') setShowHelp(false);
     };
     process.stdin.on('keypress', handleKeyPress);
-    return () => {
-      process.stdin.off('keypress', handleKeyPress);
-    };
+    return () => { process.stdin.off('keypress', handleKeyPress); };
   }, [showHelp]);
 
   const handleSubmit = async (query: string) => {
     if (!query.trim()) return;
+    if (showHelp)          { setShowHelp(false); return; }
+    if (showProviderSelect) { setShowProviderSelect(false); return; }
 
-    if (showHelp) {
-      setShowHelp(false);
-      return;
-    }
-
-    if (showProviderSelect) {
-      setShowProviderSelect(false);
-      return;
-    }
-
-    // Handle slash commands
     if (query.trim().startsWith('/')) {
       const cmd = query.trim().toLowerCase();
 
-      if (cmd === '/help' || cmd === '/h') {
-        setShowHelp(true);
-        return;
-      }
-
-      if (cmd === '/provider' || cmd === '/models' || cmd === '/model') {
-        setShowProviderSelect(true);
-        return;
-      }
+      if (cmd === '/help' || cmd === '/h') { setShowHelp(true); return; }
+      if (cmd === '/provider' || cmd === '/models' || cmd === '/model') { setShowProviderSelect(true); return; }
 
       if (cmd.startsWith('/model ')) {
         const [, providerArg, modelArg] = query.trim().split(/\s+/, 3);
@@ -111,12 +156,10 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
           const nextProvider = createProvider(providerName, modelName);
           agent.switchProvider(nextProvider);
           setCurrentProvider(nextProvider);
-
           const config = loadConfig();
           config.defaultProvider = providerName;
           config.defaultModel = nextProvider.model;
           saveConfig(config);
-
           process.stdout.write(`\n  Switched to ${nextProvider.name} / ${nextProvider.model}\n\n`);
         } catch (err) {
           process.stdout.write(`\n  Provider switch failed: ${(err as Error).message}\n\n`);
@@ -127,33 +170,20 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
       if (cmd.startsWith('/memory') || cmd === '/mem') {
         const args = query.replace(/^\/(?:memory|mem)\s*/i, '').trim();
         if (!args) {
-          const entries = memory.loadSemanticEntries();
-          const working = memory.workingMemory;
-          renderMemoryPanel(entries, working, memory.episodeCount);
-        } else if (args.startsWith('query') || args.startsWith('q')) {
-          const searchText = args.replace(/^(query|q)\s*/i, '').trim();
-          const results = memory.query(searchText, 20);
-          renderMemoryPanel(results, memory.workingMemory, memory.episodeCount, searchText);
+          renderMemoryPanel(memory.loadSemanticEntries(), memory.workingMemory, memory.episodeCount);
         } else if (args === 'forget' || args === 'clear') {
           memory.clearAll();
           process.stdout.write('\n  Memory cleared\n\n');
         } else {
-          const results = memory.query(args, 20);
-          renderMemoryPanel(results, memory.workingMemory, memory.episodeCount, args);
+          renderMemoryPanel(memory.query(args, 20), memory.workingMemory, memory.episodeCount, args);
         }
         return;
       }
 
       if (cmd === '/doctor') {
-        process.stdout.write('\n  Running diagnostics...\n\n');
-        const checks = [
-          { name: 'Node.js', ok: true, detail: `v${process.versions.node}` },
-          { name: 'Memory dir', ok: true, detail: 'OK' },
-        ];
-        for (const c of checks) {
-          process.stdout.write(`  ${c.ok ? '✓' : '✗'} ${c.name}: ${c.detail}\n`);
-        }
-        process.stdout.write('\n');
+        process.stdout.write('\n  Running diagnostics…\n\n');
+        process.stdout.write(`  ✓ Node.js  v${process.versions.node}\n`);
+        process.stdout.write(`  ✓ Memory dir  OK\n\n`);
         return;
       }
 
@@ -163,41 +193,34 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
         const maxCtx = 200000;
         const pct = Math.round((total / maxCtx) * 100);
         const bar = '█'.repeat(Math.round(pct / 5)) + '░'.repeat(20 - Math.round(pct / 5));
-        process.stdout.write(`\n  context ${bar} ${(total / 1000).toFixed(1)}k / ${(maxCtx / 1000).toFixed(0)}k (${pct}%)\n`);
-        process.stdout.write(`  messages: ${agent.getMessageCount()}\n\n`);
+        process.stdout.write(`\n  context ${bar} ${(total / 1000).toFixed(1)}k / ${(maxCtx / 1000).toFixed(0)}k (${pct}%)\n\n`);
         return;
       }
 
-      // Pass all other commands to the handler
       try {
         await handleSlashCommand(query, agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem);
-      } catch (err) {
+      } catch {
         process.stdout.write(`\n  Unknown command: ${query}\n\n`);
       }
       return;
     }
 
     if (isProcessing) return;
-    
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setIsProcessing(true);
 
     try {
-      let generator;
-      if (query.trim().startsWith('/plan')) {
-         const planQuery = query.replace('/plan', '').trim();
-         generator = agent.plan(planQuery || 'Generate a plan');
-      } else {
-         generator = agent.run(query);
-      }
+      const generator = query.trim().startsWith('/plan')
+        ? agent.plan(query.replace('/plan', '').trim() || 'Generate a plan')
+        : agent.run(query);
 
       for await (const event of generator) {
         if (event.type === 'text') {
           setMessages(prev => {
             const last = prev[prev.length - 1];
-            if (last && last.role === 'assistant') {
-               return [...prev.slice(0, -1), { role: 'assistant', content: last.content + event.content }];
+            if (last?.role === 'assistant') {
+              return [...prev.slice(0, -1), { role: 'assistant', content: last.content + event.content }];
             }
             return [...prev, { role: 'assistant', content: event.content }];
           });
@@ -217,100 +240,107 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
   };
 
   const memoryCount = memory?.query('', 100)?.length || 0;
-  const openTodos = todos?.getOpen()?.length || 0;
+  const openTodos   = todos?.getOpen()?.length || 0;
   const hasMessages = messages.length > 0;
 
+  if (showHelp) return <HelpPanel onClose={() => setShowHelp(false)} />;
+
+  if (showProviderSelect) return (
+    <ProviderSelect
+      currentProvider={currentProvider?.name || 'ollama'}
+      onSelect={(id, model) => {
+        try {
+          const providerName = id as ProviderName;
+          const modelName = model || getDefaultModel(providerName);
+          const nextProvider = createProvider(providerName, modelName);
+          agent.switchProvider(nextProvider);
+          setCurrentProvider(nextProvider);
+          const config = loadConfig();
+          config.defaultProvider = providerName;
+          config.defaultModel = nextProvider.model;
+          saveConfig(config);
+          process.stdout.write(`\n  Selected: ${nextProvider.name} / ${nextProvider.model}\n\n`);
+        } catch (err) {
+          process.stdout.write(`\n  Provider switch failed: ${(err as Error).message}\n\n`);
+        }
+        setShowProviderSelect(false);
+      }}
+      onCancel={() => setShowProviderSelect(false)}
+    />
+  );
+
   return (
-    <Box flexDirection="column" paddingX={1}>
-      {showHelp ? (
-        <HelpPanel onClose={() => setShowHelp(false)} />
-      ) : showProviderSelect ? (
-        <ProviderSelect
-          currentProvider={currentProvider?.name || 'ollama'}
-          onSelect={(id, model) => {
-            try {
-              const providerName = id as ProviderName;
-              const modelName = model || getDefaultModel(providerName);
-              const nextProvider = createProvider(providerName, modelName);
-              agent.switchProvider(nextProvider);
-              setCurrentProvider(nextProvider);
+    <Box flexDirection="column" height="100%">
 
-              const config = loadConfig();
-              config.defaultProvider = providerName;
-              config.defaultModel = nextProvider.model;
-              saveConfig(config);
+      {/* ── Main content area ── */}
+      <Box flexDirection="column" flexGrow={1} paddingX={2}>
 
-              process.stdout.write(`\n  Selected: ${nextProvider.name} / ${nextProvider.model}\n\n`);
-            } catch (err) {
-              process.stdout.write(`\n  Provider switch failed: ${(err as Error).message}\n\n`);
-            }
-            setShowProviderSelect(false);
-          }}
-          onCancel={() => setShowProviderSelect(false)}
-        />
-      ) : (
-        <>
-          <MemoryDashboard memoryCount={memoryCount} openTodos={openTodos} cwd={cwd} />
+        {/* Welcome when no conversation */}
+        {!hasMessages && <WelcomeScreen />}
 
-          {/* Welcome hint when no conversation yet */}
-          {!hasMessages && (
-            <WelcomeHint provider={currentProvider} />
-          )}
+        {/* Conversation */}
+        {hasMessages && <MessageList messages={messages} />}
 
-          {/* Conversation messages */}
-          {hasMessages && <MessageList messages={messages} />}
+        {/* Tool activity */}
+        {activeTool && !pendingQuestion && (
+          <Box marginTop={1}>
+            <ToolActivity toolName={activeTool} />
+          </Box>
+        )}
 
-          {/* Tool spinner */}
-          {activeTool && !pendingQuestion && (
-            <Box marginTop={1}>
-              <ToolActivity toolName={activeTool} />
+        {/* User question */}
+        {pendingQuestion && (
+          <Box marginTop={1} flexDirection="column">
+            <Box>
+              <Text color={C_YELLOW} bold>? </Text>
+              <Text>{pendingQuestion}</Text>
             </Box>
-          )}
-
-          {/* User-input question */}
-          {pendingQuestion && (
-            <Box marginTop={1} flexDirection="column">
-              <Box>
-                <Text color="#C8B94F" bold>? </Text>
-                <Text>{pendingQuestion}</Text>
-              </Box>
-              <Box marginTop={1}>
-                <Text color="#4A8C7A" bold>❯ </Text>
-                <TextInput
-                  value={answerInput}
-                  onChange={setAnswerInput}
-                  onSubmit={(ans) => {
-                    setMessages(prev => [...prev, { role: 'user', content: `[Answer to "${pendingQuestion}"]\n${ans}` }]);
-                    setPendingQuestion(null);
-                    setAnswerInput('');
-                    agent.answerUserQuestion(ans);
-                  }}
-                />
-              </Box>
-            </Box>
-          )}
-
-          {/* Main prompt */}
-          {!isProcessing && !pendingQuestion && (
             <Box marginTop={1}>
-              <Text color="#4A8C7A" bold>❯ </Text>
+              <Text color={C_TEAL} bold>❯ </Text>
               <TextInput
-                value={input}
-                onChange={setInput}
-                onSubmit={handleSubmit}
-                placeholder="Type your instruction or /help"
+                value={answerInput}
+                onChange={setAnswerInput}
+                onSubmit={(ans) => {
+                  setMessages(prev => [...prev, { role: 'user', content: `[${pendingQuestion}]\n${ans}` }]);
+                  setPendingQuestion(null);
+                  setAnswerInput('');
+                  agent.answerUserQuestion(ans);
+                }}
               />
             </Box>
-          )}
+          </Box>
+        )}
 
-          {/* Processing indicator */}
-          {isProcessing && (
-            <Box marginTop={1}>
-              <Text dimColor>processing…</Text>
-            </Box>
-          )}
-        </>
-      )}
+        {/* Main input */}
+        {!isProcessing && !pendingQuestion && (
+          <Box marginTop={1}>
+            <Text color={C_TEAL} bold>❯ </Text>
+            <TextInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              placeholder="Type a task, or /help for commands"
+            />
+          </Box>
+        )}
+
+        {/* Processing */}
+        {isProcessing && (
+          <Box marginTop={1}>
+            <Text color={C_DIM}>processing…</Text>
+          </Box>
+        )}
+
+      </Box>
+
+      {/* ── Bottom status bar ── */}
+      <StatusBar
+        model={currentProvider?.model || 'local'}
+        provider={currentProvider?.name || 'local'}
+        cwd={cwd}
+        memoryCount={memoryCount}
+        openTodos={openTodos}
+      />
     </Box>
   );
 };
