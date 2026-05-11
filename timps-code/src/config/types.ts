@@ -113,6 +113,12 @@ export interface TimpsConfig {
   customInstructions?: string;
   techStack?: TechStack;
   team?: TeamConfig;
+  thinkingEnabled?: boolean;
+  fastMode?: boolean;
+  verbose?: boolean;
+  disableAnalytics?: boolean;
+  apiKey?: string;
+  migrationVersion?: number;
 }
 
 export interface McpServerConfig {

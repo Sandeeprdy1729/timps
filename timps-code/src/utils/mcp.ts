@@ -1,320 +1,219 @@
-// MCP Server Integration
-// Supports both: MCP client (connect to other MCP servers) and MCP server (expose TIMPS tools)
+// ── TIMPS Code — MCP Client & Discovery
+// Model Context Protocol integration with auto-discovery
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
+import type { ToolDefinition } from '../config/types.js';
+import type { McpServerConfig } from '../types/settings.js';
+import type { McpClientConnection, McpResource } from '../types/mcp.js';
+import { loadConfig } from '../config/config.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
-import { ALL_TOOLS } from '../tools/tools.js';
-import type { ToolDefinition } from '../config/types.js';
+import { EventEmitter } from 'node:events';
 
-const MCP_CONFIG_DIR = path.join(os.homedir(), '.timps', 'mcp');
-const MCP_SERVERS_FILE = path.join(MCP_CONFIG_DIR, 'servers.json');
-
-export interface MCPServerConfig {
+export interface DiscoveredMcpServer {
+  name: string;
   command: string;
   args?: string[];
   env?: Record<string, string>;
+  description?: string;
+  autoStart?: boolean;
 }
 
-export interface MCPServerManifest {
-  servers: Record<string, MCPServerConfig>;
-  enabled: string[];
-}
-
-// ── MCP Server: Expose TIMPS tools to external agents ──
-
-let mcpServerInstance: MCPServer | null = null;
-
-export class MCPServer {
-  private server: Server;
-  private transport: StdioServerTransport | null = null;
+export class McpClientManager extends EventEmitter {
+  private clients = new Map<string, McpClientConnection>();
+  private transports = new Map<string, StdioClientTransport>();
+  private mcpClients = new Map<string, Client>();
+  private config: McpServerConfig[] = [];
 
   constructor() {
-    this.server = new Server(
-      {
-        name: 'timps-code',
-        version: '2.0.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
-
-    this.setupHandlers();
+    super();
+    this.loadConfig();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, () => {
-      return {
-        tools: ALL_TOOLS.map(tool => ({
-          name: tool.definition.name,
-          description: tool.definition.description,
-          inputSchema: tool.definition.inputSchema,
-        })),
-      };
-    });
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      
-      // Find the tool
-      const tool = ALL_TOOLS.find(t => t.definition.name === name);
-      if (!tool) {
-        return {
-          content: [{ type: 'text', text: `Unknown tool: ${name}` }],
-          isError: true,
-        };
-      }
-
-      try {
-        const result = await tool.execute(args as Record<string, unknown>, process.cwd());
-        return {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
-      } catch (err: any) {
-        return {
-          content: [{ type: 'text', text: `Error: ${err.message}` }],
-          isError: true,
-        };
-      }
-    });
+  private loadConfig(): void {
+    const cfg = loadConfig();
+    this.config = cfg.mcpServers || [];
   }
 
-  async start(): Promise<void> {
-    this.transport = new StdioServerTransport();
-    await this.server.connect(this.transport);
-    console.log('MCP Server started on stdio');
-  }
-
-  async stop(): Promise<void> {
-    // @ts-ignore - private method
-    await this.server.close();
-    mcpServerInstance = null;
-  }
-}
-
-export async function startMCPServer(): Promise<void> {
-  if (mcpServerInstance) {
-    console.log('MCP Server already running');
-    return;
-  }
-  
-  mcpServerInstance = new MCPServer();
-  await mcpServerInstance.start();
-}
-
-// ── MCP Client: Connect to external MCP servers ──
-
-export class MCPClientRegistry {
-  private clients: Map<string, Client> = new Map();
-  private manifests: MCPServerManifest;
-
-  constructor() {
-    this.manifests = this.loadManifest();
-  }
-
-  private loadManifest(): MCPServerManifest {
-    try {
-      if (fs.existsSync(MCP_SERVERS_FILE)) {
-        return JSON.parse(fs.readFileSync(MCP_SERVERS_FILE, 'utf-8'));
-      }
-    } catch { /* ignore */ }
-    return { servers: {}, enabled: [] };
-  }
-
-  private saveManifest(): void {
-    fs.mkdirSync(MCP_CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(MCP_SERVERS_FILE, JSON.stringify(this.manifests, null, 2), 'utf-8');
-  }
-
-  // List configured servers
-  listServers(): { name: string; enabled: boolean; config: MCPServerConfig }[] {
-    return Object.entries(this.manifests.servers).map(([name, config]) => ({
-      name,
-      enabled: this.manifests.enabled.includes(name),
-      config,
-    }));
-  }
-
-  // Add an MCP server
-  addServer(name: string, config: MCPServerConfig): void {
-    this.manifests.servers[name] = config;
-    if (!this.manifests.enabled.includes(name)) {
-      this.manifests.enabled.push(name);
+  async initialize(): Promise<void> {
+    for (const server of this.config) {
+      await this.connect(server);
     }
-    this.saveManifest();
   }
 
-  // Remove an MCP server
-  removeServer(name: string): boolean {
-    if (!this.manifests.servers[name]) return false;
-    
-    delete this.manifests.servers[name];
-    const idx = this.manifests.enabled.indexOf(name);
-    if (idx !== -1) this.manifests.enabled.splice(idx, 1);
-    
-    if (this.clients.has(name)) {
-      this.disconnect(name);
-    }
-    
-    this.saveManifest();
-    return true;
-  }
-
-  // Enable/disable a server
-  toggleServer(name: string, enabled: boolean): boolean {
-    if (!this.manifests.servers[name]) return false;
-    
-    if (enabled && !this.manifests.enabled.includes(name)) {
-      this.manifests.enabled.push(name);
-    } else if (!enabled) {
-      const idx = this.manifests.enabled.indexOf(name);
-      if (idx !== -1) this.manifests.enabled.splice(idx, 1);
-    }
-    
-    this.saveManifest();
-    return true;
-  }
-
-  // Connect to an MCP server
-  async connect(name: string): Promise<boolean> {
-    const config = this.manifests.servers[name];
-    if (!config) {
-      console.error(`MCP server not found: ${name}`);
-      return false;
-    }
-
-    if (this.clients.has(name)) {
-      return true; // Already connected
-    }
+  async connect(config: McpServerConfig): Promise<void> {
+    const { name, command, args = [], env = {} } = config;
 
     try {
+      const envRecord: Record<string, string> = {};
+      for (const [k, v] of Object.entries(env)) {
+        if (v !== undefined && v !== null) envRecord[k] = String(v);
+      }
+
       const transport = new StdioClientTransport({
-        command: config.command,
-        args: config.args || [],
-        env: Object.fromEntries(
-          Object.entries({ ...process.env, ...config.env }).filter(([, v]) => v !== undefined)
-        ) as Record<string, string>,
+        command,
+        args,
+        env: { ...process.env, ...envRecord } as Record<string, string>,
       });
 
-      const client = new Client(
-        { name, version: '1.0' },
-        { capabilities: {} }
-      );
+      const client = new Client({ name: `timps-${name}`, version: '2.0.0' }, {
+        capabilities: { tools: {}, resources: {}, prompts: {} },
+      } as any);
 
       await client.connect(transport);
-      this.clients.set(name, client);
-      console.log(`Connected to MCP server: ${name}`);
-      return true;
-    } catch (err: any) {
-      console.error(`Failed to connect to ${name}: ${err.message}`);
-      return false;
+      this.transports.set(name, transport);
+      this.mcpClients.set(name, client);
+
+      const toolsResult = await client.listTools();
+      const resourcesResult = await client.listResources();
+
+      this.clients.set(name, {
+        name,
+        status: 'connected',
+        serverInfo: { name, version: '1.0.0' },
+        tools: toolsResult.tools.map(t => this.mcpToolToDefinition(t)),
+        resources: resourcesResult.resources.map(r => this.mcpResourceToResource(r)),
+      });
+
+      this.emit('connected', name);
+    } catch (err) {
+      this.clients.set(name, {
+        name,
+        status: 'error',
+        lastError: (err as Error).message,
+        tools: [],
+        resources: [],
+      });
+      this.emit('error', name, err as Error);
     }
   }
 
-  // Disconnect from an MCP server
-  async disconnect(name: string): Promise<boolean> {
-    const client = this.clients.get(name);
-    if (!client) return false;
-
-    try {
-      // @ts-ignore - private method
+  async disconnect(name: string): Promise<void> {
+    const client = this.mcpClients.get(name);
+    if (client) {
       await client.close();
+      this.mcpClients.delete(name);
+      this.transports.delete(name);
       this.clients.delete(name);
-      return true;
-    } catch {
-      return false;
+      this.emit('disconnected', name);
     }
   }
 
-  // Call a tool on a connected MCP server
-  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
-    const client = this.clients.get(serverName);
-    if (!client) {
-      throw new Error(`Not connected to ${serverName}. Run: timps mcp connect ${serverName}`);
-    }
+  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<string> {
+    const client = this.mcpClients.get(serverName);
+    if (!client) throw new Error(`MCP server "${serverName}" not connected`);
 
-    const response = await client.callTool({ name: toolName, arguments: args });
-
-    const first = (response.content as Array<{type: string; text?: string; isError?: boolean}>)?.[0];
-    if (first?.isError) throw new Error(first.text);
-    return first?.text;
+    const result = await client.callTool({ name: toolName, arguments: args });
+    return this.formatToolResult(result);
   }
 
-  // List tools from all connected servers
-  async listAllTools(): Promise<{ server: string; tools: unknown[] }[]> {
-    const results: { server: string; tools: unknown[] }[] = [];
-    
-    for (const [name, client] of this.clients) {
-      try {
-        const response = await client.listTools();
-        results.push({ server: name, tools: response.tools || [] });
-      } catch { /* skip errors */ }
+  getTools(): ToolDefinition[] {
+    const tools: ToolDefinition[] = [];
+    for (const conn of this.clients.values()) {
+      if (conn.status === 'connected') {
+        tools.push(...conn.tools);
+      }
     }
-    
-    return results;
+    return tools;
   }
 
-  // Connect to all enabled servers
-  async connectAll(): Promise<void> {
-    for (const name of this.manifests.enabled) {
-      await this.connect(name);
-    }
+  getClients(): McpClientConnection[] {
+    return Array.from(this.clients.values());
   }
 
-  // Disconnect all
-  async disconnectAll(): Promise<void> {
-    for (const name of this.clients.keys()) {
-      await this.disconnect(name);
-    }
+  getClient(name: string): McpClientConnection | undefined {
+    return this.clients.get(name);
+  }
+
+  private mcpToolToDefinition(tool: Tool): ToolDefinition {
+    return {
+      name: tool.name,
+      description: tool.description || '',
+      inputSchema: {
+        type: 'object',
+        properties: (tool.inputSchema as any)?.properties || {},
+        required: (tool.inputSchema as any)?.required || [],
+      },
+    };
+  }
+
+  private mcpResourceToResource(resource: Resource): McpResource {
+    return {
+      uri: resource.uri,
+      name: resource.name,
+      mimeType: resource.mimeType,
+      description: resource.description,
+    };
+  }
+
+  private formatToolResult(result: any): string {
+    if (!result.content) return 'OK';
+    return result.content
+      .map((c: any) => c.type === 'text' ? c.text : JSON.stringify(c))
+      .join('\n');
   }
 }
 
-export const mcpRegistry = new MCPClientRegistry();
+// ── MCP Server Discovery ─────────────────────────────────────────────────────
 
-// ── CLI Commands for MCP ──
+const OFFICIAL_SERVERS: DiscoveredMcpServer[] = [
+  { name: 'filesystem', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '.'], description: 'File system operations', autoStart: true },
+  { name: 'git', command: 'npx', args: ['-y', '@modelcontextprotocol/server-git'], description: 'Git operations', autoStart: true },
+  { name: 'github', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], description: 'GitHub integration' },
+  { name: 'slack', command: 'npx', args: ['-y', '@modelcontextprotocol/server-slack'], description: 'Slack messaging' },
+  { name: 'postgres', command: 'npx', args: ['-y', '@modelcontextprotocol/server-postgres'], description: 'PostgreSQL database' },
+  { name: 'brave-search', command: 'npx', args: ['-y', '@modelcontextprotocol/server-brave-search'], description: 'Web search via Brave' },
+  { name: 'memory', command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'], description: 'Persistent memory server' },
+  { name: 'sentry', command: 'npx', args: ['-y', '@modelcontextprotocol/server-sentry'], description: 'Sentry error tracking' },
+];
 
-export function handleMCPCommand(args: string[]): string {
-  if (args[0] === 'list') {
-    const servers = mcpRegistry.listServers();
-    if (servers.length === 0) return 'No MCP servers configured. Run: timps mcp add <name> <command>';
-    
-    return 'MCP Servers:\n' + servers.map(s => 
-      `  ${s.enabled ? '✓' : '○'} ${s.name}`
-    ).join('\n');
+export async function discoverMcpServers(cwd: string): Promise<DiscoveredMcpServer[]> {
+  const discovered: DiscoveredMcpServer[] = [];
+
+  // Check package.json
+  const pkgPath = path.join(cwd, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const mcpDeps = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.devDependencies || {})]
+        .filter(d => d.startsWith('@modelcontextprotocol/server-'));
+      for (const dep of mcpDeps) {
+        const serverName = dep.replace('@modelcontextprotocol/server-', '');
+        discovered.push({ name: serverName, command: 'npx', args: ['-y', dep], description: `Discovered from ${pkgPath}`, autoStart: true });
+      }
+    } catch { /* ignore */ }
   }
 
-  if (args[0] === 'add' && args[1] && args[2]) {
-    const name = args[1];
-    const command = args.slice(2).join(' ');
-    mcpRegistry.addServer(name, {
-      command: command.split(' ')[0],
-      args: command.split(' ').slice(1),
-    });
-    return `Added MCP server: ${name}`;
+  // Check .mcp.json
+  const mcpConfigPath = path.join(cwd, '.mcp.json');
+  if (fs.existsSync(mcpConfigPath)) {
+    try {
+      const mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf-8'));
+      for (const [name, config] of Object.entries(mcpConfig.mcpServers || {})) {
+        const c = config as any;
+        discovered.push({ name, command: c.command, args: c.args, env: c.env, description: 'From .mcp.json' });
+      }
+    } catch { /* ignore */ }
   }
 
-  if (args[0] === 'remove' && args[1]) {
-    mcpRegistry.removeServer(args[1]);
-    return `Removed MCP server: ${args[1]}`;
-  }
+  return discovered;
+}
 
-  if (args[0] === 'connect' && args[1]) {
-    mcpRegistry.connect(args[1]);
-    return `Connecting to ${args[1]}...`;
-  }
+export function getOfficialMcpServers(): DiscoveredMcpServer[] {
+  return OFFICIAL_SERVERS;
+}
 
-  if (args[0] === 'disconnect' && args[1]) {
-    mcpRegistry.disconnect(args[1]);
-    return `Disconnected from ${args[1]}`;
-  }
+export function getMcpServerTemplate(name: string): DiscoveredMcpServer | undefined {
+  return OFFICIAL_SERVERS.find(s => s.name === name);
+}
 
-  return `Usage: timps mcp <list|add|remove|connect|disconnect>`;
+let mcpManager: McpClientManager | null = null;
+
+export function getMcpManager(): McpClientManager {
+  if (!mcpManager) {
+    mcpManager = new McpClientManager();
+  }
+  return mcpManager;
 }

@@ -5,6 +5,24 @@ declare module 'puppeteer' {
   export default { launch, connect };
 }
 
+declare module 'better-sqlite3' {
+  interface Database {
+    exec(sql: string): void;
+    prepare<T>(sql: string): Statement<T>;
+    close(): void;
+  }
+  interface Statement<T> {
+    run(...params: unknown[]): { changes: number };
+    all(...params: unknown[]): T[];
+    get(...params: unknown[]): T | undefined;
+  }
+  interface Sqlite3 {
+    new(path: string): Database;
+  }
+  const sqlite3: Sqlite3;
+  export default sqlite3;
+}
+
 declare module 'pdf-parse' {
   function pdfParse(data: Buffer | Uint8Array, options?: Record<string, unknown>): Promise<{
     numpages: number;

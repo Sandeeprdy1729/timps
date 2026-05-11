@@ -18,6 +18,11 @@ const DEFAULT_CONFIG: TimpsConfig = {
   memoryEnabled: true,
   autoCorrect: true,
   maxContextTokens: 128000,
+  mcpServers: [],
+  thinkingEnabled: true,
+  fastMode: false,
+  verbose: false,
+  migrationVersion: 2,
 };
 
 export function loadConfig(): TimpsConfig {
@@ -66,7 +71,7 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
   claude:     'claude-sonnet-4-20250514',
   openai:     'gpt-4o',
   gemini:     'gemini-2.0-flash',
-  ollama:     'qwen2.5-coder:latest',
+  ollama:     'qwen2.5-coder:7b',
   openrouter: 'google/gemini-2.0-flash-exp:free',
   deepseek:   'deepseek-coder',
   groq:       'llama-3.1-70b-versatile',
