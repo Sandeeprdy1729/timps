@@ -891,9 +891,9 @@ pub fn get_system_info() -> String {
     let info = serde_json::json!({
         "llama_available": is_llama_available(),
         "gpu_available": std::env::var("CUDA_VISIBLE_DEVICES").is_ok(),
-        "cpu_threads": num_cpus::get(),
-        "memory_total_mb": sys_info::memory_info().map(|m| m.total / 1024 / 1024).unwrap_or(0),
-        "memory_available_mb": sys_info::memory_info().map(|m| m.available / 1024 / 1024).unwrap_or(0),
+        "cpu_threads": std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+        "memory_total_mb": 0u64,
+        "memory_available_mb": 0u64,
     });
     
     serde_json::to_string(&info).unwrap_or_else(|_| "{}".to_string())
