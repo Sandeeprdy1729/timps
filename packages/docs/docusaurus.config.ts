@@ -1,262 +1,81 @@
-{
-  "name": "@timps/docs",
-  "version": "1.0.0",
-  "private": true,
-  "description": "TIMPS Documentation Generator",
-  "main": "src/index.js",
-  "scripts": {
-    "dev": "docusaurus start",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
-    "serve": "docusaurus serve",
-    "clear": "docusaurus clear",
-    "write-translations": "docusaurus write-translations",
-    "docusaurus": "docusaurus"
-  },
-  "dependencies": {
-    "@docusaurus/core": "^3.1.0",
-    "@docusaurus/plugin-client-redirects": "^3.1.0",
-    "@docusaurus/plugin-ideal-image": "^3.1.0",
-    "@docusaurus/preset-classic": "^3.1.0",
-    "@mdx-js/react": "^3.0.0",
-    "@tailwindcss/typography": "^0.5.10",
-    "clsx": "^2.1.0",
-    "docusaurus-plugin-tailwindcss": "^0.1.0",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "redocusaurus": "^2.0.0"
-  },
-  "devDependencies": {
-    "@docusaurus/eslint-plugin": "^3.1.0",
-    "@docusaurus/module-type-aliases": "^3.1.0",
-    "@docusaurus/types": "^3.1.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.0"
-  },
-  "engines": {
-    "node": ">=18.0"
-  },
-  "browserslist": {
-    "production": [
-      ">0.5%",
-      "last 2 versions",
-      "Firefox ESR",
-      "not dead",
-      "not IE 11"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
-}
-
-module.exports = {
+// @ts-check
+/** @type {import('@docusaurus/types').Config} */
+const config = {
   title: 'TIMPS',
   tagline: 'The AI Coding Agent That Remembers',
-  url: 'https://timps.ai',
+  favicon: 'img/favicon.ico',
+  url: 'https://timps.dev',
   baseUrl: '/',
+  organizationName: 'Sandeeprdy1729',
+  projectName: 'timps',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/favicon.ico',
-  organizationName: 'anomalyco',
-  projectName: 'timps',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'ja', 'es', 'fr', 'de', 'pt', 'hi'],
+    localeConfigs: {
+      en: { label: 'English' },
+      ja: { label: '日本語' },
+      es: { label: 'Español' },
+      fr: { label: 'Français' },
+      de: { label: 'Deutsch' },
+      pt: { label: 'Português' },
+      hi: { label: 'हिंदी' },
+    },
+  },
 
   presets: [
     [
       'classic',
-      {
+      /** @type {import('@docusaurus/preset-classic').Options} */
+      ({
         docs: {
-          sidebarPath: './sidebars.ts',
-          sidebarCollapsible: true,
-          LastUpdated: true,
-          editUrl: 'https://github.com/anomalyco/timps/edit/main/',
+          sidebarPath: './sidebars.js',
+          editUrl: 'https://github.com/Sandeeprdy1729/timps/tree/main/packages/docs/',
         },
-        blog: {
-          showReadingTime: true,
-          editUrl: 'https://github.com/anomalyco/timps/edit/main/',
-        },
-        theme: {
-          customHook: () => null,
-          customNavs: () => null,
-          footerLink: '',
-        },
-      },
+        blog: false,
+        theme: { customCss: './src/css/custom.css' },
+      }),
     ],
   ],
 
-  themeConfig: {
-    image: 'img/timps-social.png',
-    announcementBar: {
-      id: 'announcement',
-      content: '🎉 TIMPS v2.0 is now available! Check out the new features.',
-      backgroundColor: '#1a1a2e',
-      textColor: '#ffffff',
-      isCloseable: true,
-    },
-    navbar: {
-      title: 'TIMPS',
-      logo: {
-        alt: 'TIMPS Logo',
-        src: 'img/logo.svg',
-        srcDark: 'img/logo-dark.svg',
-      },
-      items: [
-        {
-          type: 'doc',
-          docId: 'intro',
-          position: 'left',
-          label: 'Docs',
-        },
-        {
-          type: 'doc',
-          docId: 'getting-started/installation',
-          position: 'left',
-          label: 'Getting Started',
-        },
-        {
-          type: 'docSidebar',
-          sidebar: 'integrations',
-          position: 'left',
-          label: 'Integrations',
-        },
-        {
-          type: 'doc',
-          docId: 'api/overview',
-          position: 'left',
-          label: 'API',
-        },
-        {
-          type: 'search',
-          position: 'right',
-        },
-        {
-          to: '/blog',
-          label: 'Blog',
-          position: 'right',
-        },
-        {
-          href: 'https://github.com/anomalyco/timps',
-          label: 'GitHub',
-          position: 'right',
-        },
-      ],
-    },
-    footer: {
-      style: 'dark',
-      links: [
-        {
-          title: 'Docs',
-          items: [
-            {
-              label: 'Getting Started',
-              to: '/docs/getting-started/installation',
-            },
-            {
-              label: 'API Reference',
-              to: '/docs/api/overview',
-            },
-            {
-              label: 'Configuration',
-              to: '/docs/getting-started/configuration',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Discord',
-              href: 'https://discord.gg/timps',
-            },
-            {
-              label: 'Twitter',
-              href: 'https://twitter.com/timpsai',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/anomalyco/timps',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} TIMPS. Built with Docusaurus.`,
-    },
-    docs: {
-      sidebar: {
-        hideLast: true,
-        collapsed: false,
-      },
-    },
-    prism: {
-      theme: prismLight,
-      darkTheme: prismDark,
-      additionalLanguages: ['bash', 'json', 'typescript', 'yaml'],
-      magicComments: [
-        {
-          className: 'theme-code-block-highlighted-line',
-          line: 'highlight-next-line',
-          block: { start: 'highlight-start', end: 'highlight-end' },
-        },
-      ],
-    },
-    algolia: {
-      appId: 'YOUR_APP_ID',
-      apiKey: 'YOUR_SEARCH_API_KEY',
-      indexName: 'timps',
-    },
-  },
-
-  themes: ['@docusaurus/theme-live-codeblock'],
-  plugins: [
-    'docusaurus-plugin-tailwindcss',
-    [
-      '@docusaurus/plugin-client-redirects',
-      {
-        redirects: [
-          { from: '/old-page', to: '/new-page' },
+  themeConfig:
+    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
+    ({
+      colorMode: { defaultMode: 'dark', respectPrefersColorScheme: true },
+      image: 'img/social-card.png',
+      navbar: {
+        title: 'TIMPS',
+        logo: { alt: 'TIMPS Logo', src: 'img/logo.svg' },
+        items: [
+          { type: 'docSidebar', sidebarId: 'tutorialSidebar', position: 'left', label: 'Docs' },
+          { href: 'https://github.com/Sandeeprdy1729/timps', label: 'GitHub', position: 'right' },
         ],
       },
-    ],
-    [
-      '@docusaurus/plugin-ideal-image',
-      {
-        quality: 70,
-        max: 1030,
-        min: 640,
-        steps: 2,
+      footer: {
+        style: 'dark',
+        links: [
+          {
+            title: 'Docs',
+            items: [
+              { label: 'Getting Started', to: '/docs/intro' },
+              { label: 'Providers', to: '/docs/providers' },
+              { label: 'Plugins', to: '/docs/plugins' },
+              { label: 'Recipes', to: '/docs/recipes' },
+            ],
+          },
+          {
+            title: 'Community',
+            items: [
+              { label: 'GitHub', href: 'https://github.com/Sandeeprdy1729/timps' },
+              { label: 'npm', href: 'https://www.npmjs.com/package/timps-code' },
+            ],
+          },
+        ],
+        copyright: `Copyright © ${new Date().getFullYear()} TIMPS. MIT License.`,
       },
-    ],
-  ],
-  
-  customFields: {
-    env: process.env.NODE_ENV,
-  },
-
-  webpack: {
-    jsLoader: (isServer) => ({
-      loader: 'esbuild-loader',
-      options: {
-        loader: 'tsx',
-        target: isServer ? 'node18' : 'es2020',
-      },
+      prism: { theme: { plain: {}, styles: [] }, darkTheme: { plain: {}, styles: [] } },
     }),
-  },
-
-  staticDirectories: ['static', 'img'],
 };
+
+module.exports = config;

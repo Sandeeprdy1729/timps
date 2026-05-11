@@ -125,12 +125,26 @@ export interface McpServerConfig {
 export interface MemoryEntry {
   id: string;
   timestamp: number;
-  type: 'fact' | 'pattern' | 'convention' | 'error' | 'decision' | 'architecture' | 'preference' | 'error_lesson';
+  type: 'fact' | 'pattern' | 'convention' | 'error' | 'decision' | 'architecture' | 'preference' | 'error_lesson' | 'procedural' | 'lesson';
   content: string;
   tags: string[];
   project?: string;
   confidence?: number;
   accessCount?: number;
+  importance?: number;
+  lastAccessed?: number;
+  expiresAt?: number;
+  domain?: string;
+  source?: 'user_explicit' | 'inferred' | 'external_doc' | 'extracted';
+  version?: number;
+  previousVersions?: { timestamp: number; content: string; changedBy?: string; trigger?: string }[];
+}
+
+export interface MemoryVersion {
+  timestamp: number;
+  content: string;
+  changedBy?: string;
+  trigger?: string;
 }
 
 export interface EpisodicMemory {
@@ -146,6 +160,11 @@ export interface WorkingMemory {
   activeFiles: string[];
   recentErrors: string[];
   discoveredPatterns: string[];
+  arousal?: number;
+  valence?: number;
+  cognitiveLoad?: number;
+  taskStartTime?: number;
+  toolsUsedSequence?: string[];
 }
 
 export interface PlanStep {
