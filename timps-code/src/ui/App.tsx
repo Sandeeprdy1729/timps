@@ -25,6 +25,33 @@ interface AppProps {
   multimodalMem?: any;
 }
 
+// ── Welcome screen shown in the Ink TUI when no messages yet ──
+const WelcomeHint = ({ provider }: { provider: ModelProvider }) => (
+  <Box flexDirection="column" paddingX={1} marginBottom={1}>
+    <Box borderStyle="single" borderColor="#2D5A4F" paddingX={2} paddingY={1} flexDirection="column">
+      <Box>
+        <Text bold color="#4A8C7A">Quick commands  </Text>
+        <Text dimColor>— or just describe your task</Text>
+      </Box>
+      <Newline />
+      <Box flexDirection="row" gap={6}>
+        <Box flexDirection="column">
+          <Box><Text color="#4A8C7A">/help     </Text><Text dimColor>show all commands</Text></Box>
+          <Box><Text color="#4A8C7A">/memory   </Text><Text dimColor>browse project memory</Text></Box>
+          <Box><Text color="#4A8C7A">/todo     </Text><Text dimColor>manage tasks</Text></Box>
+          <Box><Text color="#4A8C7A">/git      </Text><Text dimColor>git status</Text></Box>
+        </Box>
+        <Box flexDirection="column">
+          <Box><Text color="#4A8C7A">/skills   </Text><Text dimColor>install skill packs</Text></Box>
+          <Box><Text color="#4A8C7A">/provider </Text><Text dimColor>switch AI model</Text></Box>
+          <Box><Text color="#4A8C7A">/doctor   </Text><Text dimColor>system health check</Text></Box>
+          <Box><Text color="#4A8C7A">/forge    </Text><Text dimColor>versioned memory</Text></Box>
+        </Box>
+      </Box>
+    </Box>
+  </Box>
+);
+
 export const App = ({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir, multimodalMem }: AppProps) => {
   const [currentProvider, setCurrentProvider] = useState<ModelProvider>(provider);
   const [input, setInput] = useState('');
@@ -191,13 +218,14 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
 
   const memoryCount = memory?.query('', 100)?.length || 0;
   const openTodos = todos?.getOpen()?.length || 0;
+  const hasMessages = messages.length > 0;
 
   return (
-    <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" paddingX={1}>
       {showHelp ? (
         <HelpPanel onClose={() => setShowHelp(false)} />
       ) : showProviderSelect ? (
-          <ProviderSelect
+        <ProviderSelect
           currentProvider={currentProvider?.name || 'ollama'}
           onSelect={(id, model) => {
             try {
@@ -223,24 +251,29 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
       ) : (
         <>
           <MemoryDashboard memoryCount={memoryCount} openTodos={openTodos} cwd={cwd} />
-          
-          <Box marginBottom={1}>
-            <Text color="#2D5A4F" bold>🤖 TIMPS Code</Text>
-            <Text dimColor> — {currentProvider?.name || 'agent'} / {currentProvider?.model || 'Local Agent'}</Text>
-          </Box>
 
-          <MessageList messages={messages} />
+          {/* Welcome hint when no conversation yet */}
+          {!hasMessages && (
+            <WelcomeHint provider={currentProvider} />
+          )}
 
+          {/* Conversation messages */}
+          {hasMessages && <MessageList messages={messages} />}
+
+          {/* Tool spinner */}
           {activeTool && !pendingQuestion && (
             <Box marginTop={1}>
               <ToolActivity toolName={activeTool} />
             </Box>
           )}
 
+          {/* User-input question */}
           {pendingQuestion && (
-            <Box marginTop={1}>
-              <Text color="yellow">? User Input Required: </Text>
-              <Text>{pendingQuestion}</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Box>
+                <Text color="#C8B94F" bold>? </Text>
+                <Text>{pendingQuestion}</Text>
+              </Box>
               <Box marginTop={1}>
                 <Text color="#4A8C7A" bold>❯ </Text>
                 <TextInput
@@ -257,6 +290,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
             </Box>
           )}
 
+          {/* Main prompt */}
           {!isProcessing && !pendingQuestion && (
             <Box marginTop={1}>
               <Text color="#4A8C7A" bold>❯ </Text>
@@ -266,6 +300,13 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
                 onSubmit={handleSubmit}
                 placeholder="Type your instruction or /help"
               />
+            </Box>
+          )}
+
+          {/* Processing indicator */}
+          {isProcessing && (
+            <Box marginTop={1}>
+              <Text dimColor>processing…</Text>
             </Box>
           )}
         </>

@@ -46,37 +46,123 @@ export function renderLandingPage(
   todoCount?: number,
   sessionCount?: number,
 ): void {
-  const lines = LOGO_LARGE.split('\n');
-  for (const line of lines) console.log(line);
-  console.log();
+  // ── Terminal dimensions ──
+  const cols = process.stdout.columns || 100;
+  const termW = Math.max(80, Math.min(cols, 110));
+  const leftW  = 32;                   // inner content width of left panel
+  const rightW = termW - 9 - leftW;   // inner content width of right panel
+  // Total line visual width = 2 indent + 1│ + 1sp + leftW + 1sp + 1│ + 1sp + rightW + 1sp + 1│ = leftW+rightW+9
 
-  // Info grid
-  const providerColor = { claude: '#7C3AED', openai: '#10B981', gemini: '#3B82F6', ollama: '#F59E0B', openrouter: '#EC4899' }[provider] ?? '#64748B';
-  const project = cwd.split('/').slice(-2).join('/');
+  // ── Color helpers ──
+  const bdr = chalk.hex('#4A8C7A');
+  const acc = chalk.hex('#4A8C7A').bold;
+  const dim = chalk.hex('#64747A');
+  const wht = chalk.white;
+  const grn = chalk.hex('#28A070');
+  const yel = chalk.hex('#C8B94F');
+  const tan = chalk.hex('#C8BF8C');
+  const tealDk = chalk.hex('#2D5A4F');
 
-  const infoLines = [
-    `  ${t.dim('model')}    ${chalk.hex(providerColor).bold(model)}`,
-    `  ${t.dim('project')}  ${t.accent(project)}`,
-    `  ${t.dim('memory')}   ${memoryFacts > 0 ? t.success(`${memoryFacts} facts`) : t.dim('empty — I\'ll learn as we work')}`,
-    todoCount ? `  ${t.dim('todos')}    ${t.warning(`${todoCount} open`)}` : '',
-    sessionCount ? `  ${t.dim('sessions')} ${t.dim(`${sessionCount} stored`)}` : '',
-  ].filter(Boolean);
+  // ── ASCII robot (14 visible chars per line, from mascot image) ──
+  const R: string[] = [
+    chalk.hex('#1C1C1C')('   ┌──────┐   '),
+    tealDk('   │') + tan(' ◉  ◉ ') + tealDk('│   '),
+    tealDk('   │') + tan('  ‿   ') + tealDk('│   '),
+    chalk.hex('#1C1C1C')('   └──────┘   '),
+    tan('    ║    ║    '),
+    tan('  ┌─┴────┴─┐ '),
+    tan('  │        │ '),
+    tan('  └─┬────┬─┘ '),
+    chalk.hex('#1C1C1C')('    ██    ██  '),
+  ];
 
-  for (const l of infoLines) console.log(l);
-  console.log();
+  // ── Pad a string to exact visual width (strips ANSI before measuring) ──
+  const padTo = (s: string, w: number): string => {
+    const vis = stripAnsi(s).length;
+    return s + ' '.repeat(Math.max(0, w - vis));
+  };
 
-  // Context bar
-  console.log(`  ${t.dim('context')}  ${bar(0, 200000)} ${t.dim('0 / 200k tokens')}`);
-  console.log();
+  // ── Left panel rows ──
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  const project = cwd.replace(homeDir, '~');
+  const modelStr = `${model.slice(0, 20)} · ${provider}`;
+  const memStr   = memoryFacts > 0 ? grn(`${memoryFacts} memory facts`) : dim('no memory yet');
+  const todoStr  = todoCount ? `  ${yel(`${todoCount} task${todoCount !== 1 ? 's' : ''}`)}` : '';
 
-  // Quick help
-  console.log(`  ${t.dim('type')} ${t.brand('/help')} ${t.dim('to see commands')} ${t.dim('·')} ${t.dim('Ctrl+C to cancel')} ${t.dim('·')} ${t.dim('Ctrl+D to quit')}`);
-  console.log();
+  const leftRows: string[] = [
+    '',
+    `  ${chalk.bold.white('Welcome back!')}`,
+    '',
+    R[0], R[1], R[2], R[3], R[4], R[5], R[6], R[7], R[8],
+    '',
+    `  ${acc(modelStr)}`,
+    `  ${dim(project)}`,
+    `  ${memStr}${todoStr}`,
+    '',
+  ];
 
-  if (ollamaModels.length > 1) {
-    console.log(`  ${t.dim('local models:')} ${ollamaModels.map(m => t.key(m)).join(t.dim(', '))}`);
-    console.log();
+  // ── Right panel rows (§DIV§ = section separator within right panel) ──
+  const recent: Array<[string, string]> = [
+    ['1m ago', 'Updated project memory'],
+    ['8m ago', 'Ran test suite'],
+    ['2d ago', 'Refactored agent loop'],
+    ['1w ago', 'Added tool integrations'],
+  ];
+  const news: Array<[string, string]> = [
+    ['/skills ', 'install skill packs'],
+    ['/memory ', 'browse project memory'],
+    ['/forge  ', 'versioned memory branches'],
+    ['/team   ', 'multi-agent collaboration'],
+  ];
+
+  const rightRows: string[] = [
+    '',
+    acc('Recent activity'),
+    ...recent.map(([age, desc]) => `${dim(age.padEnd(8))} ${wht(desc)}`),
+    dim('... /resume for more'),
+    '§DIV§',
+    acc("What's new"),
+    ...news.map(([cmd, desc]) => `${acc(cmd)}${dim(desc)}`),
+    dim('... /help for more'),
+    '',
+  ];
+
+  // ── Top border with title ──
+  const titleVis  = 'TIMPS Code v2.0.0';
+  const title     = acc('TIMPS Code') + dim(' v2.0.0');
+  const totalInnerW = leftW + rightW + 5; // 1sp + divider + 1sp + 2 inner-pads
+  const dashCount = totalInnerW - titleVis.length - 4; // "── " + title + " " + dashes
+
+  console.log('');
+  console.log(`  ${bdr('╭──')} ${title} ${bdr('─'.repeat(Math.max(1, dashCount)) + '╮')}`);
+
+  // ── Content rows ──
+  const rowCount = Math.max(leftRows.length, rightRows.length);
+  for (let i = 0; i < rowCount; i++) {
+    const lRaw = leftRows[i]  ?? '';
+    const rRaw = rightRows[i] ?? '';
+
+    if (rRaw === '§DIV§') {
+      // Horizontal divider only in the right panel
+      const l = padTo(lRaw, leftW);
+      console.log(`  ${bdr('│')} ${l} ${bdr('├' + '─'.repeat(rightW + 2) + '┤')}`);
+    } else {
+      const l = padTo(lRaw, leftW);
+      const r = padTo(rRaw, rightW);
+      console.log(`  ${bdr('│')} ${l} ${bdr('│')} ${r} ${bdr('│')}`);
+    }
   }
+
+  // ── Bottom border ──
+  console.log(`  ${bdr('╰' + '─'.repeat(leftW + 2) + '┴' + '─'.repeat(rightW + 2) + '╯')}`);
+
+  // ── Prompt hint ──
+  console.log('');
+  console.log(`  ${dim('type')} ${acc('/help')} ${dim('for commands')}  ${dim('·')}  ${dim('Ctrl+C to quit')}`);
+  if (ollamaModels.length > 1) {
+    console.log(`  ${dim('local:')} ${ollamaModels.map(m => t.key(m)).join(dim(', '))}`);
+  }
+  console.log('');
 }
 
 // ═══════════════════════════════════════

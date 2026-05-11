@@ -8,25 +8,23 @@ interface MemoryDashboardProps {
 }
 
 export const MemoryDashboard = ({ memoryCount, openTodos, cwd }: MemoryDashboardProps) => {
+  const project = cwd.replace(process.env.HOME || '', '~');
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="#2D5A4F" paddingX={1} marginBottom={1}>
-      <Box>
-        <Text bold color="#2D5A4F">🤖 TIMPS Dashboard</Text>
-      </Box>
-      <Box flexDirection="row">
-        <Box flexDirection="column" marginRight={4}>
-          <Text color="grey">Directory:</Text>
-          <Text>{cwd}</Text>
-        </Box>
-        <Box flexDirection="column" marginRight={4}>
-          <Text color="grey">Memory Items:</Text>
-          <Text color={memoryCount > 0 ? '#4A8C7A' : 'grey'}>{memoryCount}</Text>
-        </Box>
-        <Box flexDirection="column">
-          <Text color="grey">Open Tasks:</Text>
-          <Text color={openTodos > 0 ? '#E8C94A' : '#4A8C7A'}>{openTodos}</Text>
-        </Box>
-      </Box>
+    <Box flexDirection="row" paddingX={1} paddingY={0} borderStyle="single" borderColor="#2D5A4F" marginBottom={1}>
+      <Text bold color="#4A8C7A">TIMPS</Text>
+      <Text dimColor>  {project}</Text>
+      {memoryCount > 0 && (
+        <>
+          <Text dimColor>  ·  </Text>
+          <Text color="#28A070">{memoryCount} facts</Text>
+        </>
+      )}
+      {openTodos > 0 && (
+        <>
+          <Text dimColor>  ·  </Text>
+          <Text color="#C8B94F">{openTodos} task{openTodos !== 1 ? 's' : ''}</Text>
+        </>
+      )}
     </Box>
   );
 };
