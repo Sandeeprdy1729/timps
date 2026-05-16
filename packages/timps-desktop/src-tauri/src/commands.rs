@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -320,4 +320,419 @@ pub fn set_provider(provider: String) -> Result<(), String> {
 #[tauri::command]
 pub fn install_update() -> Result<(), String> {
     Err("Auto-updater not yet configured. Check GitHub Releases for updates.".to_string())
+}
+
+// ── Passive Background Learning Commands ──────────────────────────────────
+
+/// Domain tags inferred from content for passive observations
+fn infer_domain(content: &str) -> &'static str {
+    let lc = content.to_lowercase();
+    if ["overwork", "exhausted", "stress", "burnout", "tired", "deadline", "overwhelm"]
+        .iter()
+        .any(|k| lc.contains(k))
+    {
+        return "burnout";
+    }
+    if ["colleague", "conflict", "team", "manager", "feedback", "friction"]
+        .iter()
+        .any(|k| lc.contains(k))
+    {
+        return "relationship";
+    }
+    if lc.contains("bug") || lc.contains("error") || lc.contains("fix") || lc.contains("code") {
+        return "code_pattern";
+    }
+    if lc.contains("decide") || lc.contains("decision") || lc.contains("choose") {
+        return "decision";
+    }
+    if lc.contains("goal") || lc.contains("plan") || lc.contains("target") {
+        return "goal";
+    }
+    "general"
+}
+
+/// Store a passive background observation into semantic memory.
+///
+/// Called by the passive listener in the frontend whenever the user sends
+/// a message. Content is automatically deduplicated and domain-tagged.
+#[tauri::command]
+pub fn passive_store(
+    project_path: String,
+    content: String,
+    kind: Option<String>,
+    tags: Vec<String>,
+) -> Result<String, String> {
+    if content.trim().len() < 10 {
+        return Ok("skip:too_short".to_string());
+    }
+
+    let dir = memory_dir(&project_path);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let p = format!("{}/semantic.json", dir);
+
+    let mut entries: Vec<SemanticEntry> = match fs::read_to_string(&p) {
+        Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+        Err(_) => vec![],
+    };
+
+    // Simple dedup: skip if exact content already stored
+    let lc_new = content.to_lowercase();
+    if entries.iter().any(|e| e.content.to_lowercase() == lc_new) {
+        return Ok("skip:duplicate".to_string());
+    }
+
+    let domain = infer_domain(&content);
+    let id = format!(
+        "obs_{}_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+        &lc_new[..lc_new.len().min(8)].replace(' ', "_")
+    );
+
+    let mut all_tags = tags;
+    all_tags.push("passive".to_string());
+    all_tags.push(domain.to_string());
+    all_tags.dedup();
+
+    entries.push(SemanticEntry {
+        id: id.clone(),
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64,
+        kind: kind.unwrap_or_else(|| "observation".to_string()),
+        content,
+        tags: all_tags,
+        score: Some(0.7),
+    });
+
+    // Keep most recent 2000 entries
+    if entries.len() > 2000 {
+        let drain_to = entries.len() - 2000;
+        entries.drain(0..drain_to);
+    }
+
+    let s = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
+    fs::write(&p, s).map_err(|e| e.to_string())?;
+    Ok(id)
+}
+
+/// Store an episodic memory (conversation summary) from the desktop app.
+#[tauri::command]
+pub fn store_episode(
+    project_path: String,
+    summary: String,
+    outcome: String,
+    tags: Vec<String>,
+) -> Result<(), String> {
+    let dir = memory_dir(&project_path);
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let p = format!("{}/episodes.jsonl", dir);
+
+    let id = format!(
+        "ep_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs()
+    );
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64;
+
+    let entry = serde_json::json!({
+        "id": id,
+        "timestamp": ts,
+        "summary": summary,
+        "outcome": outcome,
+        "tags": tags,
+    });
+
+    let line = format!("{}\n", serde_json::to_string(&entry).map_err(|e| e.to_string())?);
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&p)
+        .map_err(|e| e.to_string())?;
+    file.write_all(line.as_bytes()).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Autostart commands ─────────────────────────────────────────────────────
+
+/// Enable launch-at-login (autostart) using tauri-plugin-autostart
+#[tauri::command]
+pub fn enable_autostart(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().enable().map_err(|e| e.to_string())
+}
+
+/// Disable launch-at-login
+#[tauri::command]
+pub fn disable_autostart(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().disable().map_err(|e| e.to_string())
+}
+
+/// Returns true if launch-at-login is enabled
+#[tauri::command]
+pub fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+// ── Clipboard watcher ──────────────────────────────────────────────────────
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+static CLIPBOARD_WATCHER_RUNNING: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+
+/// Start watching the clipboard (opt-in). Captures copied text into passive memory.
+/// Each clip must be ≥20 chars and differ from the previous clip to be stored.
+#[tauri::command]
+pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> Result<(), String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+
+    let flag = CLIPBOARD_WATCHER_RUNNING.get_or_init(|| Arc::new(AtomicBool::new(false)));
+
+    if flag.load(Ordering::SeqCst) {
+        return Ok(()); // already running
+    }
+    flag.store(true, Ordering::SeqCst);
+
+    let flag_clone = Arc::clone(flag);
+    let app_clone = app.clone();
+    let path_clone = project_path.clone();
+
+    std::thread::spawn(move || {
+        let mut last_clip = String::new();
+        while flag_clone.load(Ordering::SeqCst) {
+            std::thread::sleep(std::time::Duration::from_secs(3));
+
+            let text = match app_clone.clipboard().read_text() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+
+            if text.trim().len() >= 20 && text != last_clip {
+                last_clip = text.clone();
+                let _ = passive_store(path_clone.clone(), text, Some("clipboard".to_string()), vec!["clipboard".to_string()]);
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Stop the clipboard watcher
+#[tauri::command]
+pub fn stop_clipboard_watcher() -> Result<(), String> {
+    if let Some(flag) = CLIPBOARD_WATCHER_RUNNING.get() {
+        flag.store(false, Ordering::SeqCst);
+    }
+    Ok(())
+}
+
+// ── Background summarizer ──────────────────────────────────────────────────
+
+/// Run a lightweight background pass that turns recent episodes into semantic facts.
+/// Called automatically on a timer from the frontend (every 30 min when idle).
+#[tauri::command]
+pub fn run_background_summarizer(project_path: String) -> Result<usize, String> {
+    let dir = memory_dir(&project_path);
+    let ep_path = format!("{}/episodes.jsonl", dir);
+
+    let file = match fs::File::open(&ep_path) {
+        Ok(f) => f,
+        Err(_) => return Ok(0),
+    };
+
+    // Read all episodes
+    let episodes: Vec<serde_json::Value> = BufReader::new(file)
+        .lines()
+        .filter_map(|l| l.ok())
+        .filter(|l| !l.trim().is_empty())
+        .filter_map(|l| serde_json::from_str(&l).ok())
+        .collect();
+
+    if episodes.is_empty() {
+        return Ok(0);
+    }
+
+    // Load existing semantic entries to avoid re-adding synthesized facts
+    let sem_path = format!("{}/semantic.json", dir);
+    let mut sem_entries: Vec<SemanticEntry> = match fs::read_to_string(&sem_path) {
+        Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+        Err(_) => vec![],
+    };
+    let existing_synthesized: std::collections::HashSet<String> = sem_entries
+        .iter()
+        .filter(|e| e.tags.contains(&"synthesized".to_string()))
+        .map(|e| e.content.clone())
+        .collect();
+
+    // Keyword-based pattern extraction from episode summaries
+    let mut new_facts: Vec<String> = Vec::new();
+
+    let summaries: Vec<String> = episodes
+        .iter()
+        .filter_map(|e| e["summary"].as_str().map(|s| s.to_string()))
+        .collect();
+
+    // Count recurring words (≥4 chars) as patterns
+    let mut word_freq: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for summary in &summaries {
+        for word in summary.split_whitespace() {
+            let w = word.to_lowercase().trim_matches(|c: char| !c.is_alphanumeric()).to_string();
+            if w.len() >= 4 {
+                *word_freq.entry(w).or_insert(0) += 1;
+            }
+        }
+    }
+
+    // Words appearing ≥3 times across episodes → infer a pattern
+    let mut patterns: Vec<String> = word_freq
+        .into_iter()
+        .filter(|(_, count)| *count >= 3)
+        .map(|(word, count)| format!("Recurring topic in {} sessions: '{}'", count, word))
+        .collect();
+    patterns.sort();
+    new_facts.extend(patterns);
+
+    // Extract goal-like sentences (contain "want", "need", "should", "will", "plan")
+    let goal_keywords = ["want to", "need to", "should", "will ", "plan to", "going to"];
+    for summary in &summaries {
+        for kw in &goal_keywords {
+            if summary.to_lowercase().contains(kw) && summary.len() >= 20 {
+                new_facts.push(format!("Inferred goal: {}", summary.trim()));
+                break;
+            }
+        }
+    }
+
+    // Deduplicate and filter already stored
+    new_facts.sort();
+    new_facts.dedup();
+
+    let mut added = 0usize;
+    let now_ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+
+    for fact in new_facts {
+        if existing_synthesized.contains(&fact) {
+            continue;
+        }
+        if fact.trim().len() < 15 {
+            continue;
+        }
+        let id = format!("synth_{}_{}", now_ts, added);
+        sem_entries.push(SemanticEntry {
+            id,
+            timestamp: now_ts,
+            kind: "pattern".to_string(),
+            content: fact,
+            tags: vec!["synthesized".to_string(), "background".to_string()],
+            score: Some(0.8),
+        });
+        added += 1;
+    }
+
+    if added > 0 {
+        // Keep most recent 2000
+        if sem_entries.len() > 2000 {
+            let drain = sem_entries.len() - 2000;
+            sem_entries.drain(0..drain);
+        }
+        let s = serde_json::to_string_pretty(&sem_entries).map_err(|e| e.to_string())?;
+        fs::write(&sem_path, s).map_err(|e| e.to_string())?;
+    }
+
+    Ok(added)
+}
+
+// ── Proactive notifications ────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NotificationItem {
+    pub title: String,
+    pub body: String,
+    pub kind: String,
+}
+
+/// Scan memory for patterns worth surfacing as a tray notification.
+/// Returns a list of notifications; the frontend sends the OS notification.
+#[tauri::command]
+pub fn check_proactive_notifications(project_path: String) -> Result<Vec<NotificationItem>, String> {
+    let dir = memory_dir(&project_path);
+    let mut notifications = Vec::new();
+
+    // 1. Repeated errors in recent episodes
+    let ep_path = format!("{}/episodes.jsonl", dir);
+    if let Ok(file) = fs::File::open(&ep_path) {
+        let recent_episodes: Vec<serde_json::Value> = BufReader::new(file)
+            .lines()
+            .filter_map(|l| l.ok())
+            .filter(|l| !l.trim().is_empty())
+            .filter_map(|l| serde_json::from_str(&l).ok())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .take(20)
+            .collect();
+
+        // Count outcome "error" in last 20
+        let error_count = recent_episodes
+            .iter()
+            .filter(|e| e["outcome"].as_str().unwrap_or("") == "error")
+            .count();
+
+        if error_count >= 3 {
+            notifications.push(NotificationItem {
+                title: "Repeated Errors Detected".to_string(),
+                body: format!("{} recent sessions ended with errors. Check your memory for patterns.", error_count),
+                kind: "repeated_error".to_string(),
+            });
+        }
+
+        // Check for unresolved goals (summaries containing "TODO" or "fix" or "remember")
+        let unresolved: Vec<String> = recent_episodes
+            .iter()
+            .filter_map(|e| e["summary"].as_str().map(|s| s.to_string()))
+            .filter(|s| {
+                let lower = s.to_lowercase();
+                lower.contains("todo") || lower.contains("remember to") || lower.contains("don't forget")
+            })
+            .take(3)
+            .collect();
+
+        if !unresolved.is_empty() {
+            notifications.push(NotificationItem {
+                title: "Unresolved Items Found".to_string(),
+                body: format!("You have {} items to follow up on from recent sessions.", unresolved.len()),
+                kind: "unresolved_task".to_string(),
+            });
+        }
+    }
+
+    // 2. Memory size milestone
+    let sem_path = format!("{}/semantic.json", dir);
+    if let Ok(s) = fs::read_to_string(&sem_path) {
+        let entries: Vec<serde_json::Value> = serde_json::from_str(&s).unwrap_or_default();
+        let milestones = [100, 500, 1000, 2000];
+        if milestones.contains(&entries.len()) {
+            notifications.push(NotificationItem {
+                title: "Memory Milestone!".to_string(),
+                body: format!("TIMPS has learned {} facts about your work.", entries.len()),
+                kind: "milestone".to_string(),
+            });
+        }
+    }
+
+    Ok(notifications)
 }

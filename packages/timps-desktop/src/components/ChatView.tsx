@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { emit } from '@tauri-apps/api/event';
 import { api } from '../api';
 import { formatRelativeTime } from '../utils/index';
 import './ChatView.css';
@@ -47,6 +48,9 @@ export function ChatView({ projectPath }: ChatViewProps) {
     setInput('');
     setSending(true);
 
+    // Emit to PassiveListener for background memory capture
+    void emit('timps:chat-message', { role: 'user', content: userMessage.content });
+
     try {
       const response = await api.chat(userMessage.content, projectPath);
       
@@ -58,6 +62,9 @@ export function ChatView({ projectPath }: ChatViewProps) {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Emit assistant response to passive listener
+      void emit('timps:chat-message', { role: 'assistant', content: response });
     } catch (err) {
       const errorMessage: Message = {
         id: `msg-${Date.now()}-error`,

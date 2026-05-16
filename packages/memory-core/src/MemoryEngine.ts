@@ -33,6 +33,13 @@ import { VelocityTracker } from './intelligence/velocityTracker.js';
 import { ArchitectureDriftDetector } from './intelligence/architectureDrift.js';
 import { PatternLearner } from './intelligence/patternLearner.js';
 
+// Layer 5: ChronosForge — bi-temporal causal memory weaver
+import { ChronosForge } from './ChronosForge.js';
+export type {
+  ChronosNode, CausalEdge, WeaveResult, TemporalQueryResult,
+  ForesightResult, SignalDomain,
+} from './ChronosForge.js';
+
 // Re-export tool result types for consumers
 export type { ContradictionResult, Position } from './intelligence/contradiction.js';
 export type { BurnoutAnalysis } from './intelligence/burnout.js';
@@ -51,6 +58,9 @@ export class MemoryEngine {
   private dir: string;
   private hash: string;
   private working: WorkingState;
+
+  // ── Layer 5: ChronosForge (lazy-init) ──
+  private _chronos?: ChronosForge;
 
   // ── Intelligence tool instances (lazy-init via getters) ──
   private _contradiction?: ContradictionDetector;
@@ -96,6 +106,11 @@ export class MemoryEngine {
   }
   get patternLearner(): PatternLearner {
     return (this._patterns ??= new PatternLearner(this.dir));
+  }
+
+  /** Layer 5: ChronosForge — bi-temporal causal memory weaver + foresight simulator. */
+  get chronosForge(): ChronosForge {
+    return (this._chronos ??= new ChronosForge(this.dir));
   }
 
   // ── Layer 1: Working Memory ──
@@ -146,6 +161,8 @@ export class MemoryEngine {
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     facts.push({ id: generateId('mem'), timestamp: Date.now(), type, content, tags });
     saveSemantic(this.dir, facts);
+    // Layer 5: weave into ChronosForge temporal graph
+    this.chronosForge.weave(content, { tags });
   }
 
   /** Recall entries matching a query using BM25 keyword search. */
@@ -171,6 +188,8 @@ export class MemoryEngine {
     if (this.working.activeFiles.length > 0) {
       parts.push('Previously active files:\n' + this.working.activeFiles.slice(-10).join('\n'));
     }
+    const chronosCtx = this.chronosForge.getContextString(undefined, 3);
+    if (chronosCtx) parts.push(chronosCtx);
     return parts.join('\n\n');
   }
 

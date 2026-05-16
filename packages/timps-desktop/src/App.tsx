@@ -10,6 +10,8 @@ import { ChatView } from './components/ChatView';
 import { SettingsView } from './components/SettingsView';
 import { QuickCapture } from './components/QuickCapture';
 import { CommandBar } from './components/CommandBar';
+import { PassiveListener } from './components/PassiveListener';
+import { BackgroundDaemon } from './components/BackgroundDaemon';
 import './App.css';
 
 export type Tab = 'chat' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings';
@@ -209,6 +211,11 @@ export default function App() {
         onClose={() => setShowCommandBar(false)}
         projectPath={projectPath}
       />
+
+      {/* Invisible passive capture — stores all chat/input to TIMPS memory */}
+      <PassiveListener projectPath={projectPath} />
+      {/* Background intelligence daemon — summarizer, clipboard, notifications */}
+      <BackgroundDaemon projectPath={projectPath} />
     </div>
   );
 }

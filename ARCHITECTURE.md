@@ -56,17 +56,38 @@ timps/
 
 ## Memory architecture
 
-The 3-layer memory system is the TIMPS moat. It persists across every session restart.
+The **5-layer memory system** is the TIMPS moat. It persists across every session restart.
 
 ```
-Working Memory       → in-process (reset on exit)
+Layer 1 — Working Memory       → in-process (reset on exit)
   goals, active files, recent errors, tool results
 
-Episodic Memory      → ~/.timps/memory/<project-hash>/episodes.jsonl
+Layer 2 — Episodic Memory      → ~/.timps/memory/<project-hash>/episodes.jsonl
   conversation summaries, what was built and why, outcomes
 
-Semantic Memory      → ~/.timps/memory/<project-hash>/semantic.json
+Layer 3 — Semantic Memory      → ~/.timps/memory/<project-hash>/semantic.json
   permanent facts: patterns, conventions, architecture decisions
+
+Layer 4 — Procedural Memory    → ~/.timps/memory/<project-hash>/procedural.json
+  auto-extracted workflows, tool sequences, reusable task templates
+
+Layer 5 — ChronosForge         → ~/.timps/memory/<project-hash>/chronos/
+  Bi-temporal causal event graph. Every write gets valid_from/valid_to/invalid_at
+  windows. Causal edges track which facts caused others. Ebbinghaus decay scores
+  nodes by recency + retrieval frequency. Monte-Carlo foresight rollouts predict
+  burnout / relationship drift / decision risk trajectories.
+
+  Sub-components (by package):
+    • packages/memory-core/src/ChronosForge.ts  — file-backed (CLI / MCP / VSCode)
+    • sandeep-ai/memory/chronosForge.ts          — PostgreSQL-backed (full server)
+    • timps-code/src/memory/chronosVeil.ts       — 4-layer classification overlay
+
+  Key APIs:
+    weave(content, opts)               — add a bi-temporal node, auto-detect supersessions
+    queryAt(atTime, opts)              — point-in-time retrieval with causal chain
+    simulateForesight(domain, opts)    — MC rollout → riskScore / trajectory
+    consolidate(threshold)             — Ebbinghaus pruning pass
+    getContextString(domain, limit)    — formatted block for prompt injection
 ```
 
 Memory is keyed by a SHA256 hash of the absolute project path, so each project has isolated memory.
