@@ -71,6 +71,12 @@ function optionalBool(value: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined;
 }
 
+function boundedPositiveInt(value: unknown, min: number, max: number): number | null {
+  const parsed = positiveInt(value);
+  if (!parsed) return null;
+  return parsed >= min && parsed <= max ? parsed : null;
+}
+
 router.post('/chat', async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
@@ -300,7 +306,11 @@ router.get('/health', (_req: Request, res: Response) => {
 
 router.post('/contradiction/check', async (req: Request, res: Response) => {
   try {
-    const { userId, text, projectId, autoStore } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId);
+    const text = requiredString(body?.text, 20_000);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const autoStore = optionalBool(body?.autoStore);
     if (!userId || !text) {
       res.status(400).json({ error: 'userId and text are required' });
       return;
@@ -310,7 +320,7 @@ router.post('/contradiction/check', async (req: Request, res: Response) => {
       operation: 'check',
       user_id: userId,
       text,
-      project_id: projectId || 'default',
+      project_id: projectId,
       auto_store: autoStore !== false,
     });
     const result = JSON.parse(raw);
@@ -318,12 +328,12 @@ router.post('/contradiction/check', async (req: Request, res: Response) => {
     if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
       eventBus.emit({
         type: 'contradiction',
-        userId: req.body.userId,
+        userId,
         payload: {
           score: result.contradiction_score,
           verdict: result.verdict,
           claim: result.conflicting_position?.extracted_claim,
-          new_text: req.body.text?.slice(0, 100),
+          new_text: text.slice(0, 100),
         },
         timestamp: new Date().toISOString(),
       });
@@ -353,9 +363,11 @@ router.get('/positions/:userId', async (req: Request, res: Response) => {
 
 router.post('/positions/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const { text, projectId } = req.body;
-    if (isNaN(userId) || !text) {
+    const userId = positiveInt(req.params.userId);
+    const body = bodyObject(req.body);
+    const text = requiredString(body?.text, 20_000);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    if (!userId || !text) {
       res.status(400).json({ error: 'Invalid userId or missing text' });
       return;
     }
@@ -547,23 +559,29 @@ router.get('/events/:userId', (req: Request, res: Response) => {
 
 router.post('/nexus/ingest', async (req: Request, res: Response) => {
   try {
-    const { userId, projectId, content, tags, metadata, sourceModule } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const content = requiredString(body?.content, 50_000);
+    const sourceModule = requiredString(body?.sourceModule, 160);
+    const tags = Array.isArray(body?.tags) ? body.tags : [];
+    const metadata = bodyObject(body?.metadata) || {};
     if (!content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
 
     const signal = {
-      userId: userId || 1,
+      userId,
       projectId,
       content,
-      tags: tags || [],
-      metadata: metadata || {},
+      tags,
+      metadata,
     };
 
     const nodeId = await nexusForge.episodicIndexer(signal, sourceModule);
     if (nodeId) {
-      await nexusForge.evolutionOracle(signal, { projectId: projectId || 'default' });
+      await nexusForge.evolutionOracle(signal, { projectId });
       res.json({ success: true, nodeId });
     } else {
       res.json({ success: false, message: 'NexusForge disabled or error' });
@@ -576,7 +594,10 @@ router.post('/nexus/ingest', async (req: Request, res: Response) => {
 
 router.post('/nexus/query', async (req: Request, res: Response) => {
   try {
-    const { query: q, userId, projectId } = req.body;
+    const body = bodyObject(req.body);
+    const q = requiredString(body?.query, 10_000);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
     if (!q) {
       res.status(400).json({ error: 'query required' });
       return;
@@ -584,8 +605,8 @@ router.post('/nexus/query', async (req: Request, res: Response) => {
 
     const result = await nexusForge.retrievalWeaver(
       q,
-      userId || 1,
-      { projectId: projectId || 'default' }
+      userId,
+      { projectId }
     );
 
     res.json(result);
@@ -623,9 +644,9 @@ router.get('/nexus/stats/:userId', async (req: Request, res: Response) => {
 
 router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const limit = parseInt(req.query.limit as string) || 30;
-    if (isNaN(userId)) {
+    const userId = positiveInt(req.params.userId);
+    const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
+    if (!userId) {
       res.status(400).json({ error: 'Invalid userId' });
       return;
     }
@@ -656,26 +677,33 @@ router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
 
 router.post('/chronos/ingest', async (req: Request, res: Response) => {
   try {
-    const { userId, projectId, content, tags, entity, metadata, sourceModule } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const content = requiredString(body?.content, 50_000);
+    const tags = Array.isArray(body?.tags) ? body.tags : [];
+    const entity = optionalString(body?.entity, 160);
+    const metadata = bodyObject(body?.metadata) || {};
+    const sourceModule = requiredString(body?.sourceModule, 160);
     if (!content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
 
     const signal: ChronosSignal = {
-      userId: userId || 1,
-      projectId: projectId || 'default',
+      userId,
+      projectId,
       content,
-      tags: tags || [],
+      tags,
       entity,
-      metadata: metadata || {},
+      metadata,
     };
 
     const result = await chronosVeil.ingestEvent(signal, sourceModule);
 
     eventBus.emit({
       type: 'chronos_event',
-      userId: userId || 1,
+      userId,
       payload: {
         eventId: result.eventId,
         layer: result.layer,
@@ -694,7 +722,11 @@ router.post('/chronos/ingest', async (req: Request, res: Response) => {
 
 router.post('/chronos/query', async (req: Request, res: Response) => {
   try {
-    const { query: q, userId, projectId, limit } = req.body;
+    const body = bodyObject(req.body);
+    const q = requiredString(body?.query, 10_000);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const limit = boundedPositiveInt(body?.limit, 1, 100) || 8;
     if (!q) {
       res.status(400).json({ error: 'query required' });
       return;
@@ -702,9 +734,9 @@ router.post('/chronos/query', async (req: Request, res: Response) => {
 
     const resolved = await chronosVeil.queryWithVeil(
       q,
-      userId || 1,
-      projectId || 'default',
-      limit || 8
+      userId,
+      projectId,
+      limit
     );
 
     res.json(resolved);
@@ -794,28 +826,37 @@ router.get('/chronos/edges/:userId', async (req: Request, res: Response) => {
 
 router.post('/synapse/ingest', async (req: Request, res: Response) => {
   try {
-    const { userId, projectId, content, tags, entity, metadata, sourceModule, confidence, outcomeScore } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const content = requiredString(body?.content, 50_000);
+    const tags = Array.isArray(body?.tags) ? body.tags : [];
+    const entity = optionalString(body?.entity, 160);
+    const metadata = bodyObject(body?.metadata) || {};
+    const sourceModule = requiredString(body?.sourceModule, 160);
+    const confidence = typeof body?.confidence === 'number' ? body.confidence : undefined;
+    const outcomeScore = typeof body?.outcomeScore === 'number' ? body.outcomeScore : undefined;
     if (!content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
 
     const signal: MetabolicSignal = {
-      userId: userId || 1,
-      projectId: projectId || 'default',
+      userId,
+      projectId,
       content,
-      tags: tags || [],
+      tags,
       entity,
       confidence,
       outcomeScore,
-      metadata: metadata || {},
+      metadata,
     };
 
     const result = await synapseMetabolon.injectEvent(signal, sourceModule);
 
     eventBus.emit({
       type: 'synapse_event',
-      userId: userId || 1,
+      userId,
       payload: {
         nodeId: result.nodeId,
         layer: result.layer,
@@ -834,7 +875,11 @@ router.post('/synapse/ingest', async (req: Request, res: Response) => {
 
 router.post('/synapse/query', async (req: Request, res: Response) => {
   try {
-    const { query: q, userId, projectId, limit } = req.body;
+    const body = bodyObject(req.body);
+    const q = requiredString(body?.query, 10_000);
+    const userId = positiveInt(body?.userId) || 1;
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
     if (!q) {
       res.status(400).json({ error: 'query required' });
       return;
@@ -842,9 +887,9 @@ router.post('/synapse/query', async (req: Request, res: Response) => {
 
     const result = await synapseMetabolon.queryWithSpread(
       q,
-      userId || 1,
-      projectId || 'default',
-      limit || 10
+      userId,
+      projectId,
+      limit
     );
 
     res.json(result);
@@ -897,10 +942,10 @@ router.get('/synapse/stats/:userId', async (req: Request, res: Response) => {
 
 router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const limit = parseInt(req.query.limit as string) || 30;
+    const userId = positiveInt(req.params.userId);
+    const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
 
-    if (isNaN(userId)) {
+    if (!userId) {
       res.status(400).json({ error: 'Invalid userId' });
       return;
     }
@@ -914,10 +959,11 @@ router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
 
 router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const projectId = (req.body.projectId as string) || 'default';
+    const userId = positiveInt(req.params.userId);
+    const body = bodyObject(req.body);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
 
-    if (isNaN(userId)) {
+    if (!userId) {
       res.status(400).json({ error: 'Invalid userId' });
       return;
     }
@@ -934,15 +980,20 @@ router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) 
 
 router.post('/chrono/query', async (req: Request, res: Response) => {
   try {
-    const { userId, atTime, domain, limit } = req.body;
-    if (!userId || !atTime) {
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const atTime = Number(body?.atTime);
+    const domain = optionalString(body?.domain, 160);
+    const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
+    if (!userId || !Number.isFinite(atTime)) {
       res.status(400).json({ error: 'userId and atTime are required' });
       return;
     }
     const result = await chronosForge.queryAt(
-      parseInt(userId, 10),
-      req.body.projectId || 'default',
-      Number(atTime),
+      userId,
+      projectId,
+      atTime,
       { domain, limit: limit ?? 10 }
     );
     res.json(result);
@@ -953,14 +1004,19 @@ router.post('/chrono/query', async (req: Request, res: Response) => {
 
 router.post('/chrono/foresight', async (req: Request, res: Response) => {
   try {
-    const { userId, domain, lookbackDays, steps } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const domain = requiredString(body?.domain, 160);
+    const lookbackDays = boundedPositiveInt(body?.lookbackDays, 1, 3650);
+    const steps = boundedPositiveInt(body?.steps, 1, 365);
     if (!userId || !domain) {
       res.status(400).json({ error: 'userId and domain are required' });
       return;
     }
     const result = await chronosForge.simulateForesight(
-      parseInt(userId, 10),
-      req.body.projectId || 'default',
+      userId,
+      projectId,
       domain,
       { lookbackDays, steps }
     );
@@ -972,14 +1028,17 @@ router.post('/chrono/foresight', async (req: Request, res: Response) => {
 
 router.post('/chrono/consolidate', async (req: Request, res: Response) => {
   try {
-    const { userId, importanceThreshold } = req.body;
+    const body = bodyObject(req.body);
+    const userId = positiveInt(body?.userId);
+    const projectId = optionalString(body?.projectId, 160) || 'default';
+    const importanceThreshold = typeof body?.importanceThreshold === 'number' ? body.importanceThreshold : undefined;
     if (!userId) {
       res.status(400).json({ error: 'userId is required' });
       return;
     }
     const result = await chronosForge.consolidate(
-      parseInt(userId, 10),
-      req.body.projectId || 'default',
+      userId,
+      projectId,
       importanceThreshold ?? 0.05
     );
     res.json(result);
