@@ -37,6 +37,8 @@ import { PredictivePrefetcher } from './predictivePrefetcher.js';
 import { AffectiveMemory } from './affectiveMemory.js';
 import { MemoryCoordinator } from './memoryCoordinator.js';
 import { MemoryBenchmark } from './benchmark.js';
+import { ChronosVeil } from './chronosVeil.js';
+import type { ChronosDomain } from './chronosVeil.js';
 
 export class Memory {
   private dir: string;
@@ -68,6 +70,9 @@ export class Memory {
   private _affective?: AffectiveMemory;
   private _coordinator?: MemoryCoordinator;
   private _benchmark?: MemoryBenchmark;
+
+  // ── Layer 5: ChronosVeil (temporal causal weaver) ──
+  private _chronos?: ChronosVeil;
 
   // Turn counter for self-reflection
   private _turnCount = 0;
@@ -124,6 +129,11 @@ export class Memory {
 
   get benchmark(): MemoryBenchmark {
     return (this._benchmark ??= new MemoryBenchmark(this.dir));
+  }
+
+  /** Layer 5: ChronosVeil — bi-temporal causal event graph. */
+  get chronosVeil(): ChronosVeil {
+    return (this._chronos ??= new ChronosVeil(this.dir));
   }
 
   // ── Intelligence tools (each stores its own file in this.dir) ──
@@ -206,7 +216,16 @@ export class Memory {
     fs.appendFileSync(this.episodicFile, JSON.stringify(episode) + '\n', 'utf-8');
     this.trimFile(this.episodicFile, 100);
 
+    // Layer 5: ingest into ChronosVeil for temporal graph
     const summary = episode.summary || '';
+    const domain: ChronosDomain = episode.taskType === 'burnout' ? 'burnout'
+      : episode.taskType === 'relationship' ? 'relationship'
+      : episode.taskType === 'decision' ? 'decision'
+      : 'general';
+    if (summary.length > 0) {
+      this.chronosVeil.ingest(summary, 'episodic', ['episode'], undefined, domain);
+    }
+
     const files = episode.filesChanged || [];
     const taskType = episode.taskType || 'general';
     this.prefetcher.createProfile(summary, files, taskType);
@@ -283,6 +302,29 @@ export class Memory {
     return results.map(r => r.entry);
   }
 
+  /**
+   * Returns ChronosVeil context for the given domain, formatted for prompt injection.
+   * Pass undefined for domain to get cross-domain temporal context.
+   */
+  getChronosContext(domain?: ChronosDomain, limit = 4): string {
+    return this.chronosVeil.query(domain ? `${domain} signals` : 'recent', 5)
+      .resolvedEvents
+      .slice(0, limit)
+      .map(e => `• [chrono:${e.domain}/${e.layer}] ${e.content.slice(0, 140)}`)
+      .join('\n');
+  }
+
+  /**
+   * Run MC foresight rollout via ChronosVeil for the given signal domain.
+   */
+  forecastRisk(domain: ChronosDomain = 'burnout'): string {
+    const events = this.chronosVeil.query(`${domain} signals`, 30).resolvedEvents;
+    if (events.length === 0) return `No ${domain} signals recorded yet.`;
+    const score = events.reduce((s, e) => s + e.importance, 0) / events.length;
+    const level = score > 7 ? 'high' : score > 4 ? 'medium' : 'low';
+    return `ChronosVeil foresight: ${domain} risk is ${level} (signal strength ${(score / 10 * 100).toFixed(0)}% from ${events.length} events).`;
+  }
+
   getContextString(task = ''): string {
     const episodes = this.loadEpisodes(5);
     const facts = this.searchFacts(task, 5);
@@ -307,6 +349,10 @@ export class Memory {
     if (this.working.activeFiles.length > 0) {
       parts.push('Previously active files:\n' + this.working.activeFiles.slice(-10).join('\n'));
     }
+
+    // Layer 5: ChronosVeil temporal context
+    const chronosCtx = this.getChronosContext(undefined, 3);
+    if (chronosCtx) parts.push('Temporal signals:\n' + chronosCtx);
 
     return parts.join('\n\n');
   }

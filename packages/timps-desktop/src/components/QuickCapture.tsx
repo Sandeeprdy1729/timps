@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { api } from '../api';
 import './QuickCapture.css';
 
@@ -48,6 +48,9 @@ export function QuickCapture({ isOpen, onClose, projectPath }: QuickCaptureProps
         importance,
         tagList
       );
+
+      // Notify PassiveListener so it also stores to passive memory
+      void emit('timps:quick-capture-saved', { content, tags: [type, ...tagList] });
       
       setSaved(true);
       setTimeout(() => {

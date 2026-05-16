@@ -55,6 +55,15 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     chat: '(stub) timps-server not running in dev mode',
     store_memory: undefined,
     delete_memory: 0,
+    passive_store: 'stub_id',
+    store_episode: undefined,
+    enable_autostart: undefined,
+    disable_autostart: undefined,
+    is_autostart_enabled: false,
+    start_clipboard_watcher: undefined,
+    stop_clipboard_watcher: undefined,
+    run_background_summarizer: 0,
+    check_proactive_notifications: [],
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -96,4 +105,51 @@ export const api = {
 
   deleteMemory: (projectPath: string, key: string) =>
     invoke<number>('delete_memory', { projectPath, key }),
+
+  // ── Passive background learning ──────────────────────────────────────────
+
+  /** Store a passive observation (chat message, typed input, etc.) silently. */
+  passiveStore: (
+    projectPath: string,
+    content: string,
+    kind = 'observation',
+    tags: string[] = [],
+  ) => invoke<string>('passive_store', { projectPath, content, kind, tags }),
+
+  /** Append an episodic memory entry (conversation summary) to episodes.jsonl */
+  storeEpisode: (
+    projectPath: string,
+    summary: string,
+    outcome: string,
+    tags: string[] = [],
+  ) => invoke<void>('store_episode', { projectPath, summary, outcome, tags }),
+
+  // ── Autostart (launch at login) ──────────────────────────────────────────
+
+  enableAutostart: () => invoke<void>('enable_autostart'),
+  disableAutostart: () => invoke<void>('disable_autostart'),
+  isAutostartEnabled: () => invoke<boolean>('is_autostart_enabled'),
+
+  // ── Clipboard watcher (opt-in) ───────────────────────────────────────────
+
+  /** Start watching the clipboard for copied text. Captured clips go into passive memory. */
+  startClipboardWatcher: (projectPath: string) =>
+    invoke<void>('start_clipboard_watcher', { projectPath }),
+
+  /** Stop the clipboard watcher. */
+  stopClipboardWatcher: () =>
+    invoke<void>('stop_clipboard_watcher'),
+
+  // ── Background summarizer ────────────────────────────────────────────────
+
+  /** Extract patterns from recent episodes and store as synthesized semantic facts.
+   *  Returns the number of new facts created. */
+  runBackgroundSummarizer: (projectPath: string) =>
+    invoke<number>('run_background_summarizer', { projectPath }),
+
+  // ── Proactive notifications ──────────────────────────────────────────────
+
+  /** Scan memory and return notification items worth surfacing to the user. */
+  checkProactiveNotifications: (projectPath: string) =>
+    invoke<Array<{ title: string; body: string; kind: string }>>('check_proactive_notifications', { projectPath }),
 };

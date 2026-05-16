@@ -2,6 +2,18 @@
 // Memory engine
 export { MemoryEngine } from './MemoryEngine.js';
 
+// Layer 5: ChronosForge — bi-temporal causal memory weaver
+export { ChronosForge } from './ChronosForge.js';
+export type {
+  ChronosNode,
+  CausalEdge,
+  WeaveResult,
+  TemporalQueryResult,
+  ForesightResult,
+  SignalDomain,
+  EdgeType,
+} from './ChronosForge.js';
+
 // Types
 export type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,

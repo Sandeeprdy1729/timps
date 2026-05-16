@@ -3,7 +3,8 @@
  * App configuration and preferences.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import { api } from '../api';
 import { APP, PROVIDERS } from '../constants/index';
 import './SettingsView.css';
@@ -19,6 +20,56 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
   );
   const [saved, setSaved] = useState(false);
   const [version, setVersion] = useState(APP.version);
+  const [autostartEnabled, setAutostartEnabled] = useState(false);
+  const [autostartLoading, setAutostartLoading] = useState(false);
+  const [clipboardWatcher, setClipboardWatcher] = useState(
+    () => localStorage.getItem('timps:clipboardWatcher') === 'true'
+  );
+
+  // Load autostart state on mount
+  useEffect(() => {
+    api.isAutostartEnabled()
+      .then(setAutostartEnabled)
+      .catch(() => {}); // not available outside Tauri
+  }, []);
+
+  // Keep in sync when the tray menu "Launch at Login" toggle fires
+  useEffect(() => {
+    const unlisten = listen<boolean>('autostart-changed', (event) => {
+      setAutostartEnabled(event.payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  const toggleAutostart = async () => {
+    setAutostartLoading(true);
+    try {
+      if (autostartEnabled) {
+        await api.disableAutostart();
+        setAutostartEnabled(false);
+      } else {
+        await api.enableAutostart();
+        setAutostartEnabled(true);
+      }
+    } catch {
+      // noop in browser preview
+    } finally {
+      setAutostartLoading(false);
+    }
+  };
+
+  const toggleClipboardWatcher = () => {
+    const next = !clipboardWatcher;
+    setClipboardWatcher(next);
+    localStorage.setItem('timps:clipboardWatcher', next ? 'true' : 'false');
+    if (next) {
+      void api.startClipboardWatcher(projectPath);
+    } else {
+      void api.stopClipboardWatcher();
+    }
+  };
 
   const handleSave = () => {
     localStorage.setItem('timps:provider', provider);
@@ -75,6 +126,50 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
             defaultValue="http://localhost:3000"
             placeholder="http://localhost:3000"
           />
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>Background Behaviour</h2>
+        <div className="settings-field">
+          <label>Launch at Login</label>
+          <div className="settings-row">
+            <button
+              className={`btn ${autostartEnabled ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={toggleAutostart}
+              disabled={autostartLoading}
+              aria-pressed={autostartEnabled}
+            >
+              {autostartLoading ? 'Updating…' : autostartEnabled ? '🤖 Enabled' : 'Disabled'}
+            </button>
+            <p className="settings-hint">
+              TIMPS starts automatically when you log in and lives in the menu bar.
+              It listens in the background and stores everything you tell it into memory.
+            </p>
+          </div>
+        </div>
+        <div className="settings-field">
+          <label>Window close behaviour</label>
+          <p className="settings-hint">
+            Clicking ✕ hides the window — TIMPS keeps running in the background.
+            To fully quit, use the menu bar icon → Quit TIMPS.
+          </p>
+        </div>
+        <div className="settings-field">
+          <label>Clipboard Watcher</label>
+          <div className="settings-row">
+            <button
+              className={`btn ${clipboardWatcher ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={toggleClipboardWatcher}
+              aria-pressed={clipboardWatcher}
+            >
+              {clipboardWatcher ? '📋 Enabled' : 'Disabled'}
+            </button>
+            <p className="settings-hint">
+              Off by default. When enabled, copied text (≥20 chars) is silently captured
+              into your memory so TIMPS can learn from things you research and reference.
+            </p>
+          </div>
         </div>
       </section>
 
