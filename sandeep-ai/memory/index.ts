@@ -12,3 +12,18 @@ export {
   TemporalQueryResult,
   SignalDomain,
 } from './chronosForge.js';
+export {
+  ResonanceForge,
+  resonanceForge,
+} from './resonanceForge.js';
+export type {
+  ResonanceDomain,
+  ResonanceNode,
+  ResonanceCausalEdge,
+  HarmonicPattern,
+  ResonanceWeaveResult,
+  ResonancePrediction,
+  ResonanceQueryResult,
+  ResonanceTemporalQueryResult,
+  HarmonicConsolidationReport,
+} from './resonanceForge.js';
