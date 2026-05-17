@@ -14,6 +14,27 @@ export type {
   EdgeType,
 } from './ChronosForge.js';
 
+// Layer 6: ResonanceForge — causal resonance fields for predictive memory harmonics
+export {
+  ResonanceForge,
+  embed,
+  dot,
+  murmurhash,
+  effectiveAmplitude,
+  resonanceScore,
+} from './ResonanceForge.js';
+export type {
+  ResonanceDomain,
+  ResonanceNode,
+  ResonanceCausalEdge,
+  HarmonicPattern,
+  ResonanceWeaveResult,
+  ResonanceQueryResult,
+  ResonancePrediction,
+  ResonanceTemporalQueryResult,
+  HarmonicConsolidationReport,
+} from './ResonanceForge.js';
+
 // Types
 export type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
