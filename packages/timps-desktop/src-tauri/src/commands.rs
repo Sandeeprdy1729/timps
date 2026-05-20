@@ -509,18 +509,44 @@ pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> R
     let path_clone = project_path.clone();
 
     std::thread::spawn(move || {
+        use tauri::Emitter;
         let mut last_clip = String::new();
+        // Poll fast for URL detection; throttle passive-store to every ~3 seconds
+        let mut passive_ticks: u32 = 0;
         while flag_clone.load(Ordering::SeqCst) {
-            std::thread::sleep(std::time::Duration::from_secs(3));
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            passive_ticks += 1;
 
             let text = match app_clone.clipboard().read_text() {
                 Ok(t) => t,
                 Err(_) => continue,
             };
 
-            if text.trim().len() >= 20 && text != last_clip {
-                last_clip = text.clone();
-                let _ = passive_store(path_clone.clone(), text, Some("clipboard".to_string()), vec!["clipboard".to_string()]);
+            let trimmed = text.trim().to_string();
+            if trimmed.is_empty() || trimmed == last_clip {
+                continue;
+            }
+            last_clip = trimmed.clone();
+
+            // ── URL fast-path: emit event + save to lens queue ──────────
+            let link_type = detect_link_type_inner(&trimmed);
+            if link_type != "other" {
+                let _ = app_clone.emit(
+                    "timps:url-detected",
+                    serde_json::json!({ "url": trimmed, "link_type": link_type }),
+                );
+                let _ = save_lens_link(&trimmed, link_type, None);
+                continue; // don't also dump URLs into passive memory
+            }
+
+            // ── Regular text — only passive-store every ~3 seconds ──────
+            if passive_ticks % 6 == 0 && trimmed.len() >= 20 {
+                let _ = passive_store(
+                    path_clone.clone(),
+                    trimmed,
+                    Some("clipboard".to_string()),
+                    vec!["clipboard".to_string()],
+                );
             }
         }
     });
@@ -735,4 +761,448 @@ pub fn check_proactive_notifications(project_path: String) -> Result<Vec<Notific
     }
 
     Ok(notifications)
+}
+
+// ── TIMPS Lens — frictionless link analysis ────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LensLink {
+    pub id: String,
+    pub url: String,
+    pub link_type: String,
+    pub title: Option<String>,
+    pub timestamp: i64,
+    pub analyzed: bool,
+    pub analysis: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GitHubMeta {
+    pub full_name: String,
+    pub description: Option<String>,
+    pub stars: u64,
+    pub forks: u64,
+    pub language: Option<String>,
+    pub open_issues: u64,
+    pub topics: Vec<String>,
+    pub updated_at: String,
+    pub default_branch: String,
+    pub license: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HuggingFaceMeta {
+    pub model_id: String,
+    pub author: Option<String>,
+    pub downloads: Option<u64>,
+    pub likes: Option<u64>,
+    pub tags: Vec<String>,
+    pub pipeline_tag: Option<String>,
+    pub library_name: Option<String>,
+}
+
+pub fn detect_link_type_inner(url: &str) -> &'static str {
+    let trimmed = url.trim();
+    if trimmed.contains("github.com/") {
+        "github"
+    } else if trimmed.contains("huggingface.co/") {
+        "huggingface"
+    } else {
+        "other"
+    }
+}
+
+fn lens_dir() -> String {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    format!("{}/.timps/lens", home)
+}
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fn epoch_secs_to_date(secs: u64) -> String {
+    let mut days = (secs / 86400) as i64;
+    let mut year = 1970i32;
+    loop {
+        let days_in_year = if is_leap_year(year) { 366i64 } else { 365i64 };
+        if days < days_in_year {
+            break;
+        }
+        days -= days_in_year;
+        year += 1;
+    }
+    let month_days: [i64; 12] = [
+        31,
+        if is_leap_year(year) { 29 } else { 28 },
+        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ];
+    let mut month = 1i32;
+    for &dm in &month_days {
+        if days < dm {
+            break;
+        }
+        days -= dm;
+        month += 1;
+    }
+    format!("{:04}-{:02}-{:02}", year, month, days + 1)
+}
+
+fn today_queue_path() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let date = epoch_secs_to_date(secs);
+    format!("{}/{}.jsonl", lens_dir(), date)
+}
+
+fn save_lens_link(url: &str, link_type: &str, title: Option<String>) -> Result<String, String> {
+    let dir = lens_dir();
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = today_queue_path();
+
+    // Deduplicate by URL within today's file
+    if let Ok(existing) = fs::read_to_string(&path) {
+        for line in existing.lines() {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                if v["url"].as_str() == Some(url) {
+                    return Ok(v["id"].as_str().unwrap_or("").to_string());
+                }
+            }
+        }
+    }
+
+    let id = format!(
+        "lens_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+
+    let entry = serde_json::json!({
+        "id": id,
+        "url": url,
+        "link_type": link_type,
+        "title": title,
+        "timestamp": std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64,
+        "analyzed": false,
+        "analysis": null,
+    });
+
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    writeln!(file, "{}", serde_json::to_string(&entry).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+/// Detect the link type of a URL: "github" | "huggingface" | "other"
+#[tauri::command]
+pub fn detect_link_type(url: String) -> String {
+    detect_link_type_inner(&url).to_string()
+}
+
+/// Save a link to today's Lens queue (~/.timps/lens/YYYY-MM-DD.jsonl)
+#[tauri::command]
+pub fn save_to_lens_queue(url: String, link_type: String, title: Option<String>) -> Result<String, String> {
+    save_lens_link(&url, &link_type, title)
+}
+
+/// Get all links in today's Lens queue
+#[tauri::command]
+pub fn get_lens_queue() -> Result<Vec<LensLink>, String> {
+    let path = today_queue_path();
+    match fs::read_to_string(&path) {
+        Ok(s) => Ok(
+            s.lines()
+                .filter(|l| !l.trim().is_empty())
+                .filter_map(|l| serde_json::from_str(l).ok())
+                .collect(),
+        ),
+        Err(_) => Ok(vec![]),
+    }
+}
+
+/// Remove a link from today's Lens queue by id
+#[tauri::command]
+pub fn remove_from_lens_queue(id: String) -> Result<(), String> {
+    let path = today_queue_path();
+    let content = fs::read_to_string(&path).unwrap_or_default();
+    let filtered: String = content
+        .lines()
+        .filter(|l| {
+            serde_json::from_str::<serde_json::Value>(l)
+                .map(|v| v["id"].as_str() != Some(&id))
+                .unwrap_or(true)
+        })
+        .map(|l| format!("{}\n", l))
+        .collect();
+    fs::write(&path, filtered).map_err(|e| e.to_string())
+}
+
+/// Persist analysis result for a queued link
+#[tauri::command]
+pub fn mark_lens_analyzed(id: String, analysis: String) -> Result<(), String> {
+    let path = today_queue_path();
+    let content = fs::read_to_string(&path).unwrap_or_default();
+    let updated: String = content
+        .lines()
+        .map(|l| {
+            if let Ok(mut v) = serde_json::from_str::<serde_json::Value>(l) {
+                if v["id"].as_str() == Some(&id) {
+                    v["analyzed"] = serde_json::json!(true);
+                    v["analysis"] = serde_json::json!(analysis);
+                    return serde_json::to_string(&v).unwrap_or_else(|_| l.to_string());
+                }
+            }
+            l.to_string()
+        })
+        .map(|l| format!("{}\n", l))
+        .collect();
+    fs::write(&path, updated).map_err(|e| e.to_string())
+}
+
+/// Return links from the last `days` daily queue files (for history view)
+#[tauri::command]
+pub fn get_lens_history(days: u32) -> Result<Vec<LensLink>, String> {
+    use std::cmp::Reverse;
+    let dir = lens_dir();
+    let mut all: Vec<LensLink> = vec![];
+    if let Ok(entries) = fs::read_dir(&dir) {
+        let mut files: Vec<_> = entries
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .map(|ext| ext == "jsonl")
+                    .unwrap_or(false)
+            })
+            .collect();
+        files.sort_by_key(|e| Reverse(e.file_name()));
+        for entry in files.into_iter().take(days as usize) {
+            if let Ok(s) = fs::read_to_string(entry.path()) {
+                let links: Vec<LensLink> = s
+                    .lines()
+                    .filter(|l| !l.trim().is_empty())
+                    .filter_map(|l| serde_json::from_str(l).ok())
+                    .collect();
+                all.extend(links);
+            }
+        }
+    }
+    Ok(all)
+}
+
+/// Fetch GitHub repo metadata via the public REST API.
+/// Reads GITHUB_TOKEN env var when available (raises rate limit from 60 to 5000 req/hr).
+#[tauri::command]
+pub async fn fetch_github_meta(url: String) -> Result<GitHubMeta, String> {
+    // Parse owner/repo from e.g. https://github.com/owner/repo(/anything)
+    let stripped = url
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .trim_start_matches("github.com/");
+
+    let parts: Vec<&str> = stripped.splitn(3, '/').collect();
+    if parts.len() < 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err("Invalid GitHub URL — expected https://github.com/owner/repo".to_string());
+    }
+    let owner = parts[0];
+    let repo = parts[1]
+        .split('#')
+        .next()
+        .unwrap_or(parts[1])
+        .split('?')
+        .next()
+        .unwrap_or(parts[1]);
+
+    let api_url = format!("https://api.github.com/repos/{}/{}", owner, repo);
+    let client = reqwest::Client::builder()
+        .user_agent("TIMPS-Desktop/0.1 (github.com/Sandeeprdy1729/timps)")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut req = client.get(&api_url);
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        if !token.is_empty() {
+            req = req.bearer_auth(token);
+        }
+    }
+
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if resp.status() == 404 {
+        return Err(format!("Repo not found: {}/{}", owner, repo));
+    }
+    if !resp.status().is_success() {
+        return Err(format!("GitHub API error {}: {}", resp.status(), resp.text().await.unwrap_or_default()));
+    }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+
+    Ok(GitHubMeta {
+        full_name: j["full_name"].as_str().unwrap_or("").to_string(),
+        description: j["description"].as_str().map(|s| s.to_string()),
+        stars: j["stargazers_count"].as_u64().unwrap_or(0),
+        forks: j["forks_count"].as_u64().unwrap_or(0),
+        language: j["language"].as_str().map(|s| s.to_string()),
+        open_issues: j["open_issues_count"].as_u64().unwrap_or(0),
+        topics: j["topics"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default(),
+        updated_at: j["updated_at"].as_str().unwrap_or("").to_string(),
+        default_branch: j["default_branch"].as_str().unwrap_or("main").to_string(),
+        license: j["license"]["spdx_id"]
+            .as_str()
+            .filter(|s| *s != "NOASSERTION")
+            .map(|s| s.to_string()),
+    })
+}
+
+/// Fetch HuggingFace model metadata via the public API.
+/// Reads HF_TOKEN env var when available.
+#[tauri::command]
+pub async fn fetch_hf_meta(url: String) -> Result<HuggingFaceMeta, String> {
+    // Parse model_id from https://huggingface.co/owner/model(/anything)
+    let stripped = url
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .trim_start_matches("huggingface.co/");
+
+    let parts: Vec<&str> = stripped.splitn(3, '/').collect();
+    if parts.len() < 2 || parts[0].is_empty() || parts[1].is_empty() {
+        return Err("Invalid HuggingFace URL — expected https://huggingface.co/owner/model".to_string());
+    }
+    let author = parts[0];
+    let model_slug = parts[1].split('?').next().unwrap_or(parts[1]);
+    let model_id = format!("{}/{}", author, model_slug);
+
+    let api_url = format!("https://huggingface.co/api/models/{}", model_id);
+    let client = reqwest::Client::builder()
+        .user_agent("TIMPS-Desktop/0.1")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut req = client.get(&api_url);
+    if let Ok(token) = std::env::var("HF_TOKEN") {
+        if !token.is_empty() {
+            req = req.bearer_auth(token);
+        }
+    }
+
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HuggingFace API error {}", resp.status()));
+    }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+
+    Ok(HuggingFaceMeta {
+        model_id: j["modelId"]
+            .as_str()
+            .or(j["id"].as_str())
+            .unwrap_or(&model_id)
+            .to_string(),
+        author: j["author"].as_str().map(|s| s.to_string()),
+        downloads: j["downloads"].as_u64(),
+        likes: j["likes"].as_u64(),
+        tags: j["tags"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .take(15)
+                    .collect()
+            })
+            .unwrap_or_default(),
+        pipeline_tag: j["pipeline_tag"].as_str().map(|s| s.to_string()),
+        library_name: j["library_name"].as_str().map(|s| s.to_string()),
+    })
+}
+
+/// Analyze a link using the TIMPS server LLM. Returns the analysis text.
+/// `metadata_json` is a pre-serialized JSON string of GitHubMeta or HuggingFaceMeta.
+#[tauri::command]
+pub async fn analyze_lens_link(
+    url: String,
+    link_type: String,
+    metadata_json: String,
+    extra_prompt: Option<String>,
+) -> Result<String, String> {
+    let type_label = if link_type == "github" {
+        "GitHub repository"
+    } else {
+        "HuggingFace model"
+    };
+
+    let base_prompt = if link_type == "github" {
+        format!(
+            "You are a senior software engineer reviewing a {}.\n\nURL: {}\nMetadata:\n{}\n\n\
+            Please provide a concise analysis covering:\n\
+            1. What this project does (1-2 sentences)\n\
+            2. Strengths (2-3 bullet points)\n\
+            3. Specific improvement suggestions (3-5 actionable bullet points)\n\
+            4. Missing features or common patterns that would make this more robust\n\
+            5. One key insight or architectural recommendation\n\
+            Be specific and practical, not generic.",
+            type_label, url, metadata_json
+        )
+    } else {
+        format!(
+            "You are an ML engineer reviewing a {}.\n\nURL: {}\nMetadata:\n{}\n\n\
+            Please provide a concise analysis covering:\n\
+            1. What this model does and its use case (1-2 sentences)\n\
+            2. Strengths and notable characteristics\n\
+            3. Potential improvements or fine-tuning suggestions\n\
+            4. Best use cases and limitations\n\
+            5. How to integrate this model effectively\n\
+            Be specific and practical.",
+            type_label, url, metadata_json
+        )
+    };
+
+    let prompt = if let Some(extra) = extra_prompt {
+        format!("{}\n\nAdditional context from user: {}", base_prompt, extra)
+    } else {
+        base_prompt
+    };
+
+    let server_url = std::env::var("TIMPS_SERVER_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+    let body = serde_json::json!({
+        "prompt": prompt,
+        "provider": null,
+        "project_path": null,
+    });
+
+    let resp = reqwest::Client::new()
+        .post(format!("{}/chat", server_url))
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+        .map_err(|e| format!("TIMPS server unreachable: {}. Start it with: cd timps-code && npm run dev", e))?;
+
+    if resp.status().is_success() {
+        let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+        Ok(j["output"].as_str().unwrap_or("No response").to_string())
+    } else {
+        Err(format!("Server error {}: {}", resp.status(), resp.text().await.unwrap_or_default()))
+    }
 }
