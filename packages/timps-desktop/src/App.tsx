@@ -12,9 +12,11 @@ import { QuickCapture } from './components/QuickCapture';
 import { CommandBar } from './components/CommandBar';
 import { PassiveListener } from './components/PassiveListener';
 import { BackgroundDaemon } from './components/BackgroundDaemon';
+import { LensView } from './components/LensView';
+import { LinkToast } from './components/LinkToast';
 import './App.css';
 
-export type Tab = 'chat' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings';
+export type Tab = 'chat' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings' | 'lens';
 
 export default function App() {
   const [projectPath, setProjectPath] = useState<string>(() => {
@@ -56,13 +58,16 @@ export default function App() {
     }
   }, [projectPath, refresh]);
 
-  // Listen for Tauri events for Quick Capture and Settings
+  // Listen for Tauri events for Quick Capture, Settings, and Lens
   useEffect(() => {
     const unlistenQuickCapture = listen('show-quick-capture', () => {
       setShowQuickCapture(true);
     });
     const unlistenSettings = listen('show-settings', () => {
       setActiveTab('settings');
+    });
+    const unlistenLens = listen('show-lens', () => {
+      setActiveTab('lens');
     });
     
     // Keyboard shortcuts
@@ -82,6 +87,7 @@ export default function App() {
     return () => {
       unlistenQuickCapture.then(fn => fn());
       unlistenSettings.then(fn => fn());
+      unlistenLens.then(fn => fn());
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -197,6 +203,8 @@ export default function App() {
               onProjectPathChange={setProjectPath}
             />
           )}
+
+          {activeTab === 'lens' && <LensView />}
         </main>
       </div>
 
@@ -216,6 +224,8 @@ export default function App() {
       <PassiveListener projectPath={projectPath} />
       {/* Background intelligence daemon — summarizer, clipboard, notifications */}
       <BackgroundDaemon projectPath={projectPath} />
+      {/* Lens: floating toast for copied GitHub/HuggingFace URLs */}
+      <LinkToast onOpenLens={() => setActiveTab('lens')} />
     </div>
   );
 }

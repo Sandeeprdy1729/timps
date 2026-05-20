@@ -35,6 +35,39 @@ export interface MemoryStats {
   working_goals: number;
 }
 
+export interface LensLink {
+  id: string;
+  url: string;
+  link_type: 'github' | 'huggingface' | string;
+  title: string | null;
+  timestamp: number;
+  analyzed: boolean;
+  analysis: string | null;
+}
+
+export interface GitHubMeta {
+  full_name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  open_issues: number;
+  topics: string[];
+  updated_at: string;
+  default_branch: string;
+  license: string | null;
+}
+
+export interface HuggingFaceMeta {
+  model_id: string;
+  author: string | null;
+  downloads: number | null;
+  likes: number | null;
+  tags: string[];
+  pipeline_tag: string | null;
+  library_name: string | null;
+}
+
 // ── Invoke helper — falls back in non-Tauri context ───────────────────────
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -64,6 +97,15 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     stop_clipboard_watcher: undefined,
     run_background_summarizer: 0,
     check_proactive_notifications: [],
+    detect_link_type: 'other',
+    save_to_lens_queue: 'stub_lens_id',
+    get_lens_queue: [],
+    remove_from_lens_queue: undefined,
+    mark_lens_analyzed: undefined,
+    get_lens_history: [],
+    fetch_github_meta: null,
+    fetch_hf_meta: null,
+    analyze_lens_link: '(stub) TIMPS server not running in dev mode',
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -152,4 +194,33 @@ export const api = {
   /** Scan memory and return notification items worth surfacing to the user. */
   checkProactiveNotifications: (projectPath: string) =>
     invoke<Array<{ title: string; body: string; kind: string }>>('check_proactive_notifications', { projectPath }),
+
+  // ── Lens — frictionless link analysis ───────────────────────────────────
+
+  detectLinkType: (url: string) =>
+    invoke<string>('detect_link_type', { url }),
+
+  saveToLensQueue: (url: string, linkType: string, title?: string) =>
+    invoke<string>('save_to_lens_queue', { url, linkType, title: title ?? null }),
+
+  getLensQueue: () =>
+    invoke<LensLink[]>('get_lens_queue'),
+
+  removeFromLensQueue: (id: string) =>
+    invoke<void>('remove_from_lens_queue', { id }),
+
+  markLensAnalyzed: (id: string, analysis: string) =>
+    invoke<void>('mark_lens_analyzed', { id, analysis }),
+
+  getLensHistory: (days = 7) =>
+    invoke<LensLink[]>('get_lens_history', { days }),
+
+  fetchGithubMeta: (url: string) =>
+    invoke<GitHubMeta>('fetch_github_meta', { url }),
+
+  fetchHfMeta: (url: string) =>
+    invoke<HuggingFaceMeta>('fetch_hf_meta', { url }),
+
+  analyzeLensLink: (url: string, linkType: string, metadataJson: string, extraPrompt?: string) =>
+    invoke<string>('analyze_lens_link', { url, linkType, metadataJson, extraPrompt: extraPrompt ?? null }),
 };

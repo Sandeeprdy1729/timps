@@ -19,6 +19,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
+// ── New intelligence layers ──
+import { SessionBridge } from '../memory/sessionBridge.js';
+import { RiskEngine } from '../utils/riskEngine.js';
+import { ContextOrchestrator } from './contextOrchestrator.js';
+import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
+import { DurableJobEngine } from './durableJob.js';
+import { CodeGraph } from '../memory/codeGraph.js';
+
 const getProvenForge = async () => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -41,10 +49,17 @@ export interface AgentOptions {
   maxContextTokens?: number;  // trigger compaction after this (default: 100000)
   customInstructions?: string;
   autoCorrect?: boolean;      // auto-retry on errors (default: true)
-techStack?: import('../config/types.js').TechStack;
+  techStack?: import('../config/types.js').TechStack;
   teamMemory?: TeamMemory;
   branchName?: string;
   pluginManager?: PluginManager;
+  // New intelligence layers
+  sessionBridge?: SessionBridge;
+  riskEngine?: RiskEngine;
+  contextOrchestrator?: ContextOrchestrator;
+  selfImproving?: SelfImprovingAgent;
+  durableJob?: DurableJobEngine;
+  codeGraph?: CodeGraph;
 }
 
 export const TIMPS_SYSTEM_PROMPT = `You are TIMPS Code — a highly capable AI coding agent running in the user's terminal.
@@ -145,6 +160,14 @@ export class Agent {
   private pendingMergeTarget?: string;
   private pluginManager?: PluginManager;
 
+  // New intelligence layers
+  private sessionBridge?: SessionBridge;
+  private riskEngine?: RiskEngine;
+  private contextOrchestrator?: ContextOrchestrator;
+  private selfImproving?: SelfImprovingAgent;
+  private durableJob?: DurableJobEngine;
+  private codeGraph?: CodeGraph;
+
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
     this.cwd = opts.cwd;
@@ -158,6 +181,15 @@ export class Agent {
     this.autoCorrect = opts.autoCorrect ?? true;
     this.techStack = opts.techStack;
     this.teamMemory = opts.teamMemory;
+    this.branchName = opts.branchName;
+    this.pluginManager = opts.pluginManager;
+    // Wire in intelligence layers
+    this.sessionBridge = opts.sessionBridge;
+    this.riskEngine = opts.riskEngine;
+    this.contextOrchestrator = opts.contextOrchestrator;
+    this.selfImproving = opts.selfImproving;
+    this.durableJob = opts.durableJob;
+    this.codeGraph = opts.codeGraph;
     this.branchName = opts.branchName;
     this.pluginManager = opts.pluginManager;
 
@@ -224,6 +256,52 @@ export class Agent {
       prompt += `\n${skillCtx}\n`;
     }
 
+    // ── Session Bridge: cross-session persistent context ──
+    if (this.sessionBridge) {
+      try {
+        const bridgeCtx = this.sessionBridge.getCachedContext();
+        if (bridgeCtx) {
+          const { projectProfile, coldStartHints } = bridgeCtx;
+          if (projectProfile) {
+            prompt += '\n## Project Profile (from previous sessions)\n';
+            if (projectProfile.conventions.length > 0) {
+              prompt += `Conventions: ${projectProfile.conventions.slice(0, 5).join(', ')}\n`;
+            }
+            if (projectProfile.techStack.length > 0) {
+              prompt += `Tech stack: ${projectProfile.techStack.join(', ')}\n`;
+            }
+            if (projectProfile.knownIssues.length > 0) {
+              prompt += `Known issues: ${projectProfile.knownIssues.slice(0, 3).join('; ')}\n`;
+            }
+            if (projectProfile.keyDecisions.length > 0) {
+              prompt += `Key decisions: ${projectProfile.keyDecisions.slice(0, 3).join('; ')}\n`;
+            }
+          }
+          if (coldStartHints.length > 0) {
+            prompt += `\nQuick context: ${coldStartHints.slice(0, 3).join(' | ')}\n`;
+          }
+        }
+      } catch { /* never fail on bridge errors */ }
+    }
+
+    // ── Self-improving: inject learned behaviors ──
+    if (this.selfImproving) {
+      const learnedBehaviors = this.selfImproving.formatForSystemPrompt();
+      if (learnedBehaviors) {
+        prompt += `\n${learnedBehaviors}\n`;
+      }
+    }
+
+    // ── Code graph summary ──
+    if (this.codeGraph) {
+      try {
+        const graphSummary = this.codeGraph.summarize();
+        if (graphSummary && graphSummary !== 'Code graph not built yet') {
+          prompt += `\n## Codebase Structure\n${graphSummary}\n`;
+        }
+      } catch { /* ignore */ }
+    }
+
     prompt += `\nWorking directory: ${this.cwd}\n`;
     return prompt;
   }
@@ -270,6 +348,15 @@ End your response with a confirmation question.`;
   async *run(userMessage: string): AsyncGenerator<AgentEvent> {
     this.abortController = new AbortController();
 
+    // ── Pre-flight: self-improvement check ──
+    if (this.selfImproving) {
+      const taskType = this.contextOrchestrator?.detectTaskType(userMessage) ?? 'general';
+      const preflight = this.selfImproving.preflightCheck(userMessage, taskType, []);
+      for (const warning of preflight.warnings) {
+        yield { type: 'text', content: `\n> ⚠️ ${warning}\n` };
+      }
+    }
+
     // Add user message
     this.messages.push({
       role: 'user',
@@ -280,10 +367,23 @@ End your response with a confirmation question.`;
     // Update working memory
     this.memory.setGoal(userMessage);
 
-    // Context compaction check
+    // Context compaction check — use ContextOrchestrator if available
     const contextSize = this.estimateContextSize();
     if (contextSize > this.maxContextTokens) {
-      yield* this.compactContext();
+      if (this.contextOrchestrator) {
+        const taskType = this.contextOrchestrator.detectTaskType(userMessage);
+        const { messages: optimized } = this.contextOrchestrator.selectMessages(
+          this.messages,
+          userMessage,
+          (text: string) => estimateTokens(text)
+        );
+        // Keep system prompt + optimized messages
+        const systemMsg = this.messages.find(m => m.role === 'system');
+        this.messages = systemMsg ? [systemMsg, ...optimized.filter(m => m.role !== 'system')] : optimized;
+        yield { type: 'text', content: '\n[Context optimized by ContextOrchestrator]\n' };
+      } else {
+        yield* this.compactContext();
+      }
     }
 
     // Agent loop: stream → collect tool calls → execute → repeat
@@ -380,6 +480,24 @@ End your response with a confirmation question.`;
           this.memory.extractFacts(userMessage, fullText);
           const saved = await this.saveMemoryFromSession(userMessage, fullText);
           if (saved) yield { type: 'memory_saved', summary: saved };
+
+          // ── Save to session bridge for future sessions ──
+          if (this.sessionBridge) {
+            try {
+              this.sessionBridge.saveSession({
+                duration: Date.now(),
+                messageCount: this.messages.length,
+                tasksCompleted: [userMessage.slice(0, 80)],
+                filesChanged: [],
+                keyDecisions: [],
+                conventions: [],
+                knownIssues: [],
+                techStack: [],
+                activeGoal: userMessage.slice(0, 80),
+                outcome: 'completed',
+              });
+            } catch { /* never fail session save */ }
+          }
         }
         yield { type: 'done', usage: this.totalUsage };
         return;
@@ -424,9 +542,29 @@ End your response with a confirmation question.`;
         continue;
       }
 
-      // Permission check
+      // Permission check — use RiskEngine if available, else legacy permission system
       const risk = getToolRisk(tc.name);
-      const allowed = !this.permissions.requiresApproval(tc.name, tc.arguments as Record<string, unknown>);
+      let allowed: boolean;
+
+      if (this.riskEngine) {
+        const assessment = this.riskEngine.assess(tc.name, tc.arguments as Record<string, unknown>);
+        if (assessment.decision === 'deny') {
+          const msg = `Denied (risk score ${assessment.score}): ${assessment.factors.join(', ')}`;
+          this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
+          yield { type: 'tool_result', tool: tc.name, result: msg, success: false };
+          continue;
+        }
+        if (assessment.decision === 'require-approval') {
+          // Fall through to legacy approval check
+          allowed = !this.permissions.requiresApproval(tc.name, tc.arguments as Record<string, unknown>);
+        } else {
+          // auto-approve
+          allowed = true;
+        }
+      } else {
+        allowed = !this.permissions.requiresApproval(tc.name, tc.arguments as Record<string, unknown>);
+      }
+
       if (!allowed) {
         const msg = 'Permission denied by user';
         this.messages.push({ role: 'tool', content: msg, toolCallId: tc.id, name: tc.name });
@@ -504,6 +642,20 @@ End your response with a confirmation question.`;
 
       // Self-correction: if tool failed and auto-correct is on
       if (result.isError && this.autoCorrect) {
+        // Record the mistake for future learning
+        if (this.selfImproving) {
+          const taskType = this.contextOrchestrator?.detectTaskType(
+            this.messages.find(m => m.role === 'user')?.content as string ?? ''
+          ) ?? 'general';
+          this.selfImproving.recordMistake({
+            category: 'tool-misuse',
+            taskType,
+            description: `${tc.name} failed: ${result.content.slice(0, 80)}`,
+            context: `Tool: ${tc.name}, args: ${JSON.stringify(tc.arguments).slice(0, 100)}`,
+            errorMessage: result.content.slice(0, 200),
+            toolSequence: [tc.name],
+          });
+        }
         yield* this.attemptSelfCorrection(tc, result.content);
       }
     }

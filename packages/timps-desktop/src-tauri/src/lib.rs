@@ -32,6 +32,7 @@ pub fn run() {
 
             let open_item = MenuItem::with_id(app, "open", "Open TIMPS", true, None::<&str>)?;
             let capture_item = MenuItem::with_id(app, "quick_capture", "Quick Capture...  ⌘⇧N", true, None::<&str>)?;
+            let lens_item = MenuItem::with_id(app, "lens", "⚡ Lens — Today's Links", true, None::<&str>)?;
             let sep1 = PredefinedMenuItem::separator(app)?;
             let autostart_item = MenuItem::with_id(app, "toggle_autostart", "Launch at Login", true, None::<&str>)?;
             let sep2 = PredefinedMenuItem::separator(app)?;
@@ -40,6 +41,7 @@ pub fn run() {
             let menu = Menu::with_items(app, &[
                 &open_item,
                 &capture_item,
+                &lens_item,
                 &sep1,
                 &autostart_item,
                 &sep2,
@@ -67,6 +69,13 @@ pub fn run() {
                                 let _ = w.show();
                                 let _ = w.set_focus();
                                 let _ = w.emit("show-quick-capture", ());
+                            }
+                        }
+                        "lens" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                                let _ = w.emit("show-lens", ());
                             }
                         }
                         "toggle_autostart" => {
@@ -170,6 +179,16 @@ pub fn run() {
             commands::run_background_summarizer,
             // Proactive notifications
             commands::check_proactive_notifications,
+            // Lens — frictionless link analysis
+            commands::detect_link_type,
+            commands::save_to_lens_queue,
+            commands::get_lens_queue,
+            commands::remove_from_lens_queue,
+            commands::mark_lens_analyzed,
+            commands::get_lens_history,
+            commands::fetch_github_meta,
+            commands::fetch_hf_meta,
+            commands::analyze_lens_link,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

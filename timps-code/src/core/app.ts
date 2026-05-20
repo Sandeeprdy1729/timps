@@ -177,7 +177,7 @@ const resolved = modelName.replace(':latest', ':7b');
     }
   }
 
-  // ── Step 3: Provider setup (minimal — most auto-detected above) ──
+// ── Step 3: Provider setup (minimal — most auto-detected above) ──
   let provider: ModelProvider;
   try {
     provider = createProvider(providerName, opts.model);
@@ -203,6 +203,41 @@ const resolved = modelName.replace(':latest', ':7b');
   const permissions = new Permissions();
   const multimodalMemory = new MultimodalMemory(cwd);
 
+  // ── Intelligence layers (new) ──
+  // Import lazily to avoid circular deps at startup
+  const { SessionBridge } = await import('../memory/sessionBridge.js');
+  const { RiskEngine } = await import('../utils/riskEngine.js');
+  const { ContextOrchestrator } = await import('./contextOrchestrator.js');
+  const { SelfImprovingAgent } = await import('../agent/selfImprovingAgent.js');
+  const { DurableJobEngine } = await import('./durableJob.js');
+  const { CodeGraph } = await import('../memory/codeGraph.js');
+
+  const sessionBridge = new SessionBridge(projectId, cwd);
+  const riskEngine = new RiskEngine();
+  const contextOrchestrator = new ContextOrchestrator();
+  const selfImproving = new SelfImprovingAgent(projectId);
+  const durableJob = new DurableJobEngine(projectId);
+  const codeGraph = new CodeGraph(projectId);
+
+  // Load cross-session context (synchronous, fast)
+  let bridgeContext = null;
+  try { bridgeContext = sessionBridge.loadContext(opts.oneLine); } catch { /* first run */ }
+  if (bridgeContext?.coldStartHints?.length) {
+    console.log(`  ${t.dim('↻')} Session restored: ${bridgeContext.coldStartHints[0]}`);
+  }
+
+  // Check for incomplete/interrupted jobs
+  const incompleteJobs = durableJob.getIncompleteJobs();
+  if (incompleteJobs.length > 0) {
+    console.log(`  ${t.warning('⚠')} ${incompleteJobs.length} interrupted job(s) from previous session`);
+    for (const job of incompleteJobs.slice(0, 2)) {
+      console.log(`    ${t.dim('→')} ${job.originalRequest.slice(0, 60)}... (${job.status})`);
+    }
+  }
+
+  // Start background code graph scan (non-blocking)
+  codeGraph.buildFromDirectory(cwd).catch(() => { /* silent — runs in background */ });
+
   // Create agent
   const agent = new Agent({
     provider,
@@ -215,6 +250,13 @@ const resolved = modelName.replace(':latest', ':7b');
     autoCorrect: config.autoCorrect ?? true,
     techStack: config.techStack,
     branchName: opts.branch,
+    // New intelligence layers
+    sessionBridge,
+    riskEngine,
+    contextOrchestrator,
+    selfImproving,
+    durableJob,
+    codeGraph,
   });
   agent.setTodoStore(todos);
 
