@@ -27,3 +27,7 @@ export type {
   ResonanceTemporalQueryResult,
   HarmonicConsolidationReport,
 } from './resonanceForge.js';
+
+// Layer 7: EchoForge — causal echo propagation + reservoir computing
+export { ServerEchoForge, echoForge, getServerEchoForge } from './echoForge.js';
+export type { EchoDomain, EchoPrediction, EchoStatus, EchoWeaveResult, EchoQueryResult } from './echoForge.js';

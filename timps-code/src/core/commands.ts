@@ -350,6 +350,19 @@ export function initCommandRegistry(): void {
     gatewayOnly: false,
     handler: async () => {},
   });
+
+  // ── Layer 7: EchoForge intelligence command ──
+  registerCommand({
+    name: 'echo',
+    description: 'Show EchoForge Layer 7 predictive memory status — causal echo propagation, burnout/contradiction risk trajectories, and reservoir field state',
+    category: 'Info',
+    aliases: ['echoforge', 'resonance7'],
+    argsHint: '[domain] [--predict|--status|--context]',
+    subcommands: ['status', 'predict', 'context', 'consolidate', 'domains'],
+    cliOnly: true,
+    gatewayOnly: false,
+    handler: async () => {},
+  });
 }
 
 export type { CommandCategory } from '../config/types.js';

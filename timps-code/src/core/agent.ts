@@ -23,6 +23,7 @@ import * as os from 'node:os';
 import { SessionBridge } from '../memory/sessionBridge.js';
 import { RiskEngine } from '../utils/riskEngine.js';
 import { ContextOrchestrator } from './contextOrchestrator.js';
+import { injectEchoContext } from '../memory/echoVeil.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
@@ -356,6 +357,26 @@ End your response with a confirmation question.`;
         yield { type: 'text', content: `\n> ⚠️ ${warning}\n` };
       }
     }
+
+    // ── Pre-flight: EchoForge intelligence injection ──
+    try {
+      const echoResult = await injectEchoContext(this.memory);
+      if (echoResult.hasHighRisk) {
+        for (const w of echoResult.warnings.filter(x => x.riskLevel === 'high')) {
+          yield { type: 'text', content: `\n> 🔮 **Echo Alert** [${w.domain}]: ${w.message}\n` };
+        }
+      }
+      if (echoResult.promptFragment) {
+        // Patch the system message with live echo context
+        const sysIdx = this.messages.findIndex(m => m.role === 'system');
+        if (sysIdx !== -1) {
+          this.messages[sysIdx] = {
+            ...this.messages[sysIdx]!,
+            content: this.messages[sysIdx]!.content + echoResult.promptFragment,
+          };
+        }
+      }
+    } catch { /* echo is best-effort */ }
 
     // Add user message
     this.messages.push({
