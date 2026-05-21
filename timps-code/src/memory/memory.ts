@@ -39,6 +39,7 @@ import { MemoryCoordinator } from './memoryCoordinator.js';
 import { MemoryBenchmark } from './benchmark.js';
 import { ChronosVeil } from './chronosVeil.js';
 import type { ChronosDomain } from './chronosVeil.js';
+import { EchoForge } from '@timps/memory-core';
 
 export class Memory {
   private dir: string;
@@ -73,6 +74,9 @@ export class Memory {
 
   // ── Layer 5: ChronosVeil (temporal causal weaver) ──
   private _chronos?: ChronosVeil;
+
+  // ── Layer 7: EchoForge (causal echo propagation + reservoir computing) ──
+  private _echoForge?: EchoForge;
 
   // Turn counter for self-reflection
   private _turnCount = 0;
@@ -134,6 +138,11 @@ export class Memory {
   /** Layer 5: ChronosVeil — bi-temporal causal event graph. */
   get chronosVeil(): ChronosVeil {
     return (this._chronos ??= new ChronosVeil(this.dir));
+  }
+
+  /** Layer 7: EchoVeil — reservoir-computing echo propagation (alias for echoForge). */
+  get echoVeil(): EchoForge {
+    return (this._echoForge ??= new EchoForge(this.dir));
   }
 
   // ── Intelligence tools (each stores its own file in this.dir) ──
@@ -217,6 +226,7 @@ export class Memory {
     this.trimFile(this.episodicFile, 100);
 
     // Layer 5: ingest into ChronosVeil for temporal graph
+    // Layer 7: weave into EchoForge for causal echo propagation
     const summary = episode.summary || '';
     const domain: ChronosDomain = episode.taskType === 'burnout' ? 'burnout'
       : episode.taskType === 'relationship' ? 'relationship'
@@ -224,6 +234,7 @@ export class Memory {
       : 'general';
     if (summary.length > 0) {
       this.chronosVeil.ingest(summary, 'episodic', ['episode'], undefined, domain);
+      void this.echoVeil.weave(summary, { domain: domain as any, tags: ['episode'] });
     }
 
     const files = episode.filesChanged || [];
