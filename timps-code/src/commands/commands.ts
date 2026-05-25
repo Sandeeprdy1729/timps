@@ -525,6 +525,14 @@ export const COMMAND_REGISTRY: CommandDef[] = [
     subcommands: ['query', 'forget', 'export', 'import', 'consolidate', 'stats'],
   },
   {
+    name: 'sheaf',
+    description: 'HarmonicSheafWeaver: algebraic contradiction detection + eigenmode foresight',
+    category: 'Tools',
+    aliases: ['hsw'],
+    argsHint: '[domain] [--predict|--contradict|--status|--consolidate]',
+    subcommands: ['predict', 'contradict', 'status', 'consolidate', 'context'],
+  },
+  {
     name: 'forget',
     description: 'Clear all memories for this project',
     category: 'Tools',
