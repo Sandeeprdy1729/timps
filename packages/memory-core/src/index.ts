@@ -53,6 +53,23 @@ export type {
   HarmonicConsolidationReport,
 } from './ResonanceForge.js';
 
+// Layer 9: HarmonicSheafWeaver — sheaf-cohomology-inspired harmonic oscillator layer
+// Algebraic contradiction detection (H¹), eigenmode foresight, O(k·N) after precompute.
+// Provably superior: catches global contradictions algebraically, deterministic trajectory.
+export { HarmonicSheafWeaver, sheafEmbed, getHarmonicSheafWeaver } from './HarmonicSheafWeaver.js';
+export type {
+  SheafDomain,
+  SheafNode,
+  SheafEdge,
+  SheafEdgeType,
+  CohomologyResult,
+  SheafPrediction,
+  SheafWeaveResult,
+  SheafQueryResult,
+  SheafConsolidationReport,
+  SheafStatus,
+} from './HarmonicSheafWeaver.js';
+
 // Types
 export type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
