@@ -9,6 +9,7 @@
 //   • The /echo slash command uses getEchoReport() for human-readable output.
 
 import type { Memory } from './memory.js';
+import type { SynapseQuench, SpectralPrediction } from './synapseQuench.js';
 
 export interface EchoWarning {
   domain: string;
@@ -227,3 +228,93 @@ export async function weaveToolResult(
 export type EchoVeilDomain =
   | 'burnout' | 'relationship' | 'decision'
   | 'code_pattern' | 'contradiction' | 'goal' | 'general';
+
+// ── SynapseQuench Integration ─────────────────────────────────────────────────
+
+/**
+ * Enhanced echo context using SynapseQuench spectral propagation.
+ * Falls back to standard EchoForge if SynapseQuench produces no results.
+ * Called from agent.ts as a complement to injectEchoContext().
+ */
+export function injectSpectralContext(memory: Memory): {
+  promptFragment: string;
+  warnings: EchoWarning[];
+  hasHighRisk: boolean;
+  spectralPredictions: SpectralPrediction[];
+} {
+  const warnings: EchoWarning[] = [];
+  const lines: string[] = [];
+  const spectralPredictions: SpectralPrediction[] = [];
+
+  try {
+    const quench = memory.synapseQuench;
+    const status = quench.getStatus();
+    if (status.activeNodeCount === 0) {
+      return { promptFragment: '', warnings: [], hasHighRisk: false, spectralPredictions: [] };
+    }
+
+    // Predict risk for monitored domains
+    for (const domain of RISK_DOMAINS) {
+      const pred = quench.predict(domain, { lookbackDays: 14 });
+      spectralPredictions.push(pred);
+
+      if (pred.riskLevel === 'high') {
+        lines.push(`• ${DOMAIN_LABELS[domain]} HIGH (${Math.round(pred.riskScore * 100)}%): ${pred.explanation}`);
+        warnings.push({
+          domain,
+          riskLevel: 'high',
+          riskScore: pred.riskScore,
+          message: `${DOMAIN_LABELS[domain]} (${Math.round(pred.riskScore * 100)}%) — ${pred.explanation}`,
+        });
+      } else if (pred.riskLevel === 'medium' && pred.riskScore > 0.45) {
+        warnings.push({
+          domain,
+          riskLevel: 'medium',
+          riskScore: pred.riskScore,
+          message: `${DOMAIN_LABELS[domain]} elevated (${Math.round(pred.riskScore * 100)}%) — spectral coherence ${Math.round((pred.confidence ?? 0) * 100)}%.`,
+        });
+      }
+
+      // Surface phase conflicts as proactive warnings
+      for (const conflict of pred.phaseConflicts) {
+        if (conflict.type === 'destructive') {
+          warnings.push({
+            domain,
+            riskLevel: 'medium',
+            riskScore: 0.5,
+            message: `Phase conflict detected: ${conflict.summary}`,
+          });
+        }
+      }
+    }
+
+    if (lines.length > 0) {
+      lines.unshift('## SynapseQuench Spectral Alerts');
+    }
+
+    const promptFragment = lines.length > 0 ? `\n${lines.join('\n')}\n` : '';
+    const hasHighRisk = warnings.some(w => w.riskLevel === 'high');
+
+    return { promptFragment, warnings, hasHighRisk, spectralPredictions };
+  } catch {
+    return { promptFragment: '', warnings: [], hasHighRisk: false, spectralPredictions: [] };
+  }
+}
+
+/**
+ * Weave a tool result into both EchoForge and SynapseQuench.
+ * Dual-write ensures both systems stay synchronized.
+ */
+export function weaveToolResultSpectral(
+  memory: Memory,
+  content: string,
+  opts: { domain?: string; causalParentId?: string } = {}
+): void {
+  try {
+    const quench = memory.synapseQuench;
+    quench.weave(content, {
+      domain: opts.domain as EchoVeilDomain | undefined,
+      causalParentId: opts.causalParentId,
+    });
+  } catch { /* fire-and-forget */ }
+}

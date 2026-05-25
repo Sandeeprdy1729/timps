@@ -40,6 +40,7 @@ import { MemoryBenchmark } from './benchmark.js';
 import { ChronosVeil } from './chronosVeil.js';
 import type { ChronosDomain } from './chronosVeil.js';
 import { EchoForge } from '@timps/memory-core';
+import { SynapseQuench } from './synapseQuench.js';
 
 export class Memory {
   private dir: string;
@@ -77,6 +78,9 @@ export class Memory {
 
   // ── Layer 7: EchoForge (causal echo propagation + reservoir computing) ──
   private _echoForge?: EchoForge;
+
+  // ── Layer 8: SynapseQuench (deterministic spectral propagation + phase quenching) ──
+  private _synapseQuench?: SynapseQuench;
 
   // Turn counter for self-reflection
   private _turnCount = 0;
@@ -143,6 +147,11 @@ export class Memory {
   /** Layer 7: EchoVeil — reservoir-computing echo propagation (alias for echoForge). */
   get echoVeil(): EchoForge {
     return (this._echoForge ??= new EchoForge(this.dir));
+  }
+
+  /** Layer 8: SynapseQuench — deterministic spectral propagation with phase-based quenching. */
+  get synapseQuench(): SynapseQuench {
+    return (this._synapseQuench ??= new SynapseQuench(this.dir));
   }
 
   // ── Intelligence tools (each stores its own file in this.dir) ──
