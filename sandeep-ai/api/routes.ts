@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { eventBus } from '../core/eventBus';
 import { Agent } from '../core/agent';
 import { memoryIndex } from '../memory/memoryIndex';
-import { query, execute } from '../db/postgres';
+import { query, execute, dbAvailable } from '../db/postgres';
 import { ContradictionTool } from '../tools/contradictionTool';
 import { positionStore } from '../tools/positionStore';
 import { nexusForge } from '../core/nexusForge';
@@ -12,6 +12,25 @@ import { chronosForge } from '../memory/chronosForge.js';
 
 const router = Router();
 const contradictionTool = new ContradictionTool();
+
+// Helper: returns a meaningful error string regardless of error type
+function errMsg(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'string' && err) return err;
+  return 'Internal server error';
+}
+
+// Guard for routes that require a live database
+function requireDb(res: Response): boolean {
+  if (!dbAvailable) {
+    res.status(503).json({
+      error: 'Database unavailable. Set POSTGRES_HOST or DATABASE_URL in your .env file.',
+      docs: 'https://github.com/Sandeeprdy1729/timps#quick-start-manual',
+    });
+    return false;
+  }
+  return true;
+}
 
 // ─── Ensure user row exists before any DB operation that needs it ──────────
 async function ensureUser(userId: number, username?: string): Promise<void> {
@@ -78,6 +97,7 @@ function boundedPositiveInt(value: unknown, min: number, max: number): number | 
 }
 
 router.post('/chat', async (req: Request, res: Response) => {
+  if (!requireDb(res)) return;
   try {
     const body = bodyObject(req.body);
     const userId = positiveInt(body?.userId);
@@ -133,11 +153,12 @@ router.post('/chat', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
 router.get('/memory/:userId', async (req: Request, res: Response) => {
+  if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -153,11 +174,12 @@ router.get('/memory/:userId', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Memory retrieval error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
 router.get('/goals/:userId', async (req: Request, res: Response) => {
+  if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -171,7 +193,7 @@ router.get('/goals/:userId', async (req: Request, res: Response) => {
     res.json({ goals });
   } catch (error: any) {
     console.error('Goals retrieval error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -195,7 +217,7 @@ router.post('/goals/:userId', async (req: Request, res: Response) => {
     res.json({ goal });
   } catch (error: any) {
     console.error('Goal creation error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -215,7 +237,7 @@ router.put('/goals/:goalId', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Goal update error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -233,7 +255,7 @@ router.get('/preferences/:userId', async (req: Request, res: Response) => {
     res.json({ preferences });
   } catch (error: any) {
     console.error('Preferences retrieval error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -253,7 +275,7 @@ router.post('/preferences/:userId', async (req: Request, res: Response) => {
     res.json({ preference });
   } catch (error: any) {
     console.error('Preference creation error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -271,7 +293,7 @@ router.get('/projects/:userId', async (req: Request, res: Response) => {
     res.json({ projects });
   } catch (error: any) {
     console.error('Projects retrieval error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -292,7 +314,7 @@ router.post('/conversations/:userId', async (req: Request, res: Response) => {
     res.json({ conversation: conversation[0] });
   } catch (error: any) {
     console.error('Conversation creation error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -341,11 +363,12 @@ router.post('/contradiction/check', async (req: Request, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error('Contradiction check error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
 router.get('/positions/:userId', async (req: Request, res: Response) => {
+  if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
     const projectId = (req.query.projectId as string) || 'default';
@@ -357,7 +380,7 @@ router.get('/positions/:userId', async (req: Request, res: Response) => {
     res.json({ positions, total: positions.length });
   } catch (error: any) {
     console.error('Positions list error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -381,7 +404,7 @@ router.post('/positions/:userId', async (req: Request, res: Response) => {
     res.json(JSON.parse(raw));
   } catch (error: any) {
     console.error('Position store error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -401,7 +424,7 @@ router.delete('/positions/:userId/:positionId', async (req: Request, res: Respon
     res.json(JSON.parse(raw));
   } catch (error: any) {
     console.error('Position delete error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -416,7 +439,7 @@ router.get('/contradiction/history/:positionId', async (req: Request, res: Respo
     res.json({ history, total: history.length });
   } catch (error: any) {
     console.error('Contradiction history error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: errMsg(error) });
   }
 });
 
@@ -588,7 +611,7 @@ router.post('/nexus/ingest', async (req: Request, res: Response) => {
     }
   } catch (err: any) {
     console.error('[nexus/ingest] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -612,7 +635,7 @@ router.post('/nexus/query', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: any) {
     console.error('[nexus/query] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -638,7 +661,7 @@ router.get('/nexus/stats/:userId', async (req: Request, res: Response) => {
       sources: sources.reduce((acc: any, row: any) => { acc[row.source_module] = parseInt(row.count); return acc; }, {}),
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -668,7 +691,7 @@ router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
 
     res.json({ nodes: enrichedNodes, edges });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -716,7 +739,7 @@ router.post('/chronos/ingest', async (req: Request, res: Response) => {
     res.json({ success: true, eventId: result.eventId, layer: result.layer, entities: result.entities });
   } catch (err: any) {
     console.error('[chronos/ingest] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -742,7 +765,7 @@ router.post('/chronos/query', async (req: Request, res: Response) => {
     res.json(resolved);
   } catch (err: any) {
     console.error('[chronos/query] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -766,7 +789,7 @@ router.get('/chronos/context/:userId', async (req: Request, res: Response) => {
     res.json({ context });
   } catch (err: any) {
     console.error('[chronos/context] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -792,7 +815,7 @@ router.get('/chronos/stats/:userId', async (req: Request, res: Response) => {
       recent,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -817,7 +840,7 @@ router.get('/chronos/edges/:userId', async (req: Request, res: Response) => {
 
     res.json({ edges, total: edges.length });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -869,7 +892,7 @@ router.post('/synapse/ingest', async (req: Request, res: Response) => {
     res.json({ success: true, nodeId: result.nodeId, layer: result.layer, activation: result.activation, entities: result.entities });
   } catch (err: any) {
     console.error('[synapse/ingest] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -895,7 +918,7 @@ router.post('/synapse/query', async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: any) {
     console.error('[synapse/query] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -919,7 +942,7 @@ router.get('/synapse/context/:userId', async (req: Request, res: Response) => {
     res.json({ context });
   } catch (err: any) {
     console.error('[synapse/context] Error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -936,7 +959,7 @@ router.get('/synapse/stats/:userId', async (req: Request, res: Response) => {
     const stats = await synapseMetabolon.getStats(userId, projectId);
     res.json(stats);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -953,7 +976,7 @@ router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
     const graph = await synapseMetabolon.getGraph(userId, limit);
     res.json(graph);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -971,7 +994,7 @@ router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) 
     const result = await synapseMetabolon.runConsolidationCycle(userId, projectId);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -984,7 +1007,7 @@ router.post('/chrono/query', async (req: Request, res: Response) => {
     const userId = positiveInt(body?.userId);
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const atTime = Number(body?.atTime);
-    const domain = optionalString(body?.domain, 160);
+    const domain = optionalString(body?.domain, 160) as import('../memory/chronosForge.js').SignalDomain | undefined;
     const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
     if (!userId || !Number.isFinite(atTime)) {
       res.status(400).json({ error: 'userId and atTime are required' });
@@ -998,7 +1021,7 @@ router.post('/chrono/query', async (req: Request, res: Response) => {
     );
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -1007,7 +1030,7 @@ router.post('/chrono/foresight', async (req: Request, res: Response) => {
     const body = bodyObject(req.body);
     const userId = positiveInt(body?.userId);
     const projectId = optionalString(body?.projectId, 160) || 'default';
-    const domain = requiredString(body?.domain, 160);
+    const domain = requiredString(body?.domain, 160) as import('../memory/chronosForge.js').SignalDomain;
     const lookbackDays = boundedPositiveInt(body?.lookbackDays, 1, 3650);
     const steps = boundedPositiveInt(body?.steps, 1, 365);
     if (!userId || !domain) {
@@ -1018,11 +1041,11 @@ router.post('/chrono/foresight', async (req: Request, res: Response) => {
       userId,
       projectId,
       domain,
-      { lookbackDays, steps }
+      { lookbackDays: lookbackDays ?? undefined, steps: steps ?? undefined }
     );
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 
@@ -1043,7 +1066,7 @@ router.post('/chrono/consolidate', async (req: Request, res: Response) => {
     );
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMsg(err) });
   }
 });
 

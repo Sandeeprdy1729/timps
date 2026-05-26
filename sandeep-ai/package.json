@@ -1,8 +1,17 @@
 {
   "name": "timps",
-  "version": "2.0.2",
+  "version": "2.0.4",
   "description": "TIMPs — The AI memory layer that gets smarter the longer you use it. 17 intelligence tools built on persistent memory.",
   "main": "dist/main.js",
+  "exports": {
+    ".": "./dist/main.js",
+    "./server": "./dist/api/server.js",
+    "./memory": "./dist/memory/memoryIndex.js",
+    "./tools": "./dist/tools/index.js",
+    "./models": "./dist/models/index.js",
+    "./config": "./dist/config/env.js",
+    "./sdk": "./sdk/typescript/src/index.ts"
+  },
   "bin": {
     "timps": "./dist/main.js"
   },

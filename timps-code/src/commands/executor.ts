@@ -178,6 +178,10 @@ export async function executeCommand(command: string, args: string[]): Promise<C
     case 'memory':
       return runMemoryCommand(argString);
 
+    case 'sheaf':
+    case 'hsw':
+      return runSheafCommand(argString);
+
     case 'session':
     case 'remote':
       return runSessionCommand();
@@ -783,6 +787,111 @@ async function runDebugCommand(): Promise<CommandResult> {
   Memory Free: ${Math.round(os.freemem() / 1024 / 1024)}MB
   CPU: ${os.cpus().length} cores`,
   };
+}
+
+async function runSheafCommand(args: string): Promise<CommandResult> {
+  const { Memory } = await import('../memory/memory.js');
+  const { getSheafReport, injectSheafContext } = await import('../memory/sheafVeil.js');
+  const mem = new Memory(process.cwd());
+  const parts = args.trim().split(/\s+/);
+  const sub = parts[0] ?? 'status';
+  const domain = parts[1] ?? undefined;
+
+  try {
+    const weaver = mem.sheafWeaver;
+
+    switch (sub) {
+      case 'status': {
+        const status = weaver.getStatus();
+        const coh = weaver.detectContradictions();
+        const lines = [
+          'HarmonicSheafWeaver — Layer 9 Status',
+          `  Active nodes : ${status.activeNodeCount} / ${status.nodeCount}`,
+          `  Edges        : ${status.edgeCount}`,
+          `  Avg amplitude: ${status.avgAmplitude.toFixed(4)}`,
+          `  Spectral gap : ${status.spectralGap.toFixed(4)}`,
+          `  H¹ (Betti-1) : ${status.betti1} ${status.betti1 > 0 ? '⚠️  contradictions' : '✓ consistent'}`,
+          '',
+          'Domain node counts:',
+          ...Object.entries(status.domainCounts).map(([d, c]) => `  ${d.padEnd(16)} ${c}`),
+          '',
+          `Cohomology: ${coh.isConsistent ? '✓ CONSISTENT — no H¹ obstructions' : `⚠️  INCONSISTENT — ${coh.betti1} non-trivial class(es)`}`,
+        ];
+        if (!coh.isConsistent) {
+          lines.push(`  Contradiction nodes: ${coh.contradictionNodeIds.slice(0, 5).join(', ')}${coh.contradictionNodeIds.length > 5 ? '…' : ''}`);
+        }
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'predict': {
+        const targetDomain = (domain as import('@timps/memory-core').SheafDomain | undefined) ?? 'burnout';
+        const pred = weaver.predict(targetDomain, { lookbackDays: 30 });
+        const traj = pred.trajectory.slice(0, 6).map(v => `${Math.round(v * 100)}%`).join(' → ');
+        const lines = [
+          `HSW Prediction — ${targetDomain}`,
+          `  Risk level   : ${pred.riskLevel.toUpperCase()} (${Math.round(pred.riskScore * 100)}%)`,
+          `  Trajectory   : ${traj}`,
+          `  Confidence   : ${Math.round(pred.confidence * 100)}%`,
+          `  Eigenweights : ${pred.eigenmodeWeights.map(w => w.toFixed(3)).join(', ')}`,
+          `  Explanation  : ${pred.explanation}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'contradict': {
+        const targetDomain = domain as import('@timps/memory-core').SheafDomain | undefined;
+        const coh = weaver.detectContradictions(targetDomain ? { domain: targetDomain } : {});
+        const domainStr = Object.entries(coh.domainContradictions)
+          .map(([d, n]) => `  ${d}: ${n} contradiction(s)`)
+          .join('\n');
+        const lines = [
+          'HSW Cohomology — Algebraic Contradiction Detection',
+          `  Betti-1 (H¹) : ${coh.betti1}`,
+          `  Spectral gap : ${coh.spectralGap.toFixed(4)}`,
+          `  Consistency  : ${coh.isConsistent ? '✓ CONSISTENT' : '⚠️  INCONSISTENT'}`,
+          `  Affected nodes: ${coh.contradictionNodeIds.length}`,
+          '',
+          'By domain:',
+          domainStr || '  (none)',
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'consolidate': {
+        const report = weaver.consolidate();
+        const lines = [
+          'HSW Consolidation complete',
+          `  Quenched (faded)    : ${report.quenched}`,
+          `  Retained            : ${report.retained}`,
+          `  Crystallised        : ${report.crystallised}`,
+          `  Contradictions res. : ${report.contradictionsResolved}`,
+          `  Spectral gap after  : ${report.spectralGap.toFixed(4)}`,
+          `  H¹ after            : ${report.bettiNumbers.b1}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'context': {
+        const targetDomain = (domain as import('@timps/memory-core').SheafDomain | undefined) ?? 'burnout';
+        const ctx = weaver.getContextString(targetDomain, 5);
+        return { success: true, output: ctx };
+      }
+
+      default:
+        return {
+          success: true,
+          output: 'Usage: /sheaf [status|predict|contradict|consolidate|context] [domain]\n' +
+            '  status                   — node/edge counts, spectral gap, H¹\n' +
+            '  predict [domain]         — eigenmode foresight trajectory\n' +
+            '  contradict [domain]      — algebraic H¹ contradiction report\n' +
+            '  consolidate              — quench faded nodes, crystallise stable ones\n' +
+            '  context [domain]         — top sheaf nodes for prompt context\n' +
+            '\nDomains: burnout relationship decision code_pattern contradiction goal general',
+        };
+    }
+  } catch (err) {
+    return { success: false, output: '', error: `Sheaf error: ${(err as Error).message}` };
+  }
 }
 
 async function runMemoryCommand(args: string): Promise<CommandResult> {

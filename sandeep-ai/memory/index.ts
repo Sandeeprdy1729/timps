@@ -31,3 +31,15 @@ export type {
 // Layer 7: EchoForge — causal echo propagation + reservoir computing
 export { ServerEchoForge, echoForge, getServerEchoForge } from './echoForge.js';
 export type { EchoDomain, EchoPrediction, EchoStatus, EchoWeaveResult, EchoQueryResult } from './echoForge.js';
+
+// Layer 9: HarmonicSheafWeaver — sheaf-cohomology H¹ contradiction detection + eigenmode foresight
+export { ServerHarmonicSheafWeaver, sheafWeaver, getServerSheafWeaver } from './harmonicSheafWeaver.js';
+export type {
+  SheafDomain,
+  SheafPrediction,
+  SheafStatus,
+  SheafWeaveResult,
+  SheafQueryResult,
+  CohomologyResult,
+  SheafConsolidationReport,
+} from './harmonicSheafWeaver.js';

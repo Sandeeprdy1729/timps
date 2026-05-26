@@ -1,12 +1,13 @@
 {
   "name": "timps",
-  "version": "1.0.3",
+  "version": "2.0.4",
   "bin": {
-    "timps": "./sandeep-ai/main.js"
+    "timps": "./sandeep-ai/dist/main.js"
   },
   "preferGlobal": true,
   "files": [
-    "sandeep-ai/",
+    "sandeep-ai/dist/",
+    "sandeep-ai/package.json",
     "docker-compose.yml",
     "README.md",
     "LICENSE"

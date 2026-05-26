@@ -1,0 +1,20 @@
+# Exclude workspace package node_modules and build artifacts
+sandeep-ai/node_modules/
+sandeep-ai/coverage/
+timps-code/
+timps-mcp/
+timps-vscode/
+timps-jetbrains/
+timps-neovim/
+timps-website/
+packages/
+apps/
+docs/
+benchmark/
+evals/
+workflow_recipes/
+crates/
+target/
+.git/
+*.log
+*.tgz
