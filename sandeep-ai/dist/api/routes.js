@@ -10,8 +10,28 @@ const positionStore_1 = require("../tools/positionStore");
 const nexusForge_1 = require("../core/nexusForge");
 const chronosVeil_1 = require("../core/chronosVeil");
 const synapseMetabolon_1 = require("../core/synapseMetabolon");
+const chronosForge_js_1 = require("../memory/chronosForge.js");
 const router = (0, express_1.Router)();
 const contradictionTool = new contradictionTool_1.ContradictionTool();
+// Helper: returns a meaningful error string regardless of error type
+function errMsg(err) {
+    if (err instanceof Error && err.message)
+        return err.message;
+    if (typeof err === 'string' && err)
+        return err;
+    return 'Internal server error';
+}
+// Guard for routes that require a live database
+function requireDb(res) {
+    if (!postgres_1.dbAvailable) {
+        res.status(503).json({
+            error: 'Database unavailable. Set POSTGRES_HOST or DATABASE_URL in your .env file.',
+            docs: 'https://github.com/Sandeeprdy1729/timps#quick-start-manual',
+        });
+        return false;
+    }
+    return true;
+}
 // ─── Ensure user row exists before any DB operation that needs it ──────────
 async function ensureUser(userId, username) {
     try {
@@ -32,11 +52,48 @@ async function ensureUser(userId, username) {
         console.warn('[ensureUser] Could not upsert user:', err);
     }
 }
+function bodyObject(body) {
+    return body && typeof body === 'object' && !Array.isArray(body) ? body : null;
+}
+function positiveInt(value) {
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+function requiredString(value, maxLength) {
+    if (typeof value !== 'string')
+        return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : null;
+}
+function optionalString(value, maxLength) {
+    if (value === undefined || value === null)
+        return undefined;
+    if (typeof value !== 'string')
+        return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+}
+function optionalBool(value) {
+    return typeof value === 'boolean' ? value : undefined;
+}
+function boundedPositiveInt(value, min, max) {
+    const parsed = positiveInt(value);
+    if (!parsed)
+        return null;
+    return parsed >= min && parsed <= max ? parsed : null;
+}
 router.post('/chat', async (req, res) => {
+    if (!requireDb(res))
+        return;
     try {
-        const { userId, username, message, systemPrompt, clearConversation } = req.body;
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId);
+        const message = requiredString(body?.message, 20_000);
+        const username = optionalString(body?.username, 120);
+        const systemPrompt = optionalString(body?.systemPrompt, 20_000);
+        const clearConversation = optionalBool(body?.clearConversation);
         if (!userId || !message) {
-            res.status(400).json({ error: 'userId and message are required' });
+            res.status(400).json({ error: 'userId must be a positive integer and message must be a non-empty string' });
             return;
         }
         await ensureUser(userId, username);
@@ -76,10 +133,12 @@ router.post('/chat', async (req, res) => {
     }
     catch (error) {
         console.error('Chat error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/memory/:userId', async (req, res) => {
+    if (!requireDb(res))
+        return;
     try {
         const userId = parseInt(req.params.userId, 10);
         if (isNaN(userId)) {
@@ -96,10 +155,12 @@ router.get('/memory/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Memory retrieval error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/goals/:userId', async (req, res) => {
+    if (!requireDb(res))
+        return;
     try {
         const userId = parseInt(req.params.userId, 10);
         if (isNaN(userId)) {
@@ -111,15 +172,19 @@ router.get('/goals/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Goals retrieval error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.post('/goals/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const { title, description, priority, targetDate } = req.body;
-        if (isNaN(userId) || !title) {
-            res.status(400).json({ error: 'Invalid userId or missing title' });
+        const userId = positiveInt(req.params.userId);
+        const body = bodyObject(req.body);
+        const title = requiredString(body?.title, 240);
+        const description = optionalString(body?.description, 5_000);
+        const priority = body?.priority === undefined ? 1 : positiveInt(body.priority);
+        const targetDate = optionalString(body?.targetDate, 80);
+        if (!userId || !title || !priority) {
+            res.status(400).json({ error: 'Invalid userId, title, or priority' });
             return;
         }
         await ensureUser(userId);
@@ -128,15 +193,16 @@ router.post('/goals/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Goal creation error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.put('/goals/:goalId', async (req, res) => {
     try {
-        const goalId = parseInt(req.params.goalId, 10);
-        const { status } = req.body;
-        if (isNaN(goalId)) {
-            res.status(400).json({ error: 'Invalid goalId' });
+        const goalId = positiveInt(req.params.goalId);
+        const body = bodyObject(req.body);
+        const status = requiredString(body?.status, 80);
+        if (!goalId || !status) {
+            res.status(400).json({ error: 'Invalid goalId or status' });
             return;
         }
         await (0, postgres_1.query)('UPDATE goals SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [status, goalId]);
@@ -144,7 +210,7 @@ router.put('/goals/:goalId', async (req, res) => {
     }
     catch (error) {
         console.error('Goal update error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/preferences/:userId', async (req, res) => {
@@ -159,14 +225,17 @@ router.get('/preferences/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Preferences retrieval error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.post('/preferences/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const { key, value, category } = req.body;
-        if (isNaN(userId) || !key || !value) {
+        const userId = positiveInt(req.params.userId);
+        const body = bodyObject(req.body);
+        const key = requiredString(body?.key, 160);
+        const value = requiredString(body?.value, 5_000);
+        const category = optionalString(body?.category, 160);
+        if (!userId || !key || !value) {
             res.status(400).json({ error: 'Invalid userId, key, or value' });
             return;
         }
@@ -176,7 +245,7 @@ router.post('/preferences/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Preference creation error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/projects/:userId', async (req, res) => {
@@ -191,24 +260,25 @@ router.get('/projects/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Projects retrieval error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.post('/conversations/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const { title } = req.body;
-        if (isNaN(userId)) {
+        const userId = positiveInt(req.params.userId);
+        const body = bodyObject(req.body);
+        const title = optionalString(body?.title, 240) || 'New Conversation';
+        if (!userId) {
             res.status(400).json({ error: 'Invalid userId' });
             return;
         }
         await ensureUser(userId);
-        const conversation = await (0, postgres_1.query)('INSERT INTO conversations (user_id, title) VALUES ($1, $2) RETURNING *', [userId, title || 'New Conversation']);
+        const conversation = await (0, postgres_1.query)('INSERT INTO conversations (user_id, title) VALUES ($1, $2) RETURNING *', [userId, title]);
         res.json({ conversation: conversation[0] });
     }
     catch (error) {
         console.error('Conversation creation error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/health', (_req, res) => {
@@ -219,7 +289,11 @@ router.get('/health', (_req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/contradiction/check', async (req, res) => {
     try {
-        const { userId, text, projectId, autoStore } = req.body;
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId);
+        const text = requiredString(body?.text, 20_000);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const autoStore = optionalBool(body?.autoStore);
         if (!userId || !text) {
             res.status(400).json({ error: 'userId and text are required' });
             return;
@@ -229,7 +303,7 @@ router.post('/contradiction/check', async (req, res) => {
             operation: 'check',
             user_id: userId,
             text,
-            project_id: projectId || 'default',
+            project_id: projectId,
             auto_store: autoStore !== false,
         });
         const result = JSON.parse(raw);
@@ -237,12 +311,12 @@ router.post('/contradiction/check', async (req, res) => {
         if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
             eventBus_1.eventBus.emit({
                 type: 'contradiction',
-                userId: req.body.userId,
+                userId,
                 payload: {
                     score: result.contradiction_score,
                     verdict: result.verdict,
                     claim: result.conflicting_position?.extracted_claim,
-                    new_text: req.body.text?.slice(0, 100),
+                    new_text: text.slice(0, 100),
                 },
                 timestamp: new Date().toISOString(),
             });
@@ -251,10 +325,12 @@ router.post('/contradiction/check', async (req, res) => {
     }
     catch (error) {
         console.error('Contradiction check error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/positions/:userId', async (req, res) => {
+    if (!requireDb(res))
+        return;
     try {
         const userId = parseInt(req.params.userId, 10);
         const projectId = req.query.projectId || 'default';
@@ -267,14 +343,16 @@ router.get('/positions/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Positions list error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.post('/positions/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const { text, projectId } = req.body;
-        if (isNaN(userId) || !text) {
+        const userId = positiveInt(req.params.userId);
+        const body = bodyObject(req.body);
+        const text = requiredString(body?.text, 20_000);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        if (!userId || !text) {
             res.status(400).json({ error: 'Invalid userId or missing text' });
             return;
         }
@@ -289,7 +367,7 @@ router.post('/positions/:userId', async (req, res) => {
     }
     catch (error) {
         console.error('Position store error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.delete('/positions/:userId/:positionId', async (req, res) => {
@@ -309,7 +387,7 @@ router.delete('/positions/:userId/:positionId', async (req, res) => {
     }
     catch (error) {
         console.error('Position delete error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 router.get('/contradiction/history/:positionId', async (req, res) => {
@@ -324,7 +402,7 @@ router.get('/contradiction/history/:positionId', async (req, res) => {
     }
     catch (error) {
         console.error('Contradiction history error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: errMsg(error) });
     }
 });
 // ─── Dashboard API endpoints ──────────────────────────────────────────────────
@@ -451,21 +529,27 @@ router.get('/events/:userId', (req, res) => {
 // ─── NexusForge API Routes ───────────────────────────────────────────────
 router.post('/nexus/ingest', async (req, res) => {
     try {
-        const { userId, projectId, content, tags, metadata, sourceModule } = req.body;
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const content = requiredString(body?.content, 50_000);
+        const sourceModule = requiredString(body?.sourceModule, 160);
+        const tags = Array.isArray(body?.tags) ? body.tags : [];
+        const metadata = bodyObject(body?.metadata) || {};
         if (!content || !sourceModule) {
             res.status(400).json({ error: 'content and sourceModule required' });
             return;
         }
         const signal = {
-            userId: userId || 1,
+            userId,
             projectId,
             content,
-            tags: tags || [],
-            metadata: metadata || {},
+            tags,
+            metadata,
         };
         const nodeId = await nexusForge_1.nexusForge.episodicIndexer(signal, sourceModule);
         if (nodeId) {
-            await nexusForge_1.nexusForge.evolutionOracle(signal, { projectId: projectId || 'default' });
+            await nexusForge_1.nexusForge.evolutionOracle(signal, { projectId });
             res.json({ success: true, nodeId });
         }
         else {
@@ -474,22 +558,25 @@ router.post('/nexus/ingest', async (req, res) => {
     }
     catch (err) {
         console.error('[nexus/ingest] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.post('/nexus/query', async (req, res) => {
     try {
-        const { query: q, userId, projectId } = req.body;
+        const body = bodyObject(req.body);
+        const q = requiredString(body?.query, 10_000);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
         if (!q) {
             res.status(400).json({ error: 'query required' });
             return;
         }
-        const result = await nexusForge_1.nexusForge.retrievalWeaver(q, userId || 1, { projectId: projectId || 'default' });
+        const result = await nexusForge_1.nexusForge.retrievalWeaver(q, userId, { projectId });
         res.json(result);
     }
     catch (err) {
         console.error('[nexus/query] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/nexus/stats/:userId', async (req, res) => {
@@ -513,14 +600,14 @@ router.get('/nexus/stats/:userId', async (req, res) => {
         });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/nexus/graph/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const limit = parseInt(req.query.limit) || 30;
-        if (isNaN(userId)) {
+        const userId = positiveInt(req.params.userId);
+        const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
+        if (!userId) {
             res.status(400).json({ error: 'Invalid userId' });
             return;
         }
@@ -540,29 +627,36 @@ router.get('/nexus/graph/:userId', async (req, res) => {
         res.json({ nodes: enrichedNodes, edges });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 // ─── ChronosVeil API Routes ───────────────────────────────────────────────
 router.post('/chronos/ingest', async (req, res) => {
     try {
-        const { userId, projectId, content, tags, entity, metadata, sourceModule } = req.body;
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const content = requiredString(body?.content, 50_000);
+        const tags = Array.isArray(body?.tags) ? body.tags : [];
+        const entity = optionalString(body?.entity, 160);
+        const metadata = bodyObject(body?.metadata) || {};
+        const sourceModule = requiredString(body?.sourceModule, 160);
         if (!content || !sourceModule) {
             res.status(400).json({ error: 'content and sourceModule required' });
             return;
         }
         const signal = {
-            userId: userId || 1,
-            projectId: projectId || 'default',
+            userId,
+            projectId,
             content,
-            tags: tags || [],
+            tags,
             entity,
-            metadata: metadata || {},
+            metadata,
         };
         const result = await chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule);
         eventBus_1.eventBus.emit({
             type: 'chronos_event',
-            userId: userId || 1,
+            userId,
             payload: {
                 eventId: result.eventId,
                 layer: result.layer,
@@ -575,22 +669,26 @@ router.post('/chronos/ingest', async (req, res) => {
     }
     catch (err) {
         console.error('[chronos/ingest] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.post('/chronos/query', async (req, res) => {
     try {
-        const { query: q, userId, projectId, limit } = req.body;
+        const body = bodyObject(req.body);
+        const q = requiredString(body?.query, 10_000);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const limit = boundedPositiveInt(body?.limit, 1, 100) || 8;
         if (!q) {
             res.status(400).json({ error: 'query required' });
             return;
         }
-        const resolved = await chronosVeil_1.chronosVeil.queryWithVeil(q, userId || 1, projectId || 'default', limit || 8);
+        const resolved = await chronosVeil_1.chronosVeil.queryWithVeil(q, userId, projectId, limit);
         res.json(resolved);
     }
     catch (err) {
         console.error('[chronos/query] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/chronos/context/:userId', async (req, res) => {
@@ -611,7 +709,7 @@ router.get('/chronos/context/:userId', async (req, res) => {
     }
     catch (err) {
         console.error('[chronos/context] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/chronos/stats/:userId', async (req, res) => {
@@ -635,7 +733,7 @@ router.get('/chronos/stats/:userId', async (req, res) => {
         });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/chronos/edges/:userId', async (req, res) => {
@@ -655,31 +753,40 @@ router.get('/chronos/edges/:userId', async (req, res) => {
         res.json({ edges, total: edges.length });
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 // ─── SynapseMetabolon API Routes ─────────────────────────────────────────────
 router.post('/synapse/ingest', async (req, res) => {
     try {
-        const { userId, projectId, content, tags, entity, metadata, sourceModule, confidence, outcomeScore } = req.body;
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const content = requiredString(body?.content, 50_000);
+        const tags = Array.isArray(body?.tags) ? body.tags : [];
+        const entity = optionalString(body?.entity, 160);
+        const metadata = bodyObject(body?.metadata) || {};
+        const sourceModule = requiredString(body?.sourceModule, 160);
+        const confidence = typeof body?.confidence === 'number' ? body.confidence : undefined;
+        const outcomeScore = typeof body?.outcomeScore === 'number' ? body.outcomeScore : undefined;
         if (!content || !sourceModule) {
             res.status(400).json({ error: 'content and sourceModule required' });
             return;
         }
         const signal = {
-            userId: userId || 1,
-            projectId: projectId || 'default',
+            userId,
+            projectId,
             content,
-            tags: tags || [],
+            tags,
             entity,
             confidence,
             outcomeScore,
-            metadata: metadata || {},
+            metadata,
         };
         const result = await synapseMetabolon_1.synapseMetabolon.injectEvent(signal, sourceModule);
         eventBus_1.eventBus.emit({
             type: 'synapse_event',
-            userId: userId || 1,
+            userId,
             payload: {
                 nodeId: result.nodeId,
                 layer: result.layer,
@@ -692,22 +799,26 @@ router.post('/synapse/ingest', async (req, res) => {
     }
     catch (err) {
         console.error('[synapse/ingest] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.post('/synapse/query', async (req, res) => {
     try {
-        const { query: q, userId, projectId, limit } = req.body;
+        const body = bodyObject(req.body);
+        const q = requiredString(body?.query, 10_000);
+        const userId = positiveInt(body?.userId) || 1;
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
         if (!q) {
             res.status(400).json({ error: 'query required' });
             return;
         }
-        const result = await synapseMetabolon_1.synapseMetabolon.queryWithSpread(q, userId || 1, projectId || 'default', limit || 10);
+        const result = await synapseMetabolon_1.synapseMetabolon.queryWithSpread(q, userId, projectId, limit);
         res.json(result);
     }
     catch (err) {
         console.error('[synapse/query] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/synapse/context/:userId', async (req, res) => {
@@ -728,7 +839,7 @@ router.get('/synapse/context/:userId', async (req, res) => {
     }
     catch (err) {
         console.error('[synapse/context] Error:', err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/synapse/stats/:userId', async (req, res) => {
@@ -743,14 +854,14 @@ router.get('/synapse/stats/:userId', async (req, res) => {
         res.json(stats);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.get('/synapse/graph/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const limit = parseInt(req.query.limit) || 30;
-        if (isNaN(userId)) {
+        const userId = positiveInt(req.params.userId);
+        const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
+        if (!userId) {
             res.status(400).json({ error: 'Invalid userId' });
             return;
         }
@@ -758,14 +869,15 @@ router.get('/synapse/graph/:userId', async (req, res) => {
         res.json(graph);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 router.post('/synapse/consolidate/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId, 10);
-        const projectId = req.body.projectId || 'default';
-        if (isNaN(userId)) {
+        const userId = positiveInt(req.params.userId);
+        const body = bodyObject(req.body);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        if (!userId) {
             res.status(400).json({ error: 'Invalid userId' });
             return;
         }
@@ -773,7 +885,63 @@ router.post('/synapse/consolidate/:userId', async (req, res) => {
         res.json(result);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: errMsg(err) });
+    }
+});
+// ── ChronosForge Routes ────────────────────────────────────────────────────
+router.post('/chrono/query', async (req, res) => {
+    try {
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const atTime = Number(body?.atTime);
+        const domain = optionalString(body?.domain, 160);
+        const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
+        if (!userId || !Number.isFinite(atTime)) {
+            res.status(400).json({ error: 'userId and atTime are required' });
+            return;
+        }
+        const result = await chronosForge_js_1.chronosForge.queryAt(userId, projectId, atTime, { domain, limit: limit ?? 10 });
+        res.json(result);
+    }
+    catch (err) {
+        res.status(500).json({ error: errMsg(err) });
+    }
+});
+router.post('/chrono/foresight', async (req, res) => {
+    try {
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const domain = requiredString(body?.domain, 160);
+        const lookbackDays = boundedPositiveInt(body?.lookbackDays, 1, 3650);
+        const steps = boundedPositiveInt(body?.steps, 1, 365);
+        if (!userId || !domain) {
+            res.status(400).json({ error: 'userId and domain are required' });
+            return;
+        }
+        const result = await chronosForge_js_1.chronosForge.simulateForesight(userId, projectId, domain, { lookbackDays: lookbackDays ?? undefined, steps: steps ?? undefined });
+        res.json(result);
+    }
+    catch (err) {
+        res.status(500).json({ error: errMsg(err) });
+    }
+});
+router.post('/chrono/consolidate', async (req, res) => {
+    try {
+        const body = bodyObject(req.body);
+        const userId = positiveInt(body?.userId);
+        const projectId = optionalString(body?.projectId, 160) || 'default';
+        const importanceThreshold = typeof body?.importanceThreshold === 'number' ? body.importanceThreshold : undefined;
+        if (!userId) {
+            res.status(400).json({ error: 'userId is required' });
+            return;
+        }
+        const result = await chronosForge_js_1.chronosForge.consolidate(userId, projectId, importanceThreshold ?? 0.05);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(500).json({ error: errMsg(err) });
     }
 });
 exports.default = router;

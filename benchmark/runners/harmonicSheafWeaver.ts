@@ -23,13 +23,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
-// Use built output when available, fall back to source via tsx
-let HarmonicSheafWeaver: typeof import('../../packages/memory-core/src/HarmonicSheafWeaver.js').HarmonicSheafWeaver;
-try {
-  ({ HarmonicSheafWeaver } = await import('../../packages/memory-core/dist/HarmonicSheafWeaver.js'));
-} catch {
-  ({ HarmonicSheafWeaver } = await import('../../packages/memory-core/src/HarmonicSheafWeaver.js'));
-}
+// Static import from built dist (tsx handles re-exporting from source if needed)
+import { HarmonicSheafWeaver } from '../../packages/memory-core/src/HarmonicSheafWeaver.js';
 
 const GRAPH_SIZE = parseInt(process.env.HSW_GRAPH_SIZE ?? '1000', 10);
 const RESULTS_DIR = path.join(process.cwd(), 'benchmark/results');

@@ -2,4 +2,9 @@ export { ShortTermMemoryStore, ShortTermMemory } from './shortTerm';
 export { LongTermMemoryStore, Memory, Goal, Preference, Project } from './longTerm';
 export { EmbeddingService } from './embedding';
 export { MemoryIndex, memoryIndex, UserMemory } from './memoryIndex';
+export { ChronosForge, chronosForge, ChronosNode, CausalEdge, ForesightResult, WeaveResult, TemporalQueryResult, SignalDomain, } from './chronosForge.js';
+export { ResonanceForge, resonanceForge, } from './resonanceForge.js';
+export type { ResonanceDomain, ResonanceNode, ResonanceCausalEdge, HarmonicPattern, ResonanceWeaveResult, ResonancePrediction, ResonanceQueryResult, ResonanceTemporalQueryResult, HarmonicConsolidationReport, } from './resonanceForge.js';
+export { ServerEchoForge, echoForge, getServerEchoForge } from './echoForge.js';
+export type { EchoDomain, EchoPrediction, EchoStatus, EchoWeaveResult, EchoQueryResult } from './echoForge.js';
 //# sourceMappingURL=index.d.ts.map

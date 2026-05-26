@@ -2,9 +2,15 @@
 // Ported from sandeep-ai/tools/allTools.ts BurnoutSeismographTool
 // Storage: JSON file instead of Postgres burnout_signals + burnout_baseline tables
 // Analysis: deterministic deviation scoring (no LLM)
+//
+// HSW integration (Layer 9):
+//   Accepts an optional HarmonicSheafWeaver instance. When provided:
+//   • record() weaves each signal into the sheaf (domain='burnout')
+//   • analyze() augments results with eigenmode foresight trajectory from HSW
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { HarmonicSheafWeaver, SheafPrediction } from '../HarmonicSheafWeaver.js';
 
 export interface BurnoutSignal {
   id: string;
@@ -26,15 +32,20 @@ export interface BurnoutAnalysis {
   key_warning_signals: string[];
   recommendation: string;
   weeks_to_burnout_estimate: number | null;
+  /** Eigenmode foresight from HarmonicSheafWeaver (if wired) */
+  sheafPrediction?: SheafPrediction;
 }
 
 export class BurnoutSeismograph {
   private file: string;
   private signals: BurnoutSignal[] = [];
   private baseline: BurnoutBaseline | null = null;
+  /** Optional HarmonicSheafWeaver for eigenmode foresight */
+  private sheaf?: HarmonicSheafWeaver;
 
-  constructor(dir: string) {
+  constructor(dir: string, sheaf?: HarmonicSheafWeaver) {
     this.file = path.join(dir, 'burnout_signals.json');
+    this.sheaf = sheaf;
     this.load();
   }
 
@@ -72,6 +83,17 @@ export class BurnoutSeismograph {
     // Keep last 500 signals
     if (this.signals.length > 500) this.signals.shift();
     this.save();
+
+    // Weave signal into HarmonicSheafWeaver for eigenmode tracking
+    if (this.sheaf) {
+      try {
+        const content = deviation !== null && deviation < -20
+          ? `Burnout signal ${signal_type} is ${Math.abs(Math.round(deviation))}% below baseline (value=${value})`
+          : `Burnout signal ${signal_type} recorded (value=${value})`;
+        this.sheaf.weave(content, { domain: 'burnout', tags: [signal_type] });
+      } catch { /* fire-and-forget */ }
+    }
+
     return { recorded: true, deviation_pct: sig.deviation_pct };
   }
 
@@ -147,6 +169,14 @@ export class BurnoutSeismograph {
       risk_level === 'moderate' ? 'Monitor closely. Some signals trending downward.' :
       'All signals within normal range.';
 
-    return { risk_level, risk_score: Math.round(risk_score), key_warning_signals: warnings, recommendation, weeks_to_burnout_estimate };
+    // Enrich with HarmonicSheafWeaver eigenmode foresight if wired
+    let sheafPrediction: SheafPrediction | undefined;
+    if (this.sheaf) {
+      try {
+        sheafPrediction = this.sheaf.predict('burnout', { lookbackDays: 42 });
+      } catch { /* non-blocking */ }
+    }
+
+    return { risk_level, risk_score: Math.round(risk_score), key_warning_signals: warnings, recommendation, weeks_to_burnout_estimate, sheafPrediction };
   }
 }

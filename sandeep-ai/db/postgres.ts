@@ -25,6 +25,9 @@ const poolConfig = process.env.DATABASE_URL
 
 export const pool = new Pool(poolConfig);
 
+// Set to true once initDatabase() succeeds. Routes use this to return 503
+// instead of crashing when the DB is unavailable.
+export let dbAvailable = false;
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
@@ -414,6 +417,7 @@ export async function initDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_quat_valid ON quaternaryforge_entries(valid_from, valid_to);
     `);
     console.log('Database initialized successfully');
+    dbAvailable = true;
   } finally {
     client.release();
   }

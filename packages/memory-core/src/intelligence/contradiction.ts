@@ -2,9 +2,15 @@
 // Ported from sandeep-ai/tools/contradictionTool.ts + positionStore.ts
 // Storage: JSON file instead of Postgres + Qdrant
 // Analysis: deterministic Jaccard similarity instead of LLM
+//
+// HSW integration (Layer 9):
+//   Accepts an optional HarmonicSheafWeaver instance. When provided:
+//   • store() weaves claims into the sheaf (domain='contradiction')
+//   • check() augments results with algebraic H¹ cohomology from the sheaf
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { HarmonicSheafWeaver, CohomologyResult } from '../HarmonicSheafWeaver.js';
 
 export interface Position {
   id: string;
@@ -37,6 +43,8 @@ export interface ContradictionResult {
   explanation: string;
   extracted_claims: string[];
   positions_checked: number;
+  /** Algebraic H¹ cohomology result from HarmonicSheafWeaver (if wired) */
+  sheafCohomology?: CohomologyResult;
 }
 
 // ── Heuristic claim extraction ──
@@ -77,9 +85,12 @@ export class ContradictionDetector {
   private file: string;
   private positions: Position[] = [];
   private contradictions: ContradictionRecord[] = [];
+  /** Optional HarmonicSheafWeaver for algebraic contradiction detection */
+  private sheaf?: HarmonicSheafWeaver;
 
-  constructor(dir: string) {
+  constructor(dir: string, sheaf?: HarmonicSheafWeaver) {
     this.file = path.join(dir, 'contradiction_positions.json');
+    this.sheaf = sheaf;
     this.load();
   }
 
@@ -126,6 +137,14 @@ export class ContradictionDetector {
       }
     }
 
+    // Augment with algebraic H¹ cohomology from HarmonicSheafWeaver if wired
+    let sheafCohomology: CohomologyResult | undefined;
+    if (this.sheaf) {
+      try {
+        sheafCohomology = this.sheaf.detectContradictions({ domain: 'contradiction' });
+      } catch { /* non-blocking */ }
+    }
+
     if (best && bestScore > 0.35) {
       best.contradiction_count++;
       this.save();
@@ -137,6 +156,7 @@ export class ContradictionDetector {
         explanation: `Matches stored position: "${best.extracted_claim.slice(0, 100)}"`,
         extracted_claims: claims,
         positions_checked: this.positions.length,
+        sheafCohomology,
       };
     }
 
@@ -147,6 +167,7 @@ export class ContradictionDetector {
       explanation: 'No contradictions detected.',
       extracted_claims: claims,
       positions_checked: this.positions.length,
+      sheafCohomology,
     };
   }
 
@@ -171,6 +192,14 @@ export class ContradictionDetector {
     this.positions.push(pos);
     if (this.positions.length > 200) this.positions.shift();
     this.save();
+
+    // Weave claim into HarmonicSheafWeaver for algebraic tracking
+    if (this.sheaf) {
+      try {
+        this.sheaf.weave(extracted_claim, { domain: 'contradiction', tags: [pos.topic_cluster] });
+      } catch { /* fire-and-forget */ }
+    }
+
     return pos;
   }
 

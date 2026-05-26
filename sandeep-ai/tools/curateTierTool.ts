@@ -12,8 +12,8 @@ export class CurateTierTool extends BaseTool {
     properties: {
       operation: {
         type: 'string',
-        enum: ['curate', 'distribution', 'recent', 'evolve'],
-        description: 'curate: score & tier-assign a memory | distribution: get tier stats | recent: recent decisions | evolve: compute tier summaries',
+        enum: ['curate', 'distribution', 'list', 'recent', 'evolve'],
+        description: 'curate: score & tier-assign a memory | distribution: get tier stats | list/recent: recent decisions | evolve: compute tier summaries',
       },
       user_id: { type: 'number', description: 'User ID' },
       content: { type: 'string', description: 'Memory content to curate (for curate operation)' },
@@ -41,12 +41,13 @@ export class CurateTierTool extends BaseTool {
         return this.curateMemory(user_id, content, tags, importance, memory_type, source, memory_id);
       case 'distribution':
         return this.getDistribution(user_id);
+      case 'list':
       case 'recent':
         return this.getRecent(user_id, limit);
       case 'evolve':
         return this.runEvolve(user_id);
       default:
-        return JSON.stringify({ error: `Unknown operation: ${operation}` });
+        return JSON.stringify({ error: `Unknown operation: ${operation}. Valid operations: curate, distribution, list, recent, evolve` });
     }
   }
 

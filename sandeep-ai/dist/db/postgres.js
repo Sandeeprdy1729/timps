@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pool = void 0;
+exports.dbAvailable = exports.pool = void 0;
 exports.initDatabase = initDatabase;
 exports.query = query;
 exports.queryOne = queryOne;
@@ -28,6 +28,9 @@ const poolConfig = process.env.DATABASE_URL
         connectionTimeoutMillis: 10000,
     };
 exports.pool = new pg_1.Pool(poolConfig);
+// Set to true once initDatabase() succeeds. Routes use this to return 503
+// instead of crashing when the DB is unavailable.
+exports.dbAvailable = false;
 exports.pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);
 });
@@ -415,6 +418,7 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_quat_valid ON quaternaryforge_entries(valid_from, valid_to);
     `);
         console.log('Database initialized successfully');
+        exports.dbAvailable = true;
     }
     finally {
         client.release();

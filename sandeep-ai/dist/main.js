@@ -130,7 +130,15 @@ async function runStart() {
     await (0, server_1.startServer)();
 }
 async function main() {
-    await (0, postgres_1.initDatabase)();
+    // DB is optional — server still starts (static UI, health check) without it
+    try {
+        await (0, postgres_1.initDatabase)();
+    }
+    catch (err) {
+        console.warn(`\n⚠  PostgreSQL unavailable: ${err?.message ?? err}`);
+        console.warn('   Server will start in degraded mode — memory/chat APIs will return 503.');
+        console.warn('   Set POSTGRES_HOST / DATABASE_URL in .env to enable persistent memory.\n');
+    }
     const { mode, options } = parseArgs();
     if (mode === 'start') {
         await runStart();

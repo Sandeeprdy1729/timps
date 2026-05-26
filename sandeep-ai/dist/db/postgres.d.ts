@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 export declare const pool: Pool;
+export declare let dbAvailable: boolean;
 export declare function initDatabase(): Promise<void>;
 export declare function query<T = any>(text: string, params?: any[]): Promise<T[]>;
 export declare function queryOne<T = any>(text: string, params?: any[]): Promise<T | null>;

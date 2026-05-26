@@ -7,6 +7,7 @@ const curateTier_1 = require("./curateTier");
 const provenForge_1 = require("./provenForge");
 const governTier_1 = require("./governTier");
 const chronosVeil_1 = require("./chronosVeil");
+const chronosForge_js_1 = require("../memory/chronosForge.js");
 const weaveForge_1 = require("./weaveForge");
 const skillWeave_1 = require("./skillWeave");
 const atomChain_1 = require("./atomChain");
@@ -177,8 +178,11 @@ Return JSON array:
             outcomeScore,
             metadata: { importance, source_module: sourceModule },
         };
-        await Promise.allSettled([
-            chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule),
+        await Promise.allSettled([chronosForge_js_1.chronosForge.weave(content, userId, projectId, {
+                tags,
+                baseImportance: outcomeScore,
+                domain: undefined, // auto-inferred from content
+            }), chronosVeil_1.chronosVeil.ingestEvent(signal, sourceModule),
             weaveForge_1.weaveForge.weaveSignal(signal, sourceModule, { userId, projectId, outcomeScore }),
             skillWeave_1.skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
             atomChain_1.atomChain.executeAtomic(signal, sourceModule, importance >= 4 ? 'consolidate' : 'create', outcomeScore),

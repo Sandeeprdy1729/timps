@@ -39,10 +39,30 @@ npm run server
 For the individual packages see:
 
 | Package | Install | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | [`timps-code`](https://www.npmjs.com/package/timps-code) | `npm install -g timps-code` | CLI coding agent (start here) |
 | [`timps-mcp`](https://www.npmjs.com/package/timps-mcp) | `npm install -g timps-mcp` | MCP server for Claude/Cursor/Windsurf |
 | `timps` | `npm install -g timps` | Full server (this package) |
+
+---
+
+## What works without a database
+
+`npx timps` starts immediately even without PostgreSQL. The following works **out of the box**:
+
+| Feature | Requires DB? |
+| --- | --- |
+| Web UI (`/`, `/chat`, `/dashboard`) | No — static HTML |
+| `GET /api/health` | No |
+| File operations tool | No |
+| Web fetch tool | No |
+| Short-term (in-session) memory | No |
+| 21 tool definitions & routing | No |
+| **Persistent memory & chat history** | **Yes** |
+| **Contradiction / burnout detection** | **Yes** |
+| **All other intelligence tools** | **Yes** |
+
+DB-dependent routes return **HTTP 503** with a clear message when PostgreSQL is unavailable instead of crashing.
 
 ---
 
@@ -59,7 +79,7 @@ For the individual packages see:
 ## 17 Intelligence Tools
 
 | Tool | What it does |
-|---|---|
+| --- | --- |
 | Contradiction Detector | Catches you contradicting past positions |
 | Regret Oracle | Warns before you repeat a regretted decision |
 | Bug Pattern Prophet | Knows your personal bug triggers before you write the bug |
