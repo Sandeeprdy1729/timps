@@ -25,3 +25,28 @@ export type { CodebaseInsight, InsightType, DriftCheckResult } from './architect
 
 export { PatternLearner } from './patternLearner.js';
 export type { LearnedPattern } from './patternLearner.js';
+
+// ── L7+ tools (new in M3 pass) ──
+export { MeetingGhost } from './meetingGhost.js';
+export type { Commitment, ExtractionResult } from './meetingGhost.js';
+
+export { DeadReckoning } from './deadReckoning.js';
+export type { PastDecision, SimulationResult } from './deadReckoning.js';
+
+export { LivingManifesto } from './livingManifesto.js';
+export type { ValueSignal, ManifestoReport } from './livingManifesto.js';
+
+export { RelationshipIntelligence } from './relationship.js';
+export type { Contact, RelationshipCheck } from './relationship.js';
+
+export { SkillShadow } from './skillShadow.js';
+export type { ShadowPattern } from './skillShadow.js';
+
+export { CurriculumArchitect } from './curriculum.js';
+export type { LearningGap, Curriculum } from './curriculum.js';
+
+export { CodebaseAnthropologist } from './codebaseAnthropologist.js';
+export type { CulturalNorm, CodebaseCulture } from './codebaseAnthropologist.js';
+
+export { InstitutionalMemory } from './institutionalMemory.js';
+export type { Contribution, DepartedContributor } from './institutionalMemory.js';
