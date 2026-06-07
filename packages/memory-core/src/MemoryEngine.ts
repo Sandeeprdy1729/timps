@@ -32,6 +32,14 @@ import { APIArchaeologist } from './intelligence/apiArchaeologist.js';
 import { VelocityTracker } from './intelligence/velocityTracker.js';
 import { ArchitectureDriftDetector } from './intelligence/architectureDrift.js';
 import { PatternLearner } from './intelligence/patternLearner.js';
+import { MeetingGhost } from './intelligence/meetingGhost.js';
+import { DeadReckoning } from './intelligence/deadReckoning.js';
+import { LivingManifesto } from './intelligence/livingManifesto.js';
+import { RelationshipIntelligence } from './intelligence/relationship.js';
+import { SkillShadow } from './intelligence/skillShadow.js';
+import { CurriculumArchitect } from './intelligence/curriculum.js';
+import { CodebaseAnthropologist } from './intelligence/codebaseAnthropologist.js';
+import { InstitutionalMemory } from './intelligence/institutionalMemory.js';
 
 // Layer 5: ChronosForge — bi-temporal causal memory weaver
 import { ChronosForge } from './ChronosForge.js';
@@ -54,6 +62,14 @@ export type { APIQuirk, APILookupResult } from './intelligence/apiArchaeologist.
 export type { CoachResult, WorkflowPattern } from './intelligence/velocityTracker.js';
 export type { DriftCheckResult, CodebaseInsight, InsightType } from './intelligence/architectureDrift.js';
 export type { LearnedPattern } from './intelligence/patternLearner.js';
+export type { Commitment, ExtractionResult } from './intelligence/meetingGhost.js';
+export type { PastDecision, SimulationResult } from './intelligence/deadReckoning.js';
+export type { ValueSignal, ManifestoReport } from './intelligence/livingManifesto.js';
+export type { Contact, RelationshipCheck } from './intelligence/relationship.js';
+export type { ShadowPattern } from './intelligence/skillShadow.js';
+export type { LearningGap, Curriculum } from './intelligence/curriculum.js';
+export type { CulturalNorm, CodebaseCulture } from './intelligence/codebaseAnthropologist.js';
+export type { Contribution, DepartedContributor } from './intelligence/institutionalMemory.js';
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -79,6 +95,14 @@ export class MemoryEngine {
   private _velocity?: VelocityTracker;
   private _architecture?: ArchitectureDriftDetector;
   private _patterns?: PatternLearner;
+  private _meetingGhost?: MeetingGhost;
+  private _deadReckoning?: DeadReckoning;
+  private _livingManifesto?: LivingManifesto;
+  private _relationship?: RelationshipIntelligence;
+  private _skillShadow?: SkillShadow;
+  private _curriculum?: CurriculumArchitect;
+  private _codebaseAnthropologist?: CodebaseAnthropologist;
+  private _institutionalMemory?: InstitutionalMemory;
 
   constructor(projectPath: string) {
     this.dir = memoryDir(projectPath);
@@ -113,6 +137,30 @@ export class MemoryEngine {
   }
   get patternLearner(): PatternLearner {
     return (this._patterns ??= new PatternLearner(this.dir));
+  }
+  get meetingGhost(): MeetingGhost {
+    return (this._meetingGhost ??= new MeetingGhost(this.dir));
+  }
+  get deadReckoning(): DeadReckoning {
+    return (this._deadReckoning ??= new DeadReckoning(this.dir));
+  }
+  get livingManifesto(): LivingManifesto {
+    return (this._livingManifesto ??= new LivingManifesto(this.dir));
+  }
+  get relationship(): RelationshipIntelligence {
+    return (this._relationship ??= new RelationshipIntelligence(this.dir));
+  }
+  get skillShadow(): SkillShadow {
+    return (this._skillShadow ??= new SkillShadow(this.dir));
+  }
+  get curriculum(): CurriculumArchitect {
+    return (this._curriculum ??= new CurriculumArchitect(this.dir));
+  }
+  get codebaseAnthropologist(): CodebaseAnthropologist {
+    return (this._codebaseAnthropologist ??= new CodebaseAnthropologist(this.dir));
+  }
+  get institutionalMemory(): InstitutionalMemory {
+    return (this._institutionalMemory ??= new InstitutionalMemory(this.dir));
   }
 
   /** Layer 5: ChronosForge — bi-temporal causal memory weaver + foresight simulator. */

@@ -112,7 +112,7 @@ function benchmarkLatency(size: number): LatencyResult {
     const content = `Signal ${i}: ${domain} observation at step ${i} with context about project ${Math.floor(i / 10)}`;
     const result = weaver.weave(content, {
       domain,
-      causalParentId: nodeIds.length > 0 ? nodeIds[Math.floor(Math.random() * nodeIds.length)] : undefined,
+      causalParentId: nodeIds.length > 0 ? nodeIds[i % nodeIds.length] : undefined,
     });
     nodeIds.push(result.nodeId);
   }

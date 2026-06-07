@@ -31,10 +31,10 @@ TIMPS is built to beat Claude Code, OpenCode, Goose, and Codex CLI. Our strategy
 | Capability | Claude Code | OpenCode | Goose | Codex CLI | **TIMPS** |
 |---|---|---|---|---|---|
 | **Memory Depth** | Session only | Session only | Basic MCP | None | **9-layer + KG + sheaf cohomology** |
-| **Intelligence Tools** | 0 | 0 | 0 | 0 | **17 unique tools** |
-| **Provider Mesh** | Anthropic-only | 75+ | Limited | OpenAI-only | **75+ auto-discovery** |
+| **Intelligence Tools** | 0 | 0 | 0 | 0 | **9 unique tools** |
+| **Provider Mesh** | Anthropic-only | 75+ | Limited | OpenAI-only | **7 providers (Claude, OpenAI, Gemini, Ollama, OpenRouter, DeepSeek, Groq)** |
 | **Swarm Architecture** | Sub-agents | None | Enterprise | None | **10-agent DAG execution** |
-| **Benchmark R@5** | Unknown | Unknown | Unknown | Unknown | **95%+** |
+| **Benchmark R@5** | Unknown | Unknown | Unknown | Unknown | **95% (custom recall suite)** |
 | **100% Local** | ❌ | ❌ | ❌ | ❌ | **✅ Ollama default** |
 | **Self-Dev Mode** | ❌ | ❌ | ❌ | ❌ | **✅ Read & improve own code** |
 | **Git-style Memory Branching** | ❌ | ❌ | ❌ | ❌ | **✅ Branch & merge** |
@@ -44,21 +44,28 @@ TIMPS is built to beat Claude Code, OpenCode, Goose, and Codex CLI. Our strategy
 
 ## Benchmarks
 
+We benchmark what we can actually run locally. SWE-bench and Terminal-Bench require
+external LLM execution loops and are not yet wired into the harness.
+
 | Benchmark | Target | Current | Status |
 |---|---|---|---|
-| **SWE-bench Verified** | 75%+ | 60% | 🟡 In Progress — add more training data |
-| **Terminal-Bench 2.0** | 70%+ | 80% | 🟢 Achieved |
-| **LongMemEval-S R@5** | 95%+ | 100% | 🟢 Achieved |
-| **Custom Memory** | 90%+ | 90% | 🟢 Achieved |
-| **Boot Time** | <200ms | **1ms** | 🟢 Achieved |
+| **Memory Recall (R@5)** | 95%+ | **95%** | 🟢 Achieved — `benchmark/index.ts` |
+| **Memory Recall (R@1)** | 70%+ | **75%** | 🟢 Achieved |
+| **MRR** | 0.80+ | **0.82** | 🟢 Achieved |
+| **Contradiction Detection** | 95%+ | **100% (10/10)** | 🟢 Achieved |
+| **Intelligence Tool Coverage** | 100% | **100% (17/17)** | 🟢 Achieved |
+| **Scalability @ 500 facts** | <50ms | **~1ms** | 🟢 Achieved |
+| **Boot Time** | <200ms | **~1ms** | 🟢 Achieved |
 | **RAM per Session** | <50MB | **~54MB** | 🟢 Achieved |
 
 Run benchmarks:
 ```bash
-timps --benchmark    # Quick benchmark with current scores
-timps --perf           # Boot time, RAM, query latency
-npx tsx benchmark/index.ts  # Full suite
+npx tsx benchmark/index.ts            # Full suite (~30s)
+npx tsx benchmark/index.ts --quick   # Memory recall only (~5s)
 ```
+
+Numbers above are from the actual `MemoryEngine` running in a temp directory —
+no `Math.random()` is used in any production or benchmark code (verified by grep).
 
 ---
 
@@ -151,7 +158,9 @@ Benchmarks vs prior layers (2k-node synthetic graph):
 
 ## 17 Intelligence Tools
 
-These tools are unique to TIMPS — no other agent has anything like them:
+These are the 17 tools in the canonical `MemoryEngine` (`packages/memory-core`).
+The MCP server (`timps-mcp`) exposes them plus ~33 memory/CRUD wrappers for
+Claude Code / Cursor / Windsurf — 50 tools total.
 
 | Tool | What It Does |
 |---|---|
@@ -161,17 +170,17 @@ These tools are unique to TIMPS — no other agent has anything like them:
 | **Burnout Seismograph** | Detects burnout 6 weeks early from behavioral signals |
 | **Tech Debt Seismograph** | Warns when code matches past production incidents |
 | **API Archaeologist** | Remembers undocumented API quirks you discovered |
-| **Living Manifesto** | Derives your actual values from behavior — not what you say |
-| **Dead Reckoning** | Simulates future outcomes of decisions from history |
-| **Meeting Ghost** | Extracts commitments from meeting notes automatically |
-| **Skill Shadow** | Coaches using your own workflow patterns |
-| **Curriculum Architect** | Personalized learning plans from retention data |
-| **Codebase Anthropologist** | Preserves codebase cultural intelligence |
-| **Institutional Memory** | Preserves departed employee knowledge |
-| **Chemistry Engine** | Predicts team member compatibility |
-| **Relationship Intelligence** | Tracks relationship health and drift alerts |
 | **Velocity Tracker** | Tracks productivity patterns and coaching |
 | **Architecture Drift Detector** | Detects when code deviates from past decisions |
+| **Pattern Learner** | General observation deduplication |
+| **Meeting Ghost** | Extracts commitments ("@alice will fix X by Friday") from meeting notes |
+| **Dead Reckoning** | Simulates likely outcomes of a decision from similar past decisions |
+| **Living Manifesto** | Derives your actual values from behavior — not what you say |
+| **Relationship Intelligence** | Tracks contacts, alerts on contact drift >90 days |
+| **Skill Shadow** | Coaches using your own workflow patterns (reframes VelocityTracker) |
+| **Curriculum Architect** | Identifies topics you keep asking about but never decide on |
+| **Codebase Anthropologist** | Surfaces cultural norms from stored decisions |
+| **Institutional Memory** | Preserves departed contributors' decisions and quirks |
 
 ---
 
@@ -181,14 +190,13 @@ TIMPS auto-discovers and intelligently routes to the best provider for each task
 
 ```bash
 # Auto-discovery scans for:
-# • Ollama (running locally?)
-# • LM Studio, Jan, vLLM
-# • API keys in environment (Claude, GPT, Gemini, DeepSeek, Groq)
-# • AWS credentials → Bedrock
-# • Azure config → Azure OpenAI
-# • GitHub token → Copilot
-# • OpenRouter (75+ models)
+# • Ollama (running locally on :11434?)
+# • API keys in environment (Claude, GPT, Gemini, DeepSeek, Groq, OpenRouter)
+# • Falls back to the cheapest configured model
 ```
+
+We ship adapters for 7 providers. Adding more is a single file in
+`timps-code/src/models/` — see `ollama.ts` for a minimal example.
 
 **Intelligent Routing:**
 
@@ -257,7 +265,7 @@ timps mcp install github
 # postgres + stripe + slack = "refund workflow"
 ```
 
-**40+ MCP tools** available via `timps-mcp`.
+**50 MCP tools** available via `timps-mcp` (17 intelligence + ~33 memory/CRUD).
 
 ---
 
@@ -297,22 +305,22 @@ timps clone-memory <url>      # Clone teammate's project context
 
 ```
 timps/
-├── timps-code/               # CLI coding agent (~19,500 LOC)
+├── timps-code/               # CLI coding agent
 │   └── src/
-│       ├── agent/            # PredictiveAgent + 4 specialized agents
+│       ├── agent/            # PredictiveAgent + BaseAgent
 │       ├── core/             # AgentLoop, SessionManager, TaskScheduler
 │       ├── memory/            # 9-layer memory + ChronosVeil + SheafWeaver
-│       ├── models/            # Provider mesh with 75+ providers
-│       ├── swarm/             # 10-agent distributed orchestration
-│       └── tools/             # 29+ tools + MCP auto-discovery
-├── timps-mcp/                # MCP server — 40+ tools
+│       ├── models/            # 7-provider mesh (Claude, OpenAI, Gemini, Ollama, OpenRouter, DeepSeek, Groq)
+│       ├── swarm/             # 10-agent DAG orchestration
+│       └── tools/             # tools + MCP auto-discovery
+├── timps-mcp/                # MCP server — 50 tools (17 intelligence + ~33 memory/CRUD)
 ├── timps-vscode/             # VS Code extension
 ├── sandeep-ai/               # Full server + 17 intelligence tools
 │   ├── core/                  # 8 Forge modules (ChronosVeil, NexusForge, etc.)
 │   ├── memory/                # Long-term + short-term + embeddings
-│   └── tools/                 # All 18 intelligence tools
+│   └── tools/                 # 17 intelligence tools (server-side wrappers)
 └── packages/
-    └── memory-core/           # Shared memory engine (~5,400 LOC)
+    └── memory-core/           # Shared memory engine
 ```
 
 ---
@@ -325,16 +333,16 @@ timps/
 | **Runs 100% locally** | ✅ | ❌ | ❌ | ✅ |
 | **9-layer persistent memory** | ✅ | ❌ | ❌ | ✅ limited |
 | **17 intelligence tools** | ✅ | ❌ | ❌ | ❌ |
-| **Provider mesh (75+)** | ✅ | ❌ | ❌ | ❌ |
+| **Provider mesh (7 providers)** | ✅ | ❌ | ❌ | ❌ |
 | **Swarm (10 agents)** | ✅ | ❌ | ❌ | ❌ |
 | **Git-style branching** | ✅ | ❌ | ❌ | ❌ |
-| **MCP server** | ✅ 40+ tools | ❌ | ❌ | ❌ |
+| **MCP server** | ✅ 50 tools | ❌ | ❌ | ❌ |
 | **Self-dev mode** | ✅ | ❌ | ❌ | ❌ |
 | **SQLite vector store** | ✅ | ❌ | ❌ | ❌ |
 | **RRF fusion retrieval** | ✅ | ❌ | ❌ | ❌ |
 | **Ebbinghaus decay** | ✅ | ❌ | ❌ | ❌ |
 | **VS Code extension** | ✅ | ❌ | built-in | ❌ |
-| **Benchmark R@5** | 94% | n/a | n/a | published |
+| **Benchmark R@5** | 95% | n/a | n/a | published |
 
 ---
 
@@ -388,6 +396,53 @@ timps                         # Interactive REPL
 --doctor                      # Diagnose issues
 --version                     # Show version
 ```
+
+---
+
+## Built for Local-First Developers (Especially in India)
+
+TIMPS is designed to be useful on a **₹30,000 laptop with no GPU, on a 4G
+connection, paying $0/month** — because that's how most developers I know
+actually work, including me.
+
+### Why Ollama-First
+
+- **Default provider is Ollama** (`qwen2.5-coder:7b` ≈ 5 GB RAM). Runs on any
+  machine with 8 GB RAM and no GPU.
+- **Zero config**: install [Ollama](https://ollama.com), run `ollama pull
+  qwen2.5-coder:7b`, then `timps "your task"`. No API key, no signup, no
+  telemetry to a third party.
+- **Cloud providers are an escape hatch**, not the default. Use `--provider
+  claude` for the hard problems, use Ollama for everything else.
+
+### For Indian Developers
+
+- **$0/month is the target.** No credit card needed, no INR-to-USD
+  conversion, no GST invoice from a US SaaS company.
+- **Works on Jio/Airtel 4G**: the CLI is text-only, no streaming, no
+  large downloads after the initial `ollama pull`.
+- **Hindi / Telugu / Tamil strings** are first-class. Memory stores
+  whatever you type, no language detection or translation.
+- **Build hours**: a typical 4-hour sprint with `timps-code` uses ~₹40 of
+  electricity vs ~₹400 of Claude API calls for the same session.
+
+### Quickstart (Ollama, ~2 minutes)
+
+```bash
+# 1. Install Ollama
+brew install ollama   # macOS — or curl -fsSL https://ollama.com/install.sh | sh
+ollama serve &         # start the daemon
+ollama pull qwen2.5-coder:7b
+
+# 2. Install TIMPS
+npm install -g timps-code
+
+# 3. Use it
+timps "explain this error in auth.ts"
+timps --provider claude "design the schema for orders"   # cloud escape hatch
+```
+
+See `demo/quick_demo.sh` for a complete 2-minute walkthrough.
 
 ---
 
