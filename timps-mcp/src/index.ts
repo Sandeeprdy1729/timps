@@ -322,64 +322,176 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `✓ Saved: ${api_name} — ${quirk}` }] };
   });
 
-  // ── Meeting Ghost ────────────────────────────────────────────────────────────
+  // ── Meeting Ghost (L7 — commitment extraction) ───────────────────────────────
 
   registerTool('timps_extract_commitments', {
-    description: 'Extract commitments from meeting notes. Use after any meeting.',
+    description: 'Extract commitments from meeting notes using regex + participant detection. Use after any meeting. Returns structured commitments with owner and deadline.',
     inputSchema: {
       meeting_notes: z.string().describe('Raw meeting notes or transcript'),
       meeting_title: z.string().optional().describe('Meeting name'),
     },
-  }, async ({ meeting_notes, meeting_title }) => ({
-    content: [{ type: 'text' as const, text: await chat(
-      `Meeting Ghost: extract commitments from "${meeting_title || 'meeting'}":\n${meeting_notes}`
-    ) }],
-  }));
+  }, async ({ meeting_notes, meeting_title }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.meetingGhost.extract(meeting_notes, meeting_title);
+      if (r.commitments.length === 0) {
+        return { content: [{ type: 'text' as const, text: `No commitments found${meeting_title ? ` in "${meeting_title}"` : ''}. Pattern matches: "I will...", "@user to...", "TODO: ..."` }] };
+      }
+      const lines = r.commitments.map(c => {
+        const owner = c.owner ? ` **@${c.owner}**` : '';
+        const due = c.deadline ? ` _by ${c.deadline}_` : '';
+        return `•${owner} ${c.text}${due}`;
+      });
+      const participants = r.participants.length ? `\nParticipants: ${r.participants.map(p => '@' + p).join(', ')}` : '';
+      return { content: [{ type: 'text' as const, text: `**${r.commitments.length} commitment(s) extracted**${meeting_title ? ` from "${meeting_title}"` : ''}:\n${lines.join('\n')}${participants}` }] };
+    }
+    const text = await chat(`Meeting Ghost: extract commitments from "${meeting_title || 'meeting'}":\n${meeting_notes}`);
+    return { content: [{ type: 'text' as const, text }] };
+  });
 
   registerTool('timps_get_pending_commitments', {
-    description: 'List all pending commitments not yet completed.',
+    description: 'List all pending commitments not yet completed. Use as a daily check-in.',
     inputSchema: {},
-  }, async () => ({
-    content: [{ type: 'text' as const, text: await chat('Meeting Ghost: list all pending commitments.') }],
-  }));
+  }, async () => {
+    if (!SERVER_MODE) {
+      const pending = localEngine.meetingGhost.getPending();
+      if (pending.length === 0) return { content: [{ type: 'text' as const, text: 'No pending commitments. Use timps_extract_commitments after a meeting to add some.' }] };
+      const lines = pending.map(c => {
+        const owner = c.owner ? ` **@${c.owner}**` : '';
+        const due = c.deadline ? ` _by ${c.deadline}_` : '';
+        const meeting = c.meeting_title ? ` (from ${c.meeting_title})` : '';
+        return `• [${c.id.slice(0, 12)}]${owner} ${c.text}${due}${meeting}`;
+      });
+      return { content: [{ type: 'text' as const, text: `**${pending.length} pending commitment(s):**\n${lines.join('\n')}\n\nUse timps_complete_commitment(id_prefix) to mark one done.` }] };
+    }
+    const text = await chat('Meeting Ghost: list all pending commitments.');
+    return { content: [{ type: 'text' as const, text }] };
+  });
 
-  // ── Relationship Intelligence ────────────────────────────────────────────────
+  registerTool('timps_complete_commitment', {
+    description: 'Mark a commitment as completed. Accepts an id prefix (first 12 chars shown by timps_get_pending_commitments).',
+    inputSchema: {
+      id_prefix: z.string().describe('Commitment id prefix (first 12 chars from timps_get_pending_commitments)'),
+    },
+  }, async ({ id_prefix }) => {
+    if (!SERVER_MODE) {
+      const c = localEngine.meetingGhost.complete(id_prefix);
+      if (!c) return { content: [{ type: 'text' as const, text: `No commitment found with id prefix "${id_prefix}".` }] };
+      return { content: [{ type: 'text' as const, text: `✓ Completed: ${c.text}` }] };
+    }
+    await chat(`Mark commitment ${id_prefix} as completed.`);
+    return { content: [{ type: 'text' as const, text: `✓ Marked complete` }] };
+  });
+
+  // ── Relationship Intelligence (L7 — drift tracking) ──────────────────────────
+
+  registerTool('timps_record_mention', {
+    description: 'Record that a person was mentioned in some context. Builds the relationship profile that powers drift alerts.',
+    inputSchema: {
+      name: z.string().describe('Person name'),
+      context: z.string().describe('What was said about them or in what context'),
+    },
+  }, async ({ name, context }) => {
+    if (!SERVER_MODE) {
+      const c = localEngine.relationship.recordMention(name, context);
+      return { content: [{ type: 'text' as const, text: `✓ Recorded mention of @${c.name} (${c.mention_count}x, sentiment: ${c.sentiment})` }] };
+    }
+    await chat(`Record mention: @${name} — ${context}`);
+    return { content: [{ type: 'text' as const, text: `✓ Recorded mention` }] };
+  });
 
   registerTool('timps_relationship_check', {
-    description: 'Check relationship health and drift alerts. Use when user mentions a person.',
+    description: 'Check relationship health and drift alerts. Use when user mentions a person. Returns drift alerts for contacts not mentioned in 90+ days.',
     inputSchema: {
       contact_name: z.string().optional().describe('Person name — omit for all drift alerts'),
     },
-  }, async ({ contact_name }) => ({
-    content: [{ type: 'text' as const, text: await chat(
-      contact_name
-        ? `Relationship Intelligence: health for ${contact_name}`
-        : 'Relationship Intelligence: show all drift alerts'
-    ) }],
-  }));
+  }, async ({ contact_name }) => {
+    if (!SERVER_MODE) {
+      const results = localEngine.relationship.check(contact_name);
+      if (results.length === 0) {
+        return { content: [{ type: 'text' as const, text: contact_name ? `No relationship data for "${contact_name}" yet. Use timps_record_mention to start tracking.` : 'No contacts tracked yet. Use timps_record_mention to start.' }] };
+      }
+      const lines = results.map(r => {
+        const alert = r.drift_alert ? '⚠️ DRIFT ' : '   ';
+        return `${alert}**@${r.contact.name}** — ${r.days_since_contact}d ago, ${r.contact.mention_count} mentions (${r.contact.sentiment})\n   ${r.recommendation}`;
+      });
+      return { content: [{ type: 'text' as const, text: `**Relationship Health${contact_name ? ` (@${contact_name})` : ''}:**\n${lines.join('\n')}` }] };
+    }
+    const text = await chat(contact_name
+      ? `Relationship Intelligence: health for ${contact_name}`
+      : 'Relationship Intelligence: show all drift alerts');
+    return { content: [{ type: 'text' as const, text }] };
+  });
 
-  // ── Dead Reckoning ───────────────────────────────────────────────────────────
+  // ── Dead Reckoning (L7 — outcome simulation) ────────────────────────────────
+
+  registerTool('timps_log_past_decision', {
+    description: 'Log a past decision with its outcome. Seeds the simulation model used by timps_simulate_decision.',
+    inputSchema: {
+      decision: z.string().describe('The decision that was made'),
+      context: z.string().describe('Context surrounding the decision'),
+      outcome: z.enum(['positive', 'neutral', 'negative']).describe('How it turned out'),
+      regret_score: z.number().min(0).max(1).describe('Regret 0-1, where 1 = catastrophic'),
+    },
+  }, async ({ decision, context, outcome, regret_score }) => {
+    if (!SERVER_MODE) {
+      const d = localEngine.deadReckoning.log(decision, context, regret_score, outcome);
+      return { content: [{ type: 'text' as const, text: `✓ Logged: "${d.decision}" → ${d.outcome} (regret ${Math.round(d.regret_score * 100)}%)` }] };
+    }
+    await chat(`Log past decision: "${decision}". Context: ${context}. Outcome: ${outcome}, regret: ${regret_score}`);
+    return { content: [{ type: 'text' as const, text: `✓ Logged` }] };
+  });
 
   registerTool('timps_simulate_decision', {
-    description: 'Simulate future outcomes for a decision based on actual history.',
+    description: 'Simulate future outcomes for a decision based on actual history. Uses Jaccard similarity to find similar past decisions and votes weighted by regret.',
     inputSchema: {
       scenario: z.string().describe('Decision or situation to simulate'),
       horizon_months: z.number().optional().describe('Months ahead (default 12)'),
     },
-  }, async ({ scenario, horizon_months }) => ({
-    content: [{ type: 'text' as const, text: await chat(
-      `Dead Reckoning: simulate ${horizon_months || 12} months for: ${scenario}`
-    ) }],
-  }));
+  }, async ({ scenario, horizon_months }) => {
+    if (!SERVER_MODE) {
+      const r = localEngine.deadReckoning.simulate(scenario, horizon_months ?? 12);
+      const conf = Math.round(r.confidence * 100);
+      const past = r.similar_past.length
+        ? `\n\nSimilar past decisions:\n${r.similar_past.map(d => `• [${d.outcome}] "${d.decision}" (regret ${Math.round(d.regret_score * 100)}%)`).join('\n')}`
+        : '';
+      return { content: [{ type: 'text' as const, text: `**Dead Reckoning (${conf}% confidence, ${r.horizon_months}mo horizon):**\n\nPredicted: **${r.predicted_outcome.toUpperCase()}**\n\n${r.rationale}${past}` }] };
+    }
+    const text = await chat(`Dead Reckoning: simulate ${horizon_months || 12} months for: ${scenario}`);
+    return { content: [{ type: 'text' as const, text }] };
+  });
 
-  // ── Living Manifesto ─────────────────────────────────────────────────────────
+  // ── Living Manifesto (L7 — values from behavior) ────────────────────────────
+
+  registerTool('timps_ingest_manifesto_signal', {
+    description: 'Add a behavioral observation to the manifesto corpus. Mines from positions, decisions, and architecture insights automatically on init.',
+    inputSchema: {
+      text: z.string().describe('Behavioral signal (what was decided, shipped, regretted, etc.)'),
+    },
+  }, async ({ text }) => {
+    if (!SERVER_MODE) {
+      localEngine.livingManifesto.ingest(text);
+      return { content: [{ type: 'text' as const, text: `✓ Signal ingested: ${text.slice(0, 80)}` }] };
+    }
+    await chat(`Manifesto signal: ${text}`);
+    return { content: [{ type: 'text' as const, text: `✓ Ingested` }] };
+  });
 
   registerTool('timps_get_manifesto', {
-    description: 'Get the Living Manifesto — actual values from behavioral patterns, not stated beliefs.',
+    description: 'Get the Living Manifesto — actual values derived from behavioral patterns, not stated beliefs. Mines from positions, decisions, and architecture insights.',
     inputSchema: {},
-  }, async () => ({
-    content: [{ type: 'text' as const, text: await chat('Show my Living Manifesto.') }],
-  }));
+  }, async () => {
+    if (!SERVER_MODE) {
+      const r = localEngine.livingManifesto.generate();
+      if (r.values.length === 0 && r.anti_patterns.length === 0) {
+        return { content: [{ type: 'text' as const, text: `No values detected yet. Analyzed ${r.decisions_analyzed} signal(s). Use timps_ingest_manifesto_signal to add observations.` }] };
+      }
+      const valueLines = r.values.map(v => `• **${v.value}** (strength: ${Math.round(v.strength * 100)}%)\n    ${v.evidence.map(e => `    - ${e.slice(0, 100)}`).join('\n')}`);
+      const antiLines = r.anti_patterns.map(a => `• ${a}`);
+      return { content: [{ type: 'text' as const, text: `**Living Manifesto** (${r.decisions_analyzed} signals analyzed):\n\n**Values:**\n${valueLines.join('\n')}${antiLines.length ? `\n\n**Anti-patterns (stated vs actual):**\n${antiLines.join('\n')}` : ''}` }] };
+    }
+    const text = await chat('Show my Living Manifesto.');
+    return { content: [{ type: 'text' as const, text }] };
+  });
 
   // ── Chronos Veil (Temporal Apex Veil) ─────────────────────────────────────
 
@@ -1023,6 +1135,104 @@ async function main() {
     });
     return { content: [{ type: 'text' as const, text:
       `✓ ChronosForge consolidation complete.\nPruned: ${data.pruned ?? 0} memories\nRetained: ${data.retained ?? 0} memories` }] };
+  });
+
+  // ── L7+ Intelligence (new in M3) ────────────────────────────────────────────
+
+  registerTool('timps_skill_shadow', {
+    description: 'Coach using your own observed workflow patterns. Reframes VelocityTracker advice as "how YOU do this work" rather than generic tips.',
+    inputSchema: {
+      situation: z.string().describe('The current situation or task (e.g. "writing a hard refactor")'),
+    },
+  }, async ({ situation }) => {
+    const r = localEngine.skillShadow.shadow(situation);
+    if (!r) return { content: [{ type: 'text' as const, text: 'No workflow patterns logged yet. Use velocityTracker.observe() a few times to seed Skill Shadow.' }] };
+    return { content: [{ type: 'text' as const, text:
+      `**Skill Shadow** (confidence: ${Math.round(r.confidence * 100)}%)\n\n${r.your_approach}\n\nPattern: ${r.pattern_id}` }] };
+  });
+
+  registerTool('timps_log_question', {
+    description: 'Log a question you asked. Powers CurriculumArchitect\'s learning-gap detection.',
+    inputSchema: {
+      question: z.string().describe('The question you asked'),
+    },
+  }, async ({ question }) => {
+    localEngine.curriculum.logQuestion(question);
+    return { content: [{ type: 'text' as const, text: `✓ Logged question: ${question.slice(0, 80)}` }] };
+  });
+
+  registerTool('timps_curriculum_plan', {
+    description: 'Generate a learning plan based on what you keep asking about vs what you\'ve decided. High gap_score = you keep asking but never decide.',
+    inputSchema: {},
+  }, async () => {
+    const r = localEngine.curriculum.plan();
+    if (r.gaps.length === 0) return { content: [{ type: 'text' as const, text:
+      `No learning gaps detected. Analyzed ${r.topics_analyzed} topic(s). Use timps_log_question to add questions.` }] };
+    const lines = r.gaps.map(g => `• **${g.topic}** (gap: ${g.gap_score}, mentioned ${g.mentions}x, ${g.stored_decisions} decisions)\n    ${g.suggested_next_step}`);
+    return { content: [{ type: 'text' as const, text: `**Curriculum Plan** (${r.gaps.length} gap(s) across ${r.topics_analyzed} topics):\n\n${lines.join('\n')}` }] };
+  });
+
+  registerTool('timps_observe_culture', {
+    description: 'Add a decision text to the codebase culture corpus. Mines from positions, decisions, and architecture insights automatically.',
+    inputSchema: {
+      text: z.string().describe('Decision text or observation'),
+    },
+  }, async ({ text }) => {
+    localEngine.codebaseAnthropologist.observe(text);
+    return { content: [{ type: 'text' as const, text: `✓ Culture observation recorded: ${text.slice(0, 80)}` }] };
+  });
+
+  registerTool('timps_codebase_culture', {
+    description: 'Surface the cultural norms of the codebase from stored decisions. Mines 15 hard-coded norm patterns (async/await, TypeScript, tests, REST, PostgreSQL, etc.).',
+    inputSchema: {},
+  }, async () => {
+    const r = localEngine.codebaseAnthropologist.culture();
+    if (r.norms.length === 0 && r.taboos.length === 0) return { content: [{ type: 'text' as const, text:
+      `No cultural patterns detected. Analyzed ${r.decisions_mined} decision(s). Use timps_observe_culture to add observations.` }] };
+    const normLines = r.norms.map(n => `• **${n.norm}** (frequency: ${n.frequency}, confidence: ${Math.round(n.confidence * 100)}%)\n    ${n.evidence.map(e => `    - ${e.slice(0, 100)}`).join('\n')}`);
+    const tabooLines = r.taboos.map(t => `• ${t}`);
+    return { content: [{ type: 'text' as const, text: `**Codebase Culture** (${r.decisions_mined} decisions mined):\n\n**Norms:**\n${normLines.join('\n')}${tabooLines.length ? `\n\n**Taboos (high regret):**\n${tabooLines.join('\n')}` : ''}` }] };
+  });
+
+  registerTool('timps_record_contribution', {
+    description: 'Record a contribution from a team member. Preserves their decisions/patterns/incidents/quirks so the team can reference them after they leave.',
+    inputSchema: {
+      contributor: z.string().describe('Person name (lowercase canonical)'),
+      kind: z.enum(['decision', 'pattern', 'incident', 'quirk', 'position']).describe('Type of contribution'),
+      text: z.string().describe('What they contributed'),
+    },
+  }, async ({ contributor, kind, text }) => {
+    const c = localEngine.institutionalMemory.record(contributor, kind, text);
+    return { content: [{ type: 'text' as const, text: `✓ Recorded ${c.kind} from @${c.contributor}: ${c.text.slice(0, 80)}` }] };
+  });
+
+  registerTool('timps_mark_contributor_active', {
+    description: 'Mark that a contributor was active on a given date. Updates their last-seen timestamp used by timps_institutional_memory.',
+    inputSchema: {
+      contributor: z.string().describe('Person name'),
+      date: z.string().optional().describe('ISO date string (defaults to now)'),
+    },
+  }, async ({ contributor, date }) => {
+    localEngine.institutionalMemory.markActive(contributor, date);
+    return { content: [{ type: 'text' as const, text: `✓ Marked @${contributor} active on ${date || 'now'}` }] };
+  });
+
+  registerTool('timps_institutional_memory', {
+    description: 'List contributors who haven\'t been seen in 90+ days, with their contributions preserved. Use to recover knowledge after someone leaves the team.',
+    inputSchema: {
+      contributor: z.string().optional().describe('Specific contributor to query (omit for all dormant)'),
+    },
+  }, async ({ contributor }) => {
+    if (contributor) {
+      const contribs = localEngine.institutionalMemory.contributionsBy(contributor);
+      if (contribs.length === 0) return { content: [{ type: 'text' as const, text: `No recorded contributions for "${contributor}". Use timps_record_contribution to add some.` }] };
+      const lines = contribs.map(c => `• [${c.kind}] ${c.text}${c.last_activity ? ` (last seen: ${new Date(c.last_activity).toLocaleDateString()})` : ''}`);
+      return { content: [{ type: 'text' as const, text: `**Contributions by @${contributor}** (${contribs.length}):\n${lines.join('\n')}` }] };
+    }
+    const departed = localEngine.institutionalMemory.departed();
+    if (departed.length === 0) return { content: [{ type: 'text' as const, text: 'No dormant contributors. Everyone is active.' }] };
+    const lines = departed.map(d => `⚠️ **@${d.name}** — ${d.days_since_last_seen}d dormant, ${d.contributions.length} contribution(s)\n   ${d.recommendation}\n   Recent:\n${d.contributions.slice(0, 3).map(c => `     - [${c.kind}] ${c.text.slice(0, 80)}`).join('\n')}`);
+    return { content: [{ type: 'text' as const, text: `**Dormant Contributors** (${departed.length}):\n${lines.join('\n')}` }] };
   });
 
   // ── Start ────────────────────────────────────────────────────────────────────

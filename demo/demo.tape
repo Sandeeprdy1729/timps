@@ -29,5 +29,5 @@ Enter
 Sleep 1s
 
 Type "# The full output proves it: R@1 75%, R@5 95%, MRR 0.82,"
-Type "NDCG 0.85, contradiction 10/10, all 9 intelligence tools green."
+Type "NDCG 0.85, contradiction 10/10, all 17 intelligence tools green."
 Sleep 3s
