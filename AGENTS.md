@@ -9,7 +9,7 @@ Monorepo of four shippable surfaces + ~20 internal packages. Workspace roots are
 | Surface | Path | What it is | Package name | Version |
 |---|---|---|---|---|
 | CLI | `timps-code/` | Coding agent TUI + slash commands | `timps-code` | 2.0.1 |
-| MCP server | `timps-mcp/` | 50 tools: 17 intelligence + ~33 memory/CRUD for Claude/Cursor/Windsurf | `timps-mcp` | 1.0.0 |
+| MCP server | `timps-mcp/` | 61 tools: 17 intelligence engines (39 wrappers) + 22 memory/CRUD for Claude/Cursor/Windsurf | `timps-mcp` | 1.0.0 |
 | VS Code ext | `timps-vscode/` | Extension (publisher `TIMPs`) | `timps-ai-coding-agent` | 1.2.0 |
 | Full server | `sandeep-ai/` | REST API + dashboard + 17 intel tool routes | `timps` | 2.0.4 |
 | Memory engine | `packages/memory-core/` | Shared memory lib + 17 intelligence tools | `@timps/memory-core` | 0.1.0 |
@@ -105,11 +105,11 @@ All 17 are in `packages/memory-core/src/intelligence/`, all are class-based with
 
 ## MCP server (`timps-mcp`)
 
-- **Single file**: all 50 tools are defined inline in `src/index.ts` (~1037 lines). There is no `src/tools/` directory. Count: 50 `registerTool` calls (verified by grep).
-- 50 tools = 17 intelligence (mirror memory-core) + ~33 memory/CRUD wrappers (`timps_chat`, `timps_get_memories`, `timps_store_memory`, `timps_chronos_*`, `timps_nexus_*`, `timps_synapse_*`, etc.).
+- **Single file**: all 61 tools are defined inline in `src/index.ts` (~1247 lines). There is no `src/tools/` directory. Count: 61 `registerTool` calls (verified by grep).
+- 61 tools = 17 intelligence engines (39 tool wrappers: 17 read + ~22 write companions like `timps_record_mention`, `timps_log_past_decision`, `timps_complete_commitment`, etc.) + 22 memory/CRUD wrappers (`timps_chat`, `timps_get_memories`, `timps_store_memory`, `timps_chronos_*`, `timps_nexus_*`, `timps_synapse_*`, etc.).
+- All 17 intelligence tools work in LOCAL mode (no `TIMPS_URL` needed). SERVER mode proxies to `sandeep-ai` HTTP API for the higher-level memory layers (Chronos, Nexus, Synapse).
 - Built with `tsup` (CJS, no dts) because `tsc` on the full MCP SDK types OOMs. The CI workflow has a comment about this — preserve it.
 - Typecheck needs `--max-old-space-size=4096`. The script in `package.json` already does this; don't shorten it.
-- **5 MCP tools are LLM-stubs that delegate to a server** (require `TIMPS_URL` to be set): `timps_extract_commitments`, `timps_get_pending_commitments`, `timps_relationship_check`, `timps_simulate_decision`, `timps_get_manifesto`. The local-mode counterparts are the new memory-core engines (MeetingGhost, DeadReckoning, RelationshipIntelligence, LivingManifesto) added in M3 — they work without a server.
 
 ## Benchmark (`benchmark/`)
 

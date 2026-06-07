@@ -159,8 +159,9 @@ Benchmarks vs prior layers (2k-node synthetic graph):
 ## 17 Intelligence Tools
 
 These are the 17 tools in the canonical `MemoryEngine` (`packages/memory-core`).
-The MCP server (`timps-mcp`) exposes them plus ~33 memory/CRUD wrappers for
-Claude Code / Cursor / Windsurf — 50 tools total.
+The MCP server (`timps-mcp`) exposes them plus ~22 memory/CRUD wrappers for
+Claude Code / Cursor / Windsurf — 61 tools total (39 intelligence wrappers +
+22 memory/CRUD).
 
 | Tool | What It Does |
 |---|---|
