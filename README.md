@@ -266,7 +266,7 @@ timps mcp install github
 # postgres + stripe + slack = "refund workflow"
 ```
 
-**50 MCP tools** available via `timps-mcp` (17 intelligence + ~33 memory/CRUD).
+**61 MCP tools** available via `timps-mcp` (39 intelligence wrappers + 22 memory/CRUD).
 
 ---
 
@@ -314,7 +314,7 @@ timps/
 │       ├── models/            # 7-provider mesh (Claude, OpenAI, Gemini, Ollama, OpenRouter, DeepSeek, Groq)
 │       ├── swarm/             # 10-agent DAG orchestration
 │       └── tools/             # tools + MCP auto-discovery
-├── timps-mcp/                # MCP server — 50 tools (17 intelligence + ~33 memory/CRUD)
+├── timps-mcp/                # MCP server — 61 tools (39 intelligence wrappers + 22 memory/CRUD)
 ├── timps-vscode/             # VS Code extension
 ├── sandeep-ai/               # Full server + 17 intelligence tools
 │   ├── core/                  # 8 Forge modules (ChronosVeil, NexusForge, etc.)
@@ -337,7 +337,7 @@ timps/
 | **Provider mesh (7 providers)** | ✅ | ❌ | ❌ | ❌ |
 | **Swarm (10 agents)** | ✅ | ❌ | ❌ | ❌ |
 | **Git-style branching** | ✅ | ❌ | ❌ | ❌ |
-| **MCP server** | ✅ 50 tools | ❌ | ❌ | ❌ |
+| **MCP server** | ✅ 61 tools | ❌ | ❌ | ❌ |
 | **Self-dev mode** | ✅ | ❌ | ❌ | ❌ |
 | **SQLite vector store** | ✅ | ❌ | ❌ | ❌ |
 | **RRF fusion retrieval** | ✅ | ❌ | ❌ | ❌ |
