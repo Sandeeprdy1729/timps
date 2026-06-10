@@ -20,9 +20,13 @@ export interface ExecutionResult {
 
 export class Executor {
   private model: BaseModel;
+  private userId: number;
+  private projectId: string;
   
-  constructor() {
+  constructor(userId?: number, projectId?: string) {
     this.model = createModel();
+    this.userId = userId ?? 1;
+    this.projectId = projectId ?? 'default';
   }
   
   async executeStep(plan: Plan, step: PlanStep): Promise<ExecutionResult> {
@@ -117,8 +121,8 @@ Otherwise, provide your direct response.`;
 
   private async evolveExecutionOutput(sourceModule: string, content: string, outcomeScore: number): Promise<void> {
     const signal = {
-      userId: 1,
-      projectId: 'default',
+      userId: this.userId,
+      projectId: this.projectId,
       content,
       raw: content,
       confidence: outcomeScore,
@@ -129,7 +133,7 @@ Otherwise, provide your direct response.`;
 
     await Promise.allSettled([
       chronosVeil.ingestEvent(signal, sourceModule),
-      weaveForge.weaveSignal(signal, sourceModule, { userId: 1, projectId: 'default', outcomeScore }),
+      weaveForge.weaveSignal(signal, sourceModule, { userId: this.userId, projectId: this.projectId, outcomeScore }),
       skillWeave.evolveAndApply(signal, sourceModule, outcomeScore),
       atomChain.executeAtomic(signal, sourceModule, 'consolidate', outcomeScore),
       policyMetabol.runLoop(signal, sourceModule, outcomeScore),

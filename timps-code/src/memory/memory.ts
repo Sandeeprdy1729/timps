@@ -41,6 +41,7 @@ import { ChronosVeil } from './chronosVeil.js';
 import type { ChronosDomain } from './chronosVeil.js';
 import { EchoForge } from '@timps/memory-core';
 import { HarmonicSheafWeaver } from '@timps/memory-core';
+import { AetherForgeERL, SupraSheaf, QPTW, TitanicForge, QERW, QISRD, EclipseForge, QITRL } from '@timps/memory-core';
 import { SynapseQuench } from './synapseQuench.js';
 
 export class Memory {
@@ -85,6 +86,20 @@ export class Memory {
 
   // ── Layer 9: HarmonicSheafWeaver (sheaf cohomology + eigenmode foresight) ──
   private _sheafWeaver?: HarmonicSheafWeaver;
+
+  // ── Layer 10: AetherForgeERL (epistemic resonance lattice) ──
+  private _aether?: AetherForgeERL;
+  private _supra?: SupraSheaf;
+  private _qptw?: QPTW;
+  private _titanic?: TitanicForge;
+  private _qerw?: QERW;
+  private _qisrd?: QISRD;
+
+  // ── Layer 17: EclipseForge (temporal sheaf resonator) ──
+  private _eclipse?: EclipseForge;
+
+  // ── Layer 18: QITRL (quantum-inspired temporal resonance lattice) ──
+  private _qitrl?: QITRL;
 
   // Turn counter for self-reflection
   private _turnCount = 0;
@@ -161,6 +176,61 @@ export class Memory {
   /** Layer 9: HarmonicSheafWeaver — sheaf cohomology + eigenmode foresight. */
   get sheafWeaver(): HarmonicSheafWeaver {
     return (this._sheafWeaver ??= new HarmonicSheafWeaver(this.dir));
+  }
+
+  /** Layer 10: AetherForgeERL — epistemic resonance lattice. */
+  get aetherForge(): AetherForgeERL {
+    return (this._aether ??= new AetherForgeERL(this.dir));
+  }
+
+  /** Layer 11: SupraSheaf — cross-layer sheaf coordinator. */
+  get supraSheaf(): SupraSheaf {
+    if (!this._supra) {
+      this._supra = new SupraSheaf();
+      this._supra.setForgeRefs({
+        echo: {
+          getNodes: () => {
+            try { return Object.values((this.echoVeil as any)['store'].nodes ?? {}); }
+            catch { return []; }
+          },
+        },
+        aether: {
+          getNodes: () => {
+            try { return Object.values((this.aetherForge as any)['store'].nodes ?? {}); }
+            catch { return []; }
+          },
+        },
+      });
+    }
+    return this._supra;
+  }
+
+  /** Layer 12: QPTW — Quantum-Phase Temporal Weaver. */
+  get qptw(): QPTW {
+    return (this._qptw ??= new QPTW(this.dir));
+  }
+
+  /** Layer 13: TitanicForge — Neural Surprise-Augmented Sheaf Weaver. */
+  get titanicForge(): TitanicForge {
+    return (this._titanic ??= new TitanicForge(this.dir));
+  }
+
+  get qerw(): QERW {
+    return (this._qerw ??= new QERW(this.dir));
+  }
+
+  get qisrd(): QISRD {
+    return (this._qisrd ??= new QISRD(this.dir));
+  }
+
+  /** Layer 17: EclipseForge — temporal sheaf resonator with temporal stalks + spectral resonance. */
+  get eclipseForge(): EclipseForge {
+    return (this._eclipse ??= new EclipseForge(this.dir));
+  }
+
+  /** Layer 18: QITRL — quantum-inspired temporal resonance lattice with low-rank tensor propagation. */
+  get qitrl(): QITRL {
+    return (this._qitrl ??= new QITRL(this.dir));
   }
 
   // ── Intelligence tools (each stores its own file in this.dir) ──
@@ -253,6 +323,7 @@ export class Memory {
     if (summary.length > 0) {
       this.chronosVeil.ingest(summary, 'episodic', ['episode'], undefined, domain);
       void this.echoVeil.weave(summary, { domain: domain as any, tags: ['episode'] });
+      try { this.aetherForge.weave(summary, { domain: domain as any, tags: ['episode'] }); } catch { /* ignore */ }
     }
 
     const files = episode.filesChanged || [];
@@ -546,9 +617,16 @@ export class Memory {
   private similarity(a: string, b: string): number {
     const al = a.toLowerCase(), bl = b.toLowerCase();
     if (al === bl) return 1;
-    const words = new Set(al.split(/\s+/));
-    const bWords = bl.split(/\s+/);
-    const overlap = bWords.filter(w => words.has(w)).length;
-    return overlap / Math.max(words.size, bWords.length);
+    const aWords = al.split(/\s+/).filter(w => w.length > 1);
+    const bWords = bl.split(/\s+/).filter(w => w.length > 1);
+    if (aWords.length === 0 || bWords.length === 0) return 0;
+    const wordSet = new Set(aWords);
+    const wordOverlap = bWords.filter(w => wordSet.has(w)).length;
+    const jaccard = wordOverlap / (wordSet.size + bWords.length - wordOverlap);
+    const bigrams = (s: string) => { const r = new Set<string>(); for (let i = 0; i < s.length - 1; i++) r.add(s.slice(i, i + 2)); return r; };
+    const aBigrams = bigrams(al), bBigrams = bigrams(bl);
+    const intersection = new Set([...aBigrams].filter(x => bBigrams.has(x)));
+    const bigramSim = intersection.size / Math.max(aBigrams.size + bBigrams.size - intersection.size, 1);
+    return jaccard * 0.6 + bigramSim * 0.4;
   }
 }

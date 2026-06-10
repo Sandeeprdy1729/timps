@@ -29,6 +29,7 @@
     "src/components/StatsView.tsx",
     "src/components/SearchView.tsx",
     "src/components/ChatView.tsx",
+    "src/components/CommandCenter.tsx",
     "src/components/SettingsView.tsx",
     "src/components/QuickCapture.tsx",
     "src/components/CommandBar.tsx",

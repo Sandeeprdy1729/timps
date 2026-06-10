@@ -52,6 +52,17 @@ export type {
 import { EchoForge } from './EchoForge.js';
 export type { EchoPrediction, EchoStatus, EchoDomain } from './EchoForge.js';
 
+// Layer 10: AetherForgeERL — Epistemic Resonance Lattice
+import { AetherForgeERL } from './AetherForgeERL.js';
+import { SupraSheaf } from './SupraSheaf.js';
+import { QPTW } from './QPTW.js';
+import { TitanicForge } from './TitanicForge.js';
+import { QERW } from './QERW.js';
+import { QISRD } from './QISRD.js';
+import { EclipseForge } from './EclipseForge.js';
+import { QITRL } from './QITRL.js';
+export type { ERLPrediction, ERLStatus } from './AetherForgeERL.js';
+
 // Re-export tool result types for consumers
 export type { ContradictionResult, Position } from './intelligence/contradiction.js';
 export type { BurnoutAnalysis } from './intelligence/burnout.js';
@@ -84,6 +95,22 @@ export class MemoryEngine {
 
   // ── Layer 7: EchoForge (lazy-init) ──
   private _echo?: EchoForge;
+
+  // ── Layer 10: AetherForgeERL (lazy-init) ──
+  private _aether?: AetherForgeERL;
+
+  // ── Layer 11: SupraSheaf (lazy-init, no persistence) ──
+  private _supra?: SupraSheaf;
+  private _qptw?: QPTW;
+  private _titanic?: TitanicForge;
+  private _qerw?: QERW;
+  private _qisrd?: QISRD;
+
+  // ── Layer 17: EclipseForge (lazy-init) ──
+  private _eclipse?: EclipseForge;
+
+  // ── Layer 18: QITRL (lazy-init) ──
+  private _qitrl?: QITRL;
 
   // ── Intelligence tool instances (lazy-init via getters) ──
   private _contradiction?: ContradictionDetector;
@@ -174,6 +201,81 @@ export class MemoryEngine {
    */
   get echoForge(): EchoForge {
     return (this._echo ??= new EchoForge(this.dir));
+  }
+
+  /**
+   * Layer 10: AetherForgeERL — Epistemic Resonance Lattice.
+   * Hybrid temporal-epistemic lattice unifying sheaf cohomology, resonance
+   * oscillators, and hierarchical MemTree-style indexing. O(log N + k) weave.
+   */
+  get aetherForge(): AetherForgeERL {
+    return (this._aether ??= new AetherForgeERL(this.dir));
+  }
+
+  /**
+   * Layer 11: SupraSheaf — cross-layer sheaf coordinator.
+   * Reads stalks from ChronosForge (L5), EchoForge (L7), and AetherForgeERL (L10),
+   * builds a joint sheaf Laplacian, and computes cross-layer H¹ + joint foresight.
+   */
+  get supraSheaf(): SupraSheaf {
+    return (this._supra ??= new SupraSheaf(this));
+  }
+
+  /**
+   * Layer 12: QPTW — Quantum-Phase Temporal Weaver.
+   * Phase-modulated incremental propagation on a low-dimensional manifold
+   * for contradiction detection, foresight, and surprise-driven updates.
+   * O(log N) amortized updates vs O(N + E) for full Laplacian eigen-solve.
+   */
+  get qptw(): QPTW {
+    return (this._qptw ??= new QPTW(this.dir));
+  }
+
+  /**
+   * Layer 13: TitanicForge — Neural Surprise-Augmented Sheaf Weaver.
+   * Hybrid neural-symbolic: sheaf H¹ algebraic safety + test-time neural
+   * memorization (Titans-style) + MAGMA multi-view projections.
+   */
+  get titanicForge(): TitanicForge {
+    return (this._titanic ??= new TitanicForge(this.dir));
+  }
+
+  /**
+   * Layer 14: QERW — QuantumEcho Resonance Weaver.
+   * Information-geometric geodesic echo propagation on a Riemannian manifold
+   * with sheaf curvature constraints. O(d log N) weave, O(d + k) query.
+   */
+  get qerw(): QERW {
+    return (this._qerw ??= new QERW(this.dir));
+  }
+
+  /**
+   * Layer 15: QISRD — Quantum-Inspired Sheaf Resonance Dynamics.
+   * Fuses sheaf cohomology with Riemannian Langevin dynamics and stochastic
+   * resonance for provably consistent, self-evolving multi-scale prediction.
+   */
+  get qisrd(): QISRD {
+    return (this._qisrd ??= new QISRD(this.dir));
+  }
+
+  /**
+   * Layer 17: EclipseForge — Temporal Sheaf Resonator.
+   * Time-aware sheaf cohomology with temporal stalks, spectral resonance
+   * propagation, phase-based quenching, and O(|affected|) incremental updates.
+   * +15-20pt temporal foresight vs pure eigenmode projection.
+   */
+  get eclipseForge(): EclipseForge {
+    return (this._eclipse ??= new EclipseForge(this.dir));
+  }
+
+  /**
+   * Layer 18: QITRL — Quantum-Inspired Temporal Resonance Lattice.
+   * Lattice-based memory with low-rank tensor propagation, SVD-based
+   * foresight, and entanglement entropy contradiction detection.
+   * O(R²D) per edge propagation, O(log N) effective on lattice paths.
+   */
+  get qitrl(): QITRL {
+    return (this._qitrl ??= new QITRL(this.dir));
   }
 
   // ── Layer 1: Working Memory ──

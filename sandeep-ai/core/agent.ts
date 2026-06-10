@@ -86,7 +86,7 @@ export class Agent {
     this.model = createModel(agentConfig.modelProvider || (config.models.defaultProvider as any));
     this.maxIterations = agentConfig.maxIterations || 15;
     this.planner = new Planner();
-    this.executor = new Executor();
+    this.executor = new Executor(this.userId, this.projectId);
 
     // Initialize ForgeLink module registry (idempotent)
     if (forgeLink.isEnabled() || process.env.ENABLE_FORGELINK !== 'false') {

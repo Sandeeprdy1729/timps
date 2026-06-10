@@ -18,11 +18,25 @@ export const SERVER = {
 } as const;
 
 export const PROVIDERS = [
-  { name: 'ollama', label: 'Ollama', defaultModel: 'qwen2.5-coder:7b', url: 'http://localhost:11434' },
-  { name: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o', url: 'https://api.openai.com/v1' },
-  { name: 'claude', label: 'Anthropic Claude', defaultModel: 'claude-sonnet-4-5', url: 'https://api.anthropic.com' },
-  { name: 'gemini', label: 'Google Gemini', defaultModel: 'gemini-2.0-flash', url: 'https://generativelanguage.googleapis.com' },
-  { name: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat', url: 'https://api.deepseek.com/v1' },
+  { name: 'auto', label: 'Provider Mesh Auto Route', defaultModel: 'auto', url: 'timps://provider-mesh', category: 'router' },
+  { name: 'openai', label: 'OpenAI', defaultModel: 'auto', url: 'https://api.openai.com/v1', category: 'frontier' },
+  { name: 'anthropic', label: 'Anthropic Claude', defaultModel: 'auto', url: 'https://api.anthropic.com', category: 'frontier' },
+  { name: 'gemini', label: 'Google Gemini', defaultModel: 'auto', url: 'https://generativelanguage.googleapis.com', category: 'frontier' },
+  { name: 'xai', label: 'xAI', defaultModel: 'auto', url: 'https://api.x.ai/v1', category: 'frontier' },
+  { name: 'deepseek', label: 'DeepSeek', defaultModel: 'auto', url: 'https://api.deepseek.com/v1', category: 'frontier' },
+  { name: 'mistral', label: 'Mistral', defaultModel: 'auto', url: 'https://api.mistral.ai/v1', category: 'frontier' },
+  { name: 'openrouter', label: 'OpenRouter', defaultModel: 'auto', url: 'https://openrouter.ai/api/v1', category: 'router' },
+  { name: 'groq', label: 'Groq', defaultModel: 'auto', url: 'https://api.groq.com/openai/v1', category: 'router' },
+  { name: 'together', label: 'Together AI', defaultModel: 'auto', url: 'https://api.together.xyz/v1', category: 'router' },
+  { name: 'fireworks', label: 'Fireworks AI', defaultModel: 'auto', url: 'https://api.fireworks.ai/inference/v1', category: 'router' },
+  { name: 'cohere', label: 'Cohere', defaultModel: 'auto', url: 'https://api.cohere.com/v2', category: 'frontier' },
+  { name: 'perplexity', label: 'Perplexity', defaultModel: 'auto', url: 'https://api.perplexity.ai', category: 'frontier' },
+  { name: 'azure-openai', label: 'Azure OpenAI', defaultModel: 'auto', url: 'https://{resource}.openai.azure.com', category: 'enterprise' },
+  { name: 'bedrock', label: 'AWS Bedrock', defaultModel: 'auto', url: 'aws://bedrock', category: 'enterprise' },
+  { name: 'ollama', label: 'Ollama', defaultModel: 'auto', url: 'http://localhost:11434', category: 'local-open' },
+  { name: 'lmstudio', label: 'LM Studio', defaultModel: 'auto', url: 'http://localhost:1234/v1', category: 'local-open' },
+  { name: 'jan', label: 'Jan', defaultModel: 'auto', url: 'http://localhost:1337/v1', category: 'local-open' },
+  { name: 'vllm', label: 'vLLM', defaultModel: 'auto', url: 'http://localhost:8000/v1', category: 'local-open' },
 ] as const;
 
 export const MEMORY = {

@@ -8,6 +8,7 @@ import { StatsView } from './components/StatsView';
 import { SearchView } from './components/SearchView';
 import { ChatView } from './components/ChatView';
 import { SettingsView } from './components/SettingsView';
+import { CommandCenter } from './components/CommandCenter';
 import { QuickCapture } from './components/QuickCapture';
 import { CommandBar } from './components/CommandBar';
 import { PassiveListener } from './components/PassiveListener';
@@ -16,7 +17,7 @@ import { LensView } from './components/LensView';
 import { LinkToast } from './components/LinkToast';
 import './App.css';
 
-export type Tab = 'chat' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings' | 'lens';
+export type Tab = 'chat' | 'command' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings' | 'lens';
 
 export default function App() {
   const [projectPath, setProjectPath] = useState<string>(() => {
@@ -30,6 +31,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [showCommandBar, setShowCommandBar] = useState(false);
+  const [chatDraft, setChatDraft] = useState<string | null>(null);
 
   const refresh = useCallback(async (path: string) => {
     if (!path.trim()) return;
@@ -146,7 +148,7 @@ export default function App() {
         <Sidebar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} stats={stats} />
 
         <main className="main-content">
-          {!projectPath && (
+          {!projectPath && activeTab !== 'command' && activeTab !== 'settings' && (
             <div className="empty-state">
               <div className="empty-icon">
                 {/* Pixel robot for empty state */}
@@ -175,7 +177,22 @@ export default function App() {
           )}
 
           {projectPath && activeTab === 'chat' && (
-            <ChatView projectPath={projectPath} />
+            <ChatView
+              projectPath={projectPath}
+              draftPrompt={chatDraft}
+              onDraftConsumed={() => setChatDraft(null)}
+            />
+          )}
+
+          {activeTab === 'command' && (
+            <CommandCenter
+              projectPath={projectPath}
+              stats={stats}
+              onRunPrompt={(prompt) => {
+                setChatDraft(prompt);
+                setActiveTab('chat');
+              }}
+            />
           )}
 
           {projectPath && activeTab === 'stats' && (

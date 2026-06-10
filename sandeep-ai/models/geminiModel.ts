@@ -44,12 +44,13 @@ export class GeminiModel extends BaseModel {
       requestBody.tools = this.convertTools(options.tools);
     }
     
-    const url = `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`;
+    const url = `${this.baseUrl}/models/${model}:generateContent`;
     
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey,
       },
       body: JSON.stringify(requestBody),
     });

@@ -86,10 +86,11 @@ describe('EchoForge.weave', () => {
 
   it('supersedes highly-similar nodes', async () => {
     const { forge } = makeForge();
-    await forge.weave('we use PostgreSQL as the primary database', { domain: 'decision' });
-    const r2 = await forge.weave('we use PostgreSQL as the primary database for all user data', {
+    await forge.weave('use PostgreSQL as primary database', { domain: 'decision' });
+    const r2 = await forge.weave('use PostgreSQL as primary database server', {
       domain: 'decision',
     });
+    // Token Jaccard = 5/6 ≈ 0.83 ≥ SUPERSESSION_THRESHOLD (0.82)
     expect(r2.supersededIds).toHaveLength(1);
   });
 

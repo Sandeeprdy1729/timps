@@ -22,6 +22,10 @@ const PROJECT_PATH = process.env.TIMPS_PROJECT_PATH || process.cwd();
 const localEngine = new MemoryEngine(PROJECT_PATH);
 
 async function timpsAPI(path: string, method = 'GET', body?: unknown): Promise<any> {
+  // Validate path to prevent path traversal
+  if (!path.startsWith('/') || path.includes('..') || /[<>"|]/.test(path)) {
+    throw new Error(`Invalid API path: ${path}`);
+  }
   const res = await fetch(`${TIMPS_URL}/api${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },

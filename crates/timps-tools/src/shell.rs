@@ -37,6 +37,13 @@ impl Tool for ShellTool {
         };
         let cwd = args["cwd"].as_str();
 
+        // Basic command injection prevention: reject shell metacharacters
+        // that could be used for command chaining
+        let dangerous_chars = [';', '`', '$', '|', '&', '\n', '\r'];
+        if cmd.chars().any(|c| dangerous_chars.contains(&c)) {
+            return ToolResult::err("Command contains dangerous shell metacharacters");
+        }
+
         let mut builder = Command::new("sh");
         builder.arg("-c").arg(&cmd);
         if let Some(dir) = cwd {

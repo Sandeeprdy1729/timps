@@ -55,6 +55,22 @@ export class WebSearchTool extends BaseTool {
   }
 }
 
+const BLOCKED_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
+const BLOCKED_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.'];
+
+function isInternalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
+    const hostname = parsed.hostname.toLowerCase();
+    if (BLOCKED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) return true;
+    if (BLOCKED_RANGES.some(range => hostname.startsWith(range))) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export class WebFetchTool extends BaseTool {
   name = 'web_fetch';
   description = 'Fetch content from a specific URL. Use this tool when you need to get the content of a webpage, API endpoint, or any publicly accessible URL.';
@@ -77,6 +93,10 @@ export class WebFetchTool extends BaseTool {
   
   async execute(params: Record<string, any>): Promise<string> {
     const { url, max_length = '5000' } = params;
+
+    if (isInternalUrl(url)) {
+      return 'Error: Access denied — URL resolves to a private/internal address';
+    }
     
     try {
       const response = await fetch(url, {

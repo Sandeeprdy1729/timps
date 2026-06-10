@@ -7,7 +7,16 @@ import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
 
-const JWT_SECRET = process.env.TIMPS_JWT_SECRET ?? 'timps-dev-secret-change-in-prod';
+const JWT_SECRET = (() => {
+  const secret = process.env.TIMPS_JWT_SECRET;
+  if (!secret || secret === 'timps-dev-secret-change-in-prod') {
+    throw new Error(
+      'TIMPS_JWT_SECRET environment variable is required. ' +
+      'Generate a secure secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+  return secret;
+})();
 const JWT_EXPIRY = process.env.TIMPS_JWT_EXPIRY ?? '7d';
 
 // ── In-memory user registry (replace with DB in production) ───────────────

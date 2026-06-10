@@ -182,6 +182,14 @@ export async function executeCommand(command: string, args: string[]): Promise<C
     case 'hsw':
       return runSheafCommand(argString);
 
+    case 'aether':
+    case 'erl':
+      return runAetherCommand(argString);
+
+    case 'qisrd':
+    case 'qisd':
+      return runQISRDCommand(argString);
+
     case 'session':
     case 'remote':
       return runSessionCommand();
@@ -891,6 +899,218 @@ async function runSheafCommand(args: string): Promise<CommandResult> {
     }
   } catch (err) {
     return { success: false, output: '', error: `Sheaf error: ${(err as Error).message}` };
+  }
+}
+
+async function runAetherCommand(args: string): Promise<CommandResult> {
+  const { Memory } = await import('../memory/memory.js');
+  const { getAetherReport, injectAetherContext } = await import('../memory/aetherVeil.js');
+  const mem = new Memory(process.cwd());
+  const parts = args.trim().split(/\s+/);
+  const sub = parts[0] ?? 'status';
+  const domain = parts[1] ?? undefined;
+
+  try {
+    const forge = mem.aetherForge;
+
+    switch (sub) {
+      case 'status': {
+        const status = forge.getStatus();
+        const coh = forge.detectContradictions();
+        const epiDist = Object.entries(status.epistemicDistribution ?? {})
+          .map(([s, c]) => `  ${s.padEnd(16)} ${c}`).join('\n');
+        const lines = [
+          'AetherForgeERL — Layer 10 Status',
+          `  Active nodes : ${status.activeNodeCount} / ${status.nodeCount}`,
+          `  Edges        : ${status.edgeCount}`,
+          `  Avg amplitude: ${status.avgAmplitude.toFixed(4)}`,
+          `  Spectral gap : ${status.spectralGap.toFixed(4)}`,
+          `  H¹ (Betti-1) : ${status.betti1} ${status.betti1 > 0 ? '⚠️  contradictions' : '✓ consistent'}`,
+          `  Lattice levels: ${status.latticeLevelCount}`,
+          '',
+          'Epistemic status distribution:',
+          epiDist || '  (none)',
+          '',
+          'Domain node counts:',
+          ...Object.entries(status.domainCounts).map(([d, c]) => `  ${d.padEnd(16)} ${c}`),
+          '',
+          `Cohomology: ${coh.isConsistent ? '✓ CONSISTENT — no H¹ obstructions' : `⚠️  INCONSISTENT — ${coh.betti1} non-trivial class(es)`}`,
+        ];
+        if (!coh.isConsistent) {
+          lines.push(`  Contradiction nodes: ${coh.contradictionNodeIds.slice(0, 5).join(', ')}${coh.contradictionNodeIds.length > 5 ? '…' : ''}`);
+        }
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'predict': {
+        const targetDomain = (domain as import('@timps/memory-core').ERLDomain) ?? 'burnout' as import('@timps/memory-core').ERLDomain;
+        const pred = forge.predict(targetDomain, { lookbackDays: 30 });
+        const traj = pred.trajectory.slice(0, 6).map(v => `${Math.round(v * 100)}%`).join(' → ');
+        const lines = [
+          `ERL Prediction — ${targetDomain}`,
+          `  Risk level        : ${pred.riskLevel.toUpperCase()} (${Math.round(pred.riskScore * 100)}%)`,
+          `  Trajectory        : ${traj}`,
+          `  Confidence        : ${Math.round(pred.confidence * 100)}%`,
+          `  Epistemic weight  : ${pred.epistemicWeight.toFixed(3)}`,
+          `  Contradiction burd: ${pred.contradictionBurden.toFixed(3)}`,
+          `  Explanation       : ${pred.explanation}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'contradict': {
+        const coh = forge.detectContradictions();
+        const domainStr = Object.entries(coh.domainContradictions ?? {})
+          .map(([d, n]) => `  ${d}: ${n} contradiction(s)`)
+          .join('\n');
+        const lines = [
+          'ERL Cohomology — Epistemic Contradiction Detection',
+          `  Betti-1 (H¹)     : ${coh.betti1}`,
+          `  Spectral gap     : ${coh.spectralGap.toFixed(4)}`,
+          `  Consistency       : ${coh.isConsistent ? '✓ CONSISTENT' : '⚠️  INCONSISTENT'}`,
+          `  Affected nodes    : ${coh.contradictionNodeIds.length}`,
+          '',
+          'By domain:',
+          domainStr || '  (none)',
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'consolidate': {
+        const report = forge.consolidate();
+        const lines = [
+          'ERL Consolidation complete',
+          `  Quenched (faded)    : ${report.quenched}`,
+          `  Retained            : ${report.retained}`,
+          `  Crystallised        : ${report.crystallised}`,
+          `  Contradictions res. : ${report.contradictionsResolved}`,
+          `  Spectral gap after  : ${report.spectralGap.toFixed(4)}`,
+          `  H¹ after            : ${report.bettiNumbers.b1}`,
+          `  Lattice levels after: ${report.latticeLevelCount}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'context': {
+        const targetDomain = (domain as import('@timps/memory-core').ERLDomain) ?? 'burnout' as import('@timps/memory-core').ERLDomain;
+        const ctx = forge.getContextString(targetDomain, 5);
+        return { success: true, output: ctx };
+      }
+
+      default:
+        return {
+          success: true,
+          output: 'Usage: /aether [status|predict|contradict|consolidate|context] [domain]\n' +
+            '  status                   — node/edge counts, spectral gap, H¹, epistemic distribution\n' +
+            '  predict [domain]         — epistemic resonance drift prediction\n' +
+            '  contradict               — H¹ epistemic contradiction report\n' +
+            '  consolidate              — consolidate lattice, quench faded nodes\n' +
+            '  context [domain]         — top epistemic nodes for prompt context\n' +
+            '\nDomains: burnout contradiction relationship decision code_pattern goal general',
+        };
+    }
+  } catch (err) {
+    return { success: false, output: '', error: `Aether error: ${(err as Error).message}` };
+  }
+}
+
+async function runQISRDCommand(args: string): Promise<CommandResult> {
+  const { Memory } = await import('../memory/memory.js');
+  const { injectQISRDContext } = await import('../memory/qisrdVeil.js');
+  const mem = new Memory(process.cwd());
+  const parts = args.trim().split(/\s+/);
+  const sub = parts[0] ?? 'status';
+  const domain = parts[1] ?? undefined;
+
+  try {
+    const q = mem.qisrd;
+
+    switch (sub) {
+      case 'status': {
+        const st = q.status();
+        const contra = q.detectContradictions();
+        const lines = [
+          'QISRD — Layer 15: Sheaf Resonance Dynamics',
+          `  Nodes            : ${st.nodeCount}`,
+          `  Edges            : ${st.edgeCount}`,
+          `  Drift score      : ${st.driftScore.toFixed(3)}`,
+          `  H¹ (Betti-1)     : ${contra.betti1} ${contra.isConsistent ? '✓ consistent' : '⚠️  contradictions'}`,
+          `  Spectral gap     : ${contra.spectralGap.toFixed(4)}`,
+          `  Anomaly nodes    : ${contra.anomalyNodes.length}`,
+          `  Topology surgery : ${st.lastTopologySurgeryAt ? new Date(st.lastTopologySurgeryAt).toISOString() : 'never'}`,
+          `  Eigenvalues      : [${st.cachedEigenvalues.slice(0, 5).map(v => v.toFixed(3)).join(', ')}${st.cachedEigenvalues.length > 5 ? '…' : ''}]`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'predict': {
+        const targetDomain = (domain ?? 'burnout') as import('@timps/memory-core').QISRDDomain;
+        const pred = q.predict(targetDomain);
+        const traj = pred.trajectory.slice(0, 8).map(v => `${(v * 100).toFixed(0)}%`).join(' → ');
+        const lines = [
+          `QISRD Resonance Prediction — ${targetDomain}`,
+          `  Risk level      : ${pred.riskLevel.toUpperCase()} (${(pred.riskScore * 100).toFixed(0)}%)`,
+          `  Resonance       : ${pred.resonance.toFixed(3)}`,
+          `  Uncertainty     : ${pred.uncertainty.toFixed(3)}`,
+          `  Trajectory      : ${traj}${pred.trajectory.length > 8 ? '…' : ''}`,
+          `  Explanation     : ${pred.explanation}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'contradict': {
+        const contra = q.detectContradictions(domain ? { domain: domain as import('@timps/memory-core').QISRDDomain } : {});
+        const lines = [
+          'QISRD Sheaf Cohomology — Contradiction Detection',
+          `  H¹ (Betti-1)     : ${contra.betti1}`,
+          `  Spectral gap     : ${contra.spectralGap.toFixed(4)}`,
+          `  Consistency       : ${contra.isConsistent ? '✓ CONSISTENT' : '⚠️  INCONSISTENT'}`,
+          `  Drift score       : ${contra.driftScore.toFixed(3)}`,
+          `  Anomaly nodes     : ${contra.anomalyNodes.length}`,
+        ];
+        for (const a of contra.anomalyNodes.slice(0, 10)) {
+          lines.push(`    ${a.nodeId.slice(-8)}  h¹=${a.h1Contribution.toFixed(2)}  [${a.domain}]`);
+        }
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'consolidate': {
+        const report = q.consolidate();
+        const lines = [
+          'QISRD Consolidation — Topology Surgery',
+          `  Pruned              : ${report.pruned}`,
+          `  Retained            : ${report.retained}`,
+          `  Contradictions res. : ${report.resolvedContradictions}`,
+          `  Surgery triggered   : ${report.topologySurgery ? 'yes' : 'no'}`,
+          `  Drift after         : ${report.driftAfter.toFixed(3)}`,
+        ];
+        return { success: true, output: lines.join('\n') };
+      }
+
+      case 'context': {
+        const ctx = injectQISRDContext(mem, domain ? [domain as import('@timps/memory-core').QISRDDomain] : undefined);
+        return {
+          success: true,
+          output: ctx.promptFragment
+            ? `QISRD Context Injection\n${ctx.promptFragment}\n${ctx.warnings.length > 0 ? `Warnings:\n${ctx.warnings.map(w => `  ⚠️  ${w}`).join('\n')}` : '  (no warnings)'}`
+            : 'QISRD: no relevant context found',
+        };
+      }
+
+      default:
+        return {
+          success: true,
+          output: 'Usage: /qisrd [status|predict|contradict|consolidate|context] [domain]\n' +
+            '  status                   — node/edge counts, H¹, drift, eigenvalues\n' +
+            '  predict [domain]         — Langevin-resonance risk prediction\n' +
+            '  contradict [domain]      — H¹ sheaf cohomology contradiction report\n' +
+            '  consolidate              — topology surgery (merge/prune)\n' +
+            '  context [domain]         — QISRD prompt context injection\n' +
+            '\nDomains: burnout relationship decision code_pattern contradiction goal general',
+        };
+    }
+  } catch (err) {
+    return { success: false, output: '', error: `QISRD error: ${(err as Error).message}` };
   }
 }
 

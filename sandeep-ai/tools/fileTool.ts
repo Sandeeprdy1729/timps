@@ -3,6 +3,13 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import { BaseTool, ToolParameter } from './baseTool';
 
+const ALLOWED_BASE_DIRS = [process.cwd(), process.env.HOME || '/tmp'].filter(Boolean);
+
+function isPathTraversalSafe(targetPath: string): boolean {
+  const resolved = path.resolve(targetPath);
+  return ALLOWED_BASE_DIRS.some(base => resolved.startsWith(base + path.sep) || resolved === base);
+}
+
 export class FileTool extends BaseTool {
   name = 'file_operations';
   description = 'Perform file operations including reading, writing, listing directories, and checking file existence. Use this tool when you need to work with files on the local filesystem.';
@@ -30,22 +37,27 @@ export class FileTool extends BaseTool {
   
   async execute(params: Record<string, any>): Promise<string> {
     const { operation, path: filePath, content } = params;
+    const resolvedPath = path.resolve(filePath);
+    
+    if (!isPathTraversalSafe(resolvedPath)) {
+      return `Error: Path traversal denied: ${filePath} is outside allowed directories`;
+    }
     
     switch (operation) {
       case 'read':
-        return this.readFile(filePath);
+        return this.readFile(resolvedPath);
       case 'write':
-        return this.writeFile(filePath, content);
+        return this.writeFile(resolvedPath, content);
       case 'list':
-        return this.listDirectory(filePath);
+        return this.listDirectory(resolvedPath);
       case 'exists':
-        return this.checkExists(filePath);
+        return this.checkExists(resolvedPath);
       case 'mkdir':
-        return this.makeDirectory(filePath);
+        return this.makeDirectory(resolvedPath);
       case 'delete':
-        return this.deleteFile(filePath);
+        return this.deleteFile(resolvedPath);
       case 'append':
-        return this.appendFile(filePath, content);
+        return this.appendFile(resolvedPath, content);
       default:
         throw new Error(`Unknown operation: ${operation}`);
     }
