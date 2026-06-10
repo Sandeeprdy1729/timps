@@ -654,13 +654,17 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
       });
 
       const modelName = config.model || 'gemini-pro';
-      const path = `/v1/models/${modelName}:streamGenerateContent?alt=sse&key=${config.geminiApiKey}`;
+      const path = `/v1/models/${modelName}:streamGenerateContent?alt=sse`;
 
       const options = {
         hostname: 'generativelanguage.googleapis.com',
         path,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'x-goog-api-key': config.geminiApiKey,
+        },
       };
 
       const req = https.request(options, (res) => {
@@ -695,7 +699,7 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-timps-webview';">
 <title>TIMPS AI</title>
 <style>
 /* ─── TIMPS Design System ─────────────────────────── */
@@ -1260,7 +1264,7 @@ textarea::placeholder { color: var(--timps-text-dim); }
   </div>
 </div>
 
-<script>
+<script nonce="timps-webview">
 const vscode = acquireVsCodeApi();
 
 // ─── State ─────────────────────────────────────────────

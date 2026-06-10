@@ -4,10 +4,13 @@ import { config } from '../config/env';
 console.log("POSTGRES CONFIG:", process.env.DATABASE_URL ? '(using DATABASE_URL)' : config.postgres);
 
 // Prefer DATABASE_URL (Neon/Supabase connection string) over individual vars
+const sslConfig = process.env.POSTGRES_SSL_DISABLE === 'true'
+  ? { ssl: { rejectUnauthorized: false } }
+  : {};
 const poolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ...sslConfig,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,

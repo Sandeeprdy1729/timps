@@ -2,7 +2,6 @@
 import 'dotenv/config';
 import { startServer } from './api/server';
 import { runCLI, printHelp } from './interfaces/cli';
-import { initDatabase } from './db/postgres';
 
 function parseArgs(): { mode: 'server' | 'cli' | 'start'; options: any } {
   const args = process.argv.slice(2);
@@ -87,15 +86,6 @@ async function runStart(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // DB is optional — server still starts (static UI, health check) without it
-  try {
-    await initDatabase();
-  } catch (err: any) {
-    console.warn(`\n⚠  PostgreSQL unavailable: ${err?.message ?? err}`);
-    console.warn('   Server will start in degraded mode — memory/chat APIs will return 503.');
-    console.warn('   Set POSTGRES_HOST / DATABASE_URL in .env to enable persistent memory.\n');
-  }
-
   const { mode, options } = parseArgs();
 
   if (mode === 'start') {

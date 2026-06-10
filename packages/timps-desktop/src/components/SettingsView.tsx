@@ -138,6 +138,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
               className={`btn ${autostartEnabled ? 'btn-primary' : 'btn-secondary'}`}
               onClick={toggleAutostart}
               disabled={autostartLoading}
+              aria-label={autostartEnabled ? 'Launch at Login Enabled' : 'Launch at Login Disabled'}
               aria-pressed={autostartEnabled}
             >
               {autostartLoading ? 'Updating…' : autostartEnabled ? '🤖 Enabled' : 'Disabled'}
@@ -161,6 +162,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
             <button
               className={`btn ${clipboardWatcher ? 'btn-primary' : 'btn-secondary'}`}
               onClick={toggleClipboardWatcher}
+              aria-label={clipboardWatcher ? 'Clipboard Watcher Enabled' : 'Clipboard Watcher Off'}
               aria-pressed={clipboardWatcher}
             >
               {clipboardWatcher ? '📋 Enabled' : 'Disabled'}

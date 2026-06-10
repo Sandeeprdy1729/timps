@@ -54,8 +54,14 @@ app.post('/auth/register', async (req, res) => {
     res.status(400).json({ error: 'email, password, teamId are required' });
     return;
   }
+  // Prevent self-assigning admin role — admin must be set by existing admin via DB or env
+  const requestedRole = role ?? 'member';
+  if (requestedRole === 'admin') {
+    res.status(403).json({ error: 'Admin role cannot be self-assigned. Contact an existing admin.' });
+    return;
+  }
   try {
-    const user = await registerUser(email, password, teamId, role ?? 'member');
+    const user = await registerUser(email, password, teamId, requestedRole);
     const token = signToken(user);
     res.status(201).json({ token, userId: user.id, teamId: user.teamId, role: user.role });
   } catch (err) {
@@ -155,6 +161,12 @@ app.post('/billing/checkout', requireAuth, requireRole('admin'), async (req: Aut
 });
 
 app.post('/billing/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const signature = req.headers['stripe-signature'] as string | undefined;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (webhookSecret && !signature) {
+    res.status(400).json({ error: 'Missing Stripe signature header' });
+    return;
+  }
   handleWebhook(req.body);
   res.json({ received: true });
 });

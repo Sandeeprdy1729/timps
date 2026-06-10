@@ -90,11 +90,35 @@ export const WebSearchTool: ToolExecutor = async (args) => {
 };
 
 // ── WebFetch Tool ──
+const BLOCKED_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
+const BLOCKED_IP_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.'];
+
+function isPrivateUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
+    const hostname = parsed.hostname.toLowerCase();
+    if (BLOCKED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) return true;
+    if (BLOCKED_IP_RANGES.some(range => hostname.startsWith(range))) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export const WebFetchTool: ToolExecutor = async (args) => {
   const { url, format } = args as any;
   
+  if (isPrivateUrl(url)) {
+    return {
+      content: `Error: Access denied — ${url} resolves to a private/internal address`,
+      isError: true,
+      toolName: 'WebFetch',
+    };
+  }
+  
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
     const text = await response.text();
     
     return {
@@ -134,15 +158,23 @@ export const GlobTool: ToolExecutor = async (args) => {
 // ── Grep Tool: Search code ──
 export const GrepTool: ToolExecutor = async (args) => {
   const { pattern, path: searchPath, include } = args as Record<string, string>;
-  // Use Node's child_process for grep since no dedicated util exists
-  const { execSync } = await import('node:child_process');
+  // Use execFileSync with args array to prevent command injection
+  const { execFileSync } = await import('node:child_process');
   try {
-    const flags = include ? `--include="${include}"` : '';
-    const cmd = `grep -rn ${flags} "${pattern}" "${searchPath || '.'}" 2>/dev/null | head -50`;
-    const out = execSync(cmd, { encoding: 'utf-8', timeout: 10000 });
-    return { content: out || `No matches for: ${pattern}`, toolName: 'Grep' };
-  } catch {
-    return { content: `Searched for: ${pattern}`, toolName: 'Grep' };
+    const grepArgs = ['-rn'];
+    if (include) {
+      grepArgs.push('--include', include);
+    }
+    if (pattern) grepArgs.push(pattern);
+    grepArgs.push(searchPath || '.');
+    const out = execFileSync('grep', grepArgs, { encoding: 'utf-8', timeout: 10000 });
+    const lines = out.split('\n').slice(0, 50).join('\n');
+    return { content: lines || `No matches for: ${pattern}`, toolName: 'Grep' };
+  } catch (err: any) {
+    if (err.status === 1) {
+      return { content: `No matches for: ${pattern}`, toolName: 'Grep' };
+    }
+    return { content: `Grep error: ${err.message}`, isError: true, toolName: 'Grep' };
   }
 };
 

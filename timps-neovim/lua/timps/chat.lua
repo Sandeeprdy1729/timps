@@ -52,7 +52,7 @@ function M.stream_message(msg)
   local line_count = #lines
   vim.api.nvim_buf_set_lines(chat_bufnr, line_count, line_count + 1, false, { "> " .. msg, "" })
   vim.api.nvim_buf_set_lines(chat_bufnr, line_count + 1, line_count + 2, false, { "Thinking..." })
-  local output = api.spawn({"--chat"}, function(line)
+  local output = api.spawn({"--chat", msg}, function(line)
     vim.schedule(function()
       local cur_lines = vim.api.nvim_buf_get_lines(chat_bufnr, 0, -1, false)
       vim.api.nvim_buf_set_lines(chat_bufnr, #cur_lines, #cur_lines + 1, false, { line })
@@ -72,7 +72,7 @@ function M.oneshot(msg)
     utils.usage("Usage: TIMPS <message>")
     return
   end
-  local out = api.spawn({"--chat"}, function(line)
+  local out = api.spawn({"--chat", msg}, function(line)
     print(line)
   end)
 end

@@ -132,11 +132,17 @@ export class KnowledgeGraphStore {
   traverse(startEntity: string, relations: string[], maxHops = 3): { path: string[]; score: number }[] {
     const data = this.load();
     const results: { path: string[]; score: number }[] = [];
+    const visitedEdges = new Set<string>();
 
     function dfs(current: string, visited: string[], depth: number, path: string[]): void {
       if (depth >= maxHops) return;
-      const nextEdges = data.edges.filter(e => e.subject === current && !visited.includes(e.object));
+      const nextEdges = data.edges.filter(e =>
+        e.subject === current && !visited.includes(e.object)
+      );
       for (const edge of nextEdges) {
+        const edgeKey = `${edge.subject}|${edge.relation}|${edge.object}`;
+        if (visitedEdges.has(edgeKey)) continue;
+        visitedEdges.add(edgeKey);
         const newPath = [...path, `${current} --[${edge.relation}]--> ${edge.object}`];
         results.push({ path: newPath, score: edge.weight * (1 / (depth + 1)) });
         dfs(edge.object, [...visited, current], depth + 1, newPath);

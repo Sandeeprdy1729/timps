@@ -15,6 +15,7 @@ interface SidebarProps {
 
 const tabs = [
   { id: 'chat', icon: '💬', label: 'Chat' },
+  { id: 'command', icon: '⌘', label: 'Command' },
   { id: 'lens', icon: '⚡', label: 'Lens' },
   { id: 'semantic', icon: '🧠', label: 'Memory' },
   { id: 'episodic', icon: '📜', label: 'Sessions' },

@@ -24,6 +24,7 @@ import { SessionBridge } from '../memory/sessionBridge.js';
 import { RiskEngine } from '../utils/riskEngine.js';
 import { ContextOrchestrator } from './contextOrchestrator.js';
 import { injectEchoContext } from '../memory/echoVeil.js';
+import { injectQISRDContext } from '../memory/qisrdVeil.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
@@ -377,6 +378,25 @@ End your response with a confirmation question.`;
         }
       }
     } catch { /* echo is best-effort */ }
+
+    // ── Pre-flight: QISRD resonance intelligence injection ──
+    try {
+      const qisrdResult = injectQISRDContext(this.memory);
+      if (qisrdResult.hasIssue) {
+        for (const w of qisrdResult.warnings) {
+          yield { type: 'text', content: `\n> 🔮 **QISRD Alert**: ${w}\n` };
+        }
+      }
+      if (qisrdResult.promptFragment) {
+        const sysIdx = this.messages.findIndex(m => m.role === 'system');
+        if (sysIdx !== -1) {
+          this.messages[sysIdx] = {
+            ...this.messages[sysIdx]!,
+            content: this.messages[sysIdx]!.content + qisrdResult.promptFragment,
+          };
+        }
+      }
+    } catch { /* qisrd is best-effort */ }
 
     // Add user message
     this.messages.push({
@@ -828,19 +848,13 @@ End your response with a confirmation question.`;
     ];
     if (!recoverable.some(r => errorMsg.includes(r))) return;
 
-    for (let attempt = 1; attempt <= this.maxCorrections; attempt++) {
-      yield { type: 'selfcorrect', attempt, error: errorMsg };
+    yield { type: 'selfcorrect', attempt: 1, error: errorMsg };
 
-      // Enhanced self-correction prompt — better diagnostics
-      this.messages.push({
-        role: 'user',
-        content: `The previous action failed with this error:\n\n<error>\n${errorMsg.slice(0, 300)}\n</error>\n\nAttempt ${attempt} of ${this.maxCorrections}. Think through:\n1. What exactly went wrong?\n2. What assumptions were incorrect?\n3. How to fix it definitively?\n\nThen take the corrective action.` +
-          (failedCall.name === 'edit_file' ? '\nRe-read the file to get the correct content before editing.' : ''),
-      });
-
-      // Re-run one iteration (will pick up from the loop in run())
-      return; // Let the main loop handle the next model call
-    }
+    this.messages.push({
+      role: 'user',
+      content: `The previous action failed with this error:\n\n<error>\n${errorMsg.slice(0, 300)}\n</error>\n\nThink through:\n1. What exactly went wrong?\n2. What assumptions were incorrect?\n3. How to fix it definitively?\n\nThen take the corrective action.` +
+        (failedCall.name === 'edit_file' ? '\nRe-read the file to get the correct content before editing.' : ''),
+    });
   }
 
   // ═══════════════════════════════════════

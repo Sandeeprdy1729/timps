@@ -1,7 +1,8 @@
 local M = {}
 
 function M.execute(cmd, args, callback)
-  local full_cmd = cmd .. " " .. table.concat(args or {}, " ")
+  local escaped = vim.tbl_map(function(a) return vim.fn.shellescape(tostring(a)) end, args or {})
+  local full_cmd = cmd .. " " .. table.concat(escaped, " ")
   local handle = io.popen(full_cmd)
   if not handle then return end
   local output = handle:read("*a")
@@ -26,7 +27,8 @@ end
 
 function M.spawn(args, on_output, on_exit)
   local binary = M.find_timps_binary()
-  local cmd = binary .. " " .. table.concat(args, " ")
+  local escaped = vim.tbl_map(function(a) return vim.fn.shellescape(tostring(a)) end, args or {})
+  local cmd = binary .. " " .. table.concat(escaped, " ")
   local handle = io.popen(cmd .. " 2>&1")
   if not handle then return end
   local output = ""

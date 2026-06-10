@@ -18,13 +18,16 @@ interface Message {
 
 interface ChatViewProps {
   projectPath: string;
+  draftPrompt?: string | null;
+  onDraftConsumed?: () => void;
 }
 
-export function ChatView({ projectPath }: ChatViewProps) {
+export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,6 +36,13 @@ export function ChatView({ projectPath }: ChatViewProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (!draftPrompt) return;
+    setInput(draftPrompt);
+    inputRef.current?.focus();
+    onDraftConsumed?.();
+  }, [draftPrompt, onDraftConsumed]);
 
   const handleSend = async () => {
     if (!input.trim() || sending) return;
@@ -136,6 +146,7 @@ export function ChatView({ projectPath }: ChatViewProps) {
       <div className="chat-input-container">
         <div className="chat-input-wrap">
           <textarea
+            ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

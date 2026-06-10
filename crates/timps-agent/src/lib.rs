@@ -22,6 +22,8 @@ pub use timps_tools::{Tool, ToolCall, ToolResult};
 pub struct AgentOptions {
     /// Max tool-call retries on failure
     pub max_retries: u8,
+    /// Max loop iterations for the agent (prevents infinite loops)
+    pub max_iterations: u32,
     /// Inject relevant semantic memories before each turn
     pub inject_memory: bool,
     /// Max semantic entries to inject
@@ -34,6 +36,7 @@ impl Default for AgentOptions {
     fn default() -> Self {
         Self {
             max_retries: 3,
+            max_iterations: 25,
             inject_memory: true,
             memory_context_limit: 10,
             system_prompt: None,
@@ -146,8 +149,14 @@ impl Agent {
         let mut tool_calls_total = 0;
         let mut retries = 0u8;
         let mut final_output = String::new();
+        let mut iterations = 0u32;
 
         loop {
+            iterations += 1;
+            if iterations > self.opts.max_iterations {
+                final_output = format!("Agent stopped after {} iterations (max: {})", iterations - 1, self.opts.max_iterations);
+                break;
+            }
             let tools = self.tool_schemas();
             let mut stream = self.provider.complete(&system, &messages, &tools).await?;
 

@@ -34,25 +34,35 @@ export function createClaudeProvider(apiKey: string, modelId?: string): ModelPro
         return;
       }
 
-      let currentToolId = '';
+      const toolIdsByIndex = new Map<number, string>();
+      let currentToolIndex = -1;
       let inputTokens = 0, outputTokens = 0;
 
       for await (const raw of parseSSE(res.body!)) {
         let data: Record<string, unknown> = {};
         try { data = JSON.parse(raw.data); } catch { continue; }
         const ev = raw.event || '';
+        const blockIndex = (data as any).index as number | undefined;
 
         if (ev === 'content_block_start') {
           const block = data.content_block as any;
-          if (block?.type === 'tool_use') { currentToolId = block.id; yield { type: 'tool_start', id: block.id, name: block.name }; }
-          else if (block?.type === 'thinking') yield { type: 'thinking', content: '' };
+          if (block?.type === 'tool_use') {
+            currentToolIndex = blockIndex ?? toolIdsByIndex.size;
+            toolIdsByIndex.set(currentToolIndex, block.id);
+            yield { type: 'tool_start', id: block.id, name: block.name };
+          } else if (block?.type === 'thinking') yield { type: 'thinking', content: '' };
         } else if (ev === 'content_block_delta') {
           const delta = data.delta as any;
           if (delta?.type === 'text_delta') yield { type: 'text', content: delta.text };
-          else if (delta?.type === 'input_json_delta') yield { type: 'tool_delta', id: currentToolId, argumentsChunk: delta.partial_json };
-          else if (delta?.type === 'thinking_delta') yield { type: 'thinking', content: delta.thinking };
+          else if (delta?.type === 'input_json_delta') {
+            const idx = blockIndex ?? currentToolIndex;
+            const tid = toolIdsByIndex.get(idx) || '';
+            yield { type: 'tool_delta', id: tid, argumentsChunk: delta.partial_json };
+          } else if (delta?.type === 'thinking_delta') yield { type: 'thinking', content: delta.thinking };
         } else if (ev === 'content_block_stop') {
-          if (currentToolId) { yield { type: 'tool_end', id: currentToolId }; currentToolId = ''; }
+          const idx = blockIndex ?? currentToolIndex;
+          const tid = toolIdsByIndex.get(idx);
+          if (tid) { yield { type: 'tool_end', id: tid }; }
         } else if (ev === 'message_start') {
           const u = (data.message as any)?.usage; if (u) inputTokens = u.input_tokens || 0;
         } else if (ev === 'message_delta') {

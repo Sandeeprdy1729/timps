@@ -533,6 +533,22 @@ export const COMMAND_REGISTRY: CommandDef[] = [
     subcommands: ['predict', 'contradict', 'status', 'consolidate', 'context'],
   },
   {
+    name: 'aether',
+    description: 'AetherForgeERL: epistemic resonance lattice — prediction, contradiction, status',
+    category: 'Tools',
+    aliases: ['erl'],
+    argsHint: '[predict|contradict|status|consolidate|context] [domain]',
+    subcommands: ['predict', 'contradict', 'status', 'consolidate', 'context'],
+  },
+  {
+    name: 'qisrd',
+    description: 'QISRD (Layer 15): Quantum-Inspired Sheaf Resonance Dynamics — Langevin prediction, H¹ contradictions, topology surgery',
+    category: 'Tools',
+    aliases: ['qisd'],
+    argsHint: '[status|predict|contradict|consolidate|context] [domain]',
+    subcommands: ['predict', 'contradict', 'status', 'consolidate', 'context'],
+  },
+  {
     name: 'forget',
     description: 'Clear all memories for this project',
     category: 'Tools',

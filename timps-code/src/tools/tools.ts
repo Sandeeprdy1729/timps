@@ -22,8 +22,13 @@ export interface RegisteredTool {
 }
 
 function resolvePath(filePath: string, cwd: string): string {
-  if (path.isAbsolute(filePath)) return filePath;
-  return path.resolve(cwd, filePath);
+  const cwdAbs = path.resolve(cwd);
+  const resolved = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(cwdAbs, filePath);
+  // Prevent path traversal — resolved must be within cwd
+  if (!resolved.startsWith(cwdAbs + path.sep) && resolved !== cwdAbs) {
+    throw new Error(`Path traversal denied: ${filePath} is outside working directory`);
+  }
+  return resolved;
 }
 
 // ══════════════════════════════════════════
@@ -704,7 +709,23 @@ async function searchDDGLite(query: string, max: number): Promise<ToolExecResult
 
 // ══════════════════════════════════════════
 // 17. fetch_url
-// ══════════════════════════════════════════
+
+const PRIVATE_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
+const PRIVATE_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.'];
+
+function isInternalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
+    const hostname = parsed.hostname.toLowerCase();
+    if (PRIVATE_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) return true;
+    if (PRIVATE_RANGES.some(range => hostname.startsWith(range))) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 const fetchUrl: RegisteredTool = {
   definition: {
     name: 'fetch_url',
@@ -723,6 +744,10 @@ const fetchUrl: RegisteredTool = {
     const url = String(args.url);
     const maxLen = Number(args.maxLength) || 8000;
     try { new URL(url); } catch { return { content: 'Invalid URL', isError: true }; }
+
+    if (isInternalUrl(url)) {
+      return { content: 'Error: Access denied — URL resolves to a private/internal address', isError: true };
+    }
 
     try {
       const res = await fetch(url, {

@@ -1,3 +1,29 @@
+import { render, renderHook, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QuickCapture } from './QuickCapture';
+import { CommandBar } from './CommandBar';
+import { ToastProvider, useToast } from './Toast';
+import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
+import { useMemory, useDebounce, useLocalStorage } from '../hooks/index';
+import {
+  debounce,
+  formatDate,
+  formatRelativeTime,
+  generateId,
+  getErrorMessage,
+  parseTags,
+  searchSemantic,
+  truncate,
+  validateProjectPath,
+} from '../utils';
+import { APP, KEYBOARD, MEMORY, PROVIDERS } from '../constants';
+import { api, SemanticEntry } from '../api';
+
+beforeEach(() => {
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
+
 describe('QuickCapture Component', () => {
   it('should render when open', () => {
     const { container } = render(
@@ -121,6 +147,8 @@ describe('useMemory hook', () => {
   });
 
   it('should add memory', async () => {
+    const storeSpy = vi.spyOn(api, 'storeMemory').mockResolvedValue(undefined);
+
     const { result } = renderHook(() => 
       useMemory({ projectPath: '/test', autoLoad: false })
     );
@@ -129,13 +157,13 @@ describe('useMemory hook', () => {
       await result.current.addMemory('test-key', 'test-value', ['tag']);
     });
 
-    expect(api.storeMemory).toHaveBeenCalled();
+    expect(storeSpy).toHaveBeenCalled();
   });
 });
 
 describe('useDebounce hook', () => {
   it('should debounce value', async () => {
-    const { result } = renderHook(({ value }) => 
+    const { result, rerender } = renderHook(({ value }) => 
       useDebounce(value, 100)
     , { initialProps: { value: 'initial' } });
 
