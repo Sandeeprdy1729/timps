@@ -25,7 +25,7 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npx changeset publish --otp
+          publish: npx changeset publish
           title: 'chore: version packages'
           commit: 'chore: version packages'
         env:

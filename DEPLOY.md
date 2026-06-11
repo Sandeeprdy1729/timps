@@ -27,7 +27,7 @@ npm i -g @railway/cli
 railway login
 
 # Link project
-cd /Users/sandeepreddy/Desktop/testbot
+cd /path/to/timps
 railway init
 railway link <project-id>
 
@@ -61,7 +61,7 @@ railway up
 
 ```bash
 # Build locally
-cd /Users/sandeepreddy/Desktop/testbot
+cd /path/to/timps
 docker build -t timps-backend -f sandeep-ai/Dockerfile .
 
 # Push to Docker Hub
@@ -97,7 +97,7 @@ Update your VS Code extension:
 ## Local Development
 
 ```bash
-cd /Users/sandeepreddy/Desktop/testbot
+cd /path/to/timps
 
 # Start with Docker (full stack)
 docker compose up -d

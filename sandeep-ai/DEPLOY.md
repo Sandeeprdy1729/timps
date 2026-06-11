@@ -49,7 +49,7 @@
 ## Docker Deploy
 
 ```bash
-cd /Users/sandeepreddy/Desktop/testbot
+cd /path/to/timps
 
 # Build and run
 docker compose up -d

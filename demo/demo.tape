@@ -14,7 +14,7 @@ Sleep 1s
 Enter
 Sleep 1s
 
-Type "cd /Users/sandeepreddy/Desktop/testbot"
+Type "cd /path/to/timps"
 Sleep 300ms
 Enter
 Sleep 500ms

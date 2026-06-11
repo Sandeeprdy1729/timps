@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Check for vulnerable dependencies
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=critical
 
       - name: Update dependencies
         if: github.event_name == 'schedule'

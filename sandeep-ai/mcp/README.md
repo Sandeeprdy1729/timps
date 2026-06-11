@@ -27,7 +27,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "timps": {
       "command": "node",
-      "args": ["/Users/sandeepreddy/Desktop/testbot/sandeep-ai/mcp/dist/index.js"]
+      "args": ["/path/to/timps/sandeep-ai/mcp/dist/index.js"]
     }
   }
 }
@@ -42,7 +42,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "timps": {
       "command": "node",
-      "args": ["/Users/sandeepreddy/Desktop/testbot/sandeep-ai/mcp/dist/index.js"]
+      "args": ["/path/to/timps/sandeep-ai/mcp/dist/index.js"]
     }
   }
 }
