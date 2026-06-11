@@ -36,6 +36,10 @@ jobs:
       - name: Publish timps-code
         if: steps.changesets.outputs.published == 'true'
         run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN not configured — skipping publish"
+            exit 0
+          fi
           cd timps-code
           npm ci
           npm run build
@@ -47,6 +51,10 @@ jobs:
       - name: Publish timps-mcp
         if: steps.changesets.outputs.published == 'true'
         run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN not configured — skipping publish"
+            exit 0
+          fi
           cd timps-mcp
           npm ci
           npm run build
