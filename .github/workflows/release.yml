@@ -20,6 +20,9 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Install dependencies
+        run: npm ci
+
       # ── Create Release PR or publish changed packages ──────────────────────
       - name: Create Release PR or Publish
         id: changesets
