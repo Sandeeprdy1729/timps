@@ -1,4 +1,4 @@
-//! timps-server — Axum REST API server (replaces sandeep-ai/api/server.ts).
+//! timps-server — Axum REST API server (replaces packages/server/api/server.ts).
 //! Routes:
 //!   POST /chat            — run agent turn
 //!   GET  /memory          — list semantic memories

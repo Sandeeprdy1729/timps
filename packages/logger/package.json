@@ -1,0 +1,9 @@
+{
+  "name": "@timps/logger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TIMPS structured logger built on winston with log levels and context support",
+  "main": "src/index.ts",
+  "author": "TIMPS Contributors",
+  "license": "MIT"
+}

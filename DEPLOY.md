@@ -10,7 +10,7 @@
 2. **New Project** → **Provision PostgreSQL**
 3. **Add Service** → **Empty Service**
 4. **Connect GitHub** repo: `https://github.com/Sandeeprdy1729/timps`
-5. **Root Directory**: `sandeep-ai`
+5. **Root Directory**: `packages/server`
 6. **Start Command**: `npm start`
 7. **Add Environment Variables**:
    - `NODE_ENV=production`
@@ -46,7 +46,7 @@ railway up
 1. **Create Render Account**: https://render.com
 2. **New** → **Web Service**
 3. **Connect GitHub**: `https://github.com/Sandeeprdy1729/timps`
-4. **Root Directory**: `sandeep-ai`
+4. **Root Directory**: `packages/server`
 5. **Build Command**: `npm install && npm run build`
 6. **Start Command**: `npm start`
 7. **Add Environment Variables**:
@@ -62,7 +62,7 @@ railway up
 ```bash
 # Build locally
 cd /path/to/timps
-docker build -t timps-backend -f sandeep-ai/Dockerfile .
+docker build -t timps-backend -f packages/server/Dockerfile .
 
 # Push to Docker Hub
 docker tag timps-backend sandeeprdy1729/timps-backend
@@ -77,7 +77,7 @@ docker push sandeeprdy1729/timps-backend
 
 1. Create DigitalOcean account
 2. **Apps** → **Create App** → **GitHub**
-3. Select `sandeep-ai` directory
+3. Select `packages/server` directory
 4. Configure with Dockerfile or buildpack
 5. Add PostgreSQL database
 
@@ -106,7 +106,7 @@ docker compose up -d
 docker compose up -d postgres qdrant
 
 # Then run API locally
-cd sandeep-ai
+cd packages/server
 npm install
 npm run dev
 ```

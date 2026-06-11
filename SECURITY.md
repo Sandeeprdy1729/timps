@@ -55,5 +55,4 @@ See [Security Advisories](https://github.com/Sandeeprdy1729/timps/security/advis
 
 ## Attribution
 
-Thanks to security researchers who have helped improve TIMPS:
-- (Your name here)
+Thanks to security researchers who have helped improve TIMPS.

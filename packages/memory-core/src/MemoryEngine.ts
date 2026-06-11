@@ -22,7 +22,7 @@ import {
 
 import { searchEntries } from './search.js';
 
-// Intelligence tools — ported from sandeep-ai
+// Intelligence tools — ported from packages/server
 import { ContradictionDetector } from './intelligence/contradiction.js';
 import { BurnoutSeismograph } from './intelligence/burnout.js';
 import { RegretOracle } from './intelligence/regretOracle.js';
@@ -478,7 +478,7 @@ export class MemoryEngine {
     }
   }
 
-  // ── Intelligence convenience aliases (mirror sandeep-ai API names) ──
+  // ── Intelligence convenience aliases (mirror packages/server API names) ──
 
   /** Detect if statement contradicts stored positions (Tool 5). */
   checkContradiction(text: string, autoStore = true) {

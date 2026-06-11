@@ -13,7 +13,7 @@ Model Context Protocol server for TIMPs memory integration with Claude Desktop a
 ## Installation
 
 ```bash
-cd sandeep-ai/mcp
+cd packages/server/mcp
 npm install
 npm run build
 ```
@@ -27,7 +27,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "timps": {
       "command": "node",
-      "args": ["/path/to/timps/sandeep-ai/mcp/dist/index.js"]
+      "args": ["/path/to/timps/packages/server/mcp/dist/index.js"]
     }
   }
 }
@@ -42,7 +42,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "timps": {
       "command": "node",
-      "args": ["/path/to/timps/sandeep-ai/mcp/dist/index.js"]
+      "args": ["/path/to/timps/packages/server/mcp/dist/index.js"]
     }
   }
 }

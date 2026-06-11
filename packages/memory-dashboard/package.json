@@ -1,8 +1,9 @@
 {
   "name": "@timps/memory-dashboard",
   "version": "0.1.0",
-  "description": "TIMPS web memory dashboard — interactive sigma.js knowledge graph of your 3-layer memory",
+  "description": "TIMPS web memory dashboard — interactive sigma.js knowledge graph visualizing your AI agent's 3-layer persistent memory (working, episodic, semantic).",
   "private": true,
+  "author": "TIMPS Contributors",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:ui\"",

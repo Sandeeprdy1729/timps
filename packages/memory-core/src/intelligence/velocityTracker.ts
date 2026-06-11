@@ -1,5 +1,5 @@
 // ── Tool 7 port: Velocity Tracker (from Skill Shadow) ──
-// Ported from sandeep-ai/tools/allTools.ts SkillShadowTool
+// Ported from packages/server/tools/allTools.ts SkillShadowTool
 // Storage: JSON file instead of Postgres workflow_patterns table
 // Analysis: frequency + success_rate scoring (no LLM for basic coaching)
 

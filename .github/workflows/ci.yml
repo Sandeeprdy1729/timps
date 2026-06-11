@@ -126,9 +126,9 @@ jobs:
         working-directory: timps-vscode
         run: npm run compile
 
-  # ── sandeep-ai ────────────────────────────────────────────────────────────
-  sandeep-ai:
-    name: sandeep-ai (${{ matrix.os }})
+  # ── packages/server ────────────────────────────────────────────────────────
+  packages-server:
+    name: server (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -136,7 +136,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
-        working-directory: sandeep-ai
+        working-directory: packages/server
 
     steps:
       - uses: actions/checkout@v4

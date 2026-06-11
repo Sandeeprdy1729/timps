@@ -1,5 +1,5 @@
 **Before asking:**
-- Read [DOCS.md](../blob/main/DOCS.md) for installation, CLI, and config
+- Read [README.md](../blob/main/README.md) for installation, CLI, and config
 - Search open/closed issues and existing discussions
 - Check [ARCHITECTURE.md](../blob/main/ARCHITECTURE.md) for memory system details
 

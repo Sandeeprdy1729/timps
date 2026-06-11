@@ -11,7 +11,7 @@
     "timps-code",
     "timps-mcp",
     "timps-vscode",
-    "sandeep-ai"
+    "packages/server"
   ],
   "ignore": []
 }

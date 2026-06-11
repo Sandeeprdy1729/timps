@@ -29,7 +29,12 @@
     "*.node"
   ],
   "keywords": ["napi", "rust", "memory", "timps"],
+  "author": "TIMPS Contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
   "publishConfig": {
     "access": "public"
   },

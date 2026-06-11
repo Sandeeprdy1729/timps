@@ -385,7 +385,7 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       if (state.activeTab === 'dna') await loadPositions();
     } catch (err) {
       hideTyping();
-      addMessage('assistant', 'Could not reach TIMPs server at ' + state.apiBase + '.\n\nMake sure the backend is running:\n  cd sandeep-ai && npm run server', 'system');
+      addMessage('assistant', 'Could not reach TIMPs server at ' + state.apiBase + '.\n\nMake sure the backend is running:\n  cd packages/server && npm run server', 'system');
     } finally {
       state.loading = false;
       document.getElementById('sendBtn').disabled = false;

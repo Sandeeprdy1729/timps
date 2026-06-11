@@ -54,12 +54,12 @@ export function createApp(): Express {
   });
   
   // Serve static files — resolve correctly for both ts-node and compiled dist
-  // ts-node: __dirname = sandeep-ai/api → public is at sandeep-ai/public
-  // compiled: __dirname = sandeep-ai/dist/api → public is at sandeep-ai/dist/public (doesn't exist)
+  // ts-node: __dirname = packages/server/api → public is at packages/server/public
+  // compiled: __dirname = packages/server/dist/api → public is at packages/server/dist/public (doesn't exist)
   // So we try ../public first (ts-node path), then fall back to checking further up
   const candidates = [
-    path.join(__dirname, '../public'),          // ts-node: api/../public = sandeep-ai/public ✓
-    path.join(__dirname, '../../public'),        // dist/api/../../public = sandeep-ai/public ✓
+    path.join(__dirname, '../public'),          // ts-node: api/../public = packages/server/public ✓
+    path.join(__dirname, '../../public'),        // dist/api/../../public = packages/server/public ✓
     path.join(process.cwd(), 'public'),          // cwd-relative fallback
   ];
   const publicPath = candidates.find(p => fs.existsSync(p)) || candidates[0];

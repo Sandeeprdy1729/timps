@@ -4,7 +4,7 @@
   "services": [
     {
       "name": "timps-backend",
-      "directory": "sandeep-ai",
+      "directory": "packages/server",
       "healthball": "/api/health",
       "envars": [
         {

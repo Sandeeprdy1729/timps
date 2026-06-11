@@ -1,5 +1,5 @@
 // ── Tool 10 port: Bug Pattern Prophet ──
-// Ported from sandeep-ai/tools/allTools.ts BugPatternProphetTool
+// Ported from packages/server/tools/allTools.ts BugPatternProphetTool
 // Storage: JSON file instead of Postgres bug_patterns table
 // Analysis: deterministic frequency + context matching (no LLM)
 

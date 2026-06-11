@@ -18,7 +18,7 @@ Give your AI coding assistant a memory that persists across sessions, catches co
 docker compose up -d
 ```
 
-Or manually: `cd sandeep-ai && npm install && npm run server`
+Or manually: `cd packages/server && npm install && npm run server`
 
 **Step 2:** Install the MCP package:
 

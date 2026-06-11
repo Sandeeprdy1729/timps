@@ -5,8 +5,8 @@
 timps-code/src/core/ @Sandeeprdy1729
 timps-code/src/agent/ @Sandeeprdy1729
 README.md @Sandeeprdy1729
-GOVERNANCE.md @Sandeeprdy1729
-MAINTAINERS.md @Sandeeprdy1729
+CONTRIBUTING.md @Sandeeprdy1729
+CHANGELOG.md @Sandeeprdy1729
 .github/ @Sandeeprdy1729
 .eslint* @Sandeeprdy1729
 tsconfig* @Sandeeprdy1729

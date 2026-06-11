@@ -11,7 +11,7 @@ Closes #
 - [ ] timps-code
 - [ ] timps-mcp
 - [ ] timps-vscode
-- [ ] sandeep-ai
+- [ ] packages/server
 
 ## Type of change
 

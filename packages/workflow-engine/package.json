@@ -1,7 +1,7 @@
 {
   "name": "@timps/workflow-engine",
   "version": "1.0.0",
-  "description": "Workflow automation engine for TIMPS",
+  "description": "Workflow automation engine for TIMPS — run automated sequences, pipelines, and multi-step agent workflows.",
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",

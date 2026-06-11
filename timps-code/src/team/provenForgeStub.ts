@@ -1,5 +1,5 @@
-// provenForgeStub.ts - Stub for ProvenForge (optional integration with sandeep-ai)
-// This is a no-op stub that allows timps-code to compile without the sandeep-ai dependency
+// provenForgeStub.ts - Stub for ProvenForge (optional integration with packages/server)
+// This is a no-op stub that allows timps-code to compile without the server dependency
 
 export interface ProvenanceMetadata {
   module: string;

@@ -82,7 +82,7 @@ node -e "console.log(new Date().getDay())"
 ### Step 4 — Verify
 ```bash
 cd timps-code && npm test
-cd ../sandeep-ai && npm run typecheck
+cd ../packages/server && npm run typecheck
 cd ../timps-mcp && npm test
 ```
 

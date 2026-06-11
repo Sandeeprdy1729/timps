@@ -33,7 +33,7 @@ timps/
 ├── timps-code/      # CLI tool
 ├── timps-mcp/       # MCP server
 ├── timps-vscode/    # VS Code extension
-├── sandeep-ai/     # Full server
+├── packages/server/     # Full server
 └── packages/       # Shared packages
     ├── config/
     ├── memory-core/

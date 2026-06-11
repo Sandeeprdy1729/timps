@@ -10,7 +10,7 @@ import { MemoryEngine } from '@timps/memory-core';
 // ── Runtime mode ────────────────────────────────────────────────────────────
 // LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use
 //   @timps/memory-core for deterministic, file-based intelligence — no server.
-// SERVER mode: TIMPS_URL is set.  Tools proxy to the sandeep-ai HTTP API for
+// SERVER mode: TIMPS_URL is set.  Tools proxy to the packages/server HTTP API for
 //   full LLM-powered intelligence (manifesto, dead reckoning, etc.).
 
 const SERVER_MODE = !!(process.env.TIMPS_URL && process.env.TIMPS_URL !== '' && process.env.TIMPS_LOCAL !== 'true');

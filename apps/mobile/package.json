@@ -2,6 +2,7 @@
   "name": "@timps/mobile",
   "version": "1.0.0",
   "private": true,
+  "description": "TIMPS mobile app — AI memory layer on the go with Expo and React Native. Access persistent memory from your phone.",
   "main": "src/App.tsx",
   "scripts": {
     "dev": "expo start",
