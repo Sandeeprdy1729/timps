@@ -1,15 +1,19 @@
 {
   "name": "@timps/event-bus",
   "version": "1.0.0",
-  "description": "Event bus for TIMPS integrations",
+  "description": "Event bus for TIMPS integrations — pub/sub messaging between TIMPS components for distributed AI agent coordination.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "test": "jest"
   },
   "dependencies": {},
   "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.0.0"
   }
 }

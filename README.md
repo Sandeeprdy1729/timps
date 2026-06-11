@@ -216,18 +216,48 @@ When you ask TIMPS a question, the request flows through the 9-layer memory syst
 
 ---
 
+## Memory Architecture
+
+The 9-layer memory system is TIMPS's core differentiating feature. Each layer serves a specific role in persisting and enriching context:
+
+| Layer | Storage | Persistence | Contents |
+|---|---|---|---|
+| **L1 Working** | In-process | Reset on exit | Current goals, active files, recent errors |
+| **L2 Episodic** | `~/.timps/memory/<hash>/episodes.jsonl` | Disk (append-only) | Conversation summaries, outcomes |
+| **L3 Semantic** | `~/.timps/memory/<hash>/semantic.json` | Disk (permanent) | Patterns, conventions, decisions |
+| **L4 Procedural** | `~/.timps/memory/<hash>/procedural.json` | Disk | Workflows, recipes, skills |
+| **L5 ChronosForge** | `~/.timps/memory/<hash>/chronos/` | Disk | Causal graph, temporal dependencies |
+| **L6 ResonanceForge** | `~/.timps/memory/<hash>/resonance.json` | Disk | Pattern harmonics, oscillation model |
+| **L7 EchoForge** | `~/.timps/memory/<hash>/echo/` | Disk | Reservoir states, BFS context |
+| **L8 SynapseQuench** | In-memory + disk | Cross-layer | Coherence scores, conflict map |
+| **L9 HarmonicSheafWeaver** | `~/.timps/memory/<hash>/sheaf/` | Disk | Sheaf Laplacian, cohomology result |
+
+Each project gets isolated memory keyed by SHA256 hash of its absolute path. L1–L3 ship in `packages/memory-core`; L4–L9 require explicit activation as intelligence tools.
+
+### Memory Branches
+
+Memory is scoped per git branch, just like code:
+
+```bash
+timps --branch auth-refactor "analyze the auth module"
+```
+
+When the branch is merged, memory is merged into main if patterns are generally useful, archived if branch-specific, or discarded if abandoned. Data is never deleted — it moves to an `archived/` subtree.
+
+---
+
 ## Performance / Benchmarks
 
 All 17 intelligence tools are benchmarked continuously against a standardized evaluation suite. Results are tracked per-commit to prevent regression.
 
-| Metric | TIMPS | agentmemory | Improvement |
-|---|---|---|---|
-| **R@5 (Recall @ 5)** | ≥ 90% | ~75% | +15% |
-| **MRR (Mean Reciprocal Rank)** | 0.87 | 0.71 | +23% |
-| **Contradiction Accuracy** | 94% | 82% | +12% |
-| **Anomaly Precision** | 91% | — | — |
-| **Latency (avg, local SQLite)** | 12 ms | 18 ms | -33% |
-| **Latency (avg, vector)** | 45 ms | 60 ms | -25% |
+| Metric | TIMPS | agentmemory | mem0 | Letta |
+|---|---|---|---|---|
+| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
+| **MRR** | **0.82** | 0.882 | 0.71 | 0.65 |
+| **Contradiction Detection** | **100% (10/10)** | — | — | — |
+| **Intelligence Tools** | **100% (17/17)** | — | — | — |
+| **Avg Latency (recall)** | **17ms** | 45ms | 120ms | 200ms |
+| **Scalability (500 facts)** | **0.6ms mean / 1ms p95** | — | — | — |
 
 Run the benchmark suite locally:
 
@@ -236,6 +266,156 @@ npx tsx benchmark/index.ts --quick
 ```
 
 All tools are deterministic — zero `Math.random()` calls in the intelligence layer.
+
+---
+
+## 17 Intelligence Tools
+
+TIMPS ships 17 class-based intelligence tools in `packages/memory-core/src/intelligence/`, each designed for a specific cognitive function:
+
+| # | Tool | Purpose |
+|---|---|---|
+| 1 | **AetherWeft** | Analyzes code sentiment and emotional patterns in commit messages |
+| 2 | **ApexSynapse** | Cross-reference detection between concepts |
+| 3 | **AtomChain** | Semantic chunking of large documents |
+| 4 | **BindWeave** | Links related facts into knowledge clusters |
+| 5 | **ChronosVeil** | Temporal pattern detection and anomaly detection |
+| 6 | **CurateTier** | Automatic memory importance scoring |
+| 7 | **EchoForge** | Generates analogies and metaphors for concepts |
+| 8 | **ForgeLink** | Creates bidirectional links between knowledge nodes |
+| 9 | **GovernTier** | Memory access control and policy enforcement |
+| 10 | **LayerForge** | Manages hierarchical memory layer transitions |
+| 11 | **NexusForge** | Identifies central concepts and hub nodes |
+| 12 | **PolicyMetabol** | Extracts and enforces project policies from memory |
+| 13 | **SkillWeave** | Composes skills into coherent system prompts |
+| 14 | **SynapseMetabolon** | Cross-session pattern synthesis and insight generation |
+| 15 | **TemporaTree** | Manages temporal knowledge graphs with decay |
+| 16 | **ArchitectureDrift** | Detects drift between documented and actual architecture |
+| 17 | **VelocityTracker** | Tracks feature velocity and development patterns |
+
+Every tool is deterministic (zero `Math.random()`), benchmarked, and backed by file-based JSON storage.
+
+---
+
+## Swarm Architecture
+
+TIMPS includes a **10-agent swarm** that decomposes complex tasks across specialist agents. The fan-out is local — all agents run in-process, not distributed:
+
+| Agent | Job |
+|---|---|
+| **Product Manager** | Requirements decomposition |
+| **Architect** | System design and technology selection |
+| **Code Generator** | Implementation |
+| **Reviewer** | Code review and quality checks |
+| **QA** | Test generation |
+| **Security** | Security audit |
+| **Performance** | Performance analysis |
+| **DevOps** | Deployment configuration |
+| **Documentation** | Docstring and README generation |
+| **Orchestrator** | Coordinates the DAG |
+
+Launch via `timps --swarm "design a microservices auth system"` or `/swarm` from the REPL.
+
+---
+
+## Multi-Surface Support
+
+| Surface | Status | Package |
+|---|---|---|
+| **CLI** | 🟢 Stable | `timps-code` |
+| **MCP Server** | 🟢 Stable | `timps-mcp` |
+| **VS Code** | 🟢 Stable | `timps-ai-coding-agent` |
+| **Desktop (Tauri)** | 🟢 Stable | `@timps/timps-desktop` |
+| **Mobile** | 🟡 Experimental | `@timps/mobile` |
+| **Docker** | 🟢 Stable | `compose.yaml` |
+| **npm library** | 🟢 Stable | `@timps/memory-core` |
+
+---
+
+## MCP Ecosystem
+
+TIMPS exposes 46 tools as an MCP server (`timps-mcp`) so any MCP-compatible client gets persistent memory, intelligence, and velocity tracking. The provider-agnostic adapter layer routes every request through a unified interface — no matter which LLM you use (Claude, GPT, Gemini, Ollama, OpenRouter, DeepSeek, or custom endpoints), the memory system, tool execution, and agent loop behave identically:
+
+```
+                  timps CLI / MCP / VS Code
+                         │
+              ┌──────────┴──────────┐
+              │   Provider Router    │
+              │   (auto-detect)      │
+              └──────────┬──────────┘
+              ┌──────────┼──────────┐
+              │          │          │
+         ┌────▼───┐  ┌──▼───┐  ┌──▼────┐
+         │ Claude │  │GPT-4o│  │Gemini │
+         └────┬───┘  └──┬───┘  └──┬────┘
+              │          │          │
+         ┌────▼───┐  ┌──▼───┐  ┌──▼────┐
+         │Ollama  │  │ Groq │  │OpenRouter
+         └────────┘  └──────┘  └───────┘
+```
+
+This means you can switch from Claude to Ollama by changing one flag with zero behavioral difference in how memory and tools work.
+
+```
+Claude Code / Cursor / Windsurf / Cline / Continue / Goose / OpenCode / any MCP client
+         │
+    ┌────▼────┐
+    │timps-mcp│  npm install -g timps-mcp
+    └────┬────┘
+         │
+    ┌────▼────┐
+    │ Memory  │  46 tools across 6 categories
+    │Engine   │  + 17 intelligence tools
+    └─────────┘
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | Anthropic (Claude) API key |
+| `OPENAI_API_KEY` | — | OpenAI API key |
+| `GEMINI_API_KEY` | — | Google Gemini API key |
+| `OPENROUTER_API_KEY` | — | OpenRouter API key |
+| `TIMPS_MODEL` | `claude-3-5-sonnet-20241022` | Model string (prefix with `ollama/` for local) |
+| `TIMPS_URL` | — | Remote timps server URL (MCP mode) |
+| `TIMPS_TOKEN` | — | Auth token for remote server |
+| `PROJECT_PATH` | `process.cwd()` | Project root for memory scoping |
+
+### CLI Reference — Slash Commands
+
+| Command | Description |
+|---|---|
+| `/help` | Show help |
+| `/memory stats` | Memory usage statistics |
+| `/memory search <q>` | Search semantic memory |
+| `/memory clear` | Clear working memory |
+| `/memory reset` | Wipe all memory for this project |
+| `/skills list` | Browse skill marketplace |
+| `/skills search <q>` | Search available skills |
+| `/skills install <id>` | Install a skill |
+| `/skills show <id>` | View installed skill content |
+| `/git status` | Git status |
+| `/git diff` | Working tree diff |
+| `/git commit` | Write commit message with context |
+| `/swarm` | Launch multi-agent swarm analysis |
+| `/sheaf` | Harmonic sheaf analysis & prediction |
+| `/echo` | EchoForge resonance status |
+| `/exit` | Save snapshot and exit |
+
+### CLI Flags
+
+| Flag | Purpose | Example |
+|---|---|---|
+| `--provider` | Select provider | `--provider claude` |
+| `--model` | Select model | `--model gpt-4o` |
+| `--config` | Setup wizard | `--config` |
+| `--branch` | Start from memory branch | `--branch my-feature` |
+| `--swarm` | Multi-agent mode | `--swarm "design auth system"` |
 
 ---
 
@@ -260,7 +440,13 @@ Yes. TIMPS auto-detects available providers. If Ollama isn't running, it walks y
 TIMPS has 9 memory layers vs 1, 17 intelligence tools vs 0, supports 7 providers vs 3, includes a VS Code extension, mobile app, and plugin system. agentmemory is simpler and SQLite-only.
 
 **Can I contribute my own intelligence tools?**  
-Yes. See the plugin SDK in `packages/plugin-sdk/` and the contributing guide in [`CONTRIBUTING.md`](contributing.md).
+Yes. See the plugin SDK in `packages/plugin-sdk/` and the contributing guide in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+**How does the swarm work?**  
+TIMPS includes a 10-agent swarm (Product Manager, Architect, Code Generator, Reviewer, QA, Security, Performance, DevOps, Documentation, Orchestrator) that decomposes complex tasks across specialist agents. The fan-out is local — all agents run in-process. Launch via `timps --swarm "your task"` or `/swarm` from the REPL.
+
+**What surfaces are supported?**  
+CLI (`timps-code`), MCP server (`timps-mcp`), VS Code extension, Tauri desktop app (`packages/timps-desktop/`), React Native mobile app (`apps/mobile/`), and Docker deployment.
 
 **Is there a GUI?**  
 Yes — VS Code extension (native), Tauri desktop app (`packages/timps-desktop/`), and a React Native mobile app (`apps/mobile/`).
@@ -270,12 +456,11 @@ Yes — VS Code extension (native), Tauri desktop app (`packages/timps-desktop/`
 ## Documentation
 
 | File | What it covers |
-|---|---|
-| [`DOCS.md`](DOCS.md) | Installation, config, CLI commands, memory API, MCP tools |
+|---|---|---|
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 memory layers, 17 tools, benchmark, CI, MCP internals |
 | [`AGENTS.md`](AGENTS.md) | AI agent instructions for this repo |
-| [`CONTRIBUTING.md`](contributing.md) | PR checklist, skills, changesets |
-| [`CHANGELOG.md`](CHANGELOG.md) | Version history |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | PR checklist, skills, changesets |
+| [`CHANGELOG.md`](CHANGELOG.md) | Version history & roadmap |
 
 ### Package READMEs
 
@@ -284,7 +469,7 @@ Yes — VS Code extension (native), Tauri desktop app (`packages/timps-desktop/`
 | [`timps-code/README.md`](timps-code/README.md) | CLI agent |
 | [`timps-mcp/README.md`](timps-mcp/README.md) | MCP server |
 | [`timps-vscode/README.md`](timps-vscode/README.md) | VS Code extension |
-| [`sandeep-ai/README.md`](sandeep-ai/README.md) | Full server + REST API |
+| [`packages/server/README.md`](packages/server/README.md) | Full server + REST API |
 | [`packages/memory-core/README.md`](packages/memory-core/README.md) | Memory engine |
 | [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | Plugin SDK |
 | [`apps/mobile/README.md`](apps/mobile/README.md) | Mobile app |
@@ -310,7 +495,7 @@ Four ready-to-use YAML workflows for Claude Code and other AI coding agents:
   <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Contributors" />
 </a>
 
-Contributions of all kinds are welcome — code, docs, translations, plugins, or bug reports. See [`CONTRIBUTING.md`](contributing.md) to get started.
+Contributions of all kinds are welcome — code, docs, translations, plugins, or bug reports. See [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started.
 
 ### Bounty Program
 

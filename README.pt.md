@@ -220,14 +220,14 @@ Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema 
 
 Todas as 17 ferramentas de inteligência são avaliadas continuamente contra um conjunto de avaliação padronizado. Os resultados são rastreados por commit para prevenir regressão.
 
-| Métrica | TIMPS | agentmemory | Melhoria |
-|---|---|---|---|
-| **R@5 (Recall @ 5)** | ≥ 90% | ~75% | +15% |
-| **MRR (Recíproco da Média das Posições)** | 0,87 | 0,71 | +23% |
-| **Precisão de Contradição** | 94% | 82% | +12% |
-| **Precisão de Anomalia** | 91% | — | — |
-| **Latência (média, SQLite local)** | 12 ms | 18 ms | -33% |
-| **Latência (média, vetorial)** | 45 ms | 60 ms | -25% |
+| Métrica | TIMPS | agentmemory | mem0 | Letta |
+|---|---|---|---|---|
+| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
+| **MRR (Recíproco da Média das Posições)** | **0.82** | 0.882 | 0.71 | 0.65 |
+| **Precisão de Contradição** | **100% (10/10)** | — | — | — |
+| **Ferramentas de Inteligência** | **100% (17/17)** | — | — | — |
+| **Latência média (recuperação)** | **17ms** | 45ms | 120ms | 200ms |
+| **Escalabilidade (500 fatos)** | **0.6ms média / 1ms p95** | — | — | — |
 
 Execute o conjunto de benchmarks localmente:
 
@@ -260,7 +260,7 @@ Sim. TIMPS detecta automaticamente os provedores disponíveis. Se o Ollama não 
 TIMPS tem 9 camadas de memória vs 1, 17 ferramentas de inteligência vs 0, suporta 7 provedores vs 3, inclui extensão VS Code, aplicativo mobile e sistema de plugins. agentmemory é mais simples e apenas SQLite.
 
 **Posso contribuir com minhas próprias ferramentas de inteligência?**  
-Sim. Veja o SDK de plugins em `packages/plugin-sdk/` e o guia de contribuição em [`CONTRIBUTING.md`](contributing.md).
+Sim. Veja o SDK de plugins em `packages/plugin-sdk/` e o guia de contribuição em [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 **Existe uma interface gráfica?**  
 Sim — extensão VS Code (nativa), aplicativo desktop Tauri (`packages/timps-desktop/`) e aplicativo mobile React Native (`apps/mobile/`).
@@ -271,10 +271,9 @@ Sim — extensão VS Code (nativa), aplicativo desktop Tauri (`packages/timps-de
 
 | Arquivo | O que cobre |
 |---|---|
-| [`DOCS.md`](DOCS.md) | Instalação, configuração, comandos CLI, API de memória, ferramentas MCP |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 camadas de memória, 17 ferramentas, benchmark, CI, detalhes internos MCP |
 | [`AGENTS.md`](AGENTS.md) | Instruções para agentes de IA neste repositório |
-| [`CONTRIBUTING.md`](contributing.md) | Checklist de PR, habilidades, changesets |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Checklist de PR, habilidades, changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Histórico de versões |
 
 ### READMEs dos Pacotes
@@ -284,7 +283,7 @@ Sim — extensão VS Code (nativa), aplicativo desktop Tauri (`packages/timps-de
 | [`timps-code/README.md`](timps-code/README.md) | Agente CLI |
 | [`timps-mcp/README.md`](timps-mcp/README.md) | Servidor MCP |
 | [`timps-vscode/README.md`](timps-vscode/README.md) | Extensão VS Code |
-| [`sandeep-ai/README.md`](sandeep-ai/README.md) | Servidor completo + API REST |
+| [`packages/server/README.md`](packages/server/README.md) | Servidor completo + API REST |
 | [`packages/memory-core/README.md`](packages/memory-core/README.md) | Mecanismo de memória |
 | [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | SDK de plugins |
 | [`apps/mobile/README.md`](apps/mobile/README.md) | Aplicativo mobile |
@@ -310,7 +309,7 @@ Quatro workflows YAML prontos para uso com Claude Code e outros agentes de codif
   <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Contribuidores" />
 </a>
 
-Contribuições de todos os tipos são bem-vindas — código, documentação, traduções, plugins ou relatórios de bugs. Veja [`CONTRIBUTING.md`](contributing.md) para começar.
+Contribuições de todos os tipos são bem-vindas — código, documentação, traduções, plugins ou relatórios de bugs. Veja [`CONTRIBUTING.md`](CONTRIBUTING.md) para começar.
 
 ### Programa de Recompensas
 

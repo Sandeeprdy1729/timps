@@ -3,6 +3,10 @@
   "version": "2.0.1",
   "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 17 more tools for Claude Code, Cursor, and Windsurf",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "bin": {
     "timps-mcp": "./dist/index.js"
   },
@@ -13,8 +17,10 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs --no-dts --out-dir dist",
     "start": "node dist/index.js",
-    "typecheck": "node --max-old-space-size=4096 ../node_modules/typescript/bin/tsc --noEmit"
+    "typecheck": "node --max-old-space-size=4096 ../node_modules/typescript/bin/tsc --noEmit",
+    "test": "jest"
   },
+  "author": "TIMPS Contributors",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -36,7 +42,6 @@
     "gemini",
     "claude-code-alternative"
   ],
-  "author": "Sandeeprdy1729",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -57,6 +62,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
     "tsup": "^8.5.1",
     "typescript": "^5.5.0"
   },

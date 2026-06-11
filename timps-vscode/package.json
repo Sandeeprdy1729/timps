@@ -1,9 +1,13 @@
 {
   "name": "timps-ai-coding-agent",
   "displayName": "TIMPS \u2014 AI Coding Agent",
-  "description": "AI coding agent powered by TIMPS-Coder (local Ollama) or OpenAI / Gemini",
+  "description": "AI coding assistant with persistent memory — understands your codebase across sessions. Supports local Ollama and cloud models.",
   "version": "1.2.0",
   "publisher": "TIMPs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
   "icon": "logo.png",
   "engines": {
     "vscode": "^1.115.0"
@@ -11,7 +15,7 @@
   "categories": [
     "AI",
     "Chat",
-    "Other"
+    "Programming Languages"
   ],
   "keywords": [
     "ai",
@@ -25,9 +29,6 @@
     "local-llm",
     "ai-agent",
     "mcp"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -245,12 +246,16 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "vscode:prepublish": "npm run compile",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "jest"
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.115.0",
+    "@types/jest": "^29.5.0",
     "@vscode/vsce": "^2.32.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.9.3"
   },
   "overrides": {

@@ -220,14 +220,14 @@ Lorsque vous posez une question à TIMPS, la requête traverse le système de m�
 
 Les 17 outils d'intelligence sont continuellement benchmarkés par rapport à une suite d'évaluation standardisée. Les résultats sont suivis par commit pour éviter les régressions.
 
-| Métrique | TIMPS | agentmemory | Amélioration |
-|---|---|---|---|
-| **R@5 (Rappel @ 5)** | ≥ 90 % | ~75 % | +15 % |
-| **MRR (Rang Réciproque Moyen)** | 0,87 | 0,71 | +23 % |
-| **Précision des Contradictions** | 94 % | 82 % | +12 % |
-| **Précision des Anomalies** | 91 % | — | — |
-| **Latence (moy, SQLite local)** | 12 ms | 18 ms | -33 % |
-| **Latence (moy, vectoriel)** | 45 ms | 60 ms | -25 % |
+| Métrique | TIMPS | agentmemory | mem0 | Letta |
+|---|---|---|---|---|
+| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
+| **MRR (Rang Réciproque Moyen)** | **0.82** | 0.882 | 0.71 | 0.65 |
+| **Précision des Contradictions** | **100% (10/10)** | — | — | — |
+| **Outils d'Intelligence** | **100% (17/17)** | — | — | — |
+| **Latence moyenne (rappel)** | **17ms** | 45ms | 120ms | 200ms |
+| **Extensibilité (500 faits)** | **0.6ms moyenne / 1ms p95** | — | — | — |
 
 Exécutez la suite de benchmarks localement :
 
@@ -260,7 +260,7 @@ Oui. TIMPS détecte automatiquement les fournisseurs disponibles. Si Ollama n'es
 TIMPS a 9 couches mémoire contre 1, 17 outils d'intelligence contre 0, prend en charge 7 fournisseurs contre 3, et inclut une extension VS Code, une application mobile et un système de plugins. agentmemory est plus simple et limité à SQLite.
 
 **Puis-je contribuer avec mes propres outils d'intelligence ?**  
-Oui. Consultez le SDK de plugin dans `packages/plugin-sdk/` et le guide de contribution dans [`CONTRIBUTING.md`](contributing.md).
+Oui. Consultez le SDK de plugin dans `packages/plugin-sdk/` et le guide de contribution dans [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 **Y a-t-il une interface graphique ?**  
 Oui — extension VS Code (native), application de bureau Tauri (`packages/timps-desktop/`) et application mobile React Native (`apps/mobile/`).
@@ -271,10 +271,9 @@ Oui — extension VS Code (native), application de bureau Tauri (`packages/timps
 
 | Fichier | Ce qu'il couvre |
 |---|---|
-| [`DOCS.md`](DOCS.md) | Installation, configuration, commandes CLI, API mémoire, outils MCP |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 couches mémoire, 17 outils, benchmark, CI, internes MCP |
 | [`AGENTS.md`](AGENTS.md) | Instructions pour les agents IA sur ce dépôt |
-| [`CONTRIBUTING.md`](contributing.md) | Liste de contrôle PR, compétences, changesets |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Liste de contrôle PR, compétences, changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historique des versions |
 
 ### README des paquets
@@ -284,7 +283,7 @@ Oui — extension VS Code (native), application de bureau Tauri (`packages/timps
 | [`timps-code/README.md`](timps-code/README.md) | Agent CLI |
 | [`timps-mcp/README.md`](timps-mcp/README.md) | Serveur MCP |
 | [`timps-vscode/README.md`](timps-vscode/README.md) | Extension VS Code |
-| [`sandeep-ai/README.md`](sandeep-ai/README.md) | Serveur complet + API REST |
+| [`packages/server/README.md`](packages/server/README.md) | Serveur complet + API REST |
 | [`packages/memory-core/README.md`](packages/memory-core/README.md) | Moteur mémoire |
 | [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | SDK de plugin |
 | [`apps/mobile/README.md`](apps/mobile/README.md) | Application mobile |
@@ -310,7 +309,7 @@ Quatre workflows YAML prêts à l'emploi pour Claude Code et autres agents de co
   <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Contributeurs" />
 </a>
 
-Les contributions de toutes sortes sont les bienvenues — code, documentation, traductions, plugins ou rapports de bogues. Consultez [`CONTRIBUTING.md`](contributing.md) pour commencer.
+Les contributions de toutes sortes sont les bienvenues — code, documentation, traductions, plugins ou rapports de bogues. Consultez [`CONTRIBUTING.md`](CONTRIBUTING.md) pour commencer.
 
 ### Programme de primes
 

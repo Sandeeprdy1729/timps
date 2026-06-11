@@ -1,7 +1,7 @@
 {
   "name": "@timps/server",
   "version": "2.0.4",
-  "description": "TIMPs — The AI memory layer that gets smarter the longer you use it. 17 intelligence tools built on persistent memory.",
+  "description": "TIMPs server — persistent AI memory with 17 intelligence tools for coding agents. Long-term memory, contradiction detection, burnout monitoring, and relationship intelligence for LLM-powered development.",
   "main": "dist/main.js",
   "exports": {
     ".": "./dist/main.js",
@@ -10,7 +10,7 @@
     "./tools": "./dist/tools/index.js",
     "./models": "./dist/models/index.js",
     "./config": "./dist/config/env.js",
-    "./sdk": "./sdk/typescript/src/index.ts"
+    "./sdk": "./dist/sdk/typescript/src/index.js"
   },
   "bin": {
     "timps": "./dist/main.js"
@@ -46,13 +46,13 @@
     "relationship-intelligence",
     "developer-tools"
   ],
-  "author": "Sandeeprdy1729",
+  "author": "TIMPS Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Sandeeprdy1729/timps"
   },
-  "homepage": "https://github.com/Sandeeprdy1729/timps",
+  "homepage": "https://timps.ai",
   "bugs": {
     "url": "https://github.com/Sandeeprdy1729/timps/issues"
   },
