@@ -66,3 +66,13 @@ temp/
 .dockerignore
 sandeep-ai/.env
 sandeep-ai/node_modules
+
+# Training data (hosted externally)
+timps-code/dataset/*.jsonl
+timps-code/dataset/stats.json
+timps-code/dataset/checkpoint.json
+
+# Build caches / generated files
+**/.gradle/
+**/.docusaurus/
+timps-website/
