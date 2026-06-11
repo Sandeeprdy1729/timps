@@ -26,7 +26,7 @@ Server starts at `http://localhost:3000`. Dashboard at `http://localhost:3000/da
 ## Quick Start (manual)
 
 ```bash
-cd sandeep-ai
+cd packages/server
 cp .env.example .env   # add your API keys
 npm install
 npm run server

@@ -1,5 +1,5 @@
 // ── Tool 2 port: Regret Oracle ──
-// Ported from sandeep-ai/tools/allTools.ts RegretOracleTool
+// Ported from packages/server/tools/allTools.ts RegretOracleTool
 // Storage: JSON file instead of Postgres decisions table
 // Analysis: deterministic Jaccard similarity (no LLM)
 

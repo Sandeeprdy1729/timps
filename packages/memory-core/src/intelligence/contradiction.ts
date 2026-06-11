@@ -1,5 +1,5 @@
 // ── Tool 5 port: Argument DNA Mapper → Contradiction Detector ──
-// Ported from sandeep-ai/tools/contradictionTool.ts + positionStore.ts
+// Ported from packages/server/tools/contradictionTool.ts + positionStore.ts
 // Storage: JSON file instead of Postgres + Qdrant
 // Analysis: deterministic Jaccard similarity instead of LLM
 //

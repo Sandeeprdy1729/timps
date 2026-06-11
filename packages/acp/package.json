@@ -1,7 +1,7 @@
 {
   "name": "@timps/acp",
   "version": "0.1.0",
-  "description": "Agent Communication Protocol — multi-agent message bus for TIMPS",
+  "description": "Agent Communication Protocol for TIMPS — multi-agent message bus and inter-agent coordination for AI agent swarms.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +17,12 @@
   },
   "files": ["dist"],
   "keywords": ["timps", "agent", "acp", "multi-agent"],
+  "author": "TIMPS Contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
   "devDependencies": {
     "typescript": "^5.0.0",
     "@types/node": "^22.0.0",

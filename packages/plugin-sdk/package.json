@@ -1,7 +1,7 @@
 {
   "name": "@timps/plugin-sdk",
   "version": "0.1.0",
-  "description": "Formal plugin interface for extending TIMPS agents — register commands, tools, and lifecycle hooks",
+  "description": "TIMPS plugin SDK — formal interface for extending TIMPS agents with custom commands, tools, and lifecycle hooks. Build plugins for AI coding workflows.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -34,7 +34,12 @@
     "sdk",
     "extensibility"
   ],
+  "author": "TIMPS Contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
+  },
   "publishConfig": {
     "access": "public"
   }

@@ -41,7 +41,7 @@ A beautiful, responsive web interface featuring:
 
 ### 1. Install Dependencies
 ```bash
-cd /path/to/timps/sandeep-ai
+cd /path/to/timps/packages/server
 npm install
 ```
 
@@ -269,7 +269,7 @@ Font: **IBM Plex** (Mono for code, Sans for UI)
 
 ### Local development with hot reload
 ```bash
-cd /path/to/timps/sandeep-ai
+cd /path/to/timps/packages/server
 npm run server
 # Edit public/index.html or public/chat.html
 # Changes auto-refresh (static files)

@@ -1,7 +1,7 @@
 // ── @timps/memory-core — ChronosForge ──
 // Temporal Contradiction Weaver + Foresight Simulator
 //
-// File-based variant of the server-side ChronosForge (sandeep-ai).
+// File-based variant of the server-side ChronosForge (packages/server).
 // Drop-in for CLI / MCP / VSCode contexts where no PostgreSQL is available.
 //
 // Features:

@@ -1,5 +1,5 @@
 // ── Tool 9 port: Technical Debt Seismograph ──
-// Ported from sandeep-ai/tools/allTools.ts TechDebtSeismographTool
+// Ported from packages/server/tools/allTools.ts TechDebtSeismographTool
 // Storage: JSON file instead of Postgres code_incidents table
 // Analysis: deterministic keyword matching (no LLM)
 

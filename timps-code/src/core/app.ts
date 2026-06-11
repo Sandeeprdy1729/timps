@@ -1370,7 +1370,7 @@ export async function handleSlashCommand(
       const loadProvenForge = async () => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const pf = require('../../sandeep-ai/core/provenForge.js');
+          const pf = require('../../packages/server/core/provenForge.js');
           return pf.provenForge;
         } catch {
           const { provenForge } = await import('../team/provenForgeStub.js');
@@ -1383,7 +1383,7 @@ export async function handleSlashCommand(
         case 'branches': {
           const pf = await loadProvenForge();
           if (!pf) {
-            console.log(`\n  ${t.dim('ProvenForge not available (requires sandeep-ai connection)')}\n`);
+            console.log(`\n  ${t.dim('ProvenForge not available (requires server connection)')}\n`);
             break;
           }
           const versions = await pf.retrieveBy({ limit: 20 });
@@ -1482,7 +1482,7 @@ export async function handleSlashCommand(
     case 'govern': {
       const loadGovernTier = async () => {
         try {
-          const pf = require('../../sandeep-ai/core/governTier.js');
+          const pf = require('../../packages/server/core/governTier.js');
           return pf.governTier;
         } catch {
           return null;
@@ -1491,7 +1491,7 @@ export async function handleSlashCommand(
 
       const gov = await loadGovernTier();
       if (!gov) {
-        console.log(`\n  ${t.dim('GovernTier not available (requires sandeep-ai connection)')}\n`);
+        console.log(`\n  ${t.dim('GovernTier not available (requires server connection)')}\n`);
         break;
       }
 

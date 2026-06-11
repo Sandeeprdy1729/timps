@@ -4,7 +4,7 @@
  * Seeds realistic data across all 17 tools so the dashboard looks alive.
  *
  * Usage:
- *   cd sandeep-ai
+ *   cd packages/server
  *   npx ts-node seed.ts [--user-id 1] [--reset]
  *
  * --reset  deletes existing seed data before seeding

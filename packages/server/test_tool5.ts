@@ -54,7 +54,7 @@ async function runTests() {
   } catch (e: any) {
     fail('Server unreachable: ' + e.message);
     failed++;
-    console.log('\n  → Start the server first: cd sandeep-ai && npm run server\n');
+    console.log('\n  → Start the server first: cd packages/server && npm run server\n');
     process.exit(1);
   }
 

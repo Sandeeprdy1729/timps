@@ -116,7 +116,7 @@ After the main module, scan the codebase for any of:
 ```bash
 # Run tests in every package touched today
 cd timps-code && npm test
-cd ../sandeep-ai && npm run typecheck
+cd ../packages/server && npm run typecheck
 cd ../timps-mcp && npm test
 ```
 If tests fail due to a change made today, fix the failure before committing.
@@ -302,7 +302,7 @@ New LRU cache module:
 - Thread-safe (use `AsyncLocalStorage` for request isolation).
 - Full JSDoc + ≥ 12 unit tests.
 
-#### 3-C. API Response Compression (`sandeep-ai/api/`)
+#### 3-C. API Response Compression (`packages/server/api/`)
 - Add `compression` middleware to all Express routers.
 - Add HTTP/2 server push for high-frequency endpoints.
 - Add response caching with `Cache-Control` headers.
@@ -313,11 +313,11 @@ New LRU cache module:
 - Identify and fix top-3 hotspots.
 - Add criterion benchmarks for the fixed functions.
 
-#### 3-E. Database Index Audit (`sandeep-ai/db/`)
+#### 3-E. Database Index Audit (`packages/server/db/`)
 - Audit all MongoDB/SQLite queries using EXPLAIN.
 - Add missing indexes.
 - Remove unused indexes.
-- Document in `sandeep-ai/db/INDEX_AUDIT.md`.
+- Document in `packages/server/db/INDEX_AUDIT.md`.
 
 ---
 
@@ -364,7 +364,7 @@ New module:
 
 Mandatory deliverables:
 
-#### 5-A. REST API Hardening (`sandeep-ai/api/`)
+#### 5-A. REST API Hardening (`packages/server/api/`)
 - Add OpenAPI 3.1 spec auto-generated from route handlers (use `zod-to-openapi`).
 - Add versioning middleware (`/v1/`, `/v2/`).
 - Add request ID propagation (`X-Request-ID` header).
@@ -408,11 +408,11 @@ For every package with < 80% coverage:
 - Use `jest --coverage --collectCoverageFrom` for accurate reporting.
 
 #### 6-B. Integration Test Suite (`packages/integration-tests/`)
-- Add end-to-end tests for all happy paths in `sandeep-ai/api/`.
+- Add end-to-end tests for all happy paths in `packages/server/api/`.
 - Add chaos tests: inject random errors and verify graceful degradation.
 - Add load tests using `autocannon` (target: 1 000 req/s at < 50 ms p95).
 
-#### 6-C. OpenTelemetry Instrumentation (`sandeep-ai/core/`, `timps-code/src/core/`)
+#### 6-C. OpenTelemetry Instrumentation (`packages/server/core/`, `timps-code/src/core/`)
 - Instrument every agent loop iteration with OTEL spans.
 - Add metrics: request count, error rate, memory retrieval latency,
   agent token usage, tool execution time.
@@ -429,7 +429,7 @@ For every package with < 80% coverage:
 #### 6-E. Mutation Testing
 Run `stryker` on the three most critical files:
 - `timps-code/src/memory/hybridRetriever.ts`
-- `sandeep-ai/api/routes.ts`
+- `packages/server/api/routes.ts`
 - `timps-code/src/core/agent.ts`
 Kill ≥ 80% of mutants. Add tests for surviving mutants.
 

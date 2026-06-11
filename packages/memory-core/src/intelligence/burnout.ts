@@ -1,5 +1,5 @@
 // ── Tool 4 port: Burnout Seismograph ──
-// Ported from sandeep-ai/tools/allTools.ts BurnoutSeismographTool
+// Ported from packages/server/tools/allTools.ts BurnoutSeismographTool
 // Storage: JSON file instead of Postgres burnout_signals + burnout_baseline tables
 // Analysis: deterministic deviation scoring (no LLM)
 //

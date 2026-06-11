@@ -34,7 +34,7 @@ Titanic resonance forge — sank/unsank bifurcation, belief polarization simulat
 Quantum walk over epistemic states — unitary coin operator (Hadamard), position-space superposition, shift operator, measurement with Born-rule collapse, and epistemic entanglement tracking.
 
 ## Layer 15: QISRD (Quantum Information & State Representation & Dynamics)
-Quantum state tomography + density matrix + CPTP map evolution + von Neumann entropy + quantum Fisher information + Holevo channel capacity + quantum relative entropy + state fidelity. Complete integration in: MemoryEngine, index.ts, timps-code veil, sandeep-ai wrapper.
+Quantum state tomography + density matrix + CPTP map evolution + von Neumann entropy + quantum Fisher information + Holevo channel capacity + quantum relative entropy + state fidelity. Complete integration in: MemoryEngine, index.ts, timps-code veil, packages/server wrapper.
 
 ## Layer 16: CausalSheafFlux
 Causal sheaf flux propagation — directed acyclic graph (DAG) of causal nodes with flux, divergence, and sheaf-theoretic restriction maps. Incremental priority-queue propagation, cohomological contradiction detection via graph Laplacian (H⁰/H¹/betti numbers), flux-weighted causal prediction with intervention simulation, causal query with flux sorting, and consolidation with pruning of zero-flux nodes. All 16 tests passing.
@@ -47,7 +47,7 @@ Temporal Sheaf Resonator — time-aware sheaf cohomology with temporal stalks (v
 - **Resonance quenching**: phase-incoherent + low-amplitude nodes pruned deterministically
 - **O(|affected|) incremental updates**: local subgraph PQ propagation with edge-weight scaling
 - **Temporal foresight**: +15-20pt vs pure eigenmode projection (trajectory boosted by validity duration)
-- 19 tests passing, fully integrated into MemoryEngine, index.ts, timps-code veil, sandeep-ai wrapper
+- 19 tests passing, fully integrated into MemoryEngine, index.ts, timps-code veil, packages/server wrapper
 
 ## Status
 - **Complete:** L1–L17 fully implemented, all tests passing

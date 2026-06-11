@@ -39,18 +39,18 @@ updates:
       - "dependencies"
       - "timps-vscode"
 
-  # sandeep-ai
+  # packages/server
   - package-ecosystem: "npm"
-    directory: "/sandeep-ai"
+    directory: "/packages/server"
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 1
     groups:
-      sandeep-ai-deps:
+      server-deps:
         patterns: ["*"]
     labels:
       - "dependencies"
-      - "sandeep-ai"
+      - "server"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

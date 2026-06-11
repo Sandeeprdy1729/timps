@@ -1,0 +1,9 @@
+{
+  "name": "@timps/file-utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TIMPS file system utilities — read, write, glob, and file info wrappers",
+  "main": "src/index.ts",
+  "author": "TIMPS Contributors",
+  "license": "MIT"
+}

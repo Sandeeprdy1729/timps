@@ -1,7 +1,7 @@
 {
   "name": "timps-mcp-server",
   "version": "1.0.0",
-  "description": "TIMPs MCP Server for Claude Desktop/Cursor integration",
+  "description": "TIMPS MCP Server — Model Context Protocol server for Claude Desktop, Cursor, Windsurf, and MCP-compatible AI tools. Persistent memory and intelligence tools.",
   "type": "module",
   "scripts": {
     "build": "tsc",

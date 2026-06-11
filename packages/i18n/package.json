@@ -1,0 +1,9 @@
+{
+  "name": "@timps/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TIMPS internationalization — multi-locale translations for en, de, es, fr, ja, pt with CLI support",
+  "main": "src/index.ts",
+  "author": "TIMPS Contributors",
+  "license": "MIT"
+}

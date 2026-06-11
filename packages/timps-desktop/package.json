@@ -2,7 +2,8 @@
   "name": "@timps/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "TIMPS Desktop — cross-platform memory cockpit (Tauri 2)",
+  "author": "TIMPS Contributors",
+  "description": "TIMPS Desktop — cross-platform memory cockpit built with Tauri 2. Visualize and manage your AI agent's persistent memory graph.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

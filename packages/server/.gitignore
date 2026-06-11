@@ -10,6 +10,24 @@ dist/
 build/
 *.tsbuildinfo
 
+# Compiled JS/declaration artifacts alongside sources
+config/*.js
+config/*.d.ts
+config/*.js.map
+config/*.d.ts.map
+core/*.js
+core/*.d.ts
+core/*.js.map
+core/*.d.ts.map
+db/*.js
+db/*.d.ts
+db/*.js.map
+db/*.d.ts.map
+models/*.js
+models/*.d.ts
+models/*.js.map
+models/*.d.ts.map
+
 # Environment variables
 .env
 .env.local

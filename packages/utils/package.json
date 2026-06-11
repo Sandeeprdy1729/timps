@@ -1,0 +1,9 @@
+{
+  "name": "@timps/utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TIMPS shared utilities — retry with backoff, rate limiting, debounce, throttle, circuit breaker, and data structures",
+  "main": "src/index.ts",
+  "author": "TIMPS Contributors",
+  "license": "MIT"
+}

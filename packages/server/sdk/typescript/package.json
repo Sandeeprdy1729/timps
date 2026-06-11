@@ -1,7 +1,7 @@
 {
   "name": "@timps/sdk",
   "version": "1.0.0",
-  "description": "TIMPs SDK - The heart of AI memory systems",
+  "description": "TIMPS SDK — build AI agents with persistent memory. Integrates with LangChain, CrewAI, and RAG pipelines for long-term context retention.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -17,7 +17,7 @@
     "crewai",
     "rag"
   ],
-  "author": "TIMPs",
+  "author": "TIMPS Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 # Exclude workspace package node_modules and build artifacts
-sandeep-ai/node_modules/
-sandeep-ai/coverage/
+packages/server/node_modules/
+packages/server/coverage/
 timps-code/
 timps-mcp/
 timps-vscode/

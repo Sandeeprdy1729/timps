@@ -2,6 +2,14 @@ import en from './en.json';
 import enCli from './en-cli.json';
 import de from './de.json';
 import deCli from './de-cli.json';
+import es from './es.json';
+import esCli from './en-cli.json';
+import fr from './fr.json';
+import frCli from './en-cli.json';
+import ja from './ja.json';
+import jaCli from './en-cli.json';
+import pt from './pt.json';
+import ptCli from './en-cli.json';
 
 export type TranslationKeys = typeof en & typeof enCli;
 export type Language = 'en' | 'de' | 'es' | 'fr' | 'ja' | 'pt';
@@ -9,10 +17,10 @@ export type Language = 'en' | 'de' | 'es' | 'fr' | 'ja' | 'pt';
 export const translations: Record<Language, TranslationKeys> = {
   en: mergeTranslations(en, enCli),
   de: mergeTranslations(de, deCli),
-  es: enCli as any,
-  fr: enCli as any,
-  ja: enCli as any,
-  pt: enCli as any,
+  es: mergeTranslations(es, esCli),
+  fr: mergeTranslations(fr, frCli),
+  ja: mergeTranslations(ja, jaCli),
+  pt: mergeTranslations(pt, ptCli),
 };
 
 function mergeTranslations(base: any, cli: any): TranslationKeys {

@@ -32,6 +32,7 @@ export class ConnectionManager {
   private healthCheckIntervals: Map<string, NodeJS.Timeout> = new Map();
   private reauthQueue: ReauthTrigger[] = [];
   private storageKey = 'timps_connections';
+  private idCounter = 0;
 
   constructor() {
     this.loadFromStorage();
@@ -89,7 +90,7 @@ export class ConnectionManager {
   }
 
   async connect(config: ConnectionConfig): Promise<ConnectionState> {
-    const connectionId = `${config.integrationId}-${Date.now()}`;
+    const connectionId = `${config.integrationId}-${Date.now()}-${++this.idCounter}`;
     const state: ConnectionState = {
       id: connectionId,
       integrationId: config.integrationId,
@@ -361,3 +362,5 @@ export class ConnectionManager {
 }
 
 export const connectionManager = new ConnectionManager();
+
+export type { ConnectionConfig, ConnectionState, ConnectionStatus, ConnectionHealthCheck, ReauthTrigger, IntegrationCredentialUpdate };

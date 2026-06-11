@@ -2,6 +2,7 @@
   "name": "@timps/marketplace",
   "version": "1.0.0",
   "private": true,
+  "description": "TIMPS marketplace — discover and share AI agent plugins, tools, and extensions for the TIMPS ecosystem.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

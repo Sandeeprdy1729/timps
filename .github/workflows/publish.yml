@@ -21,19 +21,19 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: sandeep-ai/package-lock.json
+          cache-dependency-path: packages/server/package-lock.json
 
       - name: Install dependencies
-        run: cd sandeep-ai && npm ci
+        run: cd packages/server && npm ci
 
       - name: Build
-        run: cd sandeep-ai && npm run build
+        run: cd packages/server && npm run build
 
       - name: Verify build
-        run: test -f sandeep-ai/dist/main.js
+        run: test -f packages/server/dist/main.js
 
       - name: Publish to npm
-        run: cd sandeep-ai && npm publish --access public
+        run: cd packages/server && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

@@ -32,7 +32,7 @@ import { CodeGraph } from '../memory/codeGraph.js';
 const getProvenForge = async () => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pf = require('../../sandeep-ai/core/provenForge.js');
+    const pf = require('../../packages/server/core/provenForge.js');
     return pf.provenForge;
   } catch {
     const { provenForge } = await import('../team/provenForgeStub.js');

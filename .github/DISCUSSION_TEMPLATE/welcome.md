@@ -3,7 +3,7 @@
 We're using Discussions as a place to connect with the TIMPS community. Here's how to use the categories:
 
 - **💡 Ideas** — Feature requests, improvements, or wild ideas
-- **❓ Q&A** — Ask the community for help (check [DOCS.md](../blob/main/DOCS.md) first)
+- **❓ Q&A** — Ask the community for help (check [README.md](../blob/main/README.md) first)
 - **🙏 Show and tell** — Share what you built with TIMPS
 - **🗳️ Polls** — Community votes on direction
 - **📢 Announcements** — Releases and updates from maintainers

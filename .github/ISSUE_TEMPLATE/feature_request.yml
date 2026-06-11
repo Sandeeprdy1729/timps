@@ -32,7 +32,7 @@ body:
         - "timps-code (CLI coding agent)"
         - "timps-mcp (MCP server / tools)"
         - "timps-vscode (VS Code extension)"
-        - "sandeep-ai (full server)"
+        - "packages/server (full server)"
         - "New component"
     validations:
       required: true

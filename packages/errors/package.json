@@ -1,0 +1,9 @@
+{
+  "name": "@timps/errors",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TIMPS error codes and custom error classes for structured error handling",
+  "main": "src/index.ts",
+  "author": "TIMPS Contributors",
+  "license": "MIT"
+}

@@ -1,7 +1,7 @@
 // ── Tool 11 port: API Archaeologist ──
-// Ported from sandeep-ai/tools/allTools.ts APIArchaeologistTool
+// Ported from packages/server/tools/allTools.ts APIArchaeologistTool
 // Storage: JSON file instead of Postgres api_knowledge table
-// Operations: record_quirk, lookup, list — identical to sandeep-ai version
+// Operations: record_quirk, lookup, list — identical to packages/server version
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

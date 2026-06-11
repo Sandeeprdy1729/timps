@@ -3,8 +3,8 @@ services:
     name: timps-api
     runtime: node
     plan: free
-    buildCommand: cd sandeep-ai && npm install && npm run build
-    startCommand: cd sandeep-ai && node dist/main.js server
+    buildCommand: cd packages/server && npm install && npm run build
+    startCommand: cd packages/server && node dist/main.js server
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV

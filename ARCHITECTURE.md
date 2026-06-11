@@ -9,7 +9,7 @@ Counted with: `find . -type f -name "*.ts" ! -name "*.d.ts" ! -path "*/node_modu
 | Package | TypeScript LOC | Purpose |
 |---|---|---|
 | `timps-code` | ~19,500 | CLI coding agent, agent loop, 25+ tools, TUI |
-| `sandeep-ai` | ~20,300 | Full server, REST API, dashboard, 17 intelligence tools |
+| `packages/server` | ~20,300 | Full server, REST API, dashboard, 17 intelligence tools |
 | `timps-vscode` | ~5,200 | VS Code extension, chat panel, memory explorer |
 | `timps-mcp` | ~540 | MCP server, 20 persistent-memory tools |
 | **Total** | **~45,500** | |
@@ -42,9 +42,9 @@ timps/
 │       ├── memory.ts            # Memory sidebar + episodic viewer
 │       ├── nexusExplorer.ts     # Memory graph explorer (WebView)
 │       ├── features/            # Individual extension features
-│       └── client/              # timpsClient.ts — connects to sandeep-ai
+│       └── client/              # timpsClient.ts — connects to packages/server
 │
-└── sandeep-ai/          # Full server (@timps/server)
+└── packages/server/          # Full server (@timps/server)
     └── src/
         ├── core/        # Agent loop, planner, executor, 17 intelligence tools
         ├── memory/      # Long-term + embedding memory
@@ -79,7 +79,7 @@ Layer 5 — ChronosForge         → ~/.timps/memory/<project-hash>/chronos/
 
   Sub-components (by package):
     • packages/memory-core/src/ChronosForge.ts  — file-backed (CLI / MCP / VSCode)
-    • sandeep-ai/memory/chronosForge.ts          — PostgreSQL-backed (full server)
+    • packages/server/memory/chronosForge.ts          — PostgreSQL-backed (full server)
     • timps-code/src/memory/chronosVeil.ts       — 4-layer classification overlay
 
   Key APIs:
@@ -104,7 +104,7 @@ Layer 6 — ResonanceForge        → ~/.timps/memory/<project-hash>/resonance/
 
   Sub-components (by package):
     • packages/memory-core/src/ResonanceForge.ts — file-backed (CLI / MCP / VSCode)
-    • sandeep-ai/memory/resonanceForge.ts         — PostgreSQL-backed (full server)
+    • packages/server/memory/resonanceForge.ts         — PostgreSQL-backed (full server)
 
   Key APIs:
     weave(content, opts)               — add a resonance node, detect supersessions
@@ -144,7 +144,7 @@ Layer 7 — EchoForge             → ~/.timps/memory/<project-hash>/echo/
   Sub-components (by package):
     • packages/memory-core/src/EchoForge.ts   — file-backed (CLI / MCP / VSCode)
     • packages/memory-core/src/echo_forge.py  — Python reference implementation
-    • sandeep-ai/memory/echoForge.ts          — server-side singleton (multi-user)
+    • packages/server/memory/echoForge.ts          — server-side singleton (multi-user)
     • timps-code/src/memory/echoVeil.ts       — CLI integration (agent prompt injection)
 
   Key APIs:
@@ -220,7 +220,7 @@ User input
   → Retry (× 3)        on tool error, revise approach and retry
 ```
 
-## Intelligence tools (sandeep-ai)
+## Intelligence tools (packages/server)
 
 17 tools that analyze your personal history to give advice no general LLM can:
 
@@ -267,12 +267,12 @@ This trips up every new agent. Memory is implemented in three places that overla
 
 1. **`packages/memory-core/`** — canonical library, exports `MemoryEngine` + the advanced layers (ChronosForge, ResonanceForge, EchoForge, HarmonicSheafWeaver) + the 17 intelligence tools. Used by `timps-code` via `@timps/memory-core` import. **This is the source of truth for intelligence tool behavior.**
 2. **`timps-code/src/memory/`** — runtime wrappers + the early-layer files (snapshot, procedural, knowledgeGraph, hybridRetriever, sqliteStore, chronosVeil, etc.) and the L8 SynapseQuench that does NOT live in memory-core.
-3. **`sandeep-ai/memory/`** — server-side re-implementations (longTerm, shortTerm, embedding, plus its own copies of EchoForge/ResonanceForge/ChronosForge/harmonicSheafWeaver). The 17 intelligence tool logic here is a different code path that may drift from memory-core.
+3. **`packages/server/memory/`** — server-side re-implementations (longTerm, shortTerm, embedding, plus its own copies of EchoForge/ResonanceForge/ChronosForge/harmonicSheafWeaver). The 17 intelligence tool logic here is a different code path that may drift from memory-core.
 
 Layers in the active memory stack (per `timps-code/src/memory/memory.ts`):
 - L1 Working, L2 Episodic, L3 Semantic, L4 Procedural, L5 ChronosForge, L6 ResonanceForge, L7 EchoForge, L8 SynapseQuench, L9 HarmonicSheafWeaver.
 
-When changing memory behavior, identify which of the three implementations your code path uses **first**. Don't edit memory-core expecting it to affect sandeep-ai.
+When changing memory behavior, identify which of the three implementations your code path uses **first**. Don't edit memory-core expecting it to affect packages/server.
 
 ## 17 intelligence tools — canonical list (memory-core)
 
@@ -302,7 +302,7 @@ All 17 are in `packages/memory-core/src/intelligence/`, all are class-based with
 
 - **Single file**: all 61 tools are defined inline in `src/index.ts` (~1247 lines). There is no `src/tools/` directory. Count: 61 `registerTool` calls (verified by grep).
 - 61 tools = 17 intelligence engines (39 tool wrappers: 17 read + ~22 write companions like `timps_record_mention`, `timps_log_past_decision`, `timps_complete_commitment`, etc.) + 22 memory/CRUD wrappers (`timps_chat`, `timps_get_memories`, `timps_store_memory`, `timps_chronos_*`, `timps_nexus_*`, `timps_synapse_*`, etc.).
-- All 17 intelligence tools work in LOCAL mode (no `TIMPS_URL` needed). SERVER mode proxies to `sandeep-ai` HTTP API for the higher-level memory layers (Chronos, Nexus, Synapse).
+- All 17 intelligence tools work in LOCAL mode (no `TIMPS_URL` needed). SERVER mode proxies to `packages/server` HTTP API for the higher-level memory layers (Chronos, Nexus, Synapse).
 - Built with `tsup` (CJS, no dts) because `tsc` on the full MCP SDK types OOMs. The CI workflow has a comment about this — preserve it.
 - Typecheck needs `--max-old-space-size=4096`. The script in `package.json` already does this; don't shorten it.
 

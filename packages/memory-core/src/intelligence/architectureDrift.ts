@@ -1,5 +1,5 @@
 // ── Tool 12 port: Architecture Drift Detector (from Codebase Anthropologist) ──
-// Ported from sandeep-ai/tools/allTools.ts CodebaseAnthropologistTool
+// Ported from packages/server/tools/allTools.ts CodebaseAnthropologistTool
 // Storage: JSON file instead of Postgres codebase_culture table
 // Operations: record_insight, query, culture_report, drift_check
 
