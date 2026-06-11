@@ -57,22 +57,22 @@
     "url": "https://github.com/Sandeeprdy1729/timps/issues"
   },
   "dependencies": {
-    "@qdrant/js-client-rest": "^1.9.0",
+    "@qdrant/js-client-rest": "^1.18.0",
     "blessed": "^0.1.81",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
-    "express-rate-limit": "^8.3.2",
-    "openai": "^4.63.0",
-    "pg": "^8.12.0"
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "openai": "^6.42.0",
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@types/blessed": "^0.1.21",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.14.0",
-    "@types/pg": "^8.11.8",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.3",
+    "@types/pg": "^8.20.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.0"
+    "typescript": "^6.0.3"
   }
 }
