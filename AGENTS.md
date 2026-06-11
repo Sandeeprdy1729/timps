@@ -11,7 +11,7 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 | CLI | `timps-code/` | `timps-code` | `tsc` (ESM, NodeNext) | `jest` (Jest 30) | `tsc --noEmit` |
 | MCP server | `timps-mcp/` | `timps-mcp` | `tsup src/index.ts --format cjs --no-dts --out-dir dist` | none | `tsc --noEmit` (4GB heap) |
 | VS Code ext | `timps-vscode/` | `timps-ai-coding-agent` | `npm run compile` (tsc) | none | `tsc --noEmit` |
-| Full server | `sandeep-ai/` | `@timps/server` | `tsc` (CJS) | `npx ts-node test_tool5.ts` ⚠️ requires server | `tsc --noEmit` |
+| Full server | `packages/server/` | `@timps/server` | `tsc` (CJS) | `npx ts-node test_tool5.ts` ⚠️ requires server | `tsc --noEmit` |
 | Memory engine | `packages/memory-core/` | `@timps/memory-core` | `tsup` (CJS + dts) | `jest` (Jest 29) | `tsc --noEmit` |
 
 - `npm run build` — turbo run build (all packages; mobile/plugins/docs may need extra tooling).
@@ -22,7 +22,7 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 
 - `timps-code` → ESM (`module: NodeNext`), `.js` extension in imports required.
 - `timps-mcp` → CJS, `strict: false`, no declarations.
-- `sandeep-ai` → CJS, wide include.
+- `packages/server` → CJS, wide include.
 - `packages/memory-core` → CJS, `moduleNameMapper` strips `.js` for jest.
 
 ## Agent entrypoints (timps-code)
@@ -39,7 +39,7 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 
 1. **`packages/memory-core/`** — canonical, source of truth for 17 intelligence tools.
 2. **`timps-code/src/memory/`** — runtime wrappers + L8 SynapseQuench.
-3. **`sandeep-ai/memory/`** — server-side re-implementations, may drift.
+3. **`packages/server/memory/`** — server-side re-implementations, may drift.
 
 9 layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 SynapseQuench → L9 HarmonicSheafWeaver.
 
@@ -49,7 +49,7 @@ All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, clas
 
 - ESM in `timps-code`; CJS elsewhere.
 - No pre-commit hooks, no `.cursor/rules/`, no `CLAUDE.md`.
-- Changesets in `.changeset/`. Versioned packages: timps-code, timps-mcp, timps-vscode, sandeep-ai.
+- Changesets in `.changeset/`. Versioned packages: timps-code, timps-mcp, timps-vscode, packages/server.
 - Don't commit: `dist/`, `out/`, `node_modules/`, `target/`, `.env`, `*.vsix`, `.timps/`.
 - IDs: `crypto.randomBytes(3).toString('hex')` (not `Math.random()`).
 
@@ -69,13 +69,14 @@ All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, clas
 - [ ] `grep -c "Math.random" benchmark/` returns 0.
 - [ ] If you added a tool, updated `ALL_TOOLS` and added smoke test to `benchmark/index.ts`.
 - [ ] If you changed memory on-disk format, add migration in `timps-code/src/migrations/`.
-- [ ] Changeset added for timps-code, timps-mcp, timps-vscode, or sandeep-ai.
+- [ ] Changeset added for timps-code, timps-mcp, timps-vscode, or packages/server.
 - [ ] Updated `AGENTS.md` if public API changed.
 
 ## Gotchas
 
 - `npm run build` builds all packages (mobile/plugins/docs may need extra tooling). Use `build:ci` in CI.
-- `sandeep-ai` package.json version (2.0.4) doesn't match npm (2.0.0). Don't assume alignment.
+- `packages/server` package.json version (2.0.4) doesn't match npm (2.0.0). Don't assume alignment.
 - Rust crates in `crates/` are parallel re-implementation, not usable from TS.
 - `MemoryEngine.contradiction.check(statement, autoStore?)` defaults `autoStore=true` — pass `false` in tests.
 - ContradictionDetector requires >50% Jaccard vocabulary overlap to trigger. Exact phrasings needed for `CONTRADICTION`.
+- **4 test runners in use:** Jest 29 (memory-core, acp, connection-manager, event-bus, timps-vscode, timps-mcp), Jest 30 (timps-code), Vitest (timps-desktop, plugin-sdk), raw tsx (timps-enterprise). No single `npm test` runs all tests. Standardizing on one runner is deferred.
