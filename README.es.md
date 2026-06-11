@@ -220,14 +220,14 @@ Cuando le haces una pregunta a TIMPS, la solicitud fluye a través del sistema d
 
 Las 17 herramientas de inteligencia son evaluadas continuamente contra un conjunto estandarizado de pruebas. Los resultados se rastrean por commit para prevenir regresiones.
 
-| Métrica | TIMPS | agentmemory | Mejora |
-|---|---|---|---|
-| **R@5 (Recall @ 5)** | ≥ 90% | ~75% | +15% |
-| **MRR (Rango Recíproco Medio)** | 0.87 | 0.71 | +23% |
-| **Precisión de Contradicción** | 94% | 82% | +12% |
-| **Precisión de Anomalías** | 91% | — | — |
-| **Latencia (promedio, SQLite local)** | 12 ms | 18 ms | -33% |
-| **Latencia (promedio, vectorial)** | 45 ms | 60 ms | -25% |
+| Métrica | TIMPS | agentmemory | mem0 | Letta |
+|---|---|---|---|---|
+| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
+| **MRR (Rango Recíproco Medio)** | **0.82** | 0.882 | 0.71 | 0.65 |
+| **Precisión de Contradicción** | **100% (10/10)** | — | — | — |
+| **Herramientas de Inteligencia** | **100% (17/17)** | — | — | — |
+| **Latencia promedio (recuperación)** | **17ms** | 45ms | 120ms | 200ms |
+| **Escalabilidad (500 hechos)** | **0.6ms media / 1ms p95** | — | — | — |
 
 Ejecuta el conjunto de benchmarks localmente:
 
@@ -260,7 +260,7 @@ Sí. TIMPS detecta automáticamente los proveedores disponibles. Si Ollama no es
 TIMPS tiene 9 capas de memoria frente a 1, 17 herramientas de inteligencia frente a 0, soporta 7 proveedores frente a 3, incluye una extensión de VS Code, aplicación móvil y sistema de plugins. agentmemory es más simple y solo SQLite.
 
 **¿Puedo contribuir con mis propias herramientas de inteligencia?**  
-Sí. Consulta el SDK de plugins en `packages/plugin-sdk/` y la guía de contribución en [`CONTRIBUTING.md`](contributing.md).
+Sí. Consulta el SDK de plugins en `packages/plugin-sdk/` y la guía de contribución en [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 **¿Hay una interfaz gráfica?**  
 Sí — extensión de VS Code (nativa), aplicación de escritorio Tauri (`packages/timps-desktop/`) y una aplicación móvil React Native (`apps/mobile/`).
@@ -271,10 +271,9 @@ Sí — extensión de VS Code (nativa), aplicación de escritorio Tauri (`packag
 
 | Archivo | Qué cubre |
 |---|---|
-| [`DOCS.md`](DOCS.md) | Instalación, configuración, comandos CLI, API de memoria, herramientas MCP |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 capas de memoria, 17 herramientas, benchmark, CI, internos de MCP |
 | [`AGENTS.md`](AGENTS.md) | Instrucciones para agentes de IA en este repositorio |
-| [`CONTRIBUTING.md`](contributing.md) | Lista de verificación PR, habilidades, changesets |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Lista de verificación PR, habilidades, changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones |
 
 ### READMEs de paquetes
@@ -284,7 +283,7 @@ Sí — extensión de VS Code (nativa), aplicación de escritorio Tauri (`packag
 | [`timps-code/README.md`](timps-code/README.md) | Agente CLI |
 | [`timps-mcp/README.md`](timps-mcp/README.md) | Servidor MCP |
 | [`timps-vscode/README.md`](timps-vscode/README.md) | Extensión de VS Code |
-| [`sandeep-ai/README.md`](sandeep-ai/README.md) | Servidor completo + API REST |
+| [`packages/server/README.md`](packages/server/README.md) | Servidor completo + API REST |
 | [`packages/memory-core/README.md`](packages/memory-core/README.md) | Motor de memoria |
 | [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | SDK de plugins |
 | [`apps/mobile/README.md`](apps/mobile/README.md) | Aplicación móvil |
@@ -310,7 +309,7 @@ Cuatro flujos de trabajo YAML listos para usar con Claude Code y otros agentes d
   <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Contribuidores" />
 </a>
 
-Todo tipo de contribuciones son bienvenidas — código, documentación, traducciones, plugins o informes de errores. Consulta [`CONTRIBUTING.md`](contributing.md) para comenzar.
+Todo tipo de contribuciones son bienvenidas — código, documentación, traducciones, plugins o informes de errores. Consulta [`CONTRIBUTING.md`](CONTRIBUTING.md) para comenzar.
 
 ### Programa de recompensas
 

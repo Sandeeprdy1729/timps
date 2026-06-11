@@ -8,8 +8,6 @@
 #   GEMINI_API_KEY=...
 #   OPENROUTER_API_KEY=sk-...
 
-version: '3.9'
-
 services:
   postgres:
     image: postgres:17-alpine
@@ -17,7 +15,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: sandeep_ai
     ports:
       - '5432:5432'
@@ -46,7 +44,7 @@ services:
 
   timps:
     build:
-      context: ./sandeep-ai
+      context: ./packages/server
       dockerfile: Dockerfile
     container_name: timps-app
     restart: unless-stopped
@@ -59,7 +57,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: sandeep_ai
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       QDRANT_URL: http://qdrant:6333
       DEFAULT_MODEL_PROVIDER: ${DEFAULT_MODEL_PROVIDER:-ollama}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}

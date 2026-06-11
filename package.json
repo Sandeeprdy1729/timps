@@ -3,12 +3,12 @@
   "private": true,
   "version": "2.0.4",
   "bin": {
-    "timps": "./sandeep-ai/dist/main.js"
+    "timps": "./packages/server/dist/main.js"
   },
   "preferGlobal": true,
   "files": [
-    "sandeep-ai/dist/",
-    "sandeep-ai/package.json",
+    "packages/server/dist/",
+    "packages/server/package.json",
     "docker-compose.yml",
     "README.md",
     "LICENSE"
@@ -23,7 +23,7 @@
     "timps-code",
     "timps-mcp"
   ],
-  "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
+  "description": "TIMPs — AI memory layer for coding agents. Persistent 3-layer memory (working, episodic, semantic) with 17 intelligence tools. Works with Claude Code, Cursor, Windsurf, and any LLM.",
   "main": "dist/main.js",
   "scripts": {
     "build": "turbo run build",
@@ -31,6 +31,9 @@
     "test": "turbo run test",
     "test:ci": "turbo run test --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
     "typecheck": "turbo run typecheck --filter=!@timps/mobile",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md,yaml,yml}\"",
     "clean": "turbo run clean --filter=!@timps/mobile",
     "docs": "turbo run build --filter=@timps/docs",
     "dashboard": "turbo run dev --filter=@timps/memory-dashboard",
@@ -44,33 +47,55 @@
     "llm",
     "gpt",
     "gemini",
-    "ollama"
+    "ollama",
+    "persistent-memory",
+    "claude-code",
+    "coding-agent",
+    "mcp",
+    "model-context-protocol",
+    "cursor",
+    "windsurf",
+    "developer-tools",
+    "session-memory",
+    "context-window",
+    "ai-coding",
+    "code-generation",
+    "autonomous-agent",
+    "local-llm",
+    "vscode-extension",
+    "agentic"
   ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@qdrant/js-client-rest": "^1.9.0",
-    "blessed": "^0.1.81",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
-    "openai": "^4.63.0",
-    "pg": "^8.12.0"
+  "author": "TIMPS Contributors",
+  "homepage": "https://timps.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sandeeprdy1729/timps"
   },
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+  },
+  "license": "MIT",
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
     "@types/blessed": "^0.1.21",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.14.0",
+    "@types/node": "^22.0.0",
     "@types/pg": "^8.11.8",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.4.0",
     "shell-quote": "^1.8.4",
     "ts-node": "^10.9.2",
     "turbo": "^2.9.9",
-    "typescript": "^5.5.0"
+    "typescript": "^5.6.0"
   },
   "overrides": {
     "tmp": "0.2.6",
-    "vitest": "3.2.6"
+    "vitest": "3.2.6",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0",
+    "react": "^18.3.1"
   }
 }

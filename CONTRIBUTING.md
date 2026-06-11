@@ -60,10 +60,10 @@ timps/
 │       ├── tools/          # 25 CLI tools (file, search, shell, browser…)
 │       └── interfaces/     # CLI + TUI entry points
 ├── timps-mcp/              # MCP server (npm: timps-mcp)
-│   └── src/                # 20 MCP tools proxying to sandeep-ai REST API
+│   └── src/                # 20 MCP tools proxying to packages/server REST API
 ├── timps-vscode/           # VS Code extension
 │   └── src/                # Sidebar panels, keybindings, webview
-├── sandeep-ai/             # Full server (Docker: timps-app)
+├── packages/server/             # Full server (Docker: timps-app)
 │   ├── api/                # Express REST API (routes.ts, server.ts)
 │   ├── config/             # Type-safe environment loading
 │   ├── core/               # Intelligence layer (17 tools)
@@ -73,7 +73,7 @@ timps/
 └── docker-compose.yml      # One-command full-stack startup
 ```
 
-Most feature work touches `timps-code/src/` (CLI) or `sandeep-ai/` (server intelligence).
+Most feature work touches `timps-code/src/` (CLI) or `packages/server/` (server intelligence).
 
 ---
 
@@ -85,7 +85,7 @@ Fork the repo on GitHub, then clone your fork:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/timps.git
-cd timps/sandeep-ai
+cd timps/packages/server
 ```
 
 Add the upstream remote:
@@ -109,7 +109,7 @@ cd timps-mcp && npm install && cd ..
 cd timps-vscode && npm install && cd ..
 
 # Server (or just use docker compose up -d)
-cd sandeep-ai && npm install && cd ..
+cd packages/server && npm install && cd ..
 ```
 
 ### 3. Start the Server (easiest: Docker)
@@ -123,9 +123,9 @@ This starts Postgres, Qdrant, and the TIMPS server on port 3000.
 Or run the server locally:
 
 ```bash
-cp sandeep-ai/.env.example sandeep-ai/.env
-# edit sandeep-ai/.env — Ollama needs no key
-cd sandeep-ai && npm run dev
+cp packages/server/.env.example packages/server/.env
+# edit packages/server/.env — Ollama needs no key
+cd packages/server && npm run dev
 ```
 
 ### 4. Run the CLI in dev mode
@@ -187,7 +187,7 @@ Naming conventions:
 
 TIMPs is written in **TypeScript 5.5**. Follow these conventions:
 
-- Match the existing module structure — each directory under `sandeep-ai/` has a clear responsibility; keep it that way
+- Match the existing module structure — each directory under `packages/server/` has a clear responsibility; keep it that way
 - Use strong typing — avoid `any` unless strictly necessary
 - New LLM providers go in `models/` and must implement the `baseModel.ts` interface
 - New tools go in `tools/` and must implement the `baseTool.ts` interface
@@ -264,7 +264,7 @@ npm test
 
 ### Writing Tests
 
-- Place tests mirroring the `sandeep-ai/` structure
+- Place tests mirroring the `packages/server/` structure
 - Cover both happy paths and error/edge cases, especially for:
   - Memory storage and retrieval (`memory/`)
   - Dual-search merging and deduplication (`db/`)
@@ -351,8 +351,8 @@ For larger features (e.g. a Web UI dashboard, a new provider integration, a Dock
 Documentation lives in:
 
 - `README.md` — system overview, architecture, commands, configuration, and troubleshooting
-- `sandeep-ai/QUICKSTART.md` — 5-minute setup guide
-- `sandeep-ai/TUI_README.md` — full TUI reference and keyboard shortcuts
+- `packages/server/QUICKSTART.md` — 5-minute setup guide
+- `packages/server/TUI_README.md` — full TUI reference and keyboard shortcuts
 
 If your change affects how TIMPs is configured, launched, or used, please update the relevant doc file. Documentation-only PRs are always welcome.
 
@@ -378,6 +378,12 @@ We use labels to help contributors find suitable issues:
 | `documentation` | Docs improvement |
 | `integration` | New integration |
 | `plugin` | Plugin development |
+
+### Package Layout
+
+The monorepo uses npm workspaces for most packages (`packages/*`, `apps/*`, `timps-code`, `timps-mcp`).
+
+**`timps-vscode/` is intentionally excluded** from the root workspaces array because VS Code extensions have unique build and packaging requirements (`vsce package`, `@types/vscode`, separate `package-lock.json`). If you are working on the VS Code extension, open it as a standalone project or use `code timps-vscode/`.
 
 ### Finding Your First Issue
 

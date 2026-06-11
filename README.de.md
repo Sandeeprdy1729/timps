@@ -220,14 +220,14 @@ Wenn du TIMPS eine Frage stellst, durchläuft die Anfrage das 9-schichtige Gedä
 
 Alle 17 Intelligenz-Tools werden kontinuierlich gegen eine standardisierte Evaluierungssuite benchmarkiert. Die Ergebnisse werden pro Commit verfolgt, um Regressionen zu verhindern.
 
-| Metrik | TIMPS | agentmemory | Verbesserung |
-|---|---|---|---|
-| **R@5 (Recall @ 5)** | ≥ 90 % | ~75 % | +15 % |
-| **MRR (Mean Reciprocal Rank)** | 0,87 | 0,71 | +23 % |
-| **Widerspruchsgenauigkeit** | 94 % | 82 % | +12 % |
-| **Anomaliepräzision** | 91 % | — | — |
-| **Latenz (Ø, lokales SQLite)** | 12 ms | 18 ms | −33 % |
-| **Latenz (Ø, Vektor)** | 45 ms | 60 ms | −25 % |
+| Metrik | TIMPS | agentmemory | mem0 | Letta |
+|---|---|---|---|---|
+| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
+| **MRR (Mean Reciprocal Rank)** | **0.82** | 0.882 | 0.71 | 0.65 |
+| **Widerspruchserkennung** | **100% (10/10)** | — | — | — |
+| **Intelligenz-Tools** | **100% (17/17)** | — | — | — |
+| **Durchschn. Latenz (Abruf)** | **17ms** | 45ms | 120ms | 200ms |
+| **Skalierbarkeit (500 Fakten)** | **0.6ms Mittel / 1ms p95** | — | — | — |
 
 Führe die Benchmark-Suite lokal aus:
 
@@ -260,7 +260,7 @@ Ja. TIMPS erkennt verfügbare Anbieter automatisch. Wenn Ollama nicht läuft, f�
 TIMPS hat 9 Gedächtnisschichten gegenüber 1, 17 Intelligenz-Tools gegenüber 0, unterstützt 7 Anbieter gegenüber 3, beinhaltet eine VS Code-Erweiterung, eine mobile App und ein Plugin-System. agentmemory ist einfacher und nur SQLite.
 
 **Kann ich eigene Intelligenz-Tools beitragen?**  
-Ja. Siehe das Plugin-SDK in `packages/plugin-sdk/` und den Mitwirkenden-Leitfaden in [`CONTRIBUTING.md`](contributing.md).
+Ja. Siehe das Plugin-SDK in `packages/plugin-sdk/` und den Mitwirkenden-Leitfaden in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 **Gibt es eine grafische Benutzeroberfläche?**  
 Ja — VS Code-Erweiterung (nativ), Tauri-Desktop-App (`packages/timps-desktop/`) und eine React Native-Mobilapp (`apps/mobile/`).
@@ -271,10 +271,9 @@ Ja — VS Code-Erweiterung (nativ), Tauri-Desktop-App (`packages/timps-desktop/`
 
 | Datei | Inhalt |
 |---|---|
-| [`DOCS.md`](DOCS.md) | Installation, Konfiguration, CLI-Befehle, Speicher-API, MCP-Tools |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 Gedächtnisschichten, 17 Tools, Benchmark, CI, MCP-Interna |
 | [`AGENTS.md`](AGENTS.md) | KI-Agentenanweisungen für dieses Repository |
-| [`CONTRIBUTING.md`](contributing.md) | PR-Checkliste, Skills, Changesets |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | PR-Checkliste, Skills, Changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Versionsverlauf |
 
 ### Paket-READMEs
@@ -284,7 +283,7 @@ Ja — VS Code-Erweiterung (nativ), Tauri-Desktop-App (`packages/timps-desktop/`
 | [`timps-code/README.md`](timps-code/README.md) | CLI-Agent |
 | [`timps-mcp/README.md`](timps-mcp/README.md) | MCP-Server |
 | [`timps-vscode/README.md`](timps-vscode/README.md) | VS Code-Erweiterung |
-| [`sandeep-ai/README.md`](sandeep-ai/README.md) | Vollständiger Server + REST-API |
+| [`packages/server/README.md`](packages/server/README.md) | Vollständiger Server + REST-API |
 | [`packages/memory-core/README.md`](packages/memory-core/README.md) | Speicher-Engine |
 | [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | Plugin-SDK |
 | [`apps/mobile/README.md`](apps/mobile/README.md) | Mobile App |
@@ -310,7 +309,7 @@ Vier einsatzbereite YAML-Workflows für Claude Code und andere KI-Coding-Agenten
   <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Mitwirkende" />
 </a>
 
-Beiträge aller Art sind willkommen — Code, Dokumentation, Übersetzungen, Plugins oder Bugmeldungen. Siehe [`CONTRIBUTING.md`](contributing.md) für den Einstieg.
+Beiträge aller Art sind willkommen — Code, Dokumentation, Übersetzungen, Plugins oder Bugmeldungen. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) für den Einstieg.
 
 ### Prämienprogramm
 

@@ -32,7 +32,6 @@ jobs:
 
       - name: Run tests
         run: npm run test --workspace=packages/${{ matrix.package }}
-        continue-on-error: true
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -61,15 +60,22 @@ jobs:
           ls -la coverage-*/ 2>/dev/null || echo "No coverage artifacts found"
 
       - name: Check coverage thresholds
-        continue-on-error: true
         run: |
-          total_lines=$(find . -name 'coverage' -type d 2>/dev/null | wc -l)
-          echo "Coverage thresholds: 80%"
-          if [ $total_lines -gt 0 ]; then
-            echo "✓ Coverage reports generated"
-          else
-            echo "No coverage data to check"
-          fi
+          for dir in coverage-*/; do
+            if [ -f "$dir/coverage-final.json" ]; then
+              echo "✓ Coverage report found in $dir"
+              # Enforce minimum 60% coverage thresholds
+              LINES=$(jq '.total.lines.pct // 0' "$dir/coverage-final.json")
+              FUNCS=$(jq '.total.functions.pct // 0' "$dir/coverage-final.json")
+              BRANCHES=$(jq '.total.branches.pct // 0' "$dir/coverage-final.json")
+              echo "  Lines: ${LINES}% | Functions: ${FUNCS}% | Branches: ${BRANCHES}%"
+              FAIL=false
+              if (( $(echo "$LINES < 60" | bc -l) )); then echo "  ❌ Lines below 60% threshold"; FAIL=true; fi
+              if (( $(echo "$FUNCS < 60" | bc -l) )); then echo "  ❌ Functions below 60% threshold"; FAIL=true; fi
+              if (( $(echo "$BRANCHES < 60" | bc -l) )); then echo "  ❌ Branches below 60% threshold"; FAIL=true; fi
+              if [ "$FAIL" = true ]; then exit 1; fi
+            fi
+          done
 
   lint:
     runs-on: ubuntu-latest

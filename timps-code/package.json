@@ -68,15 +68,14 @@
     "ink-spinner": "^5.0.0",
     "ink-text-input": "^6.0.0",
     "ora": "^8.1.0",
-    "react": "^19.2.6"
+    "ink": "^5.1.2"
   },
   "devDependencies": {
     "@types/diff": "^5.2.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
-    "@types/react": "^19.2.14",
     "jest": "^30.3.0",
-    "ts-jest": "^29.4.9",
+    "ts-jest": "^30.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },

@@ -1,15 +1,19 @@
 {
   "name": "@timps/connection-manager",
   "version": "1.0.0",
-  "description": "Connection manager for TIMPS integrations",
+  "description": "Connection manager for TIMPS integrations — manage external service connectivity, retries, and health checks for AI agent workflows.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "test": "jest"
   },
   "dependencies": {},
   "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.0.0"
   }
 }
