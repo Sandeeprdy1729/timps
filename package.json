@@ -62,8 +62,13 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.8",
+    "shell-quote": "^1.8.4",
     "ts-node": "^10.9.2",
     "turbo": "^2.9.9",
     "typescript": "^5.5.0"
+  },
+  "overrides": {
+    "tmp": "0.2.6",
+    "vitest": "3.2.6"
   }
 }

@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { QERW } from './QERW.js';
 
-function tmpDir(): string {
+function tmpDir(): string  {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'qerw-test-'));
 }
 

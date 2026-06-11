@@ -252,5 +252,8 @@
     "@types/vscode": "^1.115.0",
     "@vscode/vsce": "^2.32.0",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "tmp": "0.2.6"
   }
 }
