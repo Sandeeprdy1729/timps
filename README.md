@@ -15,7 +15,8 @@
 
 <p align="center">
   🏆 <b>Claude Code forgets everything when you close it. TIMPS remembers — forever.</b><br>
-  <i>100% free with Ollama • Open source • Runs fully local • No API keys required</i>
+  <i>100% free with Ollama • Open source • Runs fully local • No API keys required</i><br>
+  <strong><a href="https://timps.ai">🌐 timps.ai</a></strong>
 </p>
 
 <p align="center">
