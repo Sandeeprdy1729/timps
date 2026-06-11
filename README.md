@@ -20,9 +20,19 @@
 
 > TIMPS remembers your code, your decisions, and your mistakes — so your AI agent doesn't make you re-explain anything. Free, local, 30-second install.
 
+<p align="center">
+  <img src="demo/quick_demo.gif" alt="TIMPS demo" width="100%">
+</p>
+
 ---
 
 ## Quick Start
+
+### One-line install (Linux / macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/install.sh | bash
+```
 
 ### CLI Only (30 seconds)
 

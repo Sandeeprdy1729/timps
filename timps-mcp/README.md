@@ -7,7 +7,7 @@ Give your AI coding assistant a memory that persists across sessions, catches co
 
 **The problem:** Claude Code, Cursor, and Windsurf forget everything between sessions. Every conversation starts from zero.
 
-**What TIMPS MCP solves:** 20 MCP tools that give your AI assistant long-term intelligence — stored on your own infrastructure, private by default.
+**What TIMPS MCP solves:** 61 MCP tools that give your AI assistant long-term intelligence — stored on your own infrastructure, private by default.
 
 ## Quick Start
 
@@ -160,7 +160,9 @@ npm install -g timps-mcp
 
 ---
 
-## All 20 MCP Tools
+## All 61 MCP Tools
+
+(20 listed below; 41 more registered via the server at runtime)
 
 ### Core Memory
 
