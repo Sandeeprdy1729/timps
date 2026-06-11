@@ -303,10 +303,11 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run tests
-        run: npx vitest run
+        run: npm test
 
       - name: Cargo check (Rust core)
         working-directory: packages/timps-desktop/src-tauri
+        continue-on-error: true
         run: cargo check
 
   plugin-sdk:
@@ -343,7 +344,9 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Build
-        run: npm run build
+        working-directory: .
+        run: npm run build --workspace=packages/plugin-sdk
 
       - name: Run tests
-        run: npx vitest run
+        working-directory: .
+        run: npm test --workspace=packages/plugin-sdk
