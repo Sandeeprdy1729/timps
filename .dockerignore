@@ -1,0 +1,9 @@
+node_modules
+.git
+*.md
+packages/timps-desktop
+packages/mobile
+benchmark/
+evals/
+timps-code/dataset/
+demo/
