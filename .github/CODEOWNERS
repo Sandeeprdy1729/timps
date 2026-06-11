@@ -1,0 +1,14 @@
+# Default owners
+* @Sandeeprdy1729
+
+# Package ownership
+/timps-mcp/ @Sandeeprdy1729
+/timps-vscode/ @Sandeeprdy1729
+/timps-code/ @Sandeeprdy1729
+/packages/ @Sandeeprdy1729
+
+# Config ownership
+/.github/ @Sandeeprdy1729
+/.eslintrc.json @Sandeeprdy1729
+/.prettierrc @Sandeeprdy1729
+/tsconfig.json @Sandeeprdy1729

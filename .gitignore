@@ -63,9 +63,8 @@ temp/
 *.sqlite3
 
 # Docker
-.dockerignore
-sandeep-ai/.env
-sandeep-ai/node_modules
+packages/server/.env
+packages/server/node_modules
 
 # Training data (hosted externally)
 timps-code/dataset/*.jsonl
