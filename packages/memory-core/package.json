@@ -1,6 +1,6 @@
 {
   "name": "@timps/memory-core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "TIMPS 3-layer persistent memory engine — working, episodic, and semantic memory with intelligence tools",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
