@@ -1,0 +1,12 @@
+[
+  { "statement": "do not use JWT tokens for authentication", "storedClaim": "use JWT tokens for authentication", "expectVerdict": "CONTRADICTION" },
+  { "statement": "never use PostgreSQL for the database", "storedClaim": "use PostgreSQL for the database", "expectVerdict": "CONTRADICTION" },
+  { "statement": "do not use Redis for rate limiting", "storedClaim": "use Redis for rate limiting", "expectVerdict": "CONTRADICTION" },
+  { "statement": "never use the Result type for errors", "storedClaim": "use the Result type for errors", "expectVerdict": "CONTRADICTION" },
+  { "statement": "do not use Vitest for the test suite", "storedClaim": "use Vitest for the test suite", "expectVerdict": "CONTRADICTION" },
+  { "statement": "never use Docker Compose for deployment", "storedClaim": "use Docker Compose for deployment", "expectVerdict": "CONTRADICTION" },
+  { "statement": "do not use pino for logging", "storedClaim": "use pino for logging", "expectVerdict": "CONTRADICTION" },
+  { "statement": "never use Tailwind for the frontend", "storedClaim": "use Tailwind for the frontend", "expectVerdict": "CONTRADICTION" },
+  { "statement": "The marketing team prefers green color for the landing page hero section.", "storedClaim": "use JWT tokens for authentication", "expectVerdict": "CLEAN" },
+  { "statement": "Office snacks inventory is running low on the third floor kitchen.", "storedClaim": "use Vitest for the test suite", "expectVerdict": "CLEAN" }
+]

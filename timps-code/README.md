@@ -15,11 +15,17 @@ timps
 
 ## What makes TIMPS different
 
-**Persistent memory.** TIMPS remembers your project across sessions using a 3-layer memory system:
+**Persistent memory.** TIMPS remembers your project across sessions using a 9-layer memory system:
 
-- **Working memory** — current goal, active files, recent errors (this session)
-- **Episodic memory** — summaries of past conversations stored to disk
-- **Semantic memory** — facts, patterns, and conventions your project uses (permanent)
+- **L1 Working** — current goal, active files, recent errors (this session)
+- **L2 Episodic** — summaries of past conversations stored to disk (append-only)
+- **L3 Semantic** — facts, patterns, and conventions your project uses (permanent)
+- **L4 Procedural** — reusable workflows and recipes learned from past sessions
+- **L5 ChronosForge** — causal graph tracking decisions and their consequences
+- **L6 ResonanceForge** — harmonic oscillator model for pattern resonance detection
+- **L7 EchoForge** — reservoir computing with BFS context propagation
+- **L8 SynapseQuench** — cross-layer coherence optimizer
+- **L9 HarmonicSheafWeaver** — sheaf-cohomology engine for algebraic contradiction detection
 
 When you start a new session and say "use the same pattern we always use for API routes", TIMPS knows what you mean.
 

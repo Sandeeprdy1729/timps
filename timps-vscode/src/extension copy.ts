@@ -1,6 +1,6 @@
 // ============================================================
 // TIMPS VS Code Extension v2.1 — Main Entry Point  
-// Fixed bugs + 3-layer memory + skill system + sidebar
+// Fixed bugs + 9-layer memory + skill system + sidebar
 // ============================================================
 
 import * as vscode from 'vscode';

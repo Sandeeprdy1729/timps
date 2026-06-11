@@ -12,19 +12,9 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **DO NOT** create a public GitHub issue
-2. Email security@timps.dev with details:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Any fix suggestions (optional)
-
+2. DM [@Sandeeprdy1729](https://github.com/Sandeeprdy1729) on GitHub or open an issue with the `security` label
 3. We aim to respond within 48 hours
-
-4. We coordinate disclosure:
-   - Report to security@timps.dev
-   - Wait for acknowledgment before disclosing
-   - We request 90 days to fix before public disclosure
-   - Credit in security advisory (unless requested otherwise)
+4. Credit in security advisory (unless requested otherwise)
 
 ## Scope
 

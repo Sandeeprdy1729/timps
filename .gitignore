@@ -32,8 +32,6 @@ target/
 *.swp
 *.swo
 *~
-.DS_Store
-
 # OS
 Thumbs.db
 .DS_Store
@@ -66,6 +64,5 @@ temp/
 
 # Docker
 .dockerignore
-.DS_Store
 sandeep-ai/.env
 sandeep-ai/node_modules

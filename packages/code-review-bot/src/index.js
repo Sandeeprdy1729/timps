@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const GITHUB_API = 'https://api.github.com';
-const OWNER = process.env.GITHUB_OWNER || 'anomalyco';
+const OWNER = process.env.GITHUB_OWNER || 'Sandeeprdy1729';
 const REPO = process.env.GITHUB_REPO || 'timps';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const TIMPS_API = process.env.TIMPS_API || 'http://localhost:3000';

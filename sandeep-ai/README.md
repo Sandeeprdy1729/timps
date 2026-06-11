@@ -6,7 +6,7 @@
 
 **Claude Code forgets everything when you close it. TIMPS remembers — forever.**
 
-TIMPS is the persistent memory server that backs the CLI agent, MCP tools, and VS Code extension. It stores 3 layers of memory (working, episodic, semantic) and exposes 17 intelligence tools over a REST API.
+TIMPS is the persistent memory server that backs the CLI agent, MCP tools, and VS Code extension. It stores 9 layers of memory (working, episodic, semantic, procedural, chronos, resonance, echo, synapse, harmonic sheaf) and exposes 17 intelligence tools over a REST API.
 
 ---
 
@@ -42,7 +42,6 @@ For the individual packages see:
 | --- | --- | --- |
 | [`timps-code`](https://www.npmjs.com/package/timps-code) | `npm install -g timps-code` | CLI coding agent (start here) |
 | [`timps-mcp`](https://www.npmjs.com/package/timps-mcp) | `npm install -g timps-mcp` | MCP server for Claude/Cursor/Windsurf |
-| `timps` | `npm install -g timps` | Full server (this package) |
 
 ---
 

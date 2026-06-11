@@ -26,7 +26,7 @@ export function Navbar() {
           <Link href="/search" className="btn btn-ghost">
             Search
           </Link>
-          <Link href="https://github.com/anomalyco/timps" className="btn btn-secondary">
+          <Link href="https://github.com/Sandeeprdy1729/timps" className="btn btn-secondary">
             GitHub
           </Link>
           <Link href="https://docs.timps.ai" className="btn btn-primary">

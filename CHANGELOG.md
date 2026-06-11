@@ -33,4 +33,4 @@ All notable changes to TIMPS are documented here.
 - Core agent loop
 - Basic integrations
 
-[Full changelog](https://github.com/anomalyco/timps/compare/v0.9.0...v1.0.0)
+[Full changelog](https://github.com/Sandeeprdy1729/timps/compare/v0.9.0...v1.0.0)

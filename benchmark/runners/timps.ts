@@ -1,7 +1,7 @@
 /**
  * TIMPS Memory Recall Benchmark — TIMPS Runner
  *
- * Tests recall WITH 3-layer TIMPS memory: pre-seeds memory with facts,
+ * Tests recall WITH TIMPS memory: pre-seeds memory with facts,
  * then runs questions using MemoryEngine recall to inject context into LLM prompt.
  *
  * Usage:
@@ -66,7 +66,7 @@ function seedMemory(engine: MemoryEngine): void {
     { content: 'We use tsup instead of tsc for building timps-mcp because tsc runs out of memory on the @modelcontextprotocol/sdk types.', type: 'decision' as const },
     { content: 'Memory is stored per-project using SHA-256 hash of the project path to avoid collisions across machines.', type: 'decision' as const },
     { content: 'We decided not to use Qdrant. The MiniSearch BM25 + Jaccard similarity is sufficient for local-first use without a running vector DB.', type: 'decision' as const },
-    { content: 'The 3-layer memory system: working memory (in-memory, per session), episodic (append-only JSONL), semantic (deduped JSON with BM25 index).', type: 'decision' as const },
+    { content: 'The 9-layer memory system: L1 working, L2 episodic, L3 semantic, L4 procedural, L5 chronos, L6 resonance, L7 echo, L8 synapse, L9 sheaf.', type: 'decision' as const },
     { content: 'Backward compatibility rule: memory schema changes must be additive. Never remove fields from semantic.json or episodes.jsonl.', type: 'decision' as const },
     { content: 'SHA-256 was chosen for project hashing for collision resistance. djb2 is legacy in timps-code for backward compatibility.', type: 'decision' as const },
     { content: 'MiniSearch was chosen over Lunr because it is actively maintained, has better TypeScript support, and smaller bundle size.', type: 'decision' as const },

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TIMPS CLI installer
-# Usage: curl -fsSL https://timps.dev/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/install.sh | bash
 #        or: ./download_cli.sh [--version v0.1.0] [--dir /usr/local/bin]
 
 set -euo pipefail

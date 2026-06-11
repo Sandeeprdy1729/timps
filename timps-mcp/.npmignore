@@ -1,0 +1,15 @@
+src/
+
+test/
+
+*.test.ts
+
+*.spec.ts
+
+.env*
+
+*.log
+
+.DS_Store
+
+node_modules/

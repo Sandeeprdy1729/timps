@@ -17,7 +17,7 @@ The BDFL has final authority on:
 - Core team appointments
 - Strategic direction
 
-Current BDFL: Sandy Reddy (@anomalyco)
+Current BDFL: Sandeep Thummala (@Sandeeprdy1729)
 
 ### Maintainers
 
@@ -57,16 +57,6 @@ Small changes and bug fixes can be fast-tracked:
 3. CI passes
 4. Merged
 
-## Area Ownership
-
-| Area | Maintainer |
-|------|----------|
-| Core Agent | Sandy Reddy |
-| Integrations | @maintainer/integrations |
-| Desktop App | @maintainer/desktop |
-| MCP Server | @maintainer/mcp |
-| Documentation | @maintainer/docs |
-
 ## Conflict Resolution
 
 For conflicts:
@@ -80,7 +70,7 @@ For conflicts:
 To modify this document:
 
 1. RFC with rationale
-2. Two maintainers + BDFL approval
+2. BDFL approval
 3. Merge
 
 ## Code of Conduct

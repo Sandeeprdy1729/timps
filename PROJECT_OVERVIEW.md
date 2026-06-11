@@ -120,7 +120,7 @@ timps/
 ├── AGENTS.md                  # AI agent guide
 ├── CHANGELOG.md               # Version history
 ├── ROADMAP.md                 # Future plans
-├── CONTRIBUTING.md            # Contributing guidelines
+├── contributing.md            # Contributing guidelines
 ├── SECURITY.md                # Security policy
 └── docker-compose.yml        # Docker setup
 ```
@@ -142,7 +142,7 @@ timps-code/src/
 ├── commands/       # Slash command handlers (/memory, /skills, /branch…)
 ├── config/         # Provider and model configuration
 ├── core/           # app.ts (AgentLoop), agent.ts, toolRouter.ts
-├── memory/         # 3-layer memory: snapshot.ts, memory.ts
+├── memory/         # 9-layer memory: snapshot.ts, memory.ts
 ├── models/         # Provider adapters: Claude, GPT, Gemini, Ollama, OpenRouter
 ├── swarm/          # Multi-agent orchestration
 ├── tools/          # 25+ tools: file, git, shell, web, memory
@@ -335,15 +335,21 @@ Response → AI receives memory-enhanced response
 
 ## 9. Memory System
 
-The 3-layer memory system is TIMPS's core differentiating feature.
+The 9-layer memory system is TIMPS's core differentiating feature.
 
 ### 9.1 Layer Architecture
 
 | Layer | Storage | Persistence | Contents |
 |-------|---------|-------------|----------|
-| **Working** | In-process | Reset on exit | Current goals, active files, recent errors |
-| **Episodic** | `~/.timps/memory/<hash>/episodes.jsonl` | Survives restart | Conversation summaries, outcomes |
-| **Semantic** | `~/.timps/memory/<hash>/semantic.json` | Permanent | Patterns, conventions, decisions |
+| **L1 Working** | In-process | Reset on exit | Current goals, active files, recent errors |
+| **L2 Episodic** | `~/.timps/memory/<hash>/episodes.jsonl` | Disk (append-only) | Conversation summaries, outcomes |
+| **L3 Semantic** | `~/.timps/memory/<hash>/semantic.json` | Disk (permanent) | Patterns, conventions, decisions |
+| **L4 Procedural** | `~/.timps/memory/<hash>/procedural.json` | Disk | Workflows, recipes, skills |
+| **L5 ChronosForge** | `~/.timps/memory/<hash>/chronos/` | Disk | Causal graph, temporal dependencies |
+| **L6 ResonanceForge** | `~/.timps/memory/<hash>/resonance.json` | Disk | Pattern harmonics, oscillation model |
+| **L7 EchoForge** | `~/.timps/memory/<hash>/echo/` | Disk | Reservoir states, BFS context |
+| **L8 SynapseQuench** | In-memory + disk | Cross-layer | Coherence scores, conflict map |
+| **L9 HarmonicSheafWeaver** | `~/.timps/memory/<hash>/sheaf/` | Disk | Sheaf Laplacian, cohomology result |
 
 ### 9.2 Memory Keying
 
@@ -625,7 +631,7 @@ cd timps-code && npx tsc --noEmit
 
 ### 14.5 Contributing
 
-See [CONTRIBUTING.md](CONTributing.md) and [AGENTS.md](AGENTS.md) for detailed guidelines.
+See [contributing.md](contributing.md) and [AGENTS.md](AGENTS.md) for detailed guidelines.
 
 ---
 
