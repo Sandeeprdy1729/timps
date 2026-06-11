@@ -172,7 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Memory View (3-layer memory TreeView)
+  // Memory View (9-layer memory TreeView)
   const memoryStorageRoot = context.globalStorageUri
     ? context.globalStorageUri.fsPath
     : path.join(os.homedir(), '.timps', 'vscode-memory');

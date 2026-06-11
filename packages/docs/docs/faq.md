@@ -8,10 +8,16 @@ TIMPS (The AI Programming System) is an AI coding agent with persistent memory t
 
 ### How does TIMPS differ from other AI coding assistants?
 
-TIMPS has a 3-layer memory system that persists knowledge between sessions:
-- **Working Memory**: Current session context
-- **Episodic Memory**: Session history
-- **Semantic Memory**: Persistent knowledge
+TIMPS has a 9-layer memory system that persists knowledge between sessions:
+- **L1 Working Memory**: Current session context
+- **L2 Episodic Memory**: Session history
+- **L3 Semantic Memory**: Persistent knowledge
+- **L4 Procedural Memory**: Reusable workflows and recipes
+- **L5 ChronosForge**: Causal graph for decision tracking
+- **L6 ResonanceForge**: Harmonic pattern detection
+- **L7 EchoForge**: Reservoir computing for context propagation
+- **L8 SynapseQuench**: Cross-layer coherence optimization
+- **L9 HarmonicSheafWeaver**: Algebraic contradiction detection
 
 ### What languages does TIMPS support?
 
@@ -181,4 +187,4 @@ TIMPS has a free tier with basic features. Pro tier includes:
 
 - [Documentation](https://timps.ai/docs)
 - [Discord](https://discord.gg/timps)
-- [GitHub Discussions](https://github.com/anomalyco/timps/discussions)
+- [GitHub Discussions](https://github.com/Sandeeprdy1729/timps/discussions)

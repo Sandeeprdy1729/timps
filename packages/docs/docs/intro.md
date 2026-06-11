@@ -13,7 +13,7 @@ Unlike ChatGPT or Cursor, TIMPS **remembers** what you've told it — across ses
 
 | Feature | Details |
 |---------|---------|
-| **3-layer memory** | Working (session) + Episodic (past tasks) + Semantic (long-term facts) |
+| **9-layer memory** | Working + Episodic + Semantic + Procedural + ChronosForge + ResonanceForge + EchoForge + SynapseQuench + HarmonicSheafWeaver |
 | **15+ LLM providers** | Ollama, Claude, OpenAI, Gemini, Groq, Mistral, and more |
 | **Plugin system** | Install community plugins, create your own |
 | **Recipes** | Multi-step YAML workflows (code review, deploy check, debug) |

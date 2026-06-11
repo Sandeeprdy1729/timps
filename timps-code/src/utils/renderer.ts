@@ -687,7 +687,7 @@ export function renderHelp(): void {
 
   console.log(`\n  ${chalk.hex('#374151')('─'.repeat(56))}`);
   console.log(`  ${t.dim('TIMPS vs Claude Code:')}`);
-  console.log(`  ${t.success('✓')} ${t.dim('persistent 3-layer memory across sessions')}`);
+  console.log(`  ${t.success('✓')} ${t.dim('persistent 9-layer memory across sessions')}`);
   console.log(`  ${t.success('✓')} ${t.dim('multi-model: Claude · GPT-4 · Gemini · Ollama')}`);
   console.log(`  ${t.success('✓')} ${t.dim('team memory — shared knowledge base per project')}`);
   console.log(`  ${t.success('✓')} ${t.dim('built-in todo tracking from agent output')}`);

@@ -37,3 +37,19 @@ Thumbs.db
 
 # Seed data (not needed in package)
 seed.ts
+
+# Docs (not needed in package)
+*.md
+!README.md
+
+# Source dirs with compiled JS outside dist/
+blueprints/
+config/
+core/
+db/
+models/
+public/
+mcp/
+plugins/
+sdk/
+vercel.json

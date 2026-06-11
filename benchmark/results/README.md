@@ -4,7 +4,7 @@
 
 ## Summary
 
-This benchmark measures whether TIMPS 3-layer memory improves LLM recall accuracy on real developer questions compared to a baseline (no memory).
+This benchmark measures whether TIMPS 9-layer memory improves LLM recall accuracy on real developer questions compared to a baseline (no memory).
 
 | Metric | Baseline (no memory) | TIMPS (with memory) | Improvement |
 |---|---|---|---|
@@ -93,5 +93,11 @@ Run the benchmark and submit your results:
 
 ## Dataset
 
-- [`dataset/questions.json`](../dataset/questions.json) — 50 developer questions
+- [`dataset/corpus.json`](../dataset/corpus.json) — 50 seeding facts (project conventions & decisions)
+- [`dataset/queries.json`](../dataset/queries.json) — 20 recall queries with expected substrings
+- [`dataset/contradictions.json`](../dataset/contradictions.json) — 10 contradiction test cases (8 CONTRADICTION + 2 CLEAN)
+- [`dataset/questions.json`](../dataset/questions.json) — 50 developer questions (LLM-runner variant)
 - [`dataset/ground_truth.json`](../dataset/ground_truth.json) — expected keywords per question
+
+All 5 files are hashed together as the benchmark dataset. Current SHA256: `f1e0387495e6e111`.
+Pin this SHA alongside published benchmark numbers to guarantee reproducibility.

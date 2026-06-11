@@ -13,7 +13,7 @@ Thank you for your interest in contributing to TIMPS!
 
 ```bash
 # Clone the repository
-git clone https://github.com/anomalyco/timps.git
+git clone https://github.com/Sandeeprdy1729/timps.git
 cd timps
 
 # Install dependencies
@@ -122,7 +122,7 @@ npm run release
 
 - [Discord](https://discord.gg/timps)
 - [Twitter](https://twitter.com/timpsai)
-- [GitHub Discussions](https://github.com/anomalyco/timps/discussions)
+- [GitHub Discussions](https://github.com/Sandeeprdy1729/timps/discussions)
 
 ## Code of Conduct
 

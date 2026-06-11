@@ -1,5 +1,5 @@
 // ── TIMPS Memory Dashboard — API server ──
-// Reads the 3-layer memory from disk and exposes it as REST JSON for the sigma.js graph.
+// Reads the 9-layer memory from disk and exposes it as REST JSON for the sigma.js graph.
 // PORT: 3742 (default) or process.env.MEMORY_DASH_PORT
 
 import express from 'express';

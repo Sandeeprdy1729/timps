@@ -55,7 +55,7 @@ timps/
 ├── timps-code/             # CLI coding agent (npm: timps-code)
 │   └── src/
 │       ├── core/           # Agent loop, planner, reflection, executor
-│       ├── memory/         # 3-layer persistent memory (working/episodic/semantic)
+│       ├── memory/         # 9-layer persistent memory (working/episodic/semantic/procedural/chronos/resonance/echo/synapse/sheaf)
 │       ├── models/         # LLM adapters (Claude, OpenAI, Gemini, Ollama, OpenRouter)
 │       ├── tools/          # 25 CLI tools (file, search, shell, browser…)
 │       └── interfaces/     # CLI + TUI entry points

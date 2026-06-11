@@ -1,9 +1,9 @@
 pulls:
   daysUntilStale: 60
-  daysUntilClose: 7
+  daysUntilClose: 30
   staleLabel: stale
   markComment: |
-    This pull request has been inactive for 60 days. It will be closed in 7 days unless there is new activity.
+    This pull request has been inactive for 60 days. It will be closed in 30 days unless there is new activity.
     
     If you're still working on this, please leave a comment or push a commit to reset the timer.
   closeComment: |
@@ -13,6 +13,7 @@ pulls:
     - security
     - do-not-stale
     - dependencies
+    - bot
 
 issues:
   daysUntilStale: 90

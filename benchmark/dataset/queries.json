@@ -1,0 +1,22 @@
+[
+  { "query": "How do we handle authentication?", "expectedSubstrings": ["JWT"] },
+  { "query": "Which database stores user records?", "expectedSubstrings": ["PostgreSQL"] },
+  { "query": "What rate limiting approach did we pick?", "expectedSubstrings": ["Redis"] },
+  { "query": "How are errors handled in the codebase?", "expectedSubstrings": ["Result type"] },
+  { "query": "Where is the app config stored?", "expectedSubstrings": ["config.yaml"] },
+  { "query": "Which test runner do we use?", "expectedSubstrings": ["Vitest"] },
+  { "query": "What CI system is in place?", "expectedSubstrings": ["GitHub Actions"] },
+  { "query": "How do we deploy the application?", "expectedSubstrings": ["Docker Compose"] },
+  { "query": "What logging library is configured?", "expectedSubstrings": ["pino"] },
+  { "query": "How are environment variables managed?", "expectedSubstrings": ["dotenv"] },
+  { "query": "What styling approach does the frontend use?", "expectedSubstrings": ["Tailwind"] },
+  { "query": "How is client state managed?", "expectedSubstrings": ["Zustand"] },
+  { "query": "Which ORM handles database migrations?", "expectedSubstrings": ["Drizzle"] },
+  { "query": "What prefix do API routes use?", "expectedSubstrings": ["/api/v1"] },
+  { "query": "How are background jobs processed?", "expectedSubstrings": ["BullMQ"] },
+  { "query": "Where do uploaded files go?", "expectedSubstrings": ["S3"] },
+  { "query": "Which package manager is used?", "expectedSubstrings": ["pnpm"] },
+  { "query": "How is commit message style enforced?", "expectedSubstrings": ["Conventional Commits"] },
+  { "query": "Where are secrets stored?", "expectedSubstrings": ["1Password"] },
+  { "query": "What is the search backend?", "expectedSubstrings": ["Meilisearch"] }
+]

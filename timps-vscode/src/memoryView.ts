@@ -1,5 +1,5 @@
 /**
- * TIMPS Memory View — VS Code TreeView showing live 3-layer memory
+ * TIMPS Memory View — VS Code TreeView showing live 9-layer memory
  *
  * Displays:
  *   🧠 Semantic Facts     (type + importance, sorted by importance desc)

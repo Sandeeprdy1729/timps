@@ -1,5 +1,6 @@
 {
   "name": "timps",
+  "private": true,
   "version": "2.0.4",
   "bin": {
     "timps": "./sandeep-ai/dist/main.js"
@@ -20,14 +21,15 @@
     "packages/*",
     "apps/*",
     "timps-code",
-    "timps-mcp",
-    "docs"
+    "timps-mcp"
   ],
   "description": "TIMPs - A persistent cognitive partner that remembers, evolves, and builds with its user",
   "main": "dist/main.js",
   "scripts": {
-    "build": "turbo run build --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
-    "test": "turbo run test --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
+    "build": "turbo run build",
+    "build:ci": "turbo run build --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
+    "test": "turbo run test",
+    "test:ci": "turbo run test --filter=!@timps/mobile --filter=!@timps/docusaurus --filter=!@timps/docs --filter=!@timps/integration-base --filter=!@timps/plugin-sdk --filter=!@timps-plugin/git --filter=!@timps-plugin/shell --filter=!@timps/memory-dashboard --filter=!timps-code --filter=!timps-mcp",
     "typecheck": "turbo run typecheck --filter=!@timps/mobile",
     "clean": "turbo run clean --filter=!@timps/mobile",
     "docs": "turbo run build --filter=@timps/docs",

@@ -1,5 +1,5 @@
 // ── @timps/memory-core — MemoryEngine ──
-// The single entry-point for all 3-layer memory operations + 9 intelligence tools.
+// The single entry-point for all 9-layer memory operations + 17 intelligence tools.
 // All storage is file-based (JSON) — no database server required.
 
 import * as crypto from 'node:crypto';

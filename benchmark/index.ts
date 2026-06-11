@@ -9,7 +9,40 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 import { MemoryEngine } from '../packages/memory-core/src/MemoryEngine.js';
+
+// ── Versioned benchmark dataset ────────────────────────────────────────────────
+// Dataset files live in benchmark/dataset/ alongside this file.
+// The SHA256 of the dataset directory anchors benchmark numbers to a specific
+// corpus version so readers can independently verify reproducibility.
+const __filename = new URL(import.meta.url).pathname;
+const __dirname = path.dirname(__filename);
+const DATASET_DIR = path.join(__dirname, 'dataset');
+
+export function computeDatasetSha(): string {
+  const datasetFiles = ['corpus.json', 'queries.json', 'contradictions.json', 'questions.json', 'ground_truth.json'];
+  const hash = crypto.createHash('sha256');
+  for (const file of datasetFiles.sort()) {
+    const content = fs.readFileSync(path.join(DATASET_DIR, file), 'utf-8');
+    hash.update(file);
+    hash.update('\0');
+    hash.update(content);
+  }
+  return hash.digest('hex');
+}
+
+const RECALL_CORPUS: { content: string; tags: string[] }[] = JSON.parse(
+  fs.readFileSync(path.join(DATASET_DIR, 'corpus.json'), 'utf-8')
+);
+
+const RECALL_QUERIES: { query: string; expectedSubstrings: string[] }[] = JSON.parse(
+  fs.readFileSync(path.join(DATASET_DIR, 'queries.json'), 'utf-8')
+);
+
+const CONTRADICTION_CASES: { statement: string; storedClaim: string; expectVerdict: 'CONTRADICTION' | 'PARTIAL' | 'CLEAN' }[] = JSON.parse(
+  fs.readFileSync(path.join(DATASET_DIR, 'contradictions.json'), 'utf-8')
+);
 
 export interface BenchmarkResult {
   name: string;
@@ -43,141 +76,7 @@ export interface BenchmarkSuite {
   scalability: ScalabilityResult;
 }
 
-// ── Test corpora ──────────────────────────────────────────────────────────────
 
-const RECALL_CORPUS: { content: string; tags: string[] }[] = [
-  { content: 'Authentication uses JWT tokens stored in httpOnly cookies', tags: ['auth', 'decision'] },
-  { content: 'User data is persisted in PostgreSQL with the users table at the schema root', tags: ['db', 'decision'] },
-  { content: 'API rate limiting is implemented via Redis counter with sliding window', tags: ['infra', 'decision'] },
-  { content: 'Error handling follows the Result type pattern: never throw, always return discriminated union', tags: ['convention', 'errors'] },
-  { content: 'Configuration is loaded from config.yaml at the project root, never from environment variables', tags: ['config', 'convention'] },
-  { content: 'Tests run on Vitest, not Jest — Vitest is faster and has native TypeScript support', tags: ['testing', 'decision'] },
-  { content: 'CI is configured via GitHub Actions in .github/workflows/ — no Travis, no CircleCI', tags: ['ci', 'decision'] },
-  { content: 'Deployment uses Docker Compose on a single VPS — not Heroku, not Vercel, not Kubernetes', tags: ['deploy', 'decision'] },
-  { content: 'Logging uses pino for structured JSON output, not winston', tags: ['logging', 'decision'] },
-  { content: 'Environment variables are managed with dotenv, never with env-cmd', tags: ['config', 'decision'] },
-  { content: 'The frontend is React 19 with TypeScript strict mode enabled', tags: ['frontend', 'convention'] },
-  { content: 'Styling uses Tailwind utility classes — no CSS modules, no styled-components', tags: ['frontend', 'convention'] },
-  { content: 'State management is Zustand for client state, React Query for server state', tags: ['frontend', 'convention'] },
-  { content: 'Form validation uses Zod schemas shared between client and server', tags: ['frontend', 'convention'] },
-  { content: 'Database migrations are managed by Drizzle ORM with versioned SQL files', tags: ['db', 'convention'] },
-  { content: 'API routes follow RESTful conventions with /api/v1 prefix', tags: ['api', 'convention'] },
-  { content: 'All API responses use snake_case for JSON keys, not camelCase', tags: ['api', 'convention'] },
-  { content: 'Background jobs are processed by BullMQ on Redis', tags: ['infra', 'decision'] },
-  { content: 'Email is sent via Resend, not SendGrid', tags: ['infra', 'decision'] },
-  { content: 'File uploads go to S3 with CloudFront in front, never to local disk', tags: ['storage', 'decision'] },
-  { content: 'The monorepo uses pnpm workspaces, not npm workspaces or yarn', tags: ['monorepo', 'decision'] },
-  { content: 'TypeScript builds with tsc for production, tsx for development', tags: ['build', 'convention'] },
-  { content: 'Linting is ESLint flat config with the typescript-eslint preset', tags: ['linting', 'convention'] },
-  { content: 'Formatting is Prettier with no semicolons and 2-space indent', tags: ['formatting', 'convention'] },
-  { content: 'Pre-commit hooks run via Husky + lint-staged', tags: ['hooks', 'convention'] },
-  { content: 'API documentation is generated from OpenAPI specs in /api/openapi.yaml', tags: ['docs', 'convention'] },
-  { content: 'The team uses Conventional Commits for commit messages', tags: ['git', 'convention'] },
-  { content: 'PRs require at least one approval before merge to main', tags: ['git', 'convention'] },
-  { content: 'Releases are cut with changesets and published by a release-please bot', tags: ['release', 'convention'] },
-  { content: 'Secrets are stored in 1Password CLI, never in .env files committed to git', tags: ['security', 'decision'] },
-  { content: 'All PRs run the full test suite before merge — no merge-on-green bypass', tags: ['ci', 'convention'] },
-  { content: 'The database uses UUIDs for primary keys, never auto-incrementing integers', tags: ['db', 'convention'] },
-  { content: 'Time is always stored as UTC ISO 8601 strings, never as Unix timestamps', tags: ['db', 'convention'] },
-  { content: 'Money is stored as integer cents, never as floats', tags: ['db', 'convention'] },
-  { content: 'The codebase uses path aliases: @/components, @/lib, @/hooks', tags: ['frontend', 'convention'] },
-  { content: 'Server actions are preferred over REST endpoints for internal mutations', tags: ['api', 'convention'] },
-  { content: 'WebSockets are used for real-time features via the ws library, not Socket.IO', tags: ['realtime', 'decision'] },
-  { content: 'Search is powered by Meilisearch, not Elasticsearch or Algolia', tags: ['search', 'decision'] },
-  { content: 'The team follows trunk-based development with feature flags for incomplete work', tags: ['git', 'convention'] },
-  { content: 'Observability uses OpenTelemetry, with traces shipped to Honeycomb', tags: ['observability', 'decision'] },
-  { content: 'Error tracking is Sentry on both client and server', tags: ['observability', 'decision'] },
-  { content: 'Feature flags are managed by LaunchDarkly', tags: ['infra', 'decision'] },
-  { content: 'The product analytics tool is PostHog, self-hosted', tags: ['analytics', 'decision'] },
-  { content: 'Customer support is handled by Intercom', tags: ['support', 'decision'] },
-  { content: 'Design assets live in Figma with the engineering team having read access', tags: ['design', 'convention'] },
-  { content: 'Code review feedback is addressed in the same PR, not in follow-up commits', tags: ['git', 'convention'] },
-  { content: 'The team holds a daily standup at 10:00 CET, async-first via Slack threads', tags: ['process', 'convention'] },
-  { content: 'Sprint planning is bi-weekly on Mondays, retros on Fridays', tags: ['process', 'convention'] },
-  { content: 'The staging environment mirrors production with synthetic data, not real customer data', tags: ['env', 'convention'] },
-  { content: 'Backups run hourly to S3 with 30-day retention, tested monthly', tags: ['infra', 'convention'] },
-];
-
-const RECALL_QUERIES: { query: string; expectedSubstrings: string[] }[] = [
-  { query: 'How do we handle authentication?', expectedSubstrings: ['JWT'] },
-  { query: 'Which database stores user records?', expectedSubstrings: ['PostgreSQL'] },
-  { query: 'What rate limiting approach did we pick?', expectedSubstrings: ['Redis'] },
-  { query: 'How are errors handled in the codebase?', expectedSubstrings: ['Result type'] },
-  { query: 'Where is the app config stored?', expectedSubstrings: ['config.yaml'] },
-  { query: 'Which test runner do we use?', expectedSubstrings: ['Vitest'] },
-  { query: 'What CI system is in place?', expectedSubstrings: ['GitHub Actions'] },
-  { query: 'How do we deploy the application?', expectedSubstrings: ['Docker Compose'] },
-  { query: 'What logging library is configured?', expectedSubstrings: ['pino'] },
-  { query: 'How are environment variables managed?', expectedSubstrings: ['dotenv'] },
-  { query: 'What styling approach does the frontend use?', expectedSubstrings: ['Tailwind'] },
-  { query: 'How is client state managed?', expectedSubstrings: ['Zustand'] },
-  { query: 'Which ORM handles database migrations?', expectedSubstrings: ['Drizzle'] },
-  { query: 'What prefix do API routes use?', expectedSubstrings: ['/api/v1'] },
-  { query: 'How are background jobs processed?', expectedSubstrings: ['BullMQ'] },
-  { query: 'Where do uploaded files go?', expectedSubstrings: ['S3'] },
-  { query: 'Which package manager is used?', expectedSubstrings: ['pnpm'] },
-  { query: 'How is commit message style enforced?', expectedSubstrings: ['Conventional Commits'] },
-  { query: 'Where are secrets stored?', expectedSubstrings: ['1Password'] },
-  { query: 'What is the search backend?', expectedSubstrings: ['Meilisearch'] },
-];
-
-const CONTRADICTION_CASES: { statement: string; storedClaim: string; expectVerdict: 'CONTRADICTION' | 'PARTIAL' | 'CLEAN' }[] = [
-  // ── CONTRADICTION cases: vocabulary must overlap > 50% AND flip sentiment ──
-  // The algorithm uses Jaccard word similarity × 1.4 (with flip). For a CONTRADICTION
-  // verdict the score must exceed 0.7, so the statement must share at least ~5/6
-  // words with the stored claim while introducing a negator.
-  {
-    statement: 'do not use JWT tokens for authentication',
-    storedClaim: 'use JWT tokens for authentication',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'never use PostgreSQL for the database',
-    storedClaim: 'use PostgreSQL for the database',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'do not use Redis for rate limiting',
-    storedClaim: 'use Redis for rate limiting',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'never use the Result type for errors',
-    storedClaim: 'use the Result type for errors',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'do not use Vitest for the test suite',
-    storedClaim: 'use Vitest for the test suite',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'never use Docker Compose for deployment',
-    storedClaim: 'use Docker Compose for deployment',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'do not use pino for logging',
-    storedClaim: 'use pino for logging',
-    expectVerdict: 'CONTRADICTION',
-  },
-  {
-    statement: 'never use Tailwind for the frontend',
-    storedClaim: 'use Tailwind for the frontend',
-    expectVerdict: 'CONTRADICTION',
-  },
-  // ── CLEAN cases: completely unrelated topic, low word overlap ──
-  {
-    statement: 'The marketing team prefers green color for the landing page hero section.',
-    storedClaim: 'use JWT tokens for authentication',
-    expectVerdict: 'CLEAN',
-  },
-  {
-    statement: 'Office snacks inventory is running low on the third floor kitchen.',
-    storedClaim: 'use Vitest for the test suite',
-    expectVerdict: 'CLEAN',
-  },
-];
 
 // ── Runner ────────────────────────────────────────────────────────────────────
 
@@ -546,11 +445,13 @@ export class BenchmarkRunner {
       .map(s => `${s.corpus} facts: ${s.meanLatencyMs}ms mean / ${s.p95LatencyMs}ms p95`)
       .join(' · ');
 
+    const sha = computeDatasetSha();
     return `
 ╔══════════════════════════════════════════════════════════════╗
 ║       TIMPS Memory Benchmark — Real Numbers                  ║
 ║       (BM25 retrieval over MemoryEngine, deterministic)      ║
 ╠══════════════════════════════════════════════════════════════╣
+║ Dataset SHA256              │ ${sha.slice(0, 16)}…  (dataset version)            ║
 ║ Corpus size (seeded)        │ ${String(memoryRecall.corpusSize).padStart(4)} facts                        ║
 ║ Recall@1                    │ ${String(memoryRecall.recallAt1).padStart(3)}%                              ║
 ║ Recall@5                    │ ${String(memoryRecall.recallAt5).padStart(3)}%                              ║
@@ -619,9 +520,11 @@ async function main() {
   const projectPath = process.cwd();
   const runner = new BenchmarkRunner(projectPath);
 
+  const sha = computeDatasetSha();
   console.log('\n╔══════════════════════════════════════════════════════════════╗');
   console.log('║          TIMPS Memory Benchmark — Real Numbers              ║');
-  console.log('║  BM25 retrieval · ContradictionDetector · 17 intel tools   ║');
+  console.log('║  BM25 · ContradictionDetector · 17 intel tools            ║');
+  console.log(`║  Dataset: ${sha.slice(0, 16)}…                                              ║`);
   console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
   console.log('Note: SWE-bench and Terminal-Bench are not in this suite —');
