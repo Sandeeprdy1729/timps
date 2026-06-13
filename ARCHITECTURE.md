@@ -1,6 +1,16 @@
 # TIMPS — Architecture
 
-> Last updated: May 2026
+> Last updated: June 2026
+
+## Evaluation suites
+
+| Suite | What it tests |
+|---|---|
+| `npx tsx evals/runner.ts --suite chronos-forge` | L5 temporal memory recall, contradiction detection, foresight |
+| `npx tsx evals/runner.ts --suite echoForge` | L7 causal echo propagation, burnout foresight |
+| `npx tsx evals/runner.ts --suite memory-accuracy` | 50-question recall suite, MRR/NDCG |
+| `npx tsx evals/runner.ts --suite provider-benchmark` | Cross-provider latency/cost |
+| `npx tsx evals/runner.ts --suite task-completion` | End-to-end task success rate |
 
 ## Codebase size (verified)
 

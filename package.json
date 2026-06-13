@@ -23,7 +23,7 @@
     "timps-code",
     "timps-mcp"
   ],
-  "description": "TIMPs — AI memory layer for coding agents. Persistent 3-layer memory (working, episodic, semantic) with 17 intelligence tools. Works with Claude Code, Cursor, Windsurf, and any LLM.",
+  "description": "TIMPs — AI memory layer for coding agents. Persistent 9-layer memory with 17 intelligence tools. Works with Claude Code, Cursor, Windsurf, and any LLM.",
   "main": "dist/main.js",
   "scripts": {
     "build": "turbo run build",
