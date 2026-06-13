@@ -74,7 +74,7 @@ timps-code/dataset/checkpoint.json
 # Build caches / generated files
 **/.gradle/
 **/.docusaurus/
-timps-website/
+
 
 # Local benchmark cache
 .timps/
