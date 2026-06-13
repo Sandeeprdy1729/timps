@@ -233,8 +233,8 @@ When you ask TIMPS a question, the request flows through the 9-layer memory syst
 | Contradiction Detection | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Multi-Provider | ✅ 7 providers | ✅ | ❌ 1 provider | ❌ | ✅ | ✅ | ❌ |
 | Self-Hosted | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Mobile App | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Plugin System | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Mobile App | 🟡 Experimental | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Plugin System | ✅ | ✅ (skills) | ✅ (sub-agents) | ❌ | ✅ | ❌ | ✅ |
 
 ---
 
