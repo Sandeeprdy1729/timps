@@ -138,6 +138,38 @@ npm install -g timps-mcp
 
 ---
 
+## Desktop App (macOS · Windows · Linux)
+
+The TIMPS Desktop app is a cross-platform memory cockpit built with Tauri 2 and React. It visualizes your agent's persistent memory graph, provides a chat interface, and surfaces intelligence alerts from all 17 engines.
+
+**Download the latest release** from the [Releases page](https://github.com/Sandeeprdy1729/timps/releases) and install for your platform:
+
+| Platform | Format |
+|----------|--------|
+| macOS (Intel) | `.dmg` (x86_64) |
+| macOS (Apple Silicon) | `.dmg` (aarch64) |
+| Windows | `.msi` or `.exe` installer |
+| Linux | `.deb` or `.AppImage` |
+
+**Or build from source:**
+```bash
+cd packages/timps-desktop
+npm install
+npm run tauri:build
+```
+
+**First launch:** You'll see a "TIMPS is ready" welcome screen. Press **⌘⇧K** for the command bar or **⌘⇧N** for quick capture.
+
+### Key features:
+- **🧠 Memory Explorer** — Browse semantic, episodic, patterns, and contradictions with filter chips
+- **💬 Chat** — Conversational interface with inline tool call display and active memory recall panel
+- **🔔 Intelligence Alerts** — Real-time feed from all 17 intelligence engines with dismiss/snooze
+- **🔌 Integrations** — Connect GitHub, Telegram, Slack, Claude Code MCP, and more
+- **📊 Stats** — Memory health score, most-touched files, peak hours, velocity trends
+- **⚙️ Settings** — Provider selector with visual active-state indicator, memory retention controls
+
+---
+
 ## How It Works
 
 ```mermaid
