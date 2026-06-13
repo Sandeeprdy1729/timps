@@ -75,3 +75,9 @@ timps-code/dataset/checkpoint.json
 **/.gradle/
 **/.docusaurus/
 timps-website/
+
+# Local benchmark cache
+.timps/
+
+# Example MCP config (no leaked paths)
+claude_desktop_config.json

@@ -1,7 +1,7 @@
 {
   "name": "timps-code",
   "version": "2.0.1",
-  "description": "Open-source CLI coding agent with 3-layer persistent memory. Free with Ollama. Drop-in Claude Code alternative. Works with any model.",
+  "description": "Open-source CLI coding agent with 9-layer persistent memory. Free with Ollama. Drop-in Claude Code alternative. Works with any model.",
   "type": "module",
   "bin": {
     "timps": "./dist/bin/timps.js"
@@ -75,7 +75,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
     "jest": "^30.3.0",
-    "ts-jest": "^30.0.0",
+    "ts-jest": "^29.4.11",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },
