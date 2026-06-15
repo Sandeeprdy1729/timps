@@ -119,19 +119,31 @@ export function StatsView({ stats, loading }: StatsViewProps) {
         <div className="recommendations">
           {stats.semantic_count < 10 && (
             <div className="rec-item warning">
-              <span className="rec-icon">💡</span>
+              <span className="rec-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>
+                </svg>
+              </span>
               <span>Start adding semantic memories to build knowledge</span>
             </div>
           )}
           {stats.episode_count < 5 && (
             <div className="rec-item info">
-              <span className="rec-icon">📜</span>
+              <span className="rec-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </span>
               <span>Use TIMPS more to build session history</span>
             </div>
           )}
           {health >= 80 && (
             <div className="rec-item success">
-              <span className="rec-icon">✨</span>
+              <span className="rec-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </span>
               <span>Great memory health! Keep it up.</span>
             </div>
           )}

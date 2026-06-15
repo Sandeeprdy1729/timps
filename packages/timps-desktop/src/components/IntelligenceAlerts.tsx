@@ -1,15 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sendNotification, isPermissionGranted, requestPermission } from '@tauri-apps/plugin-notification';
 import { api, IntelligenceAlert } from '../api';
-import { ALERT_ENGINES } from '../constants/index';
 import { formatRelativeTime } from '../utils/index';
 import './IntelligenceAlerts.css';
 
-const SEVERITY_LABELS: Record<string, string> = {
-  warning: 'Warning',
-  info: 'Info',
-  ok: 'OK',
+const SEVERITY_ICONS: Record<string, string> = {
+  warning: '!',
+  info: 'i',
+  ok: '\u2713',
 };
+
+const ALERT_ENGINES = [
+  { id: 'contradiction', label: 'Contradiction Detector', icon: '' },
+  { id: 'pattern', label: 'Pattern Weaver', icon: '' },
+  { id: 'bug_pattern', label: 'Bug Pattern Prophet', icon: '' },
+  { id: 'insight', label: 'Insight Miner', icon: '' },
+  { id: 'suggestion', label: 'Suggestion Engine', icon: '' },
+];
 
 interface Props {
   projectPath: string;

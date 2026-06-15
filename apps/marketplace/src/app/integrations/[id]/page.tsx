@@ -1,48 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Metadata } from 'next';
-
-const integrations: Record<string, {
-  id: string;
-  name: string;
-  description: string;
-  fullDescription: string;
-  icon: string;
-  category: string;
-  downloads: number;
-  rating: number;
-  reviews: number;
-  maintainer: string;
-  npmPackage: string;
-  features: string[];
-  installation: string;
-  configuration: string;
-  supported: boolean;
-}> = {
-  github: {
-    id: 'github',
-    name: 'GitHub',
-    description: 'Automate PR reviews, issue management, and repository workflows',
-    fullDescription: 'The GitHub integration enables TIMPS to interact with GitHub repositories, manage issues, review pull requests, and automate workflows.',
-    icon: '🐙',
-    category: 'Developer Tools',
-    downloads: 45000,
-    rating: 4.9,
-    reviews: 328,
-    maintainer: 'TIMPS Team',
-    npmPackage: '@timps/github',
-    features: [
-      'Automated PR reviews',
-      'Issue creation and management',
-      'Repository statistics',
-      'Workflow automation',
-      'Release management',
-    ],
-    installation: 'npm install @timps/github',
-    configuration: 'timps connect github',
-    supported: true,
-  },
-};
+import type { Metadata } from 'next';
+import { integrationMap } from '@/data/integrations';
+import { ConnectButton } from '@/components/ConnectButton';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -50,7 +10,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const integration = integrations[id];
+  const integration = integrationMap[id];
   if (!integration) return { title: 'Not Found' };
   return {
     title: `${integration.name} - TIMPS Marketplace`,
@@ -60,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function IntegrationPage({ params }: PageProps) {
   const { id } = await params;
-  const integration = integrations[id];
+  const integration = integrationMap[id];
   if (!integration) notFound();
 
   return (
@@ -92,6 +52,9 @@ export default async function IntegrationPage({ params }: PageProps) {
               <span className="detail-stat">
                 ⭐ {integration.rating} ({integration.reviews} reviews)
               </span>
+              <span className="detail-stat">
+                Maintained by {integration.maintainer}
+              </span>
             </div>
           </div>
         </div>
@@ -115,13 +78,43 @@ export default async function IntegrationPage({ params }: PageProps) {
           <h2>Configuration</h2>
           <pre className="code-block">{integration.configuration}</pre>
         </section>
+        <section className="detail-section">
+          <h2>npm Package</h2>
+          <pre className="code-block">{integration.npmPackage}</pre>
+        </section>
         <section className="detail-actions">
-          <Link href="/docs/integrations/github" className="btn btn-primary">
-            Read Documentation
+          <ConnectButton integrationId={integration.id} integrationName={integration.name} />
+          <Link href={integration.npmPackage.startsWith('@') ? `https://www.npmjs.com/package/${integration.npmPackage}` : '#'} className="btn btn-secondary">
+            View on npm
           </Link>
-          <button className="btn btn-secondary">Install</button>
+        </section>
+        <section className="detail-section">
+          <h2>API Actions</h2>
+          <div className="api-actions-grid">
+            <div className="api-action-card">
+              <p className="api-action-name">Test Connection</p>
+              <p className="api-action-desc">Verify your credentials are working</p>
+            </div>
+            <div className="api-action-card">
+              <p className="api-action-name">List Data</p>
+              <p className="api-action-desc">Fetch data from {integration.name}</p>
+            </div>
+            <div className="api-action-card">
+              <p className="api-action-name">Create</p>
+              <p className="api-action-desc">Create new items in {integration.name}</p>
+            </div>
+          </div>
         </section>
       </main>
+      <footer className="footer">
+        <div className="container footer-content">
+          <div className="footer-copy">&copy; {new Date().getFullYear().toString()} TIMPS Marketplace</div>
+          <div className="footer-links">
+            <Link href="/" className="footer-link">Home</Link>
+            <Link href="/submit" className="footer-link">Submit</Link>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }

@@ -2,10 +2,23 @@
 
 import { useState } from 'react';
 
+interface Submission {
+  id: string;
+  name: string;
+  type: 'integration' | 'plugin';
+  description: string;
+  category: string;
+  repository: string;
+  npmPackage: string;
+  website: string;
+  sourceUrl: string;
+  submittedAt: number;
+}
+
 export default function SubmitPage() {
   const [formData, setFormData] = useState({
     name: '',
-    type: 'integration',
+    type: 'integration' as 'integration' | 'plugin',
     description: '',
     category: '',
     repository: '',
@@ -13,11 +26,89 @@ export default function SubmitPage() {
     website: '',
     sourceUrl: '',
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Thank you for your submission! We will review it shortly.');
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const submission: Submission = {
+        id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        ...formData,
+        submittedAt: Date.now(),
+      };
+
+      const existing = JSON.parse(localStorage.getItem('timps_submissions') || '[]');
+      existing.push(submission);
+      localStorage.setItem('timps_submissions', JSON.stringify(existing));
+
+      setSubmitted(true);
+      setFormData({
+        name: '',
+        type: 'integration',
+        description: '',
+        category: '',
+        repository: '',
+        npmPackage: '',
+        website: '',
+        sourceUrl: '',
+      });
+    } catch {
+      setError('Failed to save submission. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (submitted) {
+    return (
+      <>
+        <header className="nav">
+          <div className="nav-container">
+            <a href="/" className="nav-logo">
+              <span className="nav-logo-icon">T</span>
+              TIMPS Marketplace
+            </a>
+            <div className="nav-links">
+              <a href="/" className="nav-link">Integrations</a>
+              <a href="/?type=plugins" className="nav-link">Plugins</a>
+              <a href="/submit" className="nav-link">Submit</a>
+            </div>
+          </div>
+        </header>
+        <main className="container">
+          <div className="form-page" style={{ textAlign: 'center', padding: '96px 0' }}>
+            <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎉</div>
+            <h1 className="form-title">Thank You!</h1>
+            <p className="form-subtitle" style={{ marginBottom: '32px' }}>
+              Your {formData.type} has been submitted. The TIMPS team will review it shortly.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+              <button onClick={() => setSubmitted(false)} className="btn btn-secondary">
+                Submit Another
+              </button>
+              <a href="/" className="btn btn-primary">
+                Back to Marketplace
+              </a>
+            </div>
+          </div>
+        </main>
+        <footer className="footer">
+          <div className="container footer-content">
+            <div className="footer-copy">&copy; {new Date().getFullYear().toString()} TIMPS Marketplace</div>
+            <div className="footer-links">
+              <a href="/" className="footer-link">Home</a>
+              <a href="/submit" className="footer-link">Submit</a>
+            </div>
+          </div>
+        </footer>
+      </>
+    );
+  }
 
   return (
     <>
@@ -40,6 +131,11 @@ export default function SubmitPage() {
           <p className="form-subtitle">
             Share your integration or plugin with the TIMPS community
           </p>
+          {error && (
+            <div style={{ color: 'var(--error)', marginBottom: '16px', textAlign: 'center' }}>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="form">
             <div className="form-group">
               <label htmlFor="name">Name *</label>
@@ -59,7 +155,7 @@ export default function SubmitPage() {
                   id="type"
                   required
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'integration' | 'plugin' })}
                 >
                   <option value="integration">Integration</option>
                   <option value="plugin">Plugin</option>
@@ -74,13 +170,13 @@ export default function SubmitPage() {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
                   <option value="">Select category</option>
-                  <option value="ai">AI & LLMs</option>
-                  <option value="communication">Communication</option>
-                  <option value="developer-tools">Developer Tools</option>
-                  <option value="productivity">Productivity</option>
-                  <option value="database">Database</option>
-                  <option value="security">Security</option>
-                  <option value="analytics">Analytics</option>
+                  <option value="Developer Tools">Developer Tools</option>
+                  <option value="Communication">Communication</option>
+                  <option value="AI & LLMs">AI & LLMs</option>
+                  <option value="Productivity">Productivity</option>
+                  <option value="Database">Database</option>
+                  <option value="Security">Security</option>
+                  <option value="Analytics">Analytics</option>
                 </select>
               </div>
             </div>
@@ -126,12 +222,25 @@ export default function SubmitPage() {
                 placeholder="https://source.example.com"
               />
             </div>
-            <button type="submit" className="btn btn-primary btn-large">
-              Submit
+            <button
+              type="submit"
+              className="btn btn-primary btn-large"
+              disabled={submitting}
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
             </button>
           </form>
         </div>
       </main>
+      <footer className="footer">
+        <div className="container footer-content">
+          <div className="footer-copy">&copy; {new Date().getFullYear().toString()} TIMPS Marketplace</div>
+          <div className="footer-links">
+            <a href="/" className="footer-link">Home</a>
+            <a href="/submit" className="footer-link">Submit</a>
+          </div>
+        </div>
+      </footer>
       <style jsx>{`
         .form-page {
           max-width: 600px;
@@ -191,6 +300,10 @@ export default function SubmitPage() {
           width: 100%;
           padding: 16px;
           font-size: 16px;
+        }
+        button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
       `}</style>
     </>

@@ -10,9 +10,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@datadog/datadog-api-client": "^1.58.0",
+    "@hubspot/api-client": "^13.5.0",
+    "@linear/sdk": "^86.0.0",
+    "@notionhq/client": "^5.22.0",
+    "@octokit/rest": "^22.0.1",
+    "@sentry/node": "^10.57.0",
+    "@slack/web-api": "^7.17.0",
+    "axios": "^1.18.0",
+    "jsforce": "^3.10.16",
     "next": "^14.2.35",
+    "openai": "^6.42.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "stripe": "^22.2.1",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "20.11.0",

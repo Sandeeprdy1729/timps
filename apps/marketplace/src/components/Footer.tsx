@@ -8,17 +8,11 @@ export function Footer() {
           <Link href="/docs" className="footer-link">
             Documentation
           </Link>
-          <Link href="/blog" className="footer-link">
-            Blog
-          </Link>
-          <Link href="/community" className="footer-link">
-            Community
-          </Link>
-          <Link href="/status" className="footer-link">
-            Status
+          <Link href="/submit" className="footer-link">
+            Submit
           </Link>
         </div>
-        <p className="footer-copy">© 2024 TIMPS. All rights reserved.</p>
+        <p className="footer-copy">&copy; {new Date().getFullYear().toString()} TIMPS. All rights reserved.</p>
       </div>
     </footer>
   );

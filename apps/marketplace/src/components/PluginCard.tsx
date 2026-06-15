@@ -1,16 +1,16 @@
 import Link from 'next/link';
 
-interface Plugin {
+interface PluginCardData {
   id: string;
   name: string;
   description: string;
   icon: string;
   category: string;
-  author: string;
+  author?: string;
   version: string;
 }
 
-export function PluginCard({ plugin }: { plugin: Plugin }) {
+export function PluginCard({ plugin }: { plugin: PluginCardData }) {
   const isNew = plugin.version.startsWith('1.');
   
   return (

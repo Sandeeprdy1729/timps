@@ -141,7 +141,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
               aria-label={autostartEnabled ? 'Launch at Login Enabled' : 'Launch at Login Disabled'}
               aria-pressed={autostartEnabled}
             >
-              {autostartLoading ? 'Updating…' : autostartEnabled ? '🤖 Enabled' : 'Disabled'}
+              {autostartLoading ? 'Updating…' : autostartEnabled ? 'Enabled' : 'Disabled'}
             </button>
             <p className="settings-hint">
               TIMPS starts automatically when you log in and lives in the menu bar.
@@ -152,7 +152,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
         <div className="settings-field">
           <label>Window close behaviour</label>
           <p className="settings-hint">
-            Clicking ✕ hides the window — TIMPS keeps running in the background.
+            Clicking the close button hides the window — TIMPS keeps running in the background.
             To fully quit, use the menu bar icon → Quit TIMPS.
           </p>
         </div>
@@ -165,7 +165,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
               aria-label={clipboardWatcher ? 'Clipboard Watcher Enabled' : 'Clipboard Watcher Off'}
               aria-pressed={clipboardWatcher}
             >
-              {clipboardWatcher ? '📋 Enabled' : 'Disabled'}
+              {clipboardWatcher ? 'Enabled' : 'Disabled'}
             </button>
             <p className="settings-hint">
               Off by default. When enabled, copied text (≥20 chars) is silently captured
@@ -206,7 +206,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
 
       <div className="settings-actions">
         <button className="btn btn-primary" onClick={handleSave}>
-          {saved ? '✓ Saved' : 'Save Settings'}
+          {saved ? 'Saved' : 'Save Settings'}
         </button>
       </div>
     </div>

@@ -1,14 +1,5 @@
 import Link from 'next/link';
-
-interface Integration {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: string;
-  downloads: number;
-  rating: number;
-}
+import type { Integration } from '@/data/integrations';
 
 export function IntegrationCard({ integration }: { integration: Integration }) {
   return (
