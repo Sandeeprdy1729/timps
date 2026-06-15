@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { PluginCard } from './PluginCard';
 
 const morePlugins = [
@@ -139,11 +138,8 @@ const morePlugins = [
   },
 ];
 
-export function PluginGrid({ category = 'all', searchQuery = '' }: { category?: string; searchQuery?: string }) {
-  const [basePlugins] = useState(() => require('../IntegrationGrid').integrations || []);
-  const allPlugins = [...basePlugins, ...morePlugins];
-  
-  const filtered = allPlugins.filter((p) => {
+export function MorePluginGrid({ category = 'all', searchQuery = '' }: { category?: string; searchQuery?: string }) {
+  const filtered = morePlugins.filter((p) => {
     const matchesCategory = category === 'all' || p.category === category;
     const matchesSearch = !searchQuery || 
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

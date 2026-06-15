@@ -113,7 +113,11 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
       <div className="messages-container">
         {messages.length === 0 ? (
           <div className="chat-empty">
-            <div className="empty-icon">💬</div>
+            <div className="empty-icon" style={{ opacity: 0.3 }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
             <h3>Start a conversation</h3>
             <p>Ask questions about your code, request changes, or get explanations.</p>
             <div className="suggestions">
@@ -129,7 +133,15 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
           messages.map(msg => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-avatar">
-                {msg.role === 'user' ? '👤' : '◈'}
+                {msg.role === 'user' ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                )}
               </div>
               <div className="message-content">
                 <div className="message-bubble">{msg.content}</div>

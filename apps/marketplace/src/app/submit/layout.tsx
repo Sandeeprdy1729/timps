@@ -1,6 +1,4 @@
 import { Metadata } from 'next';
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Submit Integration | TIMPS Marketplace',
@@ -12,13 +10,5 @@ export default function SubmitLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="en">
-      <body>
-        <Navbar />
-        {children}
-        <Footer />
-      </body>
-    </html>
-  );
+  return <>{children}</>;
 }

@@ -17,6 +17,7 @@ export function SemanticView({ entries, loading }: SemanticViewProps) {
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'timestamp' | 'type'>('timestamp');
   const [selectedEntry, setSelectedEntry] = useState<SemanticEntry | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
 
   const filtered = useMemo(() => {
     let result = [...entries];

@@ -7,7 +7,7 @@
 | Phase | Feature | Status |
 | --- | --- | --- |
 | 1 | `@timps/memory-core` extracted as standalone package | ✅ |
-| 2 | 46 MCP tools + benchmark | ✅ |
+| 2 | 61 MCP tools + benchmark | ✅ |
 | 3 | Skills Marketplace + VS Code memory UI | ✅ |
 | 4 | Turborepo 2.9.9 monorepo setup | ✅ |
 | 5 | Web memory dashboard (sigma.js knowledge graph) | ✅ |
