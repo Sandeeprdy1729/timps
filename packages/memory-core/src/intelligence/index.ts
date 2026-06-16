@@ -50,3 +50,28 @@ export type { CulturalNorm, CodebaseCulture } from './codebaseAnthropologist.js'
 
 export { InstitutionalMemory } from './institutionalMemory.js';
 export type { Contribution, DepartedContributor } from './institutionalMemory.js';
+
+// ── Tools 18-25: New intelligence tools (Master Plan Phase 1-3) ──
+export { FalseMemoryDetector } from './FalseMemoryDetector.js';
+export type { FalseMemoryScore } from './FalseMemoryDetector.js';
+
+export { ConfidenceCalibratorTool } from './ConfidenceCalibrator.js';
+export type { CalibrationInput, CalibrationResult } from './ConfidenceCalibrator.js';
+
+export { SourceAttributor } from './SourceAttributor.js';
+export type { AttributionResult } from './SourceAttributor.js';
+
+export { ConflictResolver } from './ConflictResolver.js';
+export type { MemoryRef, ConflictResolution } from './ConflictResolver.js';
+
+export { MemoryAuditor } from './MemoryAuditor.js';
+export type { AuditReport } from './MemoryAuditor.js';
+
+export { ProspectiveTriggerTool } from './ProspectiveTrigger.js';
+export type { Trigger, TriggerMatch } from './ProspectiveTrigger.js';
+
+export { BiasRevealerTool } from './BiasRevealer.js';
+export type { BiasReport } from './BiasRevealer.js';
+
+export { SchemaInferrer } from './SchemaInferrer.js';
+export type { InferredSchema, SchemaInferenceResult } from './SchemaInferrer.js';

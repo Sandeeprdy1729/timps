@@ -100,3 +100,105 @@ export interface DriftResult {
   driftedAreas: string[];
   explanation: string;
 }
+
+// ── New architecture types (Layer 10-22, Tools 18-25) ──
+
+export interface EngramEntry {
+  index: number;
+  timestamp: number;
+  op: 'store' | 'retrieve' | 'update' | 'delete' | 'contradict' | 'verify' | 'supersede' | 'archive';
+  layerId: string;
+  entryId: string;
+  actorId: string;
+  prevHash: string;
+  payload: unknown;
+  justification: string;
+  hash: string;
+}
+
+export interface Provenance {
+  id: string;
+  sourceKind: 'user_direct' | 'user_implied' | 'agent_inference' | 'agent_pattern' | 'tool_output' | 'web_search' | 'doc_reference' | 'git_history' | 'cross_project';
+  sourceDetail: string;
+  actorId: string;
+  observedAt: number;
+  validFrom?: number;
+  validUntil?: number;
+  evidenceCount: number;
+  confidence: number;
+  chainOfCustody: { actor: string; op: string; at: number }[];
+  parentIds: string[];
+}
+
+export interface ConsolidationRule {
+  name: string;
+  match: (entry: any) => boolean;
+  transform: (entry: any) => any;
+  promote: boolean;
+}
+
+export interface PrunePolicy {
+  coldThresholdDays: number;
+  minImportance: number;
+  minConfidence: number;
+  archiveInsteadOfDelete: boolean;
+}
+
+export interface RepetitionCard {
+  id: string;
+  easeFactor: number;
+  interval: number;
+  repetitions: number;
+  nextReview: number;
+  lastReview: number;
+  retrievability: number;
+}
+
+export interface GuardConfig {
+  minConfidenceForStore: number;
+  minEvidenceCount: number;
+  requireProvenance: boolean;
+  maxContradictionsBeforeBlock: number;
+}
+
+export interface GuardVerdict {
+  allowed: boolean;
+  reason: string;
+  confidenceThreshold: number;
+  actualConfidence: number;
+}
+
+export interface MemoryHealthReport {
+  timestamp: number;
+  totalEntries: number;
+  weak: number;
+  contradicted: number;
+  outdated: number;
+  unsourced: number;
+  healthScore: number;
+  suggestions: string[];
+}
+
+export interface CalibrationInput {
+  similarity: number;
+  reliability: number;
+  evidence: number;
+  freshness: number;
+}
+
+export interface CalibrationResult {
+  score: number;
+  level: 'very_low' | 'low' | 'medium' | 'high' | 'very_high';
+  breakdown: {
+    similarityContribution: number;
+    reliabilityContribution: number;
+    evidenceContribution: number;
+    freshnessContribution: number;
+  };
+}
+
+export interface LayerIdString {
+  layerId: 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6' | 'L7' | 'L8' | 'L9'
+    | 'L10' | 'L11' | 'L12' | 'L13' | 'L14' | 'L15' | 'L16' | 'L17'
+    | 'L18' | 'L19' | 'L20' | 'L21' | 'L22';
+}
