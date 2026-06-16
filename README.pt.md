@@ -30,7 +30,7 @@
   <strong>Português</strong>
 </p>
 
-> TIMPS é uma camada de memória persistente para agentes de codificação de IA. Ele lembra do seu código, das suas decisões, dos seus bugs — para que Claude, Cursor, Windsurf ou qualquer agente compatível com MCP nunca faça você reexplicar nada. Memória de 9 camadas. 17 ferramentas de inteligência. Instalação de 30 segundos. Gratuito.
+> TIMPS é uma camada de memória persistente para agentes de codificação de IA. Ele lembra do seu código, das suas decisões, dos seus bugs — para que Claude, Cursor, Windsurf ou qualquer agente compatível com MCP nunca faça você reexplicar nada. Memória de 22 camadas. 25 ferramentas de inteligência. Instalação de 30 segundos. Gratuito.
 
 <p align="center">
   <img src="demo/quick_demo.gif" alt="Demonstração do TIMPS — pergunte 'explique este código' e obtenha uma resposta rica com memória" width="100%">
@@ -126,8 +126,8 @@ npm install -g timps-mcp
 
 ## Recursos
 
-- **🧠 Memória persistente de 9 camadas** — Episódica (lembrança de sessão), Semântica (grafo de conhecimento), Processual (workflows), mais 6 camadas avançadas de forja (ChronosForge, ResonanceForge, EchoForge, SynapseQuench, HarmonicSheafWeaver e mais). A memória sobrevive entre sessões, projetos e reinicializações de agentes.
-- **🔧 17 ferramentas de inteligência** — Detecção de contradição, previsão de esgotamento, rastreamento de relacionamentos, detecção de padrões, pontuação de anomalias, busca semântica, detecção de desvio e mais. Cada ferramenta é baseada em classes, determinística (zero `Math.random()`) e com benchmarks.
+- **🧠 Memória persistente de 22 camadas** — Episódica (lembrança de sessão), Semântica (grafo de conhecimento), Processual (workflows), mais 19 camadas avançadas de forja (ChronosForge, ResonanceForge, EchoForge, SynapseQuench, HarmonicSheafWeaver e mais). A memória sobrevive entre sessões, projetos e reinicializações de agentes.
+- **🔧 25 ferramentas de inteligência** — Detecção de contradição, previsão de esgotamento, rastreamento de relacionamentos, detecção de padrões, pontuação de anomalias, busca semântica, detecção de desvio e mais. Cada ferramenta é baseada em classes, determinística (zero `Math.random()`) e com benchmarks.
 - **💰 100% gratuito com Ollama** — Roda completamente local. Zero chaves de API necessárias. Sem telemetria. Sem dependência de nuvem.
 - **🔌 MCP nativo** — Funciona de imediato com Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode e qualquer agente compatível com MCP.
 - **🔄 Multiprovedor** — Claude, GPT, Gemini, DeepSeek, OpenRouter, Ollama e endpoints personalizados. Roteamento automático inteligente entre provedores.
@@ -160,13 +160,24 @@ graph TB
         L7["L7 EchoForge"]
         L8["L8 SynapseQuench"]
         L9["L9 HarmonicSheafWeaver"]
+        L10["L10 EngramLog"]
+        L11["L11 ConsolidationEngine"]
+        L12["L12 SynapticPruner"]
+        L13["L13 ProvenanceForge"]
+        L14["L14 SpacedRepetitionForge"]
+        L15["L15 ConstitutionalGuard"]
+        L16["L16 AuditForge"]
+        L17["L17 ProspectiveTrigger"]
+        L18["L18 BiasRevealer"]
+        L19["L19 ContextVector"]
+        L20["L20 RehearsalEngine"]
+        L21["L21 SchemaDistorter"]
+        L22["L22 ConfidenceCalibrator"]
 
-        L1 --> L2 --> L3 --> L4
-        L4 --> L5 --> L6 --> L7
-        L7 --> L8 --> L9
+        L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7 --> L8 --> L9 --> L10 --> L11 --> L12 --> L13 --> L14 --> L15 --> L16 --> L17 --> L18 --> L19 --> L20 --> L21 --> L22
     end
 
-    Core --> Tools["17 Ferramentas de Inteligência"]
+    Core --> Tools["25 Ferramentas de Inteligência"]
     Tools --> Storage["Armazenamento Híbrido"]
 
     Storage --> SQLite["SQLite Local"]
@@ -184,7 +195,7 @@ graph TB
     Core --> Providers
 ```
 
-Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema de memória de 9 camadas. Cada camada enriquece o contexto: a Memória de Trabalho mantém a sessão atual, a Episódica recupera sessões passadas, a Semântica fornece relações do grafo de conhecimento, a Processual injeta workflows aprendidos, e as camadas de forja (5–9) lidam com análise de séries temporais, correspondência de ressonância, síntese de padrões, recuperação associativa e tecelagem harmônica. As 17 ferramentas de inteligência processam o contexto enriquecido antes de retornar uma resposta fundamentada em tudo que o TIMPS aprendeu sobre seu código.
+Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema de memória de 22 camadas. Cada camada enriquece o contexto: a Memória de Trabalho mantém a sessão atual, a Episódica recupera sessões passadas, a Semântica fornece relações do grafo de conhecimento, a Processual injeta workflows aprendidos, e as camadas de forja (5–22) lidam com análise de séries temporais, correspondência de ressonância, síntese de padrões, recuperação associativa, tecelagem harmônica e mais. As 25 ferramentas de inteligência processam o contexto enriquecido antes de retornar uma resposta fundamentada em tudo que o TIMPS aprendeu sobre seu código.
 
 ---
 
@@ -192,8 +203,8 @@ Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema 
 
 | Funcionalidade | TIMPS | agentmemory | Claude Code | MemGPT/Letta | Cline | Continue | Cursor |
 |---|---|---|---|---|---|---|---|
-| Memória Persistente | ✅ 9 camadas | ✅ SQLite | ❌ | ✅ | ❌ | ❌ | ❌ |
-| 17 Ferramentas de Inteligência | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Memória Persistente | ✅ 22 camadas | ✅ SQLite | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 25 Ferramentas de Inteligência | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Gratuito (Ollama) | ✅ | ✅ | ❌ | ⚠️ Parcial | ❌ | ✅ | ❌ |
 | MCP Nativo | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Extensão VS Code | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
@@ -210,7 +221,7 @@ Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema 
 
 - **"Eu uso o Claude Code e estou cansado de reexplicar meu código toda sessão."** TIMPS persiste tudo — decisões de arquitetura, padrões de bugs, convenções de API — entre sessões, projetos e reinicializações.
 - **"Eu executo o Ollama localmente e quero um agente de IA que não se comunique com servidores externos."** TIMPS é 100% local com Ollama. Zero telemetria, zero chamadas de API, zero dependência de nuvem.
-- **"Eu gerencio um monorepo grande e meu agente continua esquecendo o contexto."** A memória de 9 camadas do TIMPS lida com bases de código de qualquer tamanho. As camadas de forja (ChronosForge, HarmonicSheafWeaver) são especializadas em reconhecimento de padrões de longo prazo e mapeamento de relacionamentos entre arquivos.
+- **"Eu gerencio um monorepo grande e meu agente continua esquecendo o contexto."** A memória de 22 camadas do TIMPS lida com bases de código de qualquer tamanho. As camadas de forja (ChronosForge, HarmonicSheafWeaver) são especializadas em reconhecimento de padrões de longo prazo e mapeamento de relacionamentos entre arquivos.
 - **"Eu quero que meu agente de IA aprenda com seus erros."** Detecção de contradição, previsão de esgotamento e pontuação de anomalias permitem que o TIMPS identifique quando está dando conselhos ruins e evite repetir erros.
 - **"Estou construindo uma toolchain baseada em MCP e preciso de memória que funcione entre agentes."** TIMPS é nativo MCP. Conecte-o ao Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode — qualquer cliente MCP — e compartilhe memória entre todos eles.
 
@@ -218,14 +229,14 @@ Quando você faz uma pergunta ao TIMPS, a requisição flui através do sistema 
 
 ## Desempenho / Benchmarks
 
-Todas as 17 ferramentas de inteligência são avaliadas continuamente contra um conjunto de avaliação padronizado. Os resultados são rastreados por commit para prevenir regressão.
+Todas as 25 ferramentas de inteligência são avaliadas continuamente contra um conjunto de avaliação padronizado. Os resultados são rastreados por commit para prevenir regressão.
 
 | Métrica | TIMPS | agentmemory | mem0 | Letta |
 |---|---|---|---|---|
 | **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
 | **MRR (Recíproco da Média das Posições)** | **0.82** | 0.882 | 0.71 | 0.65 |
 | **Precisão de Contradição** | **100% (10/10)** | — | — | — |
-| **Ferramentas de Inteligência** | **100% (17/17)** | — | — | — |
+| **Ferramentas de Inteligência** | **100% (25/25)** | — | — | — |
 | **Latência média (recuperação)** | **17ms** | 45ms | 120ms | 200ms |
 | **Escalabilidade (500 fatos)** | **0.6ms média / 1ms p95** | — | — | — |
 
@@ -257,7 +268,7 @@ Ainda não. TIMPS é auto-hospedado por design. Hospedagem em nuvem está no roa
 Sim. TIMPS detecta automaticamente os provedores disponíveis. Se o Ollama não estiver em execução, ele guia você na conexão com Claude, GPT ou outro provedor.
 
 **Como o TIMPS se compara ao agentmemory?**  
-TIMPS tem 9 camadas de memória vs 1, 17 ferramentas de inteligência vs 0, suporta 7 provedores vs 3, inclui extensão VS Code, aplicativo mobile e sistema de plugins. agentmemory é mais simples e apenas SQLite.
+TIMPS tem 22 camadas de memória vs 1, 25 ferramentas de inteligência vs 0, suporta 7 provedores vs 3, inclui extensão VS Code, aplicativo mobile e sistema de plugins. agentmemory é mais simples e apenas SQLite.
 
 **Posso contribuir com minhas próprias ferramentas de inteligência?**  
 Sim. Veja o SDK de plugins em `packages/plugin-sdk/` e o guia de contribuição em [`CONTRIBUTING.md`](CONTRIBUTING.md).
@@ -271,7 +282,7 @@ Sim — extensão VS Code (nativa), aplicativo desktop Tauri (`packages/timps-de
 
 | Arquivo | O que cobre |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 camadas de memória, 17 ferramentas, benchmark, CI, detalhes internos MCP |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 22 camadas de memória, 25 ferramentas, benchmark, CI, detalhes internos MCP |
 | [`AGENTS.md`](AGENTS.md) | Instruções para agentes de IA neste repositório |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Checklist de PR, habilidades, changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Histórico de versões |

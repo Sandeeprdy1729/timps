@@ -1,7 +1,7 @@
 # TIMPS Memory Recall Benchmark
 
 > **Last run:** `npx tsx benchmark/index.ts --quick` (15 runs, latest: `run_1781067808285.json`)
-> **Corpus:** 50 facts, 20 queries, 10 contradiction pairs, 17 intelligence tools
+> **Corpus:** 50 facts, 20 queries, 10 contradiction pairs, 25 intelligence tools
 
 ## Summary
 
@@ -13,7 +13,7 @@
 | **MRR** | — | 0.82 | — |
 | **NDCG** | — | 0.85 | — |
 | **Contradiction Detection** | — | 100% (10/10) | — |
-| **Intelligence Tools** | — | 100% (17/17) | — |
+| **Intelligence Tools** | — | 100% (25/25) | — |
 | **Scalability (50 facts)** | — | 0.2ms mean / 1ms p95 | — |
 | **Scalability (200 facts)** | — | 0.2ms mean / 1ms p95 | — |
 | **Scalability (500 facts)** | — | 0.6ms mean / 1ms p95 | — |
@@ -28,7 +28,7 @@ Results are saved to `.timps/benchmarks/run_<timestamp>.json`. See `benchmark/in
 - **50 facts** seeded into `MemoryEngine` covering architecture decisions, code patterns, bug history, personal preferences
 - **20 recall queries** with expected substrings — a query counts as a hit if its answer contains at least 1 expected keyword
 - **10 contradiction pairs** — 8 CONTRADICTION + 2 CLEAN, tested against `ContradictionDetector`
-- **17 intelligence tools** — each produces an expected output shape (not just "runs without error")
+- **25 intelligence tools** — each produces an expected output shape (not just "runs without error")
 - **Scalability** measured at 50, 200, and 500 facts in the corpus
 - **All metrics are deterministic** — verified by `grep -c "Math.random" benchmark/` returning 0
 

@@ -15,7 +15,7 @@ timps
 
 ## What makes TIMPS different
 
-**Persistent memory.** TIMPS remembers your project across sessions using a 9-layer memory system:
+**Persistent memory.** TIMPS remembers your project across sessions using a 22-layer memory system:
 
 - **L1 Working** — current goal, active files, recent errors (this session)
 - **L2 Episodic** — summaries of past conversations stored to disk (append-only)
@@ -26,6 +26,19 @@ timps
 - **L7 EchoForge** — reservoir computing with BFS context propagation
 - **L8 SynapseQuench** — cross-layer coherence optimizer
 - **L9 HarmonicSheafWeaver** — sheaf-cohomology engine for algebraic contradiction detection
+- **L10 EngramLog** — immutable hash-chained audit trail of all memory operations
+- **L11 ConsolidationEngine** — episodic → semantic memory promotion on demand
+- **L12 SynapticPruner** — active forgetting by importance scoring
+- **L13 ProvenanceForge** — source tracking and chain of custody for every fact
+- **L14 SpacedRepetitionForge** — SM-2 scheduling algorithm for review timing
+- **L15 ConstitutionalGuard** — prevents low-confidence writes to memory
+- **L16 AuditForge** — weekly memory health reports and drift detection
+- **L17 ProspectiveTrigger** — "when X happens, surface Y" conditional recall
+- **L18 BiasRevealer** — over/under-representation analysis across saved facts
+- **L19 ContextVector** — state-dependent recall encoding and retrieval
+- **L20 RehearsalEngine** — spaced retrieval practice scheduling
+- **L21 SchemaDistorter** — Bartlett schema-driven distortion detection
+- **L22 ConfidenceCalibrator** — multi-signal confidence scoring
 
 When you start a new session and say "use the same pattern we always use for API routes", TIMPS knows what you mean.
 
@@ -50,7 +63,7 @@ flowchart LR
     Input["User input"] --> App["app.ts\nAgentLoop.run()"]
     App --> Agent["agent.ts\n(plan + execute)"]
     Agent --> Tools["25+ Tools\nfile · git · shell · web"]
-    Agent --> Memory["3-Layer Memory\nworking · episodic · semantic"]
+    Agent --> Memory["22-Layer Memory\nworking · episodic · semantic"]
     Memory -->|"recalled context"| Agent
     Tools -->|"observation"| Agent
     Agent -->|"stream"| TUI["Ink/React TUI\n(src/ui/App.tsx)"]

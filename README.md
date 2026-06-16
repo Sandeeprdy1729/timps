@@ -30,7 +30,7 @@
   <a href="README.pt.md">Português</a>
 </p>
 
-> TIMPS is a persistent memory layer for AI coding agents. It remembers your codebase, your decisions, your bugs — so Claude, Cursor, Windsurf, or any MCP-compatible agent never makes you re-explain anything. 9-layer memory. 17 intelligence tools. 30-second install. Free.
+> TIMPS is a persistent memory layer for AI coding agents. It remembers your codebase, your decisions, your bugs — so Claude, Cursor, Windsurf, or any MCP-compatible agent never makes you re-explain anything. 22-layer memory. 25 intelligence tools. 30-second install. Free.
 
 <p align="center">
   <img src="demo/quick_demo.gif" alt="TIMPS demo — ask 'explain this codebase' and get rich memory-backed response" width="100%">
@@ -126,8 +126,8 @@ npm install -g timps-mcp
 
 ## Features
 
-- **🧠 9-layer persistent memory** — Episodic (session recall), Semantic (knowledge graph), Procedural (workflows), plus 6 advanced forge layers (ChronosForge, ResonanceForge, EchoForge, SynapseQuench, HarmonicSheafWeaver, and more). Memory survives across sessions, projects, and agent restarts.
-- **🔧 17 intelligence tools** — Contradiction detection, burnout prediction, relationship tracking, pattern detection, anomaly scoring, semantic search, drift detection, and more. Every tool is class-based, deterministic (zero `Math.random()`), and benchmarked.
+- **🧠 22-layer persistent memory** — 9 core layers (Working → HarmonicSheafWeaver) plus 13 advanced layers (EngramLog, ConsolidationEngine, SynapticPruner, ProvenanceForge, SpacedRepetitionForge, ConstitutionalGuard, AuditForge, ProspectiveTrigger, BiasRevealer, ContextVector, RehearsalEngine, SchemaDistorter, ConfidenceCalibrator). Memory survives across sessions, projects, and agent restarts.
+- **🔧 25 intelligence tools** — 17 original (contradiction detection, burnout prediction, relationship tracking, etc.) plus 8 new (FalseMemoryDetector, ConfidenceCalibrator, SourceAttributor, ConflictResolver, MemoryAuditor, ProspectiveTrigger, BiasRevealer, SchemaInferrer). Every tool is class-based, deterministic (zero `Math.random()`), and benchmarked.
 - **💰 100% free with Ollama** — Runs fully local. Zero API keys required. No telemetry. No cloud dependency.
 - **🔌 MCP native** — Works out of the box with Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode, and any MCP-compatible agent.
 - **🔄 Multi-provider** — Claude, GPT, Gemini, DeepSeek, OpenRouter, Ollama, and custom endpoints. Intelligent auto-routing between providers.
@@ -140,7 +140,7 @@ npm install -g timps-mcp
 
 ## Desktop App (macOS · Windows · Linux)
 
-The TIMPS Desktop app is a cross-platform memory cockpit built with Tauri 2 and React. It visualizes your agent's persistent memory graph, provides a chat interface, and surfaces intelligence alerts from all 17 engines.
+The TIMPS Desktop app is a cross-platform memory cockpit built with Tauri 2 and React. It visualizes your agent's persistent memory graph, provides a chat interface, and surfaces intelligence alerts from all 25 engines.
 
 **Download the latest release** from the [Releases page](https://github.com/Sandeeprdy1729/timps/releases) and install for your platform:
 
@@ -163,7 +163,7 @@ npm run tauri:build
 ### Key features:
 - **🧠 Memory Explorer** — Browse semantic, episodic, patterns, and contradictions with filter chips
 - **💬 Chat** — Conversational interface with inline tool call display and active memory recall panel
-- **🔔 Intelligence Alerts** — Real-time feed from all 17 intelligence engines with dismiss/snooze
+- **🔔 Intelligence Alerts** — Real-time feed from all 25 intelligence engines with dismiss/snooze
 - **🔌 Integrations** — Connect GitHub, Telegram, Slack, Claude Code MCP, and more
 - **📊 Stats** — Memory health score, most-touched files, peak hours, velocity trends
 - **⚙️ Settings** — Provider selector with visual active-state indicator, memory retention controls
@@ -182,23 +182,36 @@ graph TB
     VSC --> Core
     MCP --> Core
 
-    subgraph Core["TIMPS Memory Core"]
-        L1["L1 Working Memory"]
-        L2["L2 Episodic Memory"]
-        L3["L3 Semantic Memory"]
-        L4["L4 Procedural Memory"]
+    subgraph Core["TIMPS Memory Core (22 layers)"]
+        L1["L1 Working"]
+        L2["L2 Episodic"]
+        L3["L3 Semantic"]
+        L4["L4 Procedural"]
         L5["L5 ChronosForge"]
         L6["L6 ResonanceForge"]
         L7["L7 EchoForge"]
         L8["L8 SynapseQuench"]
         L9["L9 HarmonicSheafWeaver"]
+        L10["L10 EngramLog"]
+        L11["L11 ConsolidationEngine"]
+        L12["L12 SynapticPruner"]
+        L13["L13 ProvenanceForge"]
+        L14["L14 SpacedRepetitionForge"]
+        L15["L15 ConstitutionalGuard"]
+        L16["L16 AuditForge"]
+        L17["L17 ProspectiveTrigger"]
+        L18["L18 BiasRevealer"]
+        L19["L19 ContextVector"]
+        L20["L20 RehearsalEngine"]
+        L21["L21 SchemaDistorter"]
+        L22["L22 ConfidenceCalibrator"]
 
-        L1 --> L2 --> L3 --> L4
-        L4 --> L5 --> L6 --> L7
-        L7 --> L8 --> L9
+        L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7 --> L8 --> L9
+        L9 --> L10 --> L11 --> L12 --> L13 --> L14 --> L15
+        L15 --> L16 --> L17 --> L18 --> L19 --> L20 --> L21 --> L22
     end
 
-    Core --> Tools["17 Intelligence Tools"]
+    Core --> Tools["25 Intelligence Tools"]
     Tools --> Storage["Hybrid Storage"]
 
     Storage --> SQLite["SQLite Local"]
@@ -216,7 +229,7 @@ graph TB
     Core --> Providers
 ```
 
-When you ask TIMPS a question, the request flows through the 9-layer memory system. Each layer enriches the context: Working memory holds the immediate session, Episodic recalls past sessions, Semantic provides knowledge graph relationships, Procedural injects learned workflows, and the forge layers (5–9) handle time-series analysis, resonance matching, pattern synthesis, associative recall, and harmonic weaving. The 17 intelligence tools process the enriched context before returning a response that's grounded in everything TIMPS has learned about your codebase.
+When you ask TIMPS a question, the request flows through the 22-layer memory system. Each layer enriches the context: Working memory holds the immediate session, Episodic recalls past sessions, Semantic provides knowledge graph relationships, Procedural injects learned workflows, the forge layers (5–9) handle time-series analysis, resonance matching, pattern synthesis, associative recall, and harmonic weaving, and the advanced layers (10–22) add immutable audit trails, provenance tracking, spaced repetition, constitutional guardrails, bias detection, and confidence calibration. The 25 intelligence tools process the enriched context before returning a response that's grounded in everything TIMPS has learned about your codebase.
 
 ---
 
@@ -224,8 +237,8 @@ When you ask TIMPS a question, the request flows through the 9-layer memory syst
 
 | Feature | TIMPS | agentmemory | Claude Code | MemGPT/Letta | Cline | Continue | Cursor |
 |---|---|---|---|---|---|---|---|
-| Persistent Memory | ✅ 9 layers | ✅ SQLite | ❌ | ✅ | ❌ | ❌ | ❌ |
-| 17 Intelligence Tools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Persistent Memory | ✅ 22 layers | ✅ SQLite | ❌ | ✅ | ❌ | ❌ | ❌ |
+| 25 Intelligence Tools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Free (Ollama) | ✅ | ✅ | ❌ | ⚠️ Partial | ❌ | ✅ | ❌ |
 | MCP Native | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | VS Code Extension | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
@@ -242,7 +255,7 @@ When you ask TIMPS a question, the request flows through the 9-layer memory syst
 
 - **"I use Claude Code and I'm tired of re-explaining my codebase every session."** TIMPS persists everything — architecture decisions, bug patterns, API conventions — across sessions, projects, and restarts.
 - **"I run Ollama locally and want an AI agent that doesn't phone home."** TIMPS is 100% local with Ollama. Zero telemetry, zero API calls, zero cloud dependency.
-- **"I manage a large monorepo and my agent keeps forgetting context."** TIMPS's 9-layer memory handles codebases of any size. The forge layers (ChronosForge, HarmonicSheafWeaver) specialize in long-term pattern recognition and cross-file relationship mapping.
+- **"I manage a large monorepo and my agent keeps forgetting context."** TIMPS's 22-layer memory handles codebases of any size. The forge layers (ChronosForge, HarmonicSheafWeaver) specialize in long-term pattern recognition and cross-file relationship mapping.
 - **"I want my AI agent to learn from its mistakes."** Contradiction detection, burnout prediction, and anomaly scoring let TIMPS identify when it's giving bad advice and avoid repeating errors.
 - **"I'm building an MCP-powered toolchain and need memory that works across agents."** TIMPS is MCP-native. Connect it to Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode — any MCP client — and share memory across all of them.
 
@@ -250,21 +263,34 @@ When you ask TIMPS a question, the request flows through the 9-layer memory syst
 
 ## Memory Architecture
 
-The 9-layer memory system is TIMPS's core differentiating feature. Each layer serves a specific role in persisting and enriching context:
+The 22-layer memory system is TIMPS's core differentiating feature. Each layer serves a specific role in persisting and enriching context:
 
 | Layer | Storage | Persistence | Contents |
 |---|---|---|---|
 | **L1 Working** | In-process | Reset on exit | Current goals, active files, recent errors |
-| **L2 Episodic** | `~/.timps/memory/<hash>/episodes.jsonl` | Disk (append-only) | Conversation summaries, outcomes |
-| **L3 Semantic** | `~/.timps/memory/<hash>/semantic.json` | Disk (permanent) | Patterns, conventions, decisions |
-| **L4 Procedural** | `~/.timps/memory/<hash>/procedural.json` | Disk | Workflows, recipes, skills |
-| **L5 ChronosForge** | `~/.timps/memory/<hash>/chronos/` | Disk | Causal graph, temporal dependencies |
-| **L6 ResonanceForge** | `~/.timps/memory/<hash>/resonance.json` | Disk | Pattern harmonics, oscillation model |
-| **L7 EchoForge** | `~/.timps/memory/<hash>/echo/` | Disk | Reservoir states, BFS context |
+| **L2 Episodic** | `episodes.jsonl` | Disk (append-only) | Conversation summaries, outcomes |
+| **L3 Semantic** | `semantic.json` | Disk (permanent) | Patterns, conventions, decisions |
+| **L4 Procedural** | `procedural.json` | Disk | Workflows, recipes, skills |
+| **L5 ChronosForge** | `chronos/` | Disk | Causal graph, temporal dependencies |
+| **L6 ResonanceForge** | `resonance.json` | Disk | Pattern harmonics, oscillation model |
+| **L7 EchoForge** | `echo/` | Disk | Reservoir states, BFS context |
 | **L8 SynapseQuench** | In-memory + disk | Cross-layer | Coherence scores, conflict map |
-| **L9 HarmonicSheafWeaver** | `~/.timps/memory/<hash>/sheaf/` | Disk | Sheaf Laplacian, cohomology result |
+| **L9 HarmonicSheafWeaver** | `sheaf/` | Disk | Sheaf Laplacian, cohomology result |
+| **L10 EngramLog** | `engram.log.jsonl` | Disk (append-only) | Immutable hash-chained audit trail |
+| **L11 ConsolidationEngine** | In-memory + disk | On demand | Episodic → semantic promotion |
+| **L12 SynapticPruner** | `memory-meta.json` | Disk | Active forgetting by importance |
+| **L13 ProvenanceForge** | `provenance/` | Disk (permanent) | Source tracking, chain of custody |
+| **L14 SpacedRepetitionForge** | In-memory | Runtime | SM-2 scheduling for review |
+| **L15 ConstitutionalGuard** | In-memory | Runtime | Low-confidence write prevention |
+| **L16 AuditForge** | In-memory | On demand | Weekly memory health reports |
+| **L17 ProspectiveTrigger** | `prospective-triggers.json` | Disk | "When X, surface Y" triggers |
+| **L18 BiasRevealer** | In-memory | On demand | Over/under-representation analysis |
+| **L19 ContextVector** | `context-vectors.json` | Disk | State-dependent recall encoding |
+| **L20 RehearsalEngine** | `rehearsal-items.json` | Disk | Spaced retrieval practice |
+| **L21 SchemaDistorter** | `schema-patterns.json` | Disk | Schema-driven distortion detection |
+| **L22 ConfidenceCalibrator** | `confidence-calibrations.json` | Disk | Multi-signal confidence scoring |
 
-Each project gets isolated memory keyed by SHA256 hash of its absolute path. L1–L3 ship in `packages/memory-core`; L4–L9 require explicit activation as intelligence tools.
+Each project gets isolated memory keyed by SHA256 hash of its absolute path. All 22 layers ship in `packages/memory-core`.
 
 ### Memory Branches
 
@@ -280,14 +306,14 @@ When the branch is merged, memory is merged into main if patterns are generally 
 
 ## Performance / Benchmarks
 
-All 17 intelligence tools are benchmarked continuously against a standardized evaluation suite. Results are tracked per-commit to prevent regression.
+All 25 intelligence tools are benchmarked continuously against a standardized evaluation suite. Results are tracked per-commit to prevent regression.
 
 | Metric | TIMPS | agentmemory | mem0 | Letta |
 |---|---|---|---|---|
 | **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
 | **MRR** | **0.82** | 0.882 | 0.71 | 0.65 |
 | **Contradiction Detection** | **100% (10/10)** | — | — | — |
-| **Intelligence Tools** | **100% (17/17)** | — | — | — |
+| **Intelligence Tools** | **100% (25/25)** | — | — | — |
 | **Avg Latency (recall)** | **17ms** | 45ms | 120ms | 200ms |
 | **Scalability (500 facts)** | **0.6ms mean / 1ms p95** | — | — | — |
 
@@ -301,9 +327,9 @@ All tools are deterministic — zero `Math.random()` calls in the intelligence l
 
 ---
 
-## 17 Intelligence Tools
+## 25 Intelligence Tools
 
-TIMPS ships 17 class-based intelligence tools in `packages/memory-core/src/intelligence/`, each designed for a specific cognitive function:
+TIMPS ships 25 class-based intelligence tools in `packages/memory-core/src/intelligence/`, each designed for a specific cognitive function:
 
 | # | Tool | Purpose |
 |---|---|---|
@@ -324,6 +350,14 @@ TIMPS ships 17 class-based intelligence tools in `packages/memory-core/src/intel
 | 15 | **TemporaTree** | Manages temporal knowledge graphs with decay |
 | 16 | **ArchitectureDrift** | Detects drift between documented and actual architecture |
 | 17 | **VelocityTracker** | Tracks feature velocity and development patterns |
+| 18 | **FalseMemoryDetector** | Flags memories with weak provenance as false-memory risk |
+| 19 | **ConfidenceCalibrator** | Calibrates confidence from similarity, reliability, evidence, freshness |
+| 20 | **SourceAttributor** | Returns human-readable provenance chain for any memory |
+| 21 | **ConflictResolver** | Jaccard + sentiment-flip analysis for contradictory memories |
+| 22 | **MemoryAuditor** | Weekly health audit: weak, contradicted, outdated, unsourced |
+| 23 | **ProspectiveTrigger** | "When X happens, surface Y" trigger registration |
+| 24 | **BiasRevealer** | Over/under-representation analysis in saved memory |
+| 25 | **SchemaInferrer** | Auto-extracts typed schemas from episode/semantic stream |
 
 Every tool is deterministic (zero `Math.random()`), benchmarked, and backed by file-based JSON storage.
 
@@ -469,7 +503,7 @@ Not yet. TIMPS is self-hosted by design. Cloud hosting is on the roadmap.
 Yes. TIMPS auto-detects available providers. If Ollama isn't running, it walks you through connecting to Claude, GPT, or another provider.
 
 **How does TIMPS compare to agentmemory?**  
-TIMPS has 9 memory layers vs 1, 17 intelligence tools vs 0, supports 7 providers vs 3, includes a VS Code extension, mobile app, and plugin system. agentmemory is simpler and SQLite-only.
+TIMPS has 22 memory layers vs 1, 25 intelligence tools vs 0, supports 7 providers vs 3, includes a VS Code extension, mobile app, and plugin system. agentmemory is simpler and SQLite-only.
 
 **Can I contribute my own intelligence tools?**  
 Yes. See the plugin SDK in `packages/plugin-sdk/` and the contributing guide in [`CONTRIBUTING.md`](CONTRIBUTING.md).
@@ -489,7 +523,7 @@ Yes — VS Code extension (native), Tauri desktop app (`packages/timps-desktop/`
 
 | File | What it covers |
 |---|---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 9 memory layers, 17 tools, benchmark, CI, MCP internals |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 22 memory layers, 25 tools, benchmark, CI, MCP internals |
 | [`AGENTS.md`](AGENTS.md) | AI agent instructions for this repo |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | PR checklist, skills, changesets |
 | [`CHANGELOG.md`](CHANGELOG.md) | Version history & roadmap |
