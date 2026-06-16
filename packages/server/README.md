@@ -6,7 +6,7 @@
 
 **Claude Code forgets everything when you close it. TIMPS remembers — forever.**
 
-TIMPS is the persistent memory server that backs the CLI agent, MCP tools, and VS Code extension. It stores 9 layers of memory (working, episodic, semantic, procedural, chronos, resonance, echo, synapse, harmonic sheaf) and exposes 17 intelligence tools over a REST API.
+TIMPS is the persistent memory server that backs the CLI agent, MCP tools, and VS Code extension. It stores 22 layers of memory (working, episodic, semantic, procedural, chronos, resonance, echo, synapse, harmonic sheaf, engram log, consolidation, synaptic pruning, provenance, spaced repetition, constitutional guard, audit, prospective trigger, bias revealer, context vector, rehearsal, schema distortion, confidence calibration) and exposes 25 intelligence tools over a REST API.
 
 ---
 
@@ -75,7 +75,7 @@ DB-dependent routes return **HTTP 503** with a clear message when PostgreSQL is 
 
 ---
 
-## 17 Intelligence Tools
+## 25 Intelligence Tools
 
 | Tool | What it does |
 | --- | --- |
@@ -88,7 +88,7 @@ DB-dependent routes return **HTTP 503** with a clear message when PostgreSQL is 
 | Living Manifesto | Derives your actual values from behavior |
 | Dead Reckoning | Simulates future outcomes for decisions |
 | Meeting Ghost | Extracts and tracks commitments from meeting notes |
-| + 8 more | See [full docs](https://github.com/Sandeeprdy1729/timps#-timps-server-17-intelligence-tools) |
+| + 16 more | See [full docs](https://github.com/Sandeeprdy1729/timps#25-intelligence-tools) |
 
 ---
 
