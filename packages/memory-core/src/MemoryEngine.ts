@@ -22,6 +22,42 @@ import {
 
 import { searchEntries } from './search.js';
 
+// ── New Layers (L10-L22) ──
+import { EngramLog } from './EngramLog.js';
+import { ConsolidationEngine } from './ConsolidationEngine.js';
+import type { ConsolidationRule } from './ConsolidationEngine.js';
+import { SynapticPruner } from './SynapticPruner.js';
+import type { PrunePolicy } from './SynapticPruner.js';
+import { ProvenanceForge } from './ProvenanceForge.js';
+import type { ProvenanceInput } from './ProvenanceForge.js';
+import { SpacedRepetitionForge } from './SpacedRepetitionForge.js';
+import { ConstitutionalGuard } from './ConstitutionalGuard.js';
+import type { GuardConfig } from './ConstitutionalGuard.js';
+import { AuditForge } from './AuditForge.js';
+import { ProspectiveTrigger } from './ProspectiveTrigger.js';
+import { BiasRevealer } from './BiasRevealer.js';
+import { ContextVector } from './ContextVector.js';
+import { RehearsalEngine } from './RehearsalEngine.js';
+import { SchemaDistorter } from './SchemaDistorter.js';
+import { ConfidenceCalibrator } from './ConfidenceCalibrator.js';
+
+// ── New Intelligence Tools (18-25) ──
+import { FalseMemoryDetector } from './intelligence/FalseMemoryDetector.js';
+import type { FalseMemoryScore } from './intelligence/FalseMemoryDetector.js';
+import { ConfidenceCalibratorTool } from './intelligence/ConfidenceCalibrator.js';
+import type { CalibrationInput, CalibrationResult } from './intelligence/ConfidenceCalibrator.js';
+import { SourceAttributor } from './intelligence/SourceAttributor.js';
+import type { AttributionResult } from './intelligence/SourceAttributor.js';
+import { ConflictResolver } from './intelligence/ConflictResolver.js';
+import type { MemoryRef, ConflictResolution } from './intelligence/ConflictResolver.js';
+import { MemoryAuditor } from './intelligence/MemoryAuditor.js';
+import type { AuditReport } from './intelligence/MemoryAuditor.js';
+import { ProspectiveTriggerTool } from './intelligence/ProspectiveTrigger.js';
+import { BiasRevealerTool } from './intelligence/BiasRevealer.js';
+import type { BiasReport } from './intelligence/BiasRevealer.js';
+import { SchemaInferrer } from './intelligence/SchemaInferrer.js';
+import type { SchemaInferenceResult } from './intelligence/SchemaInferrer.js';
+
 // Intelligence tools — ported from packages/server
 import { ContradictionDetector } from './intelligence/contradiction.js';
 import { BurnoutSeismograph } from './intelligence/burnout.js';
@@ -111,6 +147,31 @@ export class MemoryEngine {
 
   // ── Layer 18: QITRL (lazy-init) ──
   private _qitrl?: QITRL;
+
+  // ── New Layers L10-L22 (lazy-init) ──
+  private _engramLog?: EngramLog;
+  private _consolidation?: ConsolidationEngine;
+  private _synapticPruner?: SynapticPruner;
+  private _provenanceForge?: ProvenanceForge;
+  private _spacedRepetition?: SpacedRepetitionForge;
+  private _constitutionalGuard?: ConstitutionalGuard;
+  private _auditForge?: AuditForge;
+  private _prospectiveTrigger?: ProspectiveTrigger;
+  private _biasRevealer?: BiasRevealer;
+  private _contextVector?: ContextVector;
+  private _rehearsalEngine?: RehearsalEngine;
+  private _schemaDistorter?: SchemaDistorter;
+  private _confidenceCalibrator?: ConfidenceCalibrator;
+
+  // ── New Intelligence Tools 18-25 (lazy-init) ──
+  private _falseMemoryDetector?: FalseMemoryDetector;
+  private _calibratorTool?: ConfidenceCalibratorTool;
+  private _sourceAttributor?: SourceAttributor;
+  private _conflictResolver?: ConflictResolver;
+  private _memoryAuditor?: MemoryAuditor;
+  private _prospectiveTriggerTool?: ProspectiveTriggerTool;
+  private _biasRevealerTool?: BiasRevealerTool;
+  private _schemaInferrer?: SchemaInferrer;
 
   // ── Intelligence tool instances (lazy-init via getters) ──
   private _contradiction?: ContradictionDetector;
@@ -278,6 +339,111 @@ export class MemoryEngine {
     return (this._qitrl ??= new QITRL(this.dir));
   }
 
+  // ── L10: EngramLog — immutable hash-chained audit log ──
+  get engramLog(): EngramLog {
+    return (this._engramLog ??= new EngramLog(this.dir));
+  }
+
+  // ── L11: ConsolidationEngine — sleep-equivalent background consolidation ──
+  get consolidationEngine(): ConsolidationEngine {
+    return (this._consolidation ??= new ConsolidationEngine(this.dir, []));
+  }
+
+  // ── L12: SynapticPruner — active forgetting engine ──
+  get synapticPruner(): SynapticPruner {
+    return (this._synapticPruner ??= new SynapticPruner(this.dir));
+  }
+
+  // ── L13: ProvenanceForge — complete source tracking ──
+  get provenanceForge(): ProvenanceForge {
+    return (this._provenanceForge ??= new ProvenanceForge(this.dir));
+  }
+
+  // ── L14: SpacedRepetitionForge — SM-2 scheduling ──
+  get spacedRepetitionForge(): SpacedRepetitionForge {
+    return (this._spacedRepetition ??= new SpacedRepetitionForge());
+  }
+
+  // ── L15: ConstitutionalGuard — gatekeeper against low-confidence writes ──
+  get constitutionalGuard(): ConstitutionalGuard {
+    return (this._constitutionalGuard ??= new ConstitutionalGuard(this.dir));
+  }
+
+  // ── L16: AuditForge — memory health auditor ──
+  get auditForge(): AuditForge {
+    return (this._auditForge ??= new AuditForge(this.dir));
+  }
+
+  // ── L17: ProspectiveTrigger — "when X, surface Y" ──
+  get prospectiveTrigger(): ProspectiveTrigger {
+    return (this._prospectiveTrigger ??= new ProspectiveTrigger(this.dir));
+  }
+
+  // ── L18: BiasRevealer — over/under-representation detection ──
+  get biasRevealer(): BiasRevealer {
+    return (this._biasRevealer ??= new BiasRevealer(this.dir));
+  }
+
+  // ── L19: ContextVector — state-dependent recall context encoding ──
+  get contextVector(): ContextVector {
+    return (this._contextVector ??= new ContextVector(this.dir));
+  }
+
+  // ── L20: RehearsalEngine — spaced retrieval practice ──
+  get rehearsalEngine(): RehearsalEngine {
+    return (this._rehearsalEngine ??= new RehearsalEngine(this.dir));
+  }
+
+  // ── L21: SchemaDistorter — schema-driven reconstruction detection ──
+  get schemaDistorter(): SchemaDistorter {
+    return (this._schemaDistorter ??= new SchemaDistorter(this.dir));
+  }
+
+  // ── L22: ConfidenceCalibrator — calibrated confidence scoring ──
+  get confidenceCalibrator(): ConfidenceCalibrator {
+    return (this._confidenceCalibrator ??= new ConfidenceCalibrator(this.dir));
+  }
+
+  // ── Tool 18: FalseMemoryDetector ──
+  get falseMemoryDetector(): FalseMemoryDetector {
+    return (this._falseMemoryDetector ??= new FalseMemoryDetector(this.dir));
+  }
+
+  // ── Tool 19: ConfidenceCalibratorTool ──
+  get calibratorTool(): ConfidenceCalibratorTool {
+    return (this._calibratorTool ??= new ConfidenceCalibratorTool(this.dir));
+  }
+
+  // ── Tool 20: SourceAttributor ──
+  get sourceAttributor(): SourceAttributor {
+    return (this._sourceAttributor ??= new SourceAttributor(this.dir));
+  }
+
+  // ── Tool 21: ConflictResolver ──
+  get conflictResolver(): ConflictResolver {
+    return (this._conflictResolver ??= new ConflictResolver(this.dir));
+  }
+
+  // ── Tool 22: MemoryAuditor ──
+  get memoryAuditor(): MemoryAuditor {
+    return (this._memoryAuditor ??= new MemoryAuditor(this.dir));
+  }
+
+  // ── Tool 23: ProspectiveTriggerTool ──
+  get prospectiveTriggerTool(): ProspectiveTriggerTool {
+    return (this._prospectiveTriggerTool ??= new ProspectiveTriggerTool(this.dir));
+  }
+
+  // ── Tool 24: BiasRevealerTool ──
+  get biasRevealerTool(): BiasRevealerTool {
+    return (this._biasRevealerTool ??= new BiasRevealerTool(this.dir));
+  }
+
+  // ── Tool 25: SchemaInferrer ──
+  get schemaInferrer(): SchemaInferrer {
+    return (this._schemaInferrer ??= new SchemaInferrer(this.dir));
+  }
+
   // ── Layer 1: Working Memory ──
 
   get workingMemory(): Readonly<WorkingState> { return this.working; }
@@ -324,12 +490,37 @@ export class MemoryEngine {
     const facts = loadSemantic(this.dir);
     const { content, type = 'fact', tags = [] } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
-    facts.push({ id: generateId('mem'), timestamp: Date.now(), type, content, tags });
+    const id = generateId('mem');
+    const timestamp = Date.now();
+    facts.push({ id, timestamp, type, content, tags });
     saveSemantic(this.dir, facts);
     // Layer 5: weave into ChronosForge temporal graph
     this.chronosForge.weave(content, { tags });
     // Layer 7: weave into EchoForge causal propagation graph (fire-and-forget)
     void this.echoForge.weave(content, { tags });
+    // L10: record in immutable engram log
+    this.engramLog.append({
+      timestamp,
+      op: 'store',
+      layerId: 'L3',
+      entryId: id,
+      actorId: 'agent',
+      payload: { content, type, tags },
+      justification: `Stored ${type}: ${content.slice(0, 80)}`,
+    });
+    // L13: record provenance
+    this.provenanceForge.record({
+      sourceKind: 'agent_inference',
+      sourceDetail: 'MemoryEngine.store()',
+      actorId: 'agent',
+      actor: 'agent',
+      observedAt: timestamp,
+      evidenceCount: 1,
+      confidence: 0.7,
+      parentIds: [id],
+    });
+    // L21: learn schema pattern
+    this.schemaDistorter.learn(content);
   }
 
   /** Recall entries matching a query using BM25 keyword search. */
@@ -509,5 +700,100 @@ export class MemoryEngine {
   /** Store an observation as a learned pattern (deduplicates). */
   learnPattern(observation: string, tags: string[] = []) {
     return this.patternLearner.learn(observation, tags);
+  }
+
+  // ── New Layer Convenience Methods (Master Plan Phases 1-3) ──
+
+  /** L10: Verify the engram chain integrity. */
+  verifyEngramChain(): { valid: boolean; brokenAt?: number } {
+    return this.engramLog.verifyChain();
+  }
+
+  /** L11: Run consolidation over recent episodes. */
+  runConsolidation(opts?: { sinceMs?: number; dryRun?: boolean }) {
+    return this.consolidationEngine.run(opts);
+  }
+
+  /** L12: Run synaptic pruning sweep. */
+  runPruneSweep() {
+    return this.synapticPruner.sweep();
+  }
+
+  /** L13: Get provenance explanation for a memory. */
+  explainProvenance(id: string) {
+    return this.provenanceForge.explain(id);
+  }
+
+  /** L15: Check if content passes the constitutional guard. */
+  guardCheck(content: string, provenance?: any, contradictionCount = 0) {
+    return this.constitutionalGuard.evaluate(content, provenance ?? null, contradictionCount);
+  }
+
+  /** L16: Run full memory audit. */
+  runAudit() {
+    return this.auditForge.run();
+  }
+
+  /** L17: Register a prospective trigger. */
+  registerTrigger(input: { when: string; surface: string; memoryId: string }) {
+    return this.prospectiveTrigger.register(input);
+  }
+
+  /** L18: Reveal memory bias. */
+  revealBias() {
+    return this.biasRevealer.reveal();
+  }
+
+  /** L19: Capture current context vector. */
+  captureContext(context: { domain: string; activeFiles?: string[]; tags?: string[] }) {
+    return this.contextVector.capture({
+      domain: context.domain,
+      activeFiles: context.activeFiles ?? this.working.activeFiles,
+      tags: context.tags ?? [],
+      timeOfDay: new Date().getHours() * 60 + new Date().getMinutes(),
+      dayOfWeek: new Date().getDay(),
+    });
+  }
+
+  /** L20: Enqueue a memory for spaced repetition rehearsal. */
+  enqueueRehearsal(content: string, sourceLayer: string, sourceId: string) {
+    return this.rehearsalEngine.enqueue(content, sourceLayer, sourceId);
+  }
+
+  /** L21: Check for schema distortion in a memory. */
+  checkDistortion(content: string) {
+    return this.schemaDistorter.check(content);
+  }
+
+  /** L22: Calibrate confidence for a given set of signals. */
+  calibrateConfidence(input: CalibrationInput): CalibrationResult {
+    return this.confidenceCalibrator.calibrate(input);
+  }
+
+  // ── New Intelligence Tool Convenience Methods ──
+
+  /** Tool 18: Score a memory's false-memory risk. */
+  checkFalseMemory(memory: { id?: string; content?: string; evidenceCount: number; ageDays: number; provenance?: any }): FalseMemoryScore {
+    return this.falseMemoryDetector.score(memory);
+  }
+
+  /** Tool 20: Get source attribution for a memory. */
+  attributeSource(memoryId: string): AttributionResult | null {
+    return this.sourceAttributor.attribute(memoryId);
+  }
+
+  /** Tool 21: Resolve a potential conflict between two memories. */
+  resolveConflict(a: MemoryRef, b: MemoryRef): ConflictResolution {
+    return this.conflictResolver.resolve(a, b);
+  }
+
+  /** Tool 22: Run memory health audit. */
+  auditMemoryHealth(): AuditReport {
+    return this.memoryAuditor.audit();
+  }
+
+  /** Tool 25: Infer schemas from memory stream. */
+  inferSchemas(): SchemaInferenceResult {
+    return this.schemaInferrer.infer();
   }
 }

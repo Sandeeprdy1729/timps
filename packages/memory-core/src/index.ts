@@ -164,6 +164,49 @@ export { projectHash, memoryDir, generateId, jaccardSimilarity } from './storage
 // Native Rust addon status
 export { isNativeAvailable } from './native.js';
 
+// ── IMemoryLayer interface ──
+export type { IMemoryLayer, LayerId, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, MemoryEntry as IMemoryEntry } from './IMemoryLayer.js';
+
+// ── New Layers L10-L22 ──
+export { EngramLog } from './EngramLog.js';
+export type { EngramEntry, EngramOp } from './EngramLog.js';
+
+export { ConsolidationEngine } from './ConsolidationEngine.js';
+export type { ConsolidationRule } from './ConsolidationEngine.js';
+
+export { SynapticPruner } from './SynapticPruner.js';
+export type { MemoryMeta, PrunePolicy } from './SynapticPruner.js';
+
+export { ProvenanceForge } from './ProvenanceForge.js';
+export type { Provenance, SourceKind, ProvenanceInput } from './ProvenanceForge.js';
+
+export { SpacedRepetitionForge } from './SpacedRepetitionForge.js';
+export type { RepetitionCard } from './SpacedRepetitionForge.js';
+
+export { ConstitutionalGuard } from './ConstitutionalGuard.js';
+export type { GuardVerdict, GuardConfig } from './ConstitutionalGuard.js';
+
+export { AuditForge } from './AuditForge.js';
+export type { AuditReport as ForgeAuditReport, AuditSection } from './AuditForge.js';
+
+export { ProspectiveTrigger } from './ProspectiveTrigger.js';
+export type { Trigger, TriggerMatch } from './ProspectiveTrigger.js';
+
+export { BiasRevealer } from './BiasRevealer.js';
+export type { BiasReport } from './BiasRevealer.js';
+
+export { ContextVector } from './ContextVector.js';
+export type { ContextProfile, ContextMatch } from './ContextVector.js';
+
+export { RehearsalEngine } from './RehearsalEngine.js';
+export type { RehearsalItem, RehearsalSession } from './RehearsalEngine.js';
+
+export { SchemaDistorter } from './SchemaDistorter.js';
+export type { SchemaEntry, DistortionCheck } from './SchemaDistorter.js';
+
+export { ConfidenceCalibrator } from './ConfidenceCalibrator.js';
+export type { CalibrationInput, CalibrationResult, CalibrationRecord } from './ConfidenceCalibrator.js';
+
 // Intelligence tools — direct access if needed
 export {
   ContradictionDetector,
@@ -175,6 +218,15 @@ export {
   VelocityTracker,
   ArchitectureDriftDetector,
   PatternLearner,
+  // Tools 18-25
+  FalseMemoryDetector,
+  ConfidenceCalibratorTool,
+  SourceAttributor,
+  ConflictResolver,
+  MemoryAuditor,
+  ProspectiveTriggerTool,
+  BiasRevealerTool,
+  SchemaInferrer,
 } from './intelligence/index.js';
 
 export type {
@@ -187,4 +239,10 @@ export type {
   WorkflowPattern, CoachResult,
   CodebaseInsight, InsightType, DriftCheckResult,
   LearnedPattern,
+  // New tool types
+  FalseMemoryScore,
+  AttributionResult,
+  MemoryRef, ConflictResolution,
+  AuditReport,
+  InferredSchema, SchemaInferenceResult,
 } from './intelligence/index.js';

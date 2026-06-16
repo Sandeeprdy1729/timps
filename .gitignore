@@ -81,3 +81,6 @@ timps-code/dataset/checkpoint.json
 
 # Example MCP config (no leaked paths)
 claude_desktop_config.json
+
+# Master architecture plan (internal design doc, not source code)
+TIMPS_Memory_Architecture_Master_Plan.md
