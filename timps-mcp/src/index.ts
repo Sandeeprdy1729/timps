@@ -1239,6 +1239,115 @@ async function main() {
     return { content: [{ type: 'text' as const, text: `**Dormant Contributors** (${departed.length}):\n${lines.join('\n')}` }] };
   });
 
+  // ── New 22-Layer / 25-Tool Intelligence (L10–L22) ────────────────────────────
+
+  registerTool('timps_verify_engram_chain', {
+    description: 'Verify the integrity of the immutable memory audit trail (L10 EngramLog). Returns valid/invalid and block count.',
+    inputSchema: {},
+  }, async () => {
+    const result = localEngine.verifyEngramChain();
+    const count = localEngine.engramLog.entryCount();
+    return { content: [{ type: 'text' as const, text:
+      result.valid
+        ? `✓ Engram chain valid (${count} entries)`
+        : `⚠️ Engram chain TAMPERED at block ${result.brokenAt}` }] };
+  });
+
+  registerTool('timps_false_memory_check', {
+    description: 'Score a memory\'s false-memory risk based on provenance, source reliability, evidence count, and age (Tool 18).',
+    inputSchema: {
+      content: z.string().describe('The memory content to check'),
+      evidenceCount: z.number().describe('Number of supporting evidence entries'),
+      ageDays: z.number().describe('Age of the memory in days'),
+    },
+  }, async ({ content, evidenceCount, ageDays }) => {
+    const r = localEngine.checkFalseMemory({ content, evidenceCount, ageDays });
+    return { content: [{ type: 'text' as const, text:
+      `**False Memory Check**\nRisk Score: ${r.riskScore.toFixed(2)} (level: ${r.riskLevel})\n${r.contributingFactors.length ? `Factors: ${r.contributingFactors.join(', ')}` : 'No contributing factors'}\nRecommendation: ${r.recommendation}` }] };
+  });
+
+  registerTool('timps_explain_provenance', {
+    description: 'Get the provenance chain for a memory — where it came from, how it was derived, and reliability scoring (Tool 20 SourceAttributor).',
+    inputSchema: {
+      memoryId: z.string().describe('Memory ID or content hash'),
+    },
+  }, async ({ memoryId }) => {
+    const result = localEngine.explainProvenance(memoryId);
+    if (!result) return { content: [{ type: 'text' as const, text: `No provenance found for "${memoryId}".` }] };
+    return { content: [{ type: 'text' as const, text: result }] };
+  });
+
+  registerTool('timps_resolve_conflict', {
+    description: 'Check for conflicts/contradictions between two memories using Jaccard similarity + sentiment analysis (Tool 21 ConflictResolver).',
+    inputSchema: {
+      memoryA: z.string().describe('First memory content to compare'),
+      memoryB: z.string().describe('Second memory content to compare'),
+    },
+  }, async ({ memoryA, memoryB }) => {
+    const refA = { id: 'a', content: memoryA, timestamp: Date.now(), confidence: 0.5, layer: 'L3' as const };
+    const refB = { id: 'b', content: memoryB, timestamp: Date.now(), confidence: 0.5, layer: 'L3' as const };
+    const r = localEngine.resolveConflict(refA, refB);
+    const lines = [
+      `**Conflict Resolution:**`,
+      `Similarity: ${r.similarity.toFixed(2)}`,
+      `Conflict: ${r.conflict ? '⚠️ YES' : '✓ No'}`,
+      r.reason ? `Reason: ${r.reason}` : '',
+      `Action: ${r.action}`,
+      r.moreReliable ? `More reliable: ${r.moreReliable}` : '',
+    ].filter(Boolean);
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  registerTool('timps_audit_memory', {
+    description: 'Run a full memory health audit — weak, contradicted, outdated, and unsourced entries with health score and recommendations (Tool 22 MemoryAuditor).',
+    inputSchema: {},
+  }, async () => {
+    const report = await localEngine.auditMemoryHealth();
+    return { content: [{ type: 'text' as const, text:
+      `**Memory Health Audit**\nScore: ${report.healthScore}/100\nEntries: ${report.totalEntries} total, ${report.weak} weak, ${report.contradicted} contradicted, ${report.outdated} outdated, ${report.unsourced} unsourced\n${report.recommendations.length ? `Recommendations:\n${report.recommendations.map(r => `  → ${r}`).join('\n')}` : ''}` }] };
+  });
+
+  registerTool('timps_register_trigger', {
+    description: 'Register a prospective trigger: when a specific phrase appears in context, surface a specific memory or action (Tool 23 / L17).',
+    inputSchema: {
+      when: z.string().describe('Trigger phrase to watch for (substring match)'),
+      surface: z.string().describe('What to surface when trigger fires'),
+      memoryId: z.string().describe('Memory ID to associate'),
+    },
+  }, async ({ when, surface, memoryId }) => {
+    localEngine.registerTrigger({ when, surface, memoryId });
+    return { content: [{ type: 'text' as const, text: `✓ Trigger registered: when "${when}" → surface "${surface.slice(0, 60)}"` }] };
+  });
+
+  registerTool('timps_reveal_bias', {
+    description: 'Analyze memory for over/under-representation bias across saved facts (Tool 24 / L18 BiasRevealer).',
+    inputSchema: {},
+  }, async () => {
+    const r = localEngine.revealBias();
+    const lines = [`**Bias Report**`];
+    if (r.overrepresented?.length) lines.push(`Over-represented: ${r.overrepresented.map(b => `${b.category} (${b.ratio.toFixed(1)}x)`).join(', ')}`);
+    if (r.underrepresented?.length) lines.push(`Under-represented: ${r.underrepresented.map(b => `${b.category} (${b.ratio.toFixed(1)}x)`).join(', ')}`);
+    if (!r.overrepresented?.length && !r.underrepresented?.length) lines.push('No significant bias detected.');
+    lines.push(`Sentiment: ${r.sentimentBias?.positive ?? 0} pos / ${r.sentimentBias?.negative ?? 0} neg / ${r.sentimentBias?.neutral ?? 0} neutral`);
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
+  registerTool('timps_infer_schemas', {
+    description: 'Auto-extract typed schemas from memory stream — detects repeated patterns and infers structure types (Tool 25 SchemaInferrer).',
+    inputSchema: {},
+  }, async () => {
+    const r = localEngine.inferSchemas();
+    if (!r.schemas.length) return { content: [{ type: 'text' as const, text: 'No schemas inferred yet — store more memories first.' }] };
+    const lines = [`**Inferred Schemas (${r.schemas.length})**`];
+    for (const s of r.schemas) {
+      lines.push(`- ${s.type} (${s.confidence.toFixed(2)} conf, ${s.exampleCount} examples)`);
+      for (const [key, valType] of Object.entries(s.schema).slice(0, 5)) {
+        lines.push(`    ${key}: ${valType}`);
+      }
+    }
+    return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+  });
+
   // ── Start ────────────────────────────────────────────────────────────────────
   const transport = new StdioServerTransport();
   await server.connect(transport);

@@ -788,7 +788,7 @@ export class MemoryEngine {
   }
 
   /** Tool 22: Run memory health audit. */
-  auditMemoryHealth(): AuditReport {
+  async auditMemoryHealth(): Promise<AuditReport> {
     return this.memoryAuditor.audit();
   }
 
