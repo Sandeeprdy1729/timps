@@ -49,11 +49,11 @@ export class SpacedRepetitionForge {
     card.lastReview = now;
     card.nextReview = now + card.interval * 24 * 60 * 60 * 1000;
     this.cards.set(id, card);
-    return card;
+    return { ...card };
   }
 
   dueForReview(now = Date.now()): RepetitionCard[] {
-    return [...this.cards.values()].filter(c => c.nextReview <= now);
+    return [...this.cards.values()].filter(c => c.nextReview <= now).map(c => ({ ...c }));
   }
 
   predictedRetrievability(id: string, atMs = Date.now()): number {
@@ -66,11 +66,12 @@ export class SpacedRepetitionForge {
   }
 
   getCard(id: string): RepetitionCard | undefined {
-    return this.cards.get(id);
+    const c = this.cards.get(id);
+    return c ? { ...c } : undefined;
   }
 
   getAllCards(): RepetitionCard[] {
-    return [...this.cards.values()];
+    return [...this.cards.values()].map(c => ({ ...c }));
   }
 
   deleteCard(id: string): boolean {
@@ -90,7 +91,7 @@ export class SpacedRepetitionForge {
       retrievability: 1.0,
     };
     this.cards.set(id, reset);
-    return reset;
+    return { ...reset };
   }
 
   cardCount(): number {

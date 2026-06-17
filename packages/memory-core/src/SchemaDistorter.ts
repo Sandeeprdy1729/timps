@@ -72,11 +72,9 @@ export class SchemaDistorter {
 
     for (const schema of this.schemas) {
       if (schema.pattern === pattern && schema.exampleCount > 2) {
-        const naturalWords = content.split(/\s+/).length;
         const schemaWords = schema.pattern.split(/\s+/).length;
-        const overlap = pattern.split(' ').filter(w => schema.pattern.includes(w)).length;
-        const maxLen = Math.max(naturalWords, schemaWords);
-        const distortionScore = maxLen > 0 ? overlap / maxLen : 0;
+        const overlap = pattern.split(/\s+/).filter(w => schema.pattern.includes(w)).length;
+        const distortionScore = schemaWords > 0 ? overlap / schemaWords : 0;
 
         if (distortionScore > 0.6) {
           const severity: 'low' | 'medium' | 'high' =

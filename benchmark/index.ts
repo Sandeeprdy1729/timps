@@ -379,19 +379,85 @@ export class BenchmarkRunner {
       }
     } catch (e) { failed.push(`institutionalMemory threw: ${(e as Error).message}`); }
 
+    // 18. FalseMemoryDetector — seed provenance, score a high-risk memory
+    try {
+      const highRisk = { content: 'wild guess about the architecture', evidenceCount: 0, ageDays: 200 };
+      const r = engine.checkFalseMemory(highRisk);
+      if (r.riskLevel === 'high' || r.riskLevel === 'critical') passed.push('falseMemoryDetector');
+      else failed.push(`falseMemoryDetector: level=${r.riskLevel} score=${r.riskScore}`);
+    } catch (e) { failed.push(`falseMemoryDetector threw: ${(e as Error).message}`); }
+
+    // 19. ConfidenceCalibrator — score with known inputs
+    try {
+      const r = engine.calibrateConfidence(0.8, 0.7, 3, 5);
+      if (r.score > 0.5 && r.verbal !== 'very low') passed.push('confidenceCalibrator');
+      else failed.push(`confidenceCalibrator: score=${r.score} verbal=${r.verbal}`);
+    } catch (e) { failed.push(`confidenceCalibrator threw: ${(e as Error).message}`); }
+
+    // 20. SourceAttributor — record a provenance, attribute it
+    try {
+      const provDir = path.join(tmpDir, 'provenance');
+      fs.mkdirSync(provDir, { recursive: true });
+      fs.writeFileSync(path.join(provDir, 'test.json'), JSON.stringify({ id: 'prov-1', contentHash: 'abc123', sourceKind: 'user_direct', parentIds: ['mem-1'] }));
+      engine.store({ content: 'known fact for provenance test', id: 'mem-1', type: 'fact' });
+      const r = engine.explainProvenance('mem-1');
+      if (r && r.length > 0) passed.push('sourceAttributor');
+      else failed.push(`sourceAttributor: result empty`);
+    } catch (e) { failed.push(`sourceAttributor threw: ${(e as Error).message}`); }
+
+    // 21. ConflictResolver — contradicting statements
+    try {
+      const a = { id: 'a1', content: 'always use PostgreSQL', timestamp: Date.now(), confidence: 0.9, layer: 'L3' as const };
+      const b = { id: 'b1', content: 'never use PostgreSQL', timestamp: Date.now(), confidence: 0.9, layer: 'L3' as const };
+      const r = engine.resolveConflict(a, b);
+      if (r.conflict === true && r.similarity > 0.3) passed.push('conflictResolver');
+      else failed.push(`conflictResolver: conflict=${r.conflict} sim=${r.similarity}`);
+    } catch (e) { failed.push(`conflictResolver threw: ${(e as Error).message}`); }
+
+    // 22. MemoryAuditor — run full audit
+    try {
+      engine.store({ content: 'audit test fact', type: 'fact', tags: [] });
+      const r = await engine.auditMemoryHealth();
+      if (r.healthScore >= 0 && r.healthScore <= 100) passed.push('memoryAuditor');
+      else failed.push(`memoryAuditor: healthScore=${r.healthScore}`);
+    } catch (e) { failed.push(`memoryAuditor threw: ${(e as Error).message}`); }
+
+    // 23. ProspectiveTrigger — register and check
+    try {
+      engine.registerTrigger({ when: 'deploy', surface: 'check the config first', memoryId: 'mem-trigger' });
+      passed.push('prospectiveTrigger');
+    } catch (e) { failed.push(`prospectiveTrigger threw: ${(e as Error).message}`); }
+
+    // 24. BiasRevealer — seed data then check bias
+    try {
+      const r = engine.revealBias();
+      if (r && typeof r.recommendation === 'string') passed.push('biasRevealer');
+      else failed.push(`biasRevealer: no recommendation`);
+    } catch (e) { failed.push(`biasRevealer threw: ${(e as Error).message}`); }
+
+    // 25. SchemaInferrer — seed episode data then infer schemas
+    try {
+      engine.store({ content: 'function getApiKey returns the auth key from env', type: 'pattern', tags: ['api'] });
+      engine.store({ content: 'function getDbUrl returns the connection string from env', type: 'pattern', tags: ['db'] });
+      engine.store({ content: 'function getPort returns the server port from env', type: 'pattern', tags: ['config'] });
+      const r = engine.inferSchemas();
+      if (r.schemas.length > 0) passed.push('schemaInferrer');
+      else failed.push(`schemaInferrer: 0 schemas`);
+    } catch (e) { failed.push(`schemaInferrer threw: ${(e as Error).message}`); }
+
     try {
       fs.rmSync(path.resolve(tmpDir, '..'), { recursive: true, force: true });
     } catch { /* best effort */ }
 
-    const total = 17;
+    const total = 25;
     return {
-      name: 'Intelligence Tools (17/17)',
+      name: 'Intelligence Tools (25/25)',
       score: Math.round((passed.length / total) * 100),
       total,
       passed: passed.length,
       failed: failed.length,
       durationMs: Date.now() - t0,
-      details: failed.length > 0 ? `Failures: ${failed.join('; ')}` : 'All 17 intelligence tools produced expected outputs',
+      details: failed.length > 0 ? `Failures: ${failed.join('; ')}` : 'All 25 intelligence tools produced expected outputs',
       timestamp: Date.now(),
     };
   }
@@ -523,7 +589,7 @@ async function main() {
   const sha = computeDatasetSha();
   console.log('\n╔══════════════════════════════════════════════════════════════╗');
   console.log('║          TIMPS Memory Benchmark — Real Numbers              ║');
-  console.log('║  BM25 · ContradictionDetector · 17 intel tools            ║');
+  console.log('║  BM25 · ContradictionDetector · 25 intel tools            ║');
   console.log(`║  Dataset: ${sha.slice(0, 16)}…                                              ║`);
   console.log('╚══════════════════════════════════════════════════════════════╝\n');
 
@@ -543,7 +609,7 @@ async function main() {
   console.log(`  ${cdColor} Score: ${cd.score}% (${cd.passed}/${cd.total}) in ${cd.durationMs}ms`);
   if (cd.details) console.log(`     ${cd.details}\n`);
 
-    console.log('Running intelligence tools smoke test (17/17 tools)...');
+    console.log('Running intelligence tools smoke test (25/25 tools)...');
   const it = await runner.runIntelligenceTools();
   const itColor = it.score >= 80 ? '🟢' : it.score >= 50 ? '🟡' : '🔴';
   console.log(`  ${itColor} Score: ${it.score}% (${it.passed}/${it.total}) in ${it.durationMs}ms`);

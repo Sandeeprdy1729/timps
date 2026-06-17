@@ -44,9 +44,10 @@ export class AuditForge {
     if (totalOutdated > 5) suggestions.push(`${totalOutdated} outdated memories found — run ConsolidationEngine`);
     if (semantic.unsourced > 3) suggestions.push(`${semantic.unsourced} semantic memories lack provenance — run SourceAttributor`);
 
-    const healthScore = totalEntries === 0
+    const raw = totalEntries === 0
       ? 100
-      : Math.round((1 - totalIssues / Math.max(1, totalEntries)) * 100);
+      : (1 - totalIssues / Math.max(1, totalEntries)) * 100;
+    const healthScore = Math.max(0, Math.min(100, Math.round(raw)));
 
     return {
       timestamp: Date.now(),

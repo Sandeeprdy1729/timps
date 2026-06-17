@@ -25,7 +25,7 @@ export interface AuditReport {
 export class MemoryAuditor {
   constructor(private dir: string) {}
 
-  audit(): AuditReport {
+  async audit(): Promise<AuditReport> {
     const semantic = this.loadSemantic();
     const episodes = this.loadEpisodes();
 
@@ -67,17 +67,33 @@ export class MemoryAuditor {
 
     const totalEntries = semantic.length + episodes.length;
     const weak = weakEntries.length;
-    const contradicted = 0;
     const outdated = outdatedEntries.length;
     const unsourced = unsourcedEntries.length;
+
+    // Run contradiction detection via ConflictResolver
+    let contradicted = 0;
+    try {
+      const { ConflictResolver } = await import('./ConflictResolver.js');
+      const cr = new ConflictResolver(this.dir);
+      for (let i = 0; i < semantic.length; i++) {
+        for (let j = i + 1; j < semantic.length; j++) {
+          const r = cr.resolve(
+            { id: semantic[i].id, content: semantic[i].content ?? '', timestamp: semantic[i].timestamp ?? 0, confidence: semantic[i].confidence ?? 0.5, layer: 'L3' },
+            { id: semantic[j].id, content: semantic[j].content ?? '', timestamp: semantic[j].timestamp ?? 0, confidence: semantic[j].confidence ?? 0.5, layer: 'L3' },
+          );
+          if (r.conflict) contradicted++;
+        }
+      }
+    } catch { /* ConflictResolver unavailable */ }
 
     if (weak > 3) recommendations.push(`${weak} low-confidence memories found — consider re-verifying`);
     if (outdated > 5) recommendations.push(`${outdated} outdated memories (>30 days) — run ConsolidationEngine`);
     if (unsourced > 3) recommendations.push(`${unsourced} unsourced memories — run SourceAttributor`);
 
-    const healthScore = totalEntries === 0
+    const raw = totalEntries === 0
       ? 100
-      : Math.round((1 - (weak + outdated + unsourced) / Math.max(1, totalEntries)) * 100);
+      : (1 - (weak + outdated + unsourced) / Math.max(1, totalEntries)) * 100;
+    const healthScore = Math.max(0, Math.min(100, Math.round(raw)));
 
     return {
       timestamp: now,
