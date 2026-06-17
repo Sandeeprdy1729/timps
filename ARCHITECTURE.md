@@ -43,7 +43,7 @@ timps/
 │
 ├── timps-mcp/           # npm install -g timps-mcp
 │   └── src/
-│       └── index.ts     # 20 MCP tool definitions (single-file server)
+│       └── index.ts     # 28 MCP tool definitions (single-file server)
 │
 ├── timps-vscode/        # VS Code Marketplace: TIMPs.timps-ai-coding-agent
 │   └── src/
