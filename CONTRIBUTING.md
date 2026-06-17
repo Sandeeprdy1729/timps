@@ -60,7 +60,7 @@ timps/
 │       ├── tools/          # 25 CLI tools (file, search, shell, browser…)
 │       └── interfaces/     # CLI + TUI entry points
 ├── timps-mcp/              # MCP server (npm: timps-mcp)
-│   └── src/                # 20 MCP tools proxying to packages/server REST API
+│   └── src/                # 28 MCP tools proxying to packages/server REST API
 ├── timps-vscode/           # VS Code extension
 │   └── src/                # Sidebar panels, keybindings, webview
 ├── packages/server/             # Full server (Docker: timps-app)

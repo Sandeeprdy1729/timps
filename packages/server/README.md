@@ -56,7 +56,7 @@ For the individual packages see:
 | File operations tool | No |
 | Web fetch tool | No |
 | Short-term (in-session) memory | No |
-| 21 tool definitions & routing | No |
+| 29 tool definitions & routing | No |
 | **Persistent memory & chat history** | **Yes** |
 | **Contradiction / burnout detection** | **Yes** |
 | **All other intelligence tools** | **Yes** |
