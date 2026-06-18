@@ -84,3 +84,8 @@ claude_desktop_config.json
 
 # Master architecture plan (internal design doc, not source code)
 TIMPS_Memory_Architecture_Master_Plan.md
+
+# Constitutional safety — keep these private
+packages/memory-core/runtime/constitution.md
+packages/memory-core/runtime/safety-rules.json
+packages/memory-core/runtime/safety-log.jsonl
