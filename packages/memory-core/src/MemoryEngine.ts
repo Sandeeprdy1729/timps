@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 
 import type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
-  SearchOptions, MemoryPack, MemorySnapshot, MergeResult, MemoryStats,
+  SearchOptions, ScoredMemoryEntry, MemoryPack, MemorySnapshot, MergeResult, MemoryStats,
 } from './types.js';
 
 import {
@@ -486,14 +486,26 @@ export class MemoryEngine {
   // ── Layer 3: Semantic Memory ──
 
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
-  store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }): void {
+  store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }, opts?: { skipGuard?: boolean }): void {
     const facts = loadSemantic(this.dir);
     const { content, type = 'fact', tags = [] } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     const id = generateId('mem');
     const timestamp = Date.now();
+
+    // L15: ConstitutionalGuard gate — check before storing
+    let confidence = 0.7;
+    let evidenceCount = 1;
+    if (!opts?.skipGuard) {
+      const guardVerdict = this.constitutionalGuard.evaluate(content, null, 0);
+      if (!guardVerdict.allowed) {
+        confidence = 0.3;
+      }
+    }
+
     facts.push({ id, timestamp, type, content, tags });
     saveSemantic(this.dir, facts);
+
     // Layer 5: weave into ChronosForge temporal graph
     this.chronosForge.weave(content, { tags });
     // Layer 7: weave into EchoForge causal propagation graph (fire-and-forget)
@@ -508,34 +520,143 @@ export class MemoryEngine {
       payload: { content, type, tags },
       justification: `Stored ${type}: ${content.slice(0, 80)}`,
     });
-    // L13: record provenance
+    // L13: record provenance with guard-adjusted confidence
     this.provenanceForge.record({
       sourceKind: 'agent_inference',
       sourceDetail: 'MemoryEngine.store()',
       actorId: 'agent',
       actor: 'agent',
       observedAt: timestamp,
-      evidenceCount: 1,
-      confidence: 0.7,
+      evidenceCount,
+      confidence,
       parentIds: [id],
     });
+    // L19: capture context vector snapshot
+    this.contextVector.capture({
+      domain: type,
+      activeFiles: this.working.activeFiles,
+      tags,
+      timeOfDay: new Date().getHours() * 60 + new Date().getMinutes(),
+      dayOfWeek: new Date().getDay(),
+    });
+    // L20: enqueue for future rehearsal
+    this.rehearsalEngine.enqueue(content, 'L3', id);
     // L21: learn schema pattern
     this.schemaDistorter.learn(content);
   }
 
-  /** Recall entries matching a query using BM25 keyword search. */
-  recall(query: string, options?: SearchOptions): MemoryEntry[] {
-    return searchEntries(loadSemantic(this.dir), query, options);
+  /**
+   * Recall entries matching a query using a multi-stage intelligence pipeline.
+   *
+   * Stages:
+   * 1. BM25 keyword search → top 50 candidates
+   * 2. ProvenanceForge reliability lookup (per candidate)
+   * 3. ConfidenceCalibrator (similarity × reliability × evidence × freshness)
+   * 4. FalseMemoryDetector risk scoring
+   * 5. ContextVector match boost (if options.context provided)
+   * 6. RehearsalEngine priority boost (if item is due for review)
+   * 7. Final ranking and filtering (minConfidence, maxFalseMemoryRisk)
+   */
+  recall(query: string, options?: SearchOptions): ScoredMemoryEntry[] {
+    const entries = loadSemantic(this.dir);
+    const candidates = searchEntries(entries, query, { ...options, limit: 50 });
+    const now = Date.now();
+    const useIntel = options?.useIntelligence ?? true;
+
+    const scored: ScoredMemoryEntry[] = candidates.map(entry => {
+      const prov = useIntel ? this.provenanceForge.explain(entry.id) : null;
+      const sourceReliability = prov ? this.provenanceForge.reliability(prov) : 0.5;
+      const ageDays = (now - entry.timestamp) / (24 * 60 * 60 * 1000);
+      const evidenceCount = prov?.evidenceCount ?? 1;
+      const similarityScore = entry.score ?? 0.5;
+
+      // Stage 3: Confidence calibration
+      let calibratedConfidence = similarityScore;
+      if (useIntel) {
+        const calResult = this.confidenceCalibrator.calibrate({
+          similarity: similarityScore,
+          reliability: sourceReliability,
+          evidence: evidenceCount,
+          freshness: Math.max(0, 1 - ageDays / 365),
+        });
+        calibratedConfidence = calResult.score;
+      }
+
+      // Stage 4: False memory risk
+      let falseMemoryRisk = 0;
+      if (useIntel) {
+        const fmResult = this.falseMemoryDetector.score({
+          id: entry.id,
+          content: entry.content,
+          provenance: prov ?? undefined,
+          evidenceCount,
+          ageDays,
+        });
+        falseMemoryRisk = fmResult.riskScore;
+      }
+
+      // Stage 5: Context boost
+      let contextBoost = 1;
+      if (useIntel && options?.context) {
+        const contextMatches = this.contextVector.match(options.context);
+        const bestMatch = contextMatches.reduce((max, m) => Math.max(max, m.score), 0);
+        contextBoost = 1 + bestMatch * 0.5;
+      }
+
+      // Stage 6: Rehearsal boost
+      let rehearsalBoost = 1;
+      if (useIntel) {
+        const dueItems = this.rehearsalEngine.getDueItems(100);
+        if (dueItems.some(item => item.sourceId === entry.id)) {
+          rehearsalBoost = 1.2;
+        }
+      }
+
+      // Composite score: calibrated confidence × context boost × rehearsal boost
+      let finalScore = calibratedConfidence * contextBoost * rehearsalBoost;
+      // Penalize high false-memory risk (>60%)
+      if (falseMemoryRisk > 0.6) finalScore *= (1 - falseMemoryRisk);
+
+      return {
+        ...entry,
+        score: finalScore,
+        calibratedConfidence,
+        falseMemoryRisk,
+        sourceReliability,
+        sourceKind: prov?.sourceKind ?? 'unknown',
+        contextBoost,
+        rehearsalBoost,
+      };
+    });
+
+    // Apply intelligence-based filters
+    let filtered = scored;
+    if (useIntel) {
+      if (options?.minConfidence !== undefined) {
+        filtered = filtered.filter(e => e.calibratedConfidence >= options.minConfidence!);
+      }
+      if (options?.maxFalseMemoryRisk !== undefined) {
+        filtered = filtered.filter(e => e.falseMemoryRisk <= options.maxFalseMemoryRisk!);
+      }
+    }
+
+    return filtered
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, options?.limit ?? 10);
   }
 
   /** Get a formatted context string for injection into agent prompts. */
   getContextString(task = ''): string {
     const episodes = loadEpisodes(this.dir, 5);
-    const facts = searchEntries(loadSemantic(this.dir), task, { limit: 5 });
+    const facts = this.recall(task, { limit: 5, context: { domain: task, activeFiles: this.working.activeFiles } });
     const parts: string[] = [];
 
     if (facts.length > 0) {
-      parts.push('Relevant memory:\n' + facts.map(f => `• [${f.type}] ${f.content}`).join('\n'));
+      parts.push('Relevant memory:\n' + facts.map(f => {
+        const reliability = (f.sourceReliability * 100).toFixed(0);
+        const confidence = (f.calibratedConfidence * 100).toFixed(0);
+        return `• [${f.type}] ${f.content} (rel:${reliability}% conf:${confidence}%)`;
+      }).join('\n'));
     }
     if (episodes.length > 0) {
       const recent = episodes.slice(-3);

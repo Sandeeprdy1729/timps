@@ -32,7 +32,20 @@ export interface SearchOptions {
   limit?: number;
   type?: MemoryEntryType;
   tags?: string[];
-  since?: number; // timestamp ms
+  since?: number;
+  minConfidence?: number;
+  maxFalseMemoryRisk?: number;
+  useIntelligence?: boolean;
+  context?: { domain: string; activeFiles?: string[]; tags?: string[] };
+}
+
+export interface ScoredMemoryEntry extends MemoryEntry {
+  calibratedConfidence: number;
+  falseMemoryRisk: number;
+  sourceReliability: number;
+  sourceKind: string;
+  contextBoost: number;
+  rehearsalBoost: number;
 }
 
 /** Portable memory snapshot — the "memory pack" format for export/import */
