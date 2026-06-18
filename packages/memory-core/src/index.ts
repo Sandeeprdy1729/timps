@@ -204,6 +204,10 @@ export type { RehearsalItem, RehearsalSession } from './RehearsalEngine.js';
 export { SchemaDistorter } from './SchemaDistorter.js';
 export type { SchemaEntry, DistortionCheck } from './SchemaDistorter.js';
 
+// ── Safety / ConstitutionalFilter ──
+export { ConstitutionalFilter } from './safety/ConstitutionalFilter.js';
+export type { SafetyVerdict, SafetyRules, Severity, ProhibitedPattern, PIIPattern, InjectionPattern } from './safety/ConstitutionalFilter.js';
+
 export { ConfidenceCalibrator } from './ConfidenceCalibrator.js';
 export type { CalibrationInput, CalibrationResult, CalibrationRecord } from './ConfidenceCalibrator.js';
 

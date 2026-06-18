@@ -28,6 +28,7 @@ import { injectQISRDContext } from '../memory/qisrdVeil.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
+import { ConstitutionalFilter } from '@timps/memory-core/safety/ConstitutionalFilter.js';
 
 const getProvenForge = async () => {
   try {
@@ -169,6 +170,7 @@ export class Agent {
   private selfImproving?: SelfImprovingAgent;
   private durableJob?: DurableJobEngine;
   private codeGraph?: CodeGraph;
+  private constitutionalFilter?: ConstitutionalFilter;
 
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
@@ -194,6 +196,15 @@ export class Agent {
     this.codeGraph = opts.codeGraph;
     this.branchName = opts.branchName;
     this.pluginManager = opts.pluginManager;
+
+    // ── ConstitutionalFilter: refine user input before it reaches the LLM ──
+    try {
+      const runtimeDir = path.join(os.homedir(), '.timps', 'runtime');
+      fs.mkdirSync(runtimeDir, { recursive: true });
+      this.constitutionalFilter = new ConstitutionalFilter(runtimeDir);
+    } catch {
+      // Filter is best-effort; if it fails, agent runs unfiltered
+    }
 
     // Initialize with system prompt
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
@@ -398,15 +409,32 @@ End your response with a confirmation question.`;
       }
     } catch { /* qisrd is best-effort */ }
 
-    // Add user message
+    // ── ConstitutionalFilter: refine input before sending to LLM ──
+    let refinedMessage = userMessage;
+    if (this.constitutionalFilter) {
+      try {
+        const verdict = await this.constitutionalFilter.refine(userMessage);
+        if (!verdict.safe) {
+          refinedMessage = verdict.refined;
+          yield { type: 'text', content: `\n> 🔒 Constitution refined this input (${verdict.triggeredRules.length} rule(s), ${verdict.rounds} round(s))\n` };
+          if (verdict.hitMaxRounds) {
+            yield { type: 'text', content: `\n> ⚠ Input did not fully converge — review your input if the response seems off.\n` };
+          }
+        }
+      } catch {
+        // Filter is best-effort
+      }
+    }
+
+    // Add user message (refined)
     this.messages.push({
       role: 'user',
-      content: userMessage,
+      content: refinedMessage,
       timestamp: Date.now(),
     });
 
     // Update working memory
-    this.memory.setGoal(userMessage);
+    this.memory.setGoal(refinedMessage);
 
     // Context compaction check — use ContextOrchestrator if available
     const contextSize = this.estimateContextSize();
