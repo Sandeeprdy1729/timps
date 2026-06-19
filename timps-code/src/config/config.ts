@@ -3,8 +3,8 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import type { TimpsConfig, ProviderName, TrustLevel } from './types.js';
-import { t, icons } from './theme.js';
+import type { TimpsConfig, ProviderName, TrustLevel, TerminalBackend, TerminalConfig, ToolConfig, PlatformType, PlatformConfig, SetupResult } from './types.js';
+import { t, icons, LOGO } from './theme.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.timps');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -82,60 +82,222 @@ export function getDefaultModel(provider: ProviderName): string {
   return DEFAULT_MODELS[provider] || 'unknown';
 }
 
-export async function runSetupWizard(existing?: TimpsConfig): Promise<TimpsConfig> {
+function envLabel(key: string): string {
+  const names: Record<string, string> = {
+    ANTHROPIC_API_KEY: 'Claude',
+    OPENAI_API_KEY: 'OpenAI',
+    GEMINI_API_KEY: 'Gemini',
+    OPENROUTER_API_KEY: 'OpenRouter',
+    DEEPSEEK_API_KEY: 'DeepSeek',
+    GROQ_API_KEY: 'Groq',
+    TELEGRAM_BOT_TOKEN: 'Telegram',
+    SLACK_BOT_TOKEN: 'Slack',
+    DISCORD_BOT_TOKEN: 'Discord',
+    SEARXNG_API_KEY: 'SearXNG',
+    GITHUB_TOKEN: 'GitHub',
+    HF_TOKEN: 'HuggingFace',
+  };
+  return names[key] || key;
+}
+
+export async function runFullSetup(existing?: TimpsConfig): Promise<SetupResult> {
   const config: TimpsConfig = existing ? { ...existing } : { ...DEFAULT_CONFIG };
-  const rl = readline.createInterface({ input: stdin, output: stdout });
+  const terminal: TerminalConfig = { backend: 'local' };
+  const tools: ToolConfig = {
+    webSearch: false, browser: false, terminal: true,
+    fileOps: true, codeExecution: true, vision: false,
+    imageGeneration: false, tts: false, skillsHub: false,
+    computerUse: false,
+  };
+  const platform: PlatformConfig = { platform: 'none' };
+  const envVars: Record<string, string> = {};
 
-  console.log(`\n  ${t.brandBold('⚡ TIMPS Code — Setup Wizard')}`);
-  console.log(t.separator);
-  console.log(t.dim('  Configure your AI coding agent\n'));
+  const { radioMenu, checkboxMenu, confirmMenu } = await import('../utils/interactiveMenu.js');
 
+  // ── Step 0: Logo ──
+  console.log(LOGO);
+
+  // ── Step 1: Welcome ──
+  console.log(`\n  ${t.brandBold('Setup Wizard')}`);
+  console.log(`  ${t.dim('Configure your AI coding agent — TIMPS Code')}\n`);
+  console.log(`  ${t.dim('Use ↑↓ to navigate · ENTER/SPACE to select · ESC to skip')}\n`);
+
+  // ── Step 2: Provider Selection ──
   const providerKeys = Object.keys(PROVIDERS) as ProviderName[];
-  console.log(t.bold('  Available Providers:\n'));
-  providerKeys.forEach((p, i) => {
-    const info = PROVIDERS[p];
-    const keyStatus = info.needsKey
-      ? (getApiKey(config, p) ? t.success(' ✔ key set') : t.warning(' ○ needs key'))
-      : t.success(' ✔ local/free');
-    console.log(`  ${t.bold(`${i + 1}.`)} ${t.info(info.label)}${keyStatus}`);
-    if (info.free) console.log(`     ${t.dim('Free: ' + info.free)}`);
-  });
-
-  const defaultIdx = providerKeys.indexOf('ollama') + 1;
-  const choice = await rl.question(t.prompt(`\n  Select provider [1-${providerKeys.length}] (default ${defaultIdx}=ollama): `));
-  const idx = Math.max(0, Math.min(providerKeys.length - 1, parseInt(choice || String(defaultIdx)) - 1));
-  config.defaultProvider = providerKeys[idx];
-
-  const prov = PROVIDERS[config.defaultProvider];
-  if (prov.needsKey && !getApiKey(config, config.defaultProvider)) {
-    console.log(t.dim(`\n  ${icons.key} ${prov.label} requires an API key.`));
-    const key = await rl.question(t.prompt('  API key: '));
-    if (key.trim()) config.keys[config.defaultProvider] = key.trim();
+  const provOptions = providerKeys.map(p => ({
+    label: PROVIDERS[p].label,
+    description: PROVIDERS[p].free || undefined,
+    meta: (getApiKey(config, p) ? 'key set' : (PROVIDERS[p].needsKey ? 'needs key' : 'free')) as string | undefined,
+  }));
+  const provIdx = await radioMenu({ prompt: 'Select AI provider:', options: provOptions, defaultIndex: providerKeys.indexOf('ollama') });
+  if (provIdx !== null) {
+    config.defaultProvider = providerKeys[provIdx];
+    const prov = PROVIDERS[config.defaultProvider];
+    if (prov.needsKey && !getApiKey(config, config.defaultProvider)) {
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+      console.log(t.dim(`\n  ${icons.key} ${prov.label} requires an API key.`));
+      const key = await rl.question(t.prompt('  API key: '));
+      rl.close();
+      if (key.trim()) {
+        config.keys[config.defaultProvider] = key.trim();
+        envVars[getEnvVarForProvider(config.defaultProvider)] = key.trim();
+      }
+    }
+    const defaultModel = getDefaultModel(config.defaultProvider);
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const modelInput = await rl.question(t.prompt(`  Model [default: ${defaultModel}]: `));
+    rl.close();
+    config.defaultModel = modelInput.trim() || defaultModel;
   }
 
-  const defaultModel = getDefaultModel(config.defaultProvider);
-  const modelInput = await rl.question(t.prompt(`  Model [default: ${defaultModel}]: `));
-  config.defaultModel = modelInput.trim() || defaultModel;
-
-  if (['ollama', 'hybrid'].includes(config.defaultProvider)) {
-    const url = await rl.question(t.prompt('  Ollama base URL [default: http://localhost:11434]: '));
-    if (url.trim()) config.ollamaUrl = url.trim();
-  }
-
-  console.log(t.bold('\n  Trust Level:\n'));
-  console.log(`  1. ${t.warning('cautious')} — approve every write/exec`);
-  console.log(`  2. ${t.info('normal')}    — auto-approve reads, prompt for writes`);
-  console.log(`  3. ${t.success('trust')}     — auto-approve most actions`);
-  console.log(`  4. ${t.error('yolo')}      — auto-approve everything (dangerous)`);
-  const trustChoice = await rl.question(t.prompt('  Level [1-4] (default 2): '));
+  // ── Step 3: Trust Level ──
+  const trustOptions = [
+    { label: 'Cautious', description: 'approve every write/exec' },
+    { label: 'Normal', description: 'auto-approve reads, prompt for writes' },
+    { label: 'Trust', description: 'auto-approve most actions' },
+    { label: 'YOLO', description: 'auto-approve everything (dangerous)' },
+  ];
+  const trustIdx = await radioMenu({ prompt: 'Select trust level:', options: trustOptions, defaultIndex: 1 });
   const trustLevels: TrustLevel[] = ['cautious', 'normal', 'trust', 'yolo'];
-  config.trustLevel = trustLevels[Math.max(0, Math.min(3, parseInt(trustChoice || '2') - 1))];
+  if (trustIdx !== null) config.trustLevel = trustLevels[trustIdx];
 
-  rl.close();
+  // ── Step 4: Terminal Backend ──
+  const backendOptions = [
+    { label: 'Local', description: 'run commands on your machine' },
+    { label: 'Docker', description: 'run commands in a container' },
+    { label: 'Modal', description: 'run commands on Modal serverless' },
+    { label: 'SSH', description: 'run commands on a remote server' },
+    { label: 'Daytona', description: 'run commands on Daytona dev environments' },
+  ];
+  const backendLabels: TerminalBackend[] = ['local', 'docker', 'modal', 'ssh', 'daytona'];
+  const backendIdx = await radioMenu({ prompt: 'Select terminal backend:', options: backendOptions, defaultIndex: 0 });
+  if (backendIdx !== null) {
+    terminal.backend = backendLabels[backendIdx];
+  }
+
+  // ── Step 5: Tool Configuration ──
+  const toolOptions = [
+    { label: 'Web Search', description: 'search the web via DuckDuckGo / SearXNG' },
+    { label: 'Browser', description: 'headless browser for web tasks' },
+    { label: 'Terminal', description: 'run shell commands' },
+    { label: 'File Operations', description: 'read/write/edit files on disk' },
+    { label: 'Code Execution', description: 'run code in sandboxed environment' },
+    { label: 'Vision', description: 'image analysis with vision models' },
+    { label: 'Image Generation', description: 'generate images via AI models' },
+    { label: 'Text-to-Speech', description: 'spoken output' },
+    { label: 'Skills Hub', description: 'installable skill marketplace' },
+    { label: 'Computer Use', description: 'GUI automation via screenshots + clicks' },
+  ];
+  const toolKeys: (keyof ToolConfig)[] = [
+    'webSearch', 'browser', 'terminal', 'fileOps', 'codeExecution',
+    'vision', 'imageGeneration', 'tts', 'skillsHub', 'computerUse',
+  ];
+  const initialChecks = toolKeys.map((k, i) => tools[k] ? i : -1).filter(i => i >= 0);
+  const toolIdx = await checkboxMenu({ prompt: 'Select tools to enable (SPACE to toggle):', options: toolOptions, defaultChecked: initialChecks });
+  if (toolIdx.length > 0) {
+    for (const i of toolIdx) {
+      if (i < toolKeys.length) (tools as any)[toolKeys[i]] = true;
+    }
+  }
+
+  // ── Step 6: Platform Messaging ──
+  const platformOptions = [
+    { label: 'None', description: 'no messaging platform' },
+    { label: 'Telegram', description: 'receive messages via Telegram bot' },
+    { label: 'Slack', description: 'receive messages via Slack bot' },
+    { label: 'Discord', description: 'receive messages via Discord bot' },
+  ];
+  const platformLabels: PlatformType[] = ['none', 'telegram', 'slack', 'discord'];
+  const platIdx = await radioMenu({ prompt: 'Select messaging platform:', options: platformOptions, defaultIndex: 0 });
+  if (platIdx !== null) {
+    platform.platform = platformLabels[platIdx];
+    if (platform.platform !== 'none') {
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+      const token = await rl.question(t.prompt(`  Bot token for ${platform.platform}: `));
+      rl.close();
+      if (token.trim()) {
+        platform.token = token.trim();
+        const envKey = platform.platform === 'telegram' ? 'TELEGRAM_BOT_TOKEN'
+          : platform.platform === 'slack' ? 'SLACK_BOT_TOKEN'
+          : 'DISCORD_BOT_TOKEN';
+        envVars[envKey] = token.trim();
+      }
+    }
+  }
+
+  // ── Step 7: Additional API Keys ──
+  const additional = await confirmMenu('Would you like to configure additional API keys?', false);
+  if (additional) {
+    const envKeys = [
+      'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY',
+      'OPENROUTER_API_KEY', 'DEEPSEEK_API_KEY', 'GROQ_API_KEY',
+      'SEARXNG_API_KEY', 'GITHUB_TOKEN', 'HF_TOKEN',
+    ];
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    for (const ek of envKeys) {
+      const existing = envVars[ek] || process.env[ek] || '';
+      if (existing) continue;
+      const val = await rl.question(t.prompt(`  ${envLabel(ek)} API key (leave blank to skip): `));
+      if (val.trim()) envVars[ek] = val.trim();
+    }
+    rl.close();
+  }
+
+  // ── Step 8: Save .env File ──
+  const envFile = path.join(CONFIG_DIR, '.env');
+  if (Object.keys(envVars).length > 0) {
+    const envContent = Object.entries(envVars)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n');
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    fs.writeFileSync(envFile, envContent + '\n', 'utf-8');
+    console.log(t.success(`\n  ${icons.success} Wrote ${Object.keys(envVars).length} env vars to ~/.timps/.env`));
+  } else if (fs.existsSync(envFile)) {
+    console.log(t.dim(`\n  ${icons.info} Using existing ~/.timps/.env`));
+  }
+
+  // ── Save config ──
+  config.terminal = terminal;
+  config.tools = tools;
+  config.platform = platform;
+  config.envFile = envFile;
   saveConfig(config);
-  console.log(t.success(`\n  ${icons.success} Config saved to ~/.timps/config.json`));
-  console.log(t.dim(`  Provider: ${config.defaultProvider} | Model: ${config.defaultModel} | Trust: ${config.trustLevel}\n`));
-  return config;
+
+  // ── Summary Report ──
+  console.log(`\n${t.separatorDouble}`);
+  console.log(`  ${t.brandBold('Setup Complete')}\n`);
+  console.log(`  ${t.dim('Provider:')}     ${t.accent(config.defaultProvider)}`);
+  console.log(`  ${t.dim('Model:')}        ${t.accent(config.defaultModel)}`);
+  console.log(`  ${t.dim('Trust:')}        ${t.accent(config.trustLevel)}`);
+  console.log(`  ${t.dim('Terminal:')}     ${t.accent(terminal.backend)}`);
+  const enabledTools = toolKeys.filter(k => (tools as any)[k]);
+  console.log(`  ${t.dim('Tools:')}        ${t.accent(enabledTools.length + ' of ' + toolKeys.length)} enabled`);
+  console.log(`  ${t.dim('Messaging:')}    ${t.accent(platform.platform !== 'none' ? platform.platform : 'none')}`);
+  console.log(`  ${t.dim('Config:')}       ${t.file(CONFIG_FILE)}`);
+  console.log(`  ${t.dim('Env file:')}     ${t.file(envFile)}`);
+  console.log(t.separatorDouble);
+  console.log();
+
+  return { config, terminal, tools, platform, envVars };
+}
+
+export async function runSetupWizard(existing?: TimpsConfig): Promise<TimpsConfig> {
+  const result = await runFullSetup(existing);
+  return result.config;
+}
+
+function getEnvVarForProvider(provider: ProviderName): string {
+  const map: Record<ProviderName, string> = {
+    claude: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY',
+    gemini: 'GEMINI_API_KEY',
+    ollama: '',
+    openrouter: 'OPENROUTER_API_KEY',
+    deepseek: 'DEEPSEEK_API_KEY',
+    groq: 'GROQ_API_KEY',
+    hybrid: '',
+  };
+  return map[provider] || '';
 }
 
 export function getProjectId(projectPath: string): string {

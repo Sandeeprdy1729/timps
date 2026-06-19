@@ -19,8 +19,8 @@ import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { TodoStore } from '../utils/todo.js';
 import { loadConfig, saveConfig, runSetupWizard, getProjectId, getApiKey, getDefaultModel } from '../config/config.js';
 import { runDataPipeline, type DataPipelineConfig } from '../data-pipeline/data-pipeline.js';
-import { t, icons, SMALL_LOGO, panel } from '../config/theme.js';
-import { renderAgentEvent, renderLandingPage, renderHelp, renderPrompt, renderError, flushText, renderChatReady, renderMemoryPanel, renderTodoList, renderDoctorReport, renderGitStatus, renderGitLog, renderModelsList, renderSkills } from '../utils/renderer.js';
+import { t, icons, panel } from '../config/theme.js';
+import { renderAgentEvent, renderHelp, renderPrompt, renderError, flushText, renderChatReady, renderMemoryPanel, renderTodoList, renderDoctorReport, renderGitStatus, renderGitLog, renderModelsList, renderSkills } from '../utils/renderer.js';
 import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from '../utils/ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from '../utils/skills.js';
 import { MultimodalMemory } from '../memory/multimodalMemory.js';
@@ -57,13 +57,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   if (opts.warRoom) console.log(`${t.warning('🔥')} WAR ROOM MODE - 19hr sessions`);
   if (opts.binarySynth) console.log(`${t.warning('⚡')} DIRECT BINARY SYNTHESIS enabled`);
 
-  // ── Step 1: Show compact banner ──
-  console.log();
-  const bannerLines = SMALL_LOGO.split('\n');
-  for (const line of bannerLines) console.log(line);
-  console.log();
-
-  // ── Step 2: Smart Provider Auto-Selection (Claude Code style: zero-friction) ──
+  // ── Smart Provider Auto-Selection (Claude Code style: zero-friction) ──
   let providerName: ProviderName | undefined;
 
   if (opts.provider) {
@@ -307,9 +301,6 @@ const resolved = modelName.replace(':latest', ':7b');
     }
 
     // Non-TTY without piped input → start interactive REPL
-    console.log();
-    const memoryCount = memory.query('', 999).length;
-    renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
     process.on('SIGINT', async () => {
       await agent.saveSession(sessionDir);
       await agent.saveEpisode('success');
@@ -321,10 +312,6 @@ const resolved = modelName.replace(':latest', ':7b');
   }
 
   // ── TTY Interactive Mode ──
-  console.log();
-  const memoryCount = memory.query('', 999).length;
-  renderLandingPage(provider.model, providerName, cwd, memoryCount, ollamaModels, todos.getOpen().length);
-
   process.on('SIGINT', async () => {
     await agent.saveSession(sessionDir);
     await agent.saveEpisode('success');
@@ -2195,38 +2182,29 @@ function timeSince(ts: number): string {
 // ═══════════════════════════════════════
 
 const PROVIDER_MENU: { name: ProviderName; label: string; desc: string }[] = [
-  { name: 'claude',     label: '🟣 Claude (Anthropic)',   desc: 'Claude Sonnet / Opus — top-tier coding' },
-  { name: 'openai' as ProviderName,     label: '🟢 OpenAI / Codex',      desc: 'GPT-4o, o3-mini — fast & versatile' },
-  { name: 'gemini' as ProviderName,     label: '🔵 Google Gemini',        desc: 'Gemini 2.5 Pro/Flash — free tier available' },
-  { name: 'ollama' as ProviderName,     label: '⚪ Ollama (local)',        desc: 'Qwen, DeepSeek, Llama — runs on your machine' },
-  { name: 'openrouter' as ProviderName, label: '🟡 OpenRouter',           desc: '100+ models, pay-per-token routing' },
-  { name: 'ollama' as ProviderName,     label: '🔶 OpenCode (local)',      desc: 'Local models via Ollama — no API key needed' },
+  { name: 'claude',     label: 'Claude (Anthropic)',   desc: 'Claude Sonnet / Opus — top-tier coding' },
+  { name: 'openai' as ProviderName,     label: 'OpenAI / Codex',      desc: 'GPT-4o, o3-mini — fast & versatile' },
+  { name: 'gemini' as ProviderName,     label: 'Google Gemini',        desc: 'Gemini 2.5 Pro/Flash — free tier available' },
+  { name: 'ollama' as ProviderName,     label: 'Ollama (local)',        desc: 'Qwen, DeepSeek, Llama — runs on your machine' },
+  { name: 'openrouter' as ProviderName, label: 'OpenRouter',           desc: '100+ models, pay-per-token routing' },
+  { name: 'ollama' as ProviderName,     label: 'OpenCode (local)',      desc: 'Local models via Ollama — no API key needed' },
 ];
 
 async function pickProvider(config: import('../config/types.js').TimpsConfig): Promise<ProviderName | null> {
-  console.log(`  ${t.brandBold('Choose a provider:')}\n`);
-
-  for (let i = 0; i < PROVIDER_MENU.length; i++) {
-    const p = PROVIDER_MENU[i];
-    const hasKey = p.name === 'ollama' || !!getApiKey(config, p.name);
-    const badge = hasKey ? t.success(' ✔') : '';
-    console.log(`  ${t.accent(`${i + 1}.`)} ${p.label}${badge}`);
-    console.log(`     ${t.dim(p.desc)}`);
-  }
-
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await new Promise<string>(resolve => {
-    rl.question(`\n  ${t.prompt('Select [1-6]:')} `, a => { rl.close(); resolve(a.trim()); });
-  });
-
-  const idx = parseInt(answer) - 1;
-  if (idx < 0 || idx >= PROVIDER_MENU.length) return null;
+  const { radioMenu } = await import('../utils/interactiveMenu.js');
+  const options = PROVIDER_MENU.map(p => ({
+    label: p.label,
+    description: p.desc,
+    meta: p.name === 'ollama' ? undefined : 'API key' as string | undefined,
+  }));
+  const idx = await radioMenu({ prompt: 'Select provider:', options });
+  if (idx === null) return null;
 
   const chosen = PROVIDER_MENU[idx].name;
   config.defaultProvider = chosen;
   config.defaultModel = getDefaultModel(chosen);
   saveConfig(config);
-  console.log(`\n  ${t.success(`${icons.success} Switched to ${PROVIDER_MENU[idx].label}`)}`);
+  console.log(`\n  ${t.success(`${icons.success} Switched to ${PROVIDER_MENU[idx].label}`)}\n`);
   return chosen;
 }
 

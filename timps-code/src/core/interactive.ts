@@ -144,109 +144,82 @@ export class InteractiveREPL {
 
   private showWelcome(): void {
     const w = W;
-    const line = (s = '') => `  ${chalk.hex(c.tealDark)('│')}${s}${chalk.hex(c.tealDark)('│')}`;
-    const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - stripAnsi(s).length));
-
-    // Robot pixel art (inline chalk)
-    const rd = chalk.hex(c.tealDark);
-    const rm = chalk.hex(c.tealMid);
-    const rt = chalk.hex(c.tan);
-    const rc = chalk.hex(c.cream);
-    const ri = chalk.hex(c.ink);
-    const robot = [
-      `  ${rd('┌──────┐')}  `,
-      `  ${rd('│')}${rc(' ◉  ◉ ')}${rd('│')}  `,
-      `  ${rd('│')}${rc('  ‿   ')}${rd('│')}  `,
-      `  ${rd('└──────┘')}  `,
-      `  ${rt('┆')} ${rm('░░░░')} ${rt('┆')}  `,
-      ` ${rt('┌┴──────┴┐')} `,
-      ` ${rt('│')}  ${rm('▣ ▣ ▣')}  ${rt('│')} `,
-      ` ${rt('└┬──────┬┘')} `,
-      `  ${ri('██')}      ${ri('██')}  `,
-    ];
-
-    const sep = chalk.hex(c.tealDark)('═'.repeat(w - 4));
-    const innerW = w - 4;
-
-    // Header bar
+    const iw = w - 4;
+    const vl = chalk.hex(c.tealDark);
     console.log();
-    console.log(`  ${chalk.hex(c.tealDark)('╔' + '═'.repeat(w - 4) + '╗')}`);
-    // Dots row
-    const dotsRow = ` ${chalk.hex(c.dotRed)('●')} ${chalk.hex(c.dotYellow)('●')} ${chalk.hex(c.dotGreen)('●')}`;
-    const title = chalk.hex(c.tealMid).bold('  TIMPS  ') + chalk.hex(c.dim)('— AI Coding Agent');
-    console.log(`  ${chalk.hex(c.tealDark)('║')}${dotsRow}  ${title}${' '.repeat(Math.max(0, innerW - 3 - stripAnsi(title).length - 3))}${chalk.hex(c.tealDark)('║')}`);
-    console.log(`  ${chalk.hex(c.tealDark)('╠' + '═'.repeat(w - 4) + '╣')}`);
+    console.log(`  ${vl('╭' + '─'.repeat(iw) + '╮')}`);
 
-    // Robot + text rows
-    const textLines = [
-      `  ${chalk.hex(c.tealLight).bold('TIMPS Code')} ${chalk.hex(c.dim)('v2.0')}`,
-      ``,
-      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Persistent Memory Across Sessions')}`,
-      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('25+ Tools · Swarm · MCP Protocol')}`,
-      `  ${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Local-First · 100% Private')}`,
-      ``,
-      `  ${chalk.hex(c.dim)('Type')} ${chalk.hex(c.tealLight)('/help')} ${chalk.hex(c.dim)('for commands ·')} ${chalk.hex(c.dim)('Tab')} ${chalk.hex(c.dim)('to autocomplete')}`,
-      `  ${chalk.hex(c.dim)('↑↓')} ${chalk.hex(c.dim)('history ·')} ${chalk.hex(c.amber)('Ctrl+C')} ${chalk.hex(c.dim)('to exit')}`,
-      ``,
+    // Row: model info
+    const modelLabel = chalk.hex(c.tealMid).bold('Model');
+    const modelVal = chalk.bold.hex(c.cream)(this.provider.model.slice(0, 36));
+    const provVal = chalk.hex(c.tealLight)(this.provider.name);
+    const row1 = `${modelLabel}    ${modelVal}  ${vl('─')}  ${provVal}`;
+    const r1 = stripAnsi(row1);
+    console.log(`  ${vl('│')}  ${row1}${' '.repeat(Math.max(0, iw - 2 - r1.length))}  ${vl('│')}`);
+
+    // Row: project
+    const projLabel = chalk.hex(c.tealMid).bold('Project');
+    const projVal = chalk.hex(c.cream)(this.cwd.split('/').slice(-2).join('/'));
+    const r2 = stripAnsi(projLabel).length + 4 + stripAnsi(projVal).length;
+    console.log(`  ${vl('│')}  ${projLabel}  ${projVal}${' '.repeat(Math.max(0, iw - 2 - r2))}  ${vl('│')}`);
+
+    console.log(`  ${vl('│')}${' '.repeat(iw + 2)}${vl('│')}`);
+
+    // Row: features
+    const feat = [
+      `${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Persistent Memory Across Sessions')}`,
+      `${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('25+ Tools · Swarm · MCP Protocol')}`,
+      `${chalk.hex(c.tealMid)('▸')} ${chalk.hex(c.cream)('Local-First · 100% Private')}`,
     ];
-
-    for (let i = 0; i < Math.max(robot.length, textLines.length); i++) {
-      const rob = robot[i] ?? '              ';
-      const txt = textLines[i] ?? '';
-      const robRaw = stripAnsi(rob);
-      const txtRaw = stripAnsi(txt);
-      const content = `${rob}  ${txt}`;
-      const padLen = Math.max(0, innerW - robRaw.length - 2 - txtRaw.length);
-      console.log(`  ${chalk.hex(c.tealDark)('║')}${content}${' '.repeat(padLen)}${chalk.hex(c.tealDark)('║')}`);
+    for (const f of feat) {
+      const rf = stripAnsi(f);
+      console.log(`  ${vl('│')}  ${f}${' '.repeat(Math.max(0, iw - 2 - rf.length))}  ${vl('│')}`);
     }
 
-    console.log(`  ${chalk.hex(c.tealDark)('╚' + '═'.repeat(w - 4) + '╝')}`);
+    console.log(`  ${vl('│')}${' '.repeat(iw + 2)}${vl('│')}`);
+
+    // Row: help hint
+    const hint = `${chalk.hex(c.dim)('type')} ${chalk.hex(c.tealLight)('/help')} ${chalk.hex(c.dim)('for commands ·')} ${chalk.hex(c.amber)('Ctrl+C')} ${chalk.hex(c.dim)('to exit')}`;
+    const rh = stripAnsi(hint);
+    console.log(`  ${vl('│')}  ${hint}${' '.repeat(Math.max(0, iw - 2 - rh.length))}  ${vl('│')}`);
+
+    console.log(`  ${vl('╰' + '─'.repeat(iw) + '╯')}`);
     console.log();
 
-    // Quick shortcut bar
+    // Quick shortcut bar (compact like Hermes)
     const shortcuts = [
-      ['/', 'command'],
-      ['Tab', 'complete'],
-      ['↑↓', 'history'],
+      ['/', 'cmd'],
+      ['Tab', 'comp'],
+      ['↑↓', 'hist'],
       ['Ctrl+L', 'clear'],
-      ['Ctrl+C', 'exit'],
     ];
-    const shortcutStr = shortcuts.map(([k, v]) =>
+    const sc = shortcuts.map(([k, v]) =>
       `${chalk.hex(c.tealMid).bold(k)} ${chalk.hex(c.dim)(v)}`
-    ).join(chalk.hex(c.dim)('  ·  '));
-    console.log(`  ${chalk.hex(c.dim)('>')} ${shortcutStr}`);
+    ).join(chalk.hex(c.dim)(' · '));
+    console.log(`  ${chalk.hex(c.dim)('❯')} ${sc}`);
     console.log();
   }
 
   private drawStatusLine(): void {
-    const model = this.provider.model.slice(0, 30);
+    const model = this.provider.model.slice(0, 24);
     const totalTok = this.totalUsage.inputTokens + this.totalUsage.outputTokens;
-    const tokInfo = totalTok > 0 ? ` ${(totalTok / 1000).toFixed(1)}k tok` : '';
-    const statusDot = this.isProcessing
-      ? chalk.hex(c.warning)('●')
-      : chalk.hex(c.success)('●');
+    const tokInfo = totalTok > 0 ? ` ${(totalTok / 1000).toFixed(1)}k` : '';
+    const maxCtx = 200000;
+    const pct = Math.min(100, Math.round((totalTok / maxCtx) * 100));
+    const filled = Math.round(pct / 10);
+    const pb = chalk.hex(c.tealDark)('█'.repeat(filled)) + chalk.hex('#374151')('░'.repeat(12 - filled));
 
-    const flags = [
-      this.fastMode  ? chalk.hex(c.cyan)('⚡ fast') : '',
-      this.briefMode ? chalk.hex(c.amber)('◎ brief') : '',
-      this.vimMode !== 'normal' ? chalk.hex(c.magenta)(`VIM:${this.vimMode[0].toUpperCase()}`) : '',
-    ].filter(Boolean).join(' ');
-
-    const left  = ` ${statusDot} ${chalk.hex(c.tealMid).bold('TIMPS')} ${chalk.hex(c.dim)('·')} ${chalk.hex(c.cream)(model)}`;
-    const right = `${flags}${tokInfo} ${chalk.hex(c.dim)(new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }))} `;
-
+    // Hermes-style: model │ ctx -- │ [progress] │ tokens │ time
+    const vl = chalk.hex('#374151')('│');
+    const left = `${chalk.hex(c.tealMid)('⚕')} ${chalk.hex(c.cream)(model)} ${vl} ${chalk.hex(c.dim)('ctx')} -- ${vl} ${pb} ${vl} ${chalk.hex(c.dim)(tokInfo || '--')}`;
+    const timeStr = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+    const right = `${chalk.hex(c.dim)(timeStr)} `;
     const leftLen  = stripAnsi(left).length;
     const rightLen = stripAnsi(right).length;
     const mid = ' '.repeat(Math.max(1, W - 4 - leftLen - rightLen));
 
     process.stdout.write(
-      `\n  ${chalk.hex(c.tealDark)('┌' + '─'.repeat(W - 4) + '┐')}\n`
-    );
-    process.stdout.write(
-      `  ${chalk.hex(c.tealDark)('│')}${left}${mid}${right}${chalk.hex(c.tealDark)('│')}\n`
-    );
-    process.stdout.write(
-      `  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4) + '┘')}\n`
+      `\n ${vl} ${chalk.hex(c.cream)(model)} ${vl} ${chalk.hex(c.dim)('ctx')} -- ${vl} ${pb} ${vl} ${chalk.hex(c.dim)(tokInfo || '--')}${mid}${chalk.hex(c.dim)(timeStr)}\n`
     );
   }
 
@@ -254,23 +227,23 @@ export class InteractiveREPL {
     const label = chalk.hex(c.tealLight).bold('  ❯ You');
     const msgLines = msg.split('\n');
     console.log();
-    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 6 - stripAnsi(label).length - 2)))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 4 - stripAnsi(label).length)))}`);
     for (const line of msgLines) {
       console.log(`  ${chalk.hex(c.tealDark)('│')} ${chalk.hex(c.cream)(line)}`);
     }
-    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 3))}`);
     console.log();
   }
 
   private printAssistantSeparator(): void {
     console.log();
-    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 4))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('└' + '─'.repeat(W - 3))}`);
     console.log();
   }
 
   private printAssistantHeader(): void {
     const label = chalk.hex(c.tealMid).bold('  🤖 TIMPS');
-    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 6 - stripAnsi(label).length - 2)))}`);
+    console.log(`  ${chalk.hex(c.tealDark)('┌─')}${label}${chalk.hex(c.tealDark)('─'.repeat(Math.max(1, W - 4 - stripAnsi(label).length)))}`);
     console.log(`  ${chalk.hex(c.tealDark)('│')}`);
   }
 
@@ -386,13 +359,19 @@ export class InteractiveREPL {
     this.drawStatusLine();
   }
 
+  private printSeparator(): void {
+    const w = W - 2;
+    console.log(chalk.hex('#374151')('─'.repeat(w + 2)));
+  }
+
   private async replLoop(): Promise<void> {
     const prompt = () => new Promise<string>(resolve => {
       const modeIndicator = this.vimMode !== 'normal'
         ? chalk.hex(c.magenta)(`(${this.vimMode.toUpperCase()}) `)
         : '';
-      const promptChar = chalk.hex(c.tealMid)('│');
-      this.rl.question(`  ${modeIndicator}${promptChar} `, answer => resolve(answer));
+      this.printSeparator();
+      const promptChar = chalk.hex(c.tealMid)('❯');
+      this.rl.question(` ${promptChar} `, answer => resolve(answer));
     });
 
     for (;;) {

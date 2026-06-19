@@ -1,4 +1,5 @@
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
+import { isPrivateUrl } from '../_shared/index.js';
 
 export const webFetchTool: RegisteredTool = {
   definition: {
@@ -56,4 +57,20 @@ export const webFetchTool: RegisteredTool = {
       return { content: `Fetch error: ${(e as Error).message}`, isError: true };
     }
   },
+};
+
+export const WebFetchTool: ToolExecutor = async (args) => {
+  const { url } = args as any;
+
+  if (isPrivateUrl(url)) {
+    return { content: `Error: Access denied — ${url} resolves to a private/internal address`, isError: true, toolName: 'WebFetch' };
+  }
+
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const text = await response.text();
+    return { content: text.slice(0, 10000), toolName: 'WebFetch' };
+  } catch (err: any) {
+    return { content: `Fetch error: ${err.message}`, isError: true, toolName: 'WebFetch' };
+  }
 };

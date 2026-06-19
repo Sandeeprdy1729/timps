@@ -119,6 +119,12 @@ export interface TimpsConfig {
   disableAnalytics?: boolean;
   apiKey?: string;
   migrationVersion?: number;
+
+  // Hermes-style setup fields
+  terminal?: TerminalConfig;
+  tools?: ToolConfig;
+  platform?: PlatformConfig;
+  envFile?: string;
 }
 
 export interface McpServerConfig {
@@ -260,4 +266,45 @@ export interface TeamMemoryStore {
   sessions: TeamSession[];
   sharedFacts: MemoryEntry[];
   progress: { task: string; status: string; assignee?: string; timestamp: number }[];
+}
+
+
+
+export type TerminalBackend = 'local' | 'docker' | 'modal' | 'ssh' | 'daytona';
+
+export interface TerminalConfig {
+  backend: TerminalBackend;
+  sshHost?: string;
+  sshUser?: string;
+  sshKey?: string;
+  dockerImage?: string;
+}
+
+export interface ToolConfig {
+  webSearch: boolean;
+  browser: boolean;
+  terminal: boolean;
+  fileOps: boolean;
+  codeExecution: boolean;
+  vision: boolean;
+  imageGeneration: boolean;
+  tts: boolean;
+  skillsHub: boolean;
+  computerUse: boolean;
+}
+
+export type PlatformType = 'telegram' | 'slack' | 'discord' | 'none';
+
+export interface PlatformConfig {
+  platform: PlatformType;
+  token?: string;
+  channelId?: string;
+}
+
+export interface SetupResult {
+  config: TimpsConfig;
+  terminal: TerminalConfig;
+  tools: ToolConfig;
+  platform: PlatformConfig;
+  envVars: Record<string, string>;
 }

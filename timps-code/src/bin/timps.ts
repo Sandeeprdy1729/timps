@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ── TIMPS Code — CLI Entry Point v2.0
-// World #1 CLI Coding Agent
+
 
 import dotenv from 'dotenv';
 import path from 'path';
@@ -33,7 +33,7 @@ const program = new Command();
 
 program
   .name('timps')
-  .description('TIMPS Code — World\'s #1 AI coding agent with persistent memory')
+  .description('TIMPS Code — AI coding agent with persistent memory')
   .version('2.0.0')
   .option('-p, --provider <name>', 'Model provider: claude, openai, gemini, ollama, openrouter, opencode, timps-coder, hybrid')
   .option('-m, --model <model>', 'Model name')
@@ -117,6 +117,15 @@ program
         console.error(`Failed to handle URI: ${(err as Error).message}`);
         process.exit(1);
       }
+    }
+
+    // Handle --config / setup wizard
+    if (opts.config) {
+      const { runFullSetup } = await import('../config/config.js');
+      const result = await runFullSetup();
+      console.log(`  ${t.dim('Run')} ${t.accent('timps')} ${t.dim('to start coding.')}`);
+      console.log(`  ${t.dim('Reconfigure with:')} ${t.accent('timps --config')}\n`);
+      return;
     }
 
     // Handle SSH mode

@@ -1,4 +1,4 @@
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
 import { listTasks } from '../taskCreate/index.js';
 
 export const taskListTool: RegisteredTool = {
@@ -27,4 +27,8 @@ export const taskListTool: RegisteredTool = {
     });
     return { content: lines.join('\n'), isError: false };
   },
+};
+
+export const TaskListTool: ToolExecutor = async () => {
+  return { content: `Tasks:\n  - Task list here (from storage)`, toolName: 'TaskList' };
 };
