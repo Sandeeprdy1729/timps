@@ -28,7 +28,8 @@ import { injectQISRDContext } from '../memory/qisrdVeil.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
-import { ConstitutionalFilter } from '@timps/memory-core/safety/ConstitutionalFilter.js';
+import { ConstitutionalFilter, ConstitutionalSandbox } from '@timps/memory-core';
+import type { PromptAnalysis, SandboxExecutionRecord, ExecResult } from '@timps/memory-core';
 
 const getProvenForge = async () => {
   try {
@@ -171,6 +172,7 @@ export class Agent {
   private durableJob?: DurableJobEngine;
   private codeGraph?: CodeGraph;
   private constitutionalFilter?: ConstitutionalFilter;
+  private constitutionalSandbox?: ConstitutionalSandbox;
 
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
@@ -202,8 +204,9 @@ export class Agent {
       const runtimeDir = path.join(os.homedir(), '.timps', 'runtime');
       fs.mkdirSync(runtimeDir, { recursive: true });
       this.constitutionalFilter = new ConstitutionalFilter(runtimeDir);
+      this.constitutionalSandbox = new ConstitutionalSandbox(runtimeDir, this.constitutionalFilter);
     } catch {
-      // Filter is best-effort; if it fails, agent runs unfiltered
+      // Filter/Sandbox is best-effort; if it fails, agent runs unfiltered
     }
 
     // Initialize with system prompt
@@ -395,7 +398,7 @@ End your response with a confirmation question.`;
       const qisrdResult = injectQISRDContext(this.memory);
       if (qisrdResult.hasIssue) {
         for (const w of qisrdResult.warnings) {
-          yield { type: 'text', content: `\n> 🔮 **QISRD Alert**: ${w}\n` };
+          console.warn(`  ⚡ ${w}`);
         }
       }
       if (qisrdResult.promptFragment) {
@@ -655,6 +658,8 @@ End your response with a confirmation question.`;
       yield { type: 'tool_start', tool: tc.name, args: tc.arguments };
 
       // Execute with retry + exponential backoff for transient failures
+      // Sandbox-aware: route bash/notebook through ConstitutionalSandbox
+      const SANDBOX_TOOLS = new Set(['bash', 'notebook']);
       const TRANSIENT_ERRORS = ['ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'fetch failed', 'AbortError', 'timeout'];
       const MAX_RETRIES = 3;
       let result: ToolExecResult | null = null;
@@ -663,7 +668,11 @@ End your response with a confirmation question.`;
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          result = await tool.execute(tc.arguments, this.cwd);
+          if (this.constitutionalSandbox && SANDBOX_TOOLS.has(tc.name)) {
+            result = await this.executeSandboxed(tc.name, tc.arguments);
+          } else {
+            result = await tool.execute(tc.arguments, this.cwd);
+          }
         } catch (err) {
           result = { content: `Tool error: ${(err as Error).message}`, isError: true };
         }
@@ -781,7 +790,14 @@ End your response with a confirmation question.`;
       return { id: tc.id, result: `Permission denied for ${tc.name}`, success: false, tool: tc.name, durationMs: 0 };
     }
 
-    const res = await registered.execute(tc.arguments, this.cwd);
+    const SANDBOX_TOOLS_FOR_SINGLE = new Set(['bash', 'notebook']);
+    let res: ToolExecResult;
+    if (this.constitutionalSandbox && SANDBOX_TOOLS_FOR_SINGLE.has(tc.name)) {
+      const sandboxResult = await this.executeSandboxed(tc.name, tc.arguments);
+      res = sandboxResult;
+    } else {
+      res = await registered.execute(tc.arguments, this.cwd);
+    }
     const durationMs = Date.now() - start;
 
     // Track file changes for memory and snapshots
@@ -792,6 +808,46 @@ End your response with a confirmation question.`;
     if (!res.isError) await this.forgeSuccessfulToolResult(tc.name, res.content);
 
     return { id: tc.id, result: res.content, success: !res.isError, tool: tc.name, durationMs };
+  }
+
+  private async executeSandboxed(
+    toolName: string,
+    args: Record<string, unknown>,
+  ): Promise<ToolExecResult> {
+    if (!this.constitutionalSandbox) {
+      return { content: 'Sandbox not available', isError: true };
+    }
+
+    try {
+      let codeBlock: string;
+      if (toolName === 'notebook') {
+        const lang = String(args.language || 'js');
+        const fenceLang = lang === 'python' ? 'python' : lang === 'ts' ? 'typescript' : 'javascript';
+        codeBlock = '```' + fenceLang + '\n' + String(args.code) + '\n```';
+      } else {
+        codeBlock = '```bash\n' + String(args.command) + '\n```';
+      }
+
+      const sbxResult = await this.constitutionalSandbox.maybeExecute(codeBlock, { autoApprove: true });
+
+      if (!sbxResult.executed || !sbxResult.result) {
+        const reason = sbxResult.record?.stderrPreview || sbxResult.analysis.reason;
+        return { content: `Sandbox blocked execution: ${reason}`, isError: true };
+      }
+
+      const r = sbxResult.result;
+      const outputParts: string[] = [];
+      if (r.stdout) outputParts.push(r.stdout);
+      if (r.stderr) outputParts.push('stderr: ' + r.stderr);
+      const content = outputParts.join('\n') || '(no output)';
+
+      return {
+        content: content + `\n\n[Sandboxed] exit=${r.exitCode} dur=${r.durationMs}ms` + (r.timedOut ? ' TIMED_OUT' : ''),
+        isError: r.exitCode !== 0,
+      };
+    } catch (err) {
+      return { content: `Sandbox error: ${(err as Error).message}`, isError: true };
+    }
   }
 
   private async forgeSuccessfulToolResult(toolName: string, content: string): Promise<void> {

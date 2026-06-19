@@ -45,22 +45,33 @@ export function renderLandingPage(
   ollamaModels: string[],
   todoCount?: number,
   sessionCount?: number,
+  toolCount?: number,
+  skillCount?: number,
 ): void {
-  // OpenCode-style: clean block logo, no robot, no border box
   console.log(LOGO_TIMPS);
 
-  // Minimal info grid
+  // Hermes-style bordered info panel
+  const iw = Math.min(W - 4, 78);
+  const top = chalk.hex('#374151')('╭' + '─'.repeat(iw) + '╮');
+  const bot = chalk.hex('#374151')('╰' + '─'.repeat(iw) + '╯');
+  const vl = chalk.hex('#374151')('│');
+  const hr = (n: number) => chalk.hex('#374151')('─'.repeat(n));
+
   const project = cwd.split('/').slice(-2).join('/');
-  console.log(`  ${t.dim('model')}    ${chalk.bold(model)}`);
-  console.log(`  ${t.dim('project')}  ${t.accent(project)}`);
-  if (memoryFacts > 0) {
-    console.log(`  ${t.dim('memory')}   ${t.success(`${memoryFacts} facts`)}`);
-  }
+  const pctg = bar(memoryFacts, Math.max(memoryFacts, 100), 10, '▪', '▫');
+
+  console.log(`  ${top}`);
+  console.log(`  ${vl}  ${t.brandBold('Model')}    ${chalk.bold(model.padEnd(30))} ${t.dim('─')}  ${t.accent(provider)}  ${vl}`);
+  console.log(`  ${vl}  ${t.brandBold('Project')}  ${t.accent(project.padEnd(30))} ${t.dim('─')}  ${t.muted(cwd)}  ${vl}`);
+  console.log(`  ${vl}${hr(iw + 2)}${vl}`);
+  console.log(`  ${vl}  ${t.brandBold('Memory')}   ${t.success(String(memoryFacts).padEnd(4))} facts ${pctg}  ${vl}`);
   if (todoCount && todoCount > 0) {
-    console.log(`  ${t.dim('todos')}    ${t.warning(`${todoCount} open`)}`);
+    console.log(`  ${vl}  ${t.brandBold('Todos')}    ${t.warning(String(todoCount).padEnd(4))} open${' '.repeat(25)}  ${vl}`);
   }
-  console.log();
-  console.log(`  ${t.dim('type')} ${t.brand('/help')} ${t.dim('to see commands')} ${t.dim('·')} ${t.dim('Ctrl+C to exit')}`);
+  console.log(`  ${vl}  ${t.brandBold('Tools')}    ${t.info(String(toolCount ?? 0).padEnd(4))} available  ${t.dim('·')}  ${t.brandBold('Skills')}  ${t.info(String(skillCount ?? 0).padEnd(4))} installed  ${vl}`);
+  console.log(`  ${vl}${hr(iw + 2)}${vl}`);
+  console.log(`  ${vl}  ${t.dim('type')} ${t.brand('/help')} ${t.dim('to see commands')}  ${t.dim('·')}  ${t.dim('Ctrl+C to exit')}${' '.repeat(Math.max(0, iw - 43))}  ${vl}`);
+  console.log(`  ${bot}`);
   console.log();
 }
 
@@ -70,13 +81,13 @@ export function renderLandingPage(
 
 export function renderPrompt(model?: string, tokens?: number, cost?: number): void {
   const modelPart = model ? ` ${t.dim(model.slice(0, 18))}` : '';
-  const tokenPart = tokens ? ` ${t.dim(`${(tokens / 1000).toFixed(1)}k tok`)}` : '';
+  const tokenPart = tokens ? ` ${t.dim(`${(tokens / 1000).toFixed(1)}k`)}` : '';
   const costPart = cost ? ` ${t.dim(`$${cost.toFixed(4)}`)}` : '';
-  process.stdout.write(`\n  ${t.brand('▸')}${modelPart}${tokenPart}${costPart} `);
+  process.stdout.write(`\n  ${t.brand('❯')}${modelPart}${tokenPart}${costPart} `);
 }
 
 export function renderChatReady(): void {
-  console.log(`\n  ${t.success(icons.success)} ${t.dim('Ready. Ask me anything.')}\n`);
+  console.log(`\n  ${t.dim('Welcome to TIMPS Code! Type your message or')} ${t.brand('/help')} ${t.dim('for commands.')}\n`);
 }
 
 // ═══════════════════════════════════════
@@ -87,8 +98,28 @@ export function renderContextBar(used: number, max: number): void {
   const pct = Math.round((used / max) * 100);
   const color = pct > 80 ? '#EF4444' : pct > 60 ? '#F59E0B' : '#10B981';
   const b = bar(used, max, 30, '█', '░');
-  const label = `${(used / 1000).toFixed(1)}k / ${(max / 1000).toFixed(0)}k tokens (${pct}%)`;
-  console.log(`\n  ${t.dim('context')} ${b} ${chalk.hex(color)(label)}`);
+  const label = `${(used / 1000).toFixed(1)}k / ${(max / 1000).toFixed(0)}k (${pct}%)`;
+  console.log(`\n  ${t.dim('ctx')} ${b} ${chalk.hex(color)(label)}`);
+}
+
+// Hermes-style bottom status bar: model │ ctx │ [░░░░░░░░░░] │ time
+export function renderStatusBar(model: string, used: number, max: number, duration?: string): void {
+  const w = Math.min(W - 4, 96);
+  const pct = Math.min(100, Math.round((used / max) * 100));
+  const pb = bar(used, max, 12, '█', '░');
+  const modelShort = model.length > 18 ? model.slice(0, 16) + '…' : model;
+  const dur = duration ?? '-';
+  const vl = chalk.hex('#374151')('│');
+  const dt = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  const left = `${t.dim(modelShort)} ${vl} ${t.dim('ctx')} -- ${vl} ${pb} ${vl} ${t.dim(dur)}`;
+  const mid = ' '.repeat(Math.max(1, w - stripAnsi(left).length - stripAnsi(dt).length - 2));
+  console.log(` ${vl} ${t.dim(modelShort)} ${vl} ${t.dim('ctx')} -- ${vl} ${pb} ${vl} ${t.dim(dur)}${mid}${t.dim(dt)}`);
+}
+
+// Hermes-style separator line
+export function renderSeparator(): void {
+  const w = Math.min(W - 2, 100);
+  console.log(chalk.hex('#374151')('─'.repeat(w + 4)));
 }
 
 // ═══════════════════════════════════════

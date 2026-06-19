@@ -1,4 +1,4 @@
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
 
 interface Command {
   name: string;
@@ -51,4 +51,9 @@ export const skillTool: RegisteredTool = {
       isError: false,
     };
   },
+};
+
+export const SkillTool: ToolExecutor = async (args) => {
+  const { name } = args as any;
+  return { content: `[Skill] Running skill: ${name}`, toolName: 'Skill' };
 };

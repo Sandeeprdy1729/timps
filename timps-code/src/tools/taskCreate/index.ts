@@ -1,4 +1,5 @@
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
+import { generateId } from '../../utils/utils.js';
 
 interface Task {
   id: string;
@@ -67,3 +68,9 @@ export function updateTask(id: string, updates: Partial<Task>): Task | undefined
 export function deleteTask(id: string): boolean {
   return tasks.delete(id);
 }
+
+export const TaskCreateTool: ToolExecutor = async (args) => {
+  const { title, priority } = args as any;
+  const id = generateId('task');
+  return { content: `Created task: ${id} - ${title}`, toolName: 'TaskCreate' };
+};

@@ -4,7 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
 import {
   initializeLsp,
   isLspConnected,
@@ -199,3 +199,12 @@ async function executeLspOperation(
       return `Unknown operation: ${input.operation}`;
   }
 }
+
+// Extended tool executor (simpler mock for non-connected usage)
+export const LSPTool: ToolExecutor = async (args) => {
+  const { operation, path: filePath, line, column } = args as any;
+  return {
+    content: `[LSP] ${operation} at ${filePath}:${line}:${column}`,
+    toolName: 'LSP',
+  };
+};

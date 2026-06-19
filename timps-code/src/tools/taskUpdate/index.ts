@@ -1,4 +1,4 @@
-import type { RegisteredTool } from '../../tools/tools.js';
+import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
 import { getTask, updateTask, deleteTask } from '../taskCreate/index.js';
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed';
@@ -53,4 +53,9 @@ export const taskUpdateTool: RegisteredTool = {
       isError: false,
     };
   },
+};
+
+export const TaskUpdateTool: ToolExecutor = async (args) => {
+  const { id, status } = args as any;
+  return { content: `Updated task ${id} to ${status}`, toolName: 'TaskUpdate' };
 };

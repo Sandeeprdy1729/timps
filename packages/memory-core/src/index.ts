@@ -211,6 +211,12 @@ export type { SafetyVerdict, SafetyRules, Severity, ProhibitedPattern, PIIPatter
 export { ConfidenceCalibrator } from './ConfidenceCalibrator.js';
 export type { CalibrationInput, CalibrationResult, CalibrationRecord } from './ConfidenceCalibrator.js';
 
+// ── Sandbox — Constitutional runtime isolation ──
+export { ConstitutionalSandbox } from './sandbox/ConstitutionalSandbox.js';
+export type { PromptAnalysis, SandboxExecutionRecord, DetectedLanguage } from './sandbox/ConstitutionalSandbox.js';
+export { SandboxRouter, SubprocessSandbox, PythonSandbox, NodeSandbox, BashSandbox } from './sandbox/Sandbox.js';
+export type { SandboxHandle, SandboxOptions, ExecResult, Runtime, NetworkPolicy } from './sandbox/Sandbox.js';
+
 // Intelligence tools — direct access if needed
 export {
   ContradictionDetector,

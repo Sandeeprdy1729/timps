@@ -1,326 +1,32 @@
-// TIMPS Tools System
-// Complete toolset like Claude Code: Agent, skills, hooks, permissions, subagents
+// TIMPS Tools System — Extended tool definitions (Claude Code-style)
+// Each tool implementation lives in its own folder under src/tools/
 
 import { ALL_TOOLS } from '../tools/tools.js';
 import type { ToolDefinition } from '../config/types.js';
-import { generateId, shellEscape, formatDuration } from '../utils/utils.js';
 
-type ToolExecutor = (args: Record<string, unknown>) => Promise<ToolResult>;
+// Import shared types
+import type { ToolExecutor, ToolResult, ToolCall } from './_shared/index.js';
+export type { ToolResult, ToolCall };
 
-export interface ToolResult {
-  content: string;
-  isError?: boolean;
-  toolName?: string;
-  durationMs?: number;
-}
+// Import tool implementations
+import { AgentTool } from './agent/index.js';
+import { GlobTool } from './glob/index.js';
 
-export interface ToolCall {
-  id: string;
-  name: string;
-  arguments: Record<string, unknown>;
-  startTime: number;
-}
+import { TaskCreateTool } from './taskCreate/index.js';
+import { TaskListTool } from './taskList/index.js';
+import { TaskUpdateTool } from './taskUpdate/index.js';
+import { SkillTool } from './skill/index.js';
 
-// ── Agent Tool: Spawn subagents ──
-export const AgentTool: ToolExecutor = async (args) => {
-  const { prompt, model, context } = args as any;
-  
-  return {
-    content: `[Agent Tool] Spawning subagent for: ${prompt.slice(0, 50)}...`,
-    toolName: 'Agent',
-  };
-};
-
-// ── Task Tools: Todo management ──
-export const TaskCreateTool: ToolExecutor = async (args) => {
-  const { title, priority } = args as any;
-  const id = generateId('task');
-  
-  return {
-    content: `Created task: ${id} - ${title}`,
-    toolName: 'TaskCreate',
-  };
-};
-
-export const TaskListTool: ToolExecutor = async (args) => {
-  return {
-    content: `Tasks:\n  - Task list here (from storage)`,
-    toolName: 'TaskList',
-  };
-};
-
-export const TaskUpdateTool: ToolExecutor = async (args) => {
-  const { id, status } = args as any;
-  
-  return {
-    content: `Updated task ${id} to ${status}`,
-    toolName: 'TaskUpdate',
-  };
-};
-
-// ── Skill Tool ──
-export const SkillTool: ToolExecutor = async (args) => {
-  const { name } = args as any;
-  
-  return {
-    content: `[Skill] Running skill: ${name}`,
-    toolName: 'Skill',
-  };
-};
-
-// ── WebSearch Tool ──
-export const WebSearchTool: ToolExecutor = async (args) => {
-  const { query } = args as any;
-  
-  try {
-    const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`);
-    const data = await response.json();
-    
-    return {
-      content: data.AbstractText || `No results for: ${query}`,
-      toolName: 'WebSearch',
-    };
-  } catch (err: any) {
-    return {
-      content: `Search error: ${err.message}`,
-      isError: true,
-      toolName: 'WebSearch',
-    };
-  }
-};
-
-// ── WebFetch Tool ──
-const BLOCKED_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
-const BLOCKED_IP_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.'];
-
-function isPrivateUrl(urlStr: string): boolean {
-  try {
-    const parsed = new URL(urlStr);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
-    const hostname = parsed.hostname.toLowerCase();
-    if (BLOCKED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) return true;
-    if (BLOCKED_IP_RANGES.some(range => hostname.startsWith(range))) return true;
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-export const WebFetchTool: ToolExecutor = async (args) => {
-  const { url, format } = args as any;
-  
-  if (isPrivateUrl(url)) {
-    return {
-      content: `Error: Access denied — ${url} resolves to a private/internal address`,
-      isError: true,
-      toolName: 'WebFetch',
-    };
-  }
-  
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    const text = await response.text();
-    
-    return {
-      content: text.slice(0, 10000),
-      toolName: 'WebFetch',
-    };
-  } catch (err: any) {
-    return {
-      content: `Fetch error: ${err.message}`,
-      isError: true,
-      toolName: 'WebFetch',
-    };
-  }
-};
-
-// ── Glob Tool: Find files ──
-export const GlobTool: ToolExecutor = async (args) => {
-  const { pattern, cwd } = args as any;
-  const { glob } = await import('glob');
-  
-  try {
-    const files = await glob(pattern, { cwd: cwd || process.cwd(), absolute: true });
-    
-    return {
-      content: files.slice(0, 100).join('\n'),
-      toolName: 'Glob',
-    };
-  } catch (err: any) {
-    return {
-      content: `Glob error: ${err.message}`,
-      isError: true,
-      toolName: 'Glob',
-    };
-  }
-};
-
-// ── Grep Tool: Search code ──
-export const GrepTool: ToolExecutor = async (args) => {
-  const { pattern, path: searchPath, include } = args as Record<string, string>;
-  // Use execFileSync with args array to prevent command injection
-  const { execFileSync } = await import('node:child_process');
-  try {
-    const grepArgs = ['-rn'];
-    if (include) {
-      grepArgs.push('--include', include);
-    }
-    if (pattern) grepArgs.push(pattern);
-    grepArgs.push(searchPath || '.');
-    const out = execFileSync('grep', grepArgs, { encoding: 'utf-8', timeout: 10000 });
-    const lines = out.split('\n').slice(0, 50).join('\n');
-    return { content: lines || `No matches for: ${pattern}`, toolName: 'Grep' };
-  } catch (err: any) {
-    if (err.status === 1) {
-      return { content: `No matches for: ${pattern}`, toolName: 'Grep' };
-    }
-    return { content: `Grep error: ${err.message}`, isError: true, toolName: 'Grep' };
-  }
-};
-
-// ── Edit Tool ──
-export const EditTool: ToolExecutor = async (args) => {
-  const { path, old_string, new_string } = args as any;
-  const fs = await import('node:fs');
-  
-  try {
-    let content = fs.readFileSync(path, 'utf-8');
-    
-    if (!content.includes(old_string)) {
-      return {
-        content: `Could not find "${old_string.slice(0, 50)}" in ${path}`,
-        isError: true,
-        toolName: 'Edit',
-      };
-    }
-    
-    content = content.replace(old_string, new_string);
-    fs.writeFileSync(path, content, 'utf-8');
-    
-    return {
-      content: `Edited ${path}`,
-      toolName: 'Edit',
-    };
-  } catch (err: any) {
-    return {
-      content: `Edit error: ${err.message}`,
-      isError: true,
-      toolName: 'Edit',
-    };
-  }
-};
-
-// ── Write Tool ──
-export const WriteTool: ToolExecutor = async (args) => {
-  const { path, content } = args as any;
-  const fs = await import('node:fs');
-  
-  try {
-    fs.writeFileSync(path, content, 'utf-8');
-    
-    return {
-      content: `Wrote ${path}`,
-      toolName: 'Write',
-    };
-  } catch (err: any) {
-    return {
-      content: `Write error: ${err.message}`,
-      isError: true,
-      toolName: 'Write',
-    };
-  }
-};
-
-// ── Read Tool ──
-export const ReadTool: ToolExecutor = async (args) => {
-  const { path, limit, offset } = args as any;
-  const fs = await import('node:fs');
-  
-  try {
-    let content = fs.readFileSync(path, 'utf-8');
-    
-    if (offset || limit) {
-      const lines = content.split('\n');
-      if (offset) content = lines.slice(offset).join('\n');
-      if (limit) content = lines.slice(0, limit).join('\n');
-    }
-    
-    return {
-      content: content.slice(0, 50000),
-      toolName: 'Read',
-    };
-  } catch (err: any) {
-    return {
-      content: `Read error: ${err.message}`,
-      isError: true,
-      toolName: 'Read',
-    };
-  }
-};
-
-// ── Bash Tool ──
-export const BashTool: ToolExecutor = async (args) => {
-  const { command, timeout, description } = args as any;
-  const { execSync } = await import('node:child_process');
-  
-  try {
-    const start = Date.now();
-    const output = String(execSync(command, { 
-      encoding: 'utf-8', 
-      timeout: timeout || 120000,
-      maxBuffer: 10 * 1024 * 1024,
-    }));
-    const duration = Date.now() - start;
-    
-    return {
-      content: output.slice(0, 100000),
-      toolName: 'Bash',
-      durationMs: duration,
-    };
-  } catch (err: any) {
-    return {
-      content: err.message || 'Command failed',
-      isError: true,
-      toolName: 'Bash',
-    };
-  }
-};
-
-// ── TodoWrite Tool ──
-export const TodoWriteTool: ToolExecutor = async (args) => {
-  const { content, status } = args as any;
-  
-  return {
-    content: `Todo: ${content} [${status || 'pending'}]`,
-    toolName: 'TodoWrite',
-  };
-};
-
-// ── TodoRead Tool ──
-export const TodoReadTool: ToolExecutor = async () => {
-  return {
-    content: 'Todo list from session memory',
-    toolName: 'TodoRead',
-  };
-};
-
-// ── LSP Tool: Code intelligence ──
-export const LSPTool: ToolExecutor = async (args) => {
-  const { operation, path, line, column } = args as any;
-  
-  return {
-    content: `[LSP] ${operation} at ${path}:${line}:${column}`,
-    toolName: 'LSP',
-  };
-};
-
-// ── NotStarted: Implementation placeholder for tools being added ──
-export const NotStartedTool: ToolExecutor = async (args) => {
-  return {
-    content: 'Tool not yet implemented',
-    isError: true,
-  };
-};
+import { WebSearchTool } from './webSearch/index.js';
+import { WebFetchTool } from './webFetch/index.js';
+import { GrepTool } from './searchCode/index.js';
+import { EditTool } from './editFile/index.js';
+import { WriteTool } from './writeFile/index.js';
+import { ReadTool } from './readFile/index.js';
+import { BashTool } from './bash/index.js';
+import { TodoWriteTool } from './todoWrite/index.js';
+import { TodoReadTool } from './todoRead/index.js';
+import { LSPTool } from './lsp/index.js';
 
 // ── Extended tool definitions (matching Claude Code) ──
 export const EXTENDED_TOOLS: ToolDefinition[] = [
@@ -548,18 +254,18 @@ export function getTool(name: string): ToolDefinition | undefined {
 // ── Execute tool ──
 export async function executeTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
   const executor = TOOL_EXECUTORS[name];
-  
+
   if (!executor) {
     return { content: `Unknown tool: ${name}`, isError: true };
   }
-  
+
   const start = Date.now();
   try {
     const result = await executor(args);
     return { ...result, durationMs: Date.now() - start };
   } catch (err: any) {
-    return { 
-      content: `Tool error: ${err.message}`, 
+    return {
+      content: `Tool error: ${err.message}`,
       isError: true,
       toolName: name,
       durationMs: Date.now() - start,

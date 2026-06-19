@@ -9,6 +9,14 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js"
+    },
+    "./safety/*": {
+      "types": "./src/safety/*.ts",
+      "import": "./src/safety/*.ts"
+    },
+    "./sandbox/*": {
+      "types": "./src/sandbox/*.ts",
+      "import": "./src/sandbox/*.ts"
     }
   },
   "files": [
