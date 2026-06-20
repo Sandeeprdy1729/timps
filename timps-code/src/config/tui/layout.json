@@ -1,0 +1,47 @@
+{
+  "$schema": "https://timps.ai/tui-layout.json",
+  "name": "default",
+  "spacing": {
+    "messageGap": 1,
+    "messagePadding": 1,
+    "panelPadding": 1,
+    "panelMargin": 1,
+    "footerHeight": 8,
+    "headerHeight": 3,
+    "statusHeight": 1,
+    "inputHeight": 3,
+    "autocompleteHeight": 10,
+    "dialogPadding": 2,
+    "dialogMargin": 2,
+    "toastGap": 1,
+    "toastMargin": 1
+  },
+  "visibility": {
+    "showHeader": true,
+    "showFooter": true,
+    "showStatusBar": true,
+    "showLineNumbers": false,
+    "showTimestamps": false,
+    "showToolIcons": true,
+    "showModelBadge": true,
+    "showContextBar": true,
+    "showCost": true,
+    "showGitStatus": true,
+    "compactMode": false
+  },
+  "sizing": {
+    "maxWidth": 120,
+    "minWidth": 60,
+    "messageMaxWidth": 100,
+    "panelMaxWidth": 80,
+    "dialogMaxWidth": 70,
+    "autocompleteMaxItems": 10,
+    "historyMaxItems": 1000
+  },
+  "animation": {
+    "enabled": true,
+    "spinnerSpeed": 100,
+    "fadeSpeed": 150,
+    "slideSpeed": 200
+  }
+}

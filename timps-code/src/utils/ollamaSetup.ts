@@ -192,7 +192,7 @@ export function tryStartOllama(): boolean {
  * Full interactive auto-setup: check Ollama → ask to install/start → check model → pull if needed.
  */
 export async function ensureOllamaReady(
-  model = 'qwen2.5-coder:7b',
+  model = 'llama3.2:1b',
   baseUrl = 'http://localhost:11434',
 ): Promise<OllamaStatus> {
   const status: OllamaStatus = {

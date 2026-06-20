@@ -33,7 +33,7 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
       return createGeminiProvider(key, model || config.defaultModel);
     }
     case 'ollama': {
-      const resolvedModel = (model || config.defaultModel || 'qwen2.5-coder:7b').replace(':latest', ':7b');
+      const resolvedModel = model || config.defaultModel || 'llama3.2:1b';
       return createOllamaProvider(config.ollamaUrl, resolvedModel);
     }
     case 'openrouter': {
@@ -53,7 +53,7 @@ export function createProvider(provider?: ProviderName, model?: string): ModelPr
     }
     case 'hybrid': {
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434';
-      return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'qwen2.5-coder:7b');
+      return createOllamaProvider(ollamaUrl, model || config.defaultModel || 'llama3.2:1b');
     }
     default:
       throw new Error(`Unknown provider: ${name}. Valid: claude, openai, gemini, ollama, openrouter, deepseek, groq`);

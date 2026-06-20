@@ -19,7 +19,7 @@ import { PermissionSystem as Permissions } from '../utils/permissions.js';
 import { TodoStore } from '../utils/todo.js';
 import { loadConfig, saveConfig, runSetupWizard, getProjectId, getApiKey, getDefaultModel } from '../config/config.js';
 import { runDataPipeline, type DataPipelineConfig } from '../data-pipeline/data-pipeline.js';
-import { t, icons, panel } from '../config/theme.js';
+import { t, icons, panel, LOGO } from '../config/theme.js';
 import { renderAgentEvent, renderHelp, renderPrompt, renderError, flushText, renderChatReady, renderMemoryPanel, renderTodoList, renderDoctorReport, renderGitStatus, renderGitLog, renderModelsList, renderSkills } from '../utils/renderer.js';
 import { ensureOllamaReady, getLocalModels, isOllamaInstalled, installOllama, isOllamaRunning, tryStartOllama, pullModel } from '../utils/ollamaSetup.js';
 import { searchSkills, installSkill, uninstallSkill, getInstalledSkills, fetchSkillContent } from '../utils/skills.js';
@@ -52,6 +52,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   const config = loadConfig();
   let ollamaModels: string[] = [];
 
+  console.log(LOGO);
   if (opts.grpo) console.log(`${t.accent('🧠')} GRPO training loop enabled`);
   if (opts.mineBugs) console.log(`${t.accent('🔍')} Human mistake mining enabled`);
   if (opts.warRoom) console.log(`${t.warning('🔥')} WAR ROOM MODE - 19hr sessions`);
@@ -69,17 +70,15 @@ export async function startApp(opts: AppOptions): Promise<void> {
     const ollamaRunning = await isOllamaRunning(ollamaUrl);
     if (ollamaRunning) {
       ollamaModels = await getLocalModels(ollamaUrl);
-      const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
-      const resolvedModel = modelName.replace(':latest', ':7b');
-      const hasModel = ollamaModels.some(m => m === resolvedModel || m.startsWith(resolvedModel.split(':')[0]));
+      const modelName = opts.model || config.defaultModel || 'llama3.2:1b';
+      const hasModel = ollamaModels.some(m => m === modelName || m.startsWith(modelName.split(':')[0]));
       if (hasModel) {
         providerName = 'ollama';
         console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
       } else {
         // Try to start Ollama and pull model
         console.log(`  ${t.dim('↻')} Ollama running, pulling ${modelName}...`);
-        const resolvedName1 = modelName.replace(':latest', ':7b');
-            const pulled = await pullModel(resolvedName1, ollamaUrl);
+        const pulled = await pullModel(modelName, ollamaUrl);
         if (pulled) {
           providerName = 'ollama';
           console.log(`  ${t.success('✓')} Model ready — ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
@@ -121,10 +120,9 @@ export async function startApp(opts: AppOptions): Promise<void> {
           await new Promise(r => setTimeout(r, 1000));
           const started = await isOllamaRunning(ollamaUrl);
           if (started) {
-            const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+            const modelName = opts.model || config.defaultModel || 'llama3.2:1b';
             console.log(`  ${t.success('✓')} Ollama ready — pulling ${modelName}...`);
-            const resolvedName1 = modelName.replace(':latest', ':7b');
-            const pulled = await pullModel(resolvedName1, ollamaUrl);
+            const pulled = await pullModel(modelName, ollamaUrl);
             if (pulled) {
               providerName = 'ollama';
               console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
@@ -147,14 +145,12 @@ export async function startApp(opts: AppOptions): Promise<void> {
           for (let i = 0; i < 10; i++) {
             await new Promise(r => setTimeout(r, 1000));
             if (await isOllamaRunning(ollamaUrl)) {
-              const modelName = opts.model || config.defaultModel || 'qwen2.5-coder:7b';
+              const modelName = opts.model || config.defaultModel || 'llama3.2:1b';
               console.log(`  ${t.success('✓')} Ollama installed — pulling ${modelName}...`);
-              const resolvedName2 = modelName.replace(':latest', ':7b');
-              const pulled = await pullModel(resolvedName2, ollamaUrl);
+              const pulled = await pullModel(modelName, ollamaUrl);
               if (pulled) {
                 providerName = 'ollama';
-const resolved = modelName.replace(':latest', ':7b');
-        console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${resolved}`)}\n`);
+                console.log(`  ${t.success('✓')} Using ${t.accent('Ollama')} ${t.dim(`— ${modelName}`)}\n`);
                 break;
               }
             }
@@ -171,10 +167,69 @@ const resolved = modelName.replace(':latest', ':7b');
     }
   }
 
+  // ── Ollama model picker (if auto-detected and no explicit model) ──
+  let resolvedModel = opts.model || config.defaultModel;
+  if (providerName === 'ollama' && !opts.model) {
+    const { OLLAMA_CATEGORIES } = await import('../utils/ollamaModels.js');
+    const { radioMenu } = await import('../utils/interactiveMenu.js');
+    const catOptions = OLLAMA_CATEGORIES.map(c => ({
+      label: c.label,
+      description: c.description,
+      icon: c.icon,
+    }));
+    catOptions.push({ label: 'Other (type manually)', icon: '✏️', description: 'enter a model name yourself' });
+    let modelPicked = false;
+    while (!modelPicked) {
+      const catIdx = await radioMenu({ prompt: 'Select Ollama model:', options: catOptions });
+      if (catIdx === null) { modelPicked = true; break; }
+      if (catIdx >= OLLAMA_CATEGORIES.length) {
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const manual = await rl.question('  Model name (e.g. qwen2.5-coder:7b): ');
+        rl.close();
+        if (manual.trim()) resolvedModel = manual.trim();
+        modelPicked = true;
+        break;
+      }
+      const category = OLLAMA_CATEGORIES[catIdx];
+      const modelOptions: { label: string; description?: string }[] = category.models.map(m => ({
+        label: m.name,
+        description: m.description + (m.sizes ? ` [${m.sizes.join(', ')}]` : ''),
+      }));
+      modelOptions.push({ label: '← Back to categories', description: '' });
+      modelOptions.push({ label: 'Other (type manually)', description: '' });
+      const modIdx = await radioMenu({ prompt: `Select ${category.label} model:`, options: modelOptions });
+      if (modIdx === null) continue;
+      if (modIdx >= category.models.length) {
+        if (modIdx === category.models.length) continue;
+        const { createInterface: ci } = await import('node:readline/promises');
+        const rl2 = ci({ input: process.stdin, output: process.stdout });
+        const manual2 = await rl2.question('  Model name (e.g. qwen2.5-coder:7b): ');
+        rl2.close();
+        if (manual2.trim()) resolvedModel = manual2.trim();
+        modelPicked = true;
+        break;
+      }
+      resolvedModel = category.models[modIdx].name;
+      modelPicked = true;
+    }
+    if (resolvedModel) {
+      const { pullModel: pull } = await import('../utils/ollamaSetup.js');
+      console.log(`\n  ${t.dim(`Pulling ${resolvedModel}...`)}`);
+      const ok = await pull(resolvedModel);
+      if (ok) {
+        config.defaultModel = resolvedModel;
+        config.defaultProvider = 'ollama';
+        saveConfig(config);
+        console.log(`  ${t.success(`✓ Using ${resolvedModel}`)}\n`);
+      }
+    }
+  }
+
 // ── Step 3: Provider setup (minimal — most auto-detected above) ──
   let provider: ModelProvider;
   try {
-    provider = createProvider(providerName, opts.model);
+    provider = createProvider(providerName, resolvedModel);
   } catch (err) {
     console.error(`\n  ${t.error((err as Error).message)}\n`);
     process.exit(1);
@@ -258,7 +313,7 @@ const resolved = modelName.replace(':latest', ':7b');
     agent.setPendingMergeTarget(opts.merge);
   }
 
-  const isTTY = process.stdin.isTTY;
+  const isTTY = process.stdin.isTTY !== false;
 
   // Session directory
   const sessionDir = path.join(os.homedir(), '.timps', 'sessions', projectId);
@@ -311,15 +366,28 @@ const resolved = modelName.replace(':latest', ':7b');
     return;
   }
 
-  // ── TTY Interactive Mode ──
-  process.on('SIGINT', async () => {
-    await agent.saveSession(sessionDir);
-    await agent.saveEpisode('success');
+  // ── TTY Interactive Mode (Ink/React TUI) ──
+  process.on('SIGINT', () => {
     process.exit(0);
   });
 
-  const { startInteractiveREPL } = await import('./interactive.js');
-  await startInteractiveREPL({ agent, memory, todos, snapshots, permissions, provider, cwd, sessionDir }, opts.oneLine);
+  const instance = render(
+    React.createElement(App, {
+      agent,
+      memory,
+      todos,
+      snapshots,
+      permissions,
+      provider,
+      cwd,
+      sessionDir,
+      multimodalMem: multimodalMemory,
+    }),
+    { patchConsole: false, alternateScreen: false }
+  );
+  const { waitUntilExit } = instance;
+
+  await waitUntilExit();
 }
 
   // ═══════════════════════════════════════
@@ -378,7 +446,7 @@ export async function handleSlashCommand(
         { name: 'ollama', models: ['qwen2.5-coder:7b', 'deepseek-r1:7b', 'codellama:7b'] },
         { name: 'openrouter', models: ['google/gemini-2.0-flash-exp:free', 'anthropic/claude-sonnet-4-20250514'] },
         { name: 'opencode', models: ['qwen2.5-coder:latest', 'llama3.1:8b'] },
-        { name: 'timps-coder', models: ['sandeeprdy1729/timps-coder'] },
+        { name: 'timps-coder', models: ['llama3.2:1b'] },
         { name: 'hybrid', models: ['auto'] },
       ];
       for (const p of providers) {

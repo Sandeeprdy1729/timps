@@ -77,7 +77,7 @@ export function createProfile(name: string): UserProfile {
     id: name,
     name,
     defaultProvider: 'ollama',
-    defaultModel: 'qwen2.5-coder:latest',
+    defaultModel: 'llama3.2:1b',
     trustLevel: 'normal',
     preferredLanguage: 'en',
     projects: [],

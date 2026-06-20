@@ -68,7 +68,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   cat > "$CONFIG_FILE" << 'CONFIG'
 {
   "defaultProvider": "ollama",
-  "defaultModel": "qwen2.5-coder:latest",
+  "defaultModel": "llama3.2:1b",
   "trustLevel": "normal",
   "memoryEnabled": true,
   "ollamaUrl": "http://localhost:11434"

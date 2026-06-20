@@ -1,11 +1,17 @@
 import React from 'react';
-import { Box, Text, Newline } from 'ink';
+import { Box, Text, Newline, useInput } from 'ink';
 
 interface HelpPanelProps {
   onClose: () => void;
 }
 
 export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
+  useInput((_input, key) => {
+    if (key.return || key.escape) {
+      onClose();
+    }
+  });
+
   return (
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       <Text bold color="#58A6FF">timps — commands</Text>
@@ -42,8 +48,7 @@ export const HelpPanel: React.FC<HelpPanelProps> = ({ onClose }) => {
       <Text>  /git log      commits</Text>
       <Newline />
 
-      <Text dimColor color="#58A6FF">press enter to close</Text>
+      <Text dimColor color="#58A6FF">press enter or esc to close</Text>
     </Box>
   );
 };
-

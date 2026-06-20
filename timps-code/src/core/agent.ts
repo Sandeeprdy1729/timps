@@ -364,25 +364,16 @@ End your response with a confirmation question.`;
   async *run(userMessage: string): AsyncGenerator<AgentEvent> {
     this.abortController = new AbortController();
 
-    // ── Pre-flight: self-improvement check ──
+    // ── Pre-flight: self-improvement check (silent — only yields in verbose) ──
     if (this.selfImproving) {
       const taskType = this.contextOrchestrator?.detectTaskType(userMessage) ?? 'general';
-      const preflight = this.selfImproving.preflightCheck(userMessage, taskType, []);
-      for (const warning of preflight.warnings) {
-        yield { type: 'text', content: `\n> ⚠️ ${warning}\n` };
-      }
+      this.selfImproving.preflightCheck(userMessage, taskType, []);
     }
 
-    // ── Pre-flight: EchoForge intelligence injection ──
+    // ── Pre-flight: EchoForge intelligence injection (silent context injection) ──
     try {
       const echoResult = await injectEchoContext(this.memory);
-      if (echoResult.hasHighRisk) {
-        for (const w of echoResult.warnings.filter(x => x.riskLevel === 'high')) {
-          yield { type: 'text', content: `\n> 🔮 **Echo Alert** [${w.domain}]: ${w.message}\n` };
-        }
-      }
       if (echoResult.promptFragment) {
-        // Patch the system message with live echo context
         const sysIdx = this.messages.findIndex(m => m.role === 'system');
         if (sysIdx !== -1) {
           this.messages[sysIdx] = {
@@ -393,14 +384,9 @@ End your response with a confirmation question.`;
       }
     } catch { /* echo is best-effort */ }
 
-    // ── Pre-flight: QISRD resonance intelligence injection ──
+    // ── Pre-flight: QISRD resonance intelligence injection (silent context injection) ──
     try {
       const qisrdResult = injectQISRDContext(this.memory);
-      if (qisrdResult.hasIssue) {
-        for (const w of qisrdResult.warnings) {
-          console.warn(`  ⚡ ${w}`);
-        }
-      }
       if (qisrdResult.promptFragment) {
         const sysIdx = this.messages.findIndex(m => m.role === 'system');
         if (sysIdx !== -1) {

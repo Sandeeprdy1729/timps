@@ -96,7 +96,7 @@ export class ProviderMesh {
         const data = await res.json() as { models: { name: string }[] };
         const models = data.models?.map(m => m.name) || [];
         const defaultModel = models.find(m => m.includes('coder')) ||
-          models.find(m => m.includes('2.5')) || models[0] || 'qwen2.5-coder:latest';
+          models.find(m => m.includes('2.5')) || models[0] || 'llama3.2:1b';
 
         this.discoveredProviders.set('ollama', {
           name: 'Ollama (Local)',

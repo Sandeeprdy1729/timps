@@ -61,6 +61,9 @@ export const t = {
   diffRem: chalk.hex(red),
   diffCtx: chalk.hex('#9CA3AF'),
 
+  // Dynamic color from hex string
+  hex: (color: string) => chalk.hex(color),
+
   // Gradient helpers
   gradient: (text: string) => {
     const colors = [tealDark, tealMid, tealLight, tan];
@@ -116,14 +119,14 @@ export const SMALL_LOGO = `  ${chalk.hex(tealDark)('🤖')} ${chalk.bold.hex(tea
 
 export const LOGO_TIMPS = [
   '',
-  `  ${chalk.hex(tealMid).bold('████████╗')}${chalk.hex(tealDark).bold('██╗')}${chalk.hex(tealMid).bold('███╗   ███╗')}${chalk.hex(tealDark).bold('██████╗ ')}${chalk.hex(tealLight).bold('███████╗')}`,
-  `  ${chalk.hex(tealMid).bold('   ██╔══╝')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('████╗ ████║')}${chalk.hex(tealDark).bold('██╔══██╗')}${chalk.hex(tealLight).bold('██╔════╝')}`,
-  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██╔████╔██║')}${chalk.hex(tealDark).bold('██████╔╝')}${chalk.hex(tealLight).bold('███████╗')}`,
-  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██║╚██╔╝██║')}${chalk.hex(tealDark).bold('██╔═══╝ ')}${chalk.hex(tealLight).bold('╚════██║')}`,
-  `  ${chalk.hex(tealMid).bold('   ██║   ')}${chalk.hex(tealDark).bold('██║')}${chalk.hex(tealMid).bold('██║ ╚═╝ ██║')}${chalk.hex(tealDark).bold('██║     ')}${chalk.hex(tealLight).bold('███████║')}`,
-  `  ${chalk.hex(tealMid).bold('   ╚═╝   ')}${chalk.hex(tealDark).bold('╚═╝')}${chalk.hex(tealMid).bold('╚═╝     ╚═╝')}${chalk.hex(tealDark).bold('╚═╝     ')}${chalk.hex(tealLight).bold('╚══════╝')}`,
+  `  ${chalk.hex(tealDark).bold('████████╗██╗███╗   ███╗██████╗ ███████╗')}`,
+  `  ${chalk.hex(tealDark).bold('╚══██╔══╝██║████╗ ████║██╔══██╗██╔════╝')}`,
+  `  ${chalk.hex(tealDark).bold('   ██║   ██║██╔████╔██║██████╔╝███████╗')}`,
+  `  ${chalk.hex(tealDark).bold('   ██║   ██║██║╚██╔╝██║██╔═══╝ ╚════██║')}`,
+  `  ${chalk.hex(tealDark).bold('   ██║   ██║██║ ╚═╝ ██║██║     ███████║')}`,
+  `  ${chalk.hex(tealDark).bold('   ╚═╝   ╚═╝╚═╝     ╚═╝╚═╝     ╚══════╝')}`,
   '',
-  `                    ${chalk.hex(tealMid)('c o d e')}`,
+  `          ${chalk.hex(tealMid).bold('T')} ${chalk.hex(tealMid).bold('I')} ${chalk.hex(tealMid).bold('M')} ${chalk.hex(tealMid).bold('P')} ${chalk.hex(tealMid).bold('S')}   ${chalk.hex(tealLight).bold('C')} ${chalk.hex(tealLight).bold('O')} ${chalk.hex(tealLight).bold('D')} ${chalk.hex(tealLight).bold('E')}`,
   '',
 ].join('\n');
 

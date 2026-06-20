@@ -5,7 +5,7 @@ export function createOllamaProvider(
   modelId?: string
 ): ModelProvider {
   const url = (baseUrl || 'http://localhost:11434').replace(/\/$/, '');
-  const model = modelId || 'qwen2.5-coder:7b';
+  const model = modelId || 'llama3.2:1b';
 
   return {
     name: 'ollama',

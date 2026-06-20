@@ -56,7 +56,7 @@ const PROVIDERS: ProviderOption[] = [
     id: 'timps-coder',
     name: 'TIMPs Coder',
     description: 'Your custom local TIMPs coding model through Ollama',
-    models: ['sandeeprdy1729/timps-coder', 'sandeeprdy1729/timps-coder:latest'],
+    models: ['llama3.2:1b'],
     local: true,
   },
   {
