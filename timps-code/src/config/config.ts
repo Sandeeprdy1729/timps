@@ -11,7 +11,7 @@ export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 const DEFAULT_CONFIG: TimpsConfig = {
   defaultProvider: 'ollama',
-  defaultModel: 'qwen2.5-coder:latest',
+  defaultModel: 'llama3.2:1b',
   trustLevel: 'normal',
   keys: {},
   ollamaUrl: 'http://localhost:11434',
@@ -143,11 +143,61 @@ export async function runFullSetup(existing?: TimpsConfig): Promise<SetupResult>
         envVars[getEnvVarForProvider(config.defaultProvider)] = key.trim();
       }
     }
-    const defaultModel = getDefaultModel(config.defaultProvider);
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const modelInput = await rl.question(t.prompt(`  Model [default: ${defaultModel}]: `));
-    rl.close();
-    config.defaultModel = modelInput.trim() || defaultModel;
+    if (config.defaultProvider === 'ollama') {
+      const { OLLAMA_CATEGORIES } = await import('../utils/ollamaModels.js');
+      const { radioMenu } = await import('../utils/interactiveMenu.js');
+      const catOptions = OLLAMA_CATEGORIES.map(c => ({
+        label: c.label,
+        description: c.description,
+        icon: c.icon,
+      }));
+      catOptions.push({ label: 'Other (type manually)', icon: '✏️', description: 'enter a model name yourself' });
+      let modelPicked = false;
+      while (!modelPicked) {
+        const catIdx = await radioMenu({ prompt: 'Select Ollama model category:', options: catOptions });
+        if (catIdx === null) { config.defaultModel = getDefaultModel('ollama'); break; }
+        if (catIdx >= OLLAMA_CATEGORIES.length) {
+          const rl2 = readline.createInterface({ input: stdin, output: stdout });
+          const manual = await rl2.question(t.prompt(`  Model name (e.g. qwen2.5-coder:7b): `));
+          rl2.close();
+          config.defaultModel = manual.trim() || getDefaultModel('ollama');
+          modelPicked = true;
+          break;
+        }
+        const category = OLLAMA_CATEGORIES[catIdx];
+        const modelOptions: { label: string; description?: string; icon?: string }[] = category.models.map(m => ({
+          label: m.name,
+          description: m.description + (m.sizes ? ` [${m.sizes.join(', ')}]` : ''),
+        }));
+        modelOptions.push({ label: '← Back to categories', description: '' });
+        modelOptions.push({ label: 'Other (type manually)', icon: '✏️', description: '' });
+        const modIdx = await radioMenu({ prompt: `Select ${category.label} model:`, options: modelOptions });
+        if (modIdx === null) continue;
+        if (modIdx >= category.models.length) {
+          if (modIdx === category.models.length) continue;
+          const rl3 = readline.createInterface({ input: stdin, output: stdout });
+          const manual = await rl3.question(t.prompt(`  Model name (e.g. qwen2.5-coder:7b): `));
+          rl3.close();
+          config.defaultModel = manual.trim() || getDefaultModel('ollama');
+          modelPicked = true;
+          break;
+        }
+        config.defaultModel = category.models[modIdx].name;
+        modelPicked = true;
+      }
+      const { pullModel } = await import('../utils/ollamaSetup.js');
+      console.log(`\n  ${t.dim(`Pulling ${config.defaultModel} from Ollama...`)}`);
+      const pulled = await pullModel(config.defaultModel);
+      if (!pulled) {
+        console.log(`  ${t.warning('Model pull failed. You can pull it later with: ollama pull ' + config.defaultModel)}`);
+      }
+    } else {
+      const defaultModel = getDefaultModel(config.defaultProvider);
+      const rl = readline.createInterface({ input: stdin, output: stdout });
+      const modelInput = await rl.question(t.prompt(`  Model [default: ${defaultModel}]: `));
+      rl.close();
+      config.defaultModel = modelInput.trim() || defaultModel;
+    }
   }
 
   // ── Step 3: Trust Level ──
