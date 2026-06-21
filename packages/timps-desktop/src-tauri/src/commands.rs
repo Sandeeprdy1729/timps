@@ -325,7 +325,7 @@ pub async fn chat(
     app: tauri::AppHandle,
     prompt: String,
     model: Option<String>,
-    _project_path: Option<String>,
+    project_path: Option<String>,
 ) -> Result<(), String> {
     use tauri::Emitter;
 
@@ -333,9 +333,36 @@ pub async fn chat(
         .unwrap_or_else(|_| "http://localhost:11434".to_string());
     let model = model.unwrap_or_else(|| "llama3.2:1b".to_string());
 
+    // Build context from stored semantic memories
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+    if let Some(pp) = &project_path {
+        if !pp.is_empty() {
+            let mem_dir = memory_dir(pp);
+            let sem_path = format!("{}/semantic.json", mem_dir);
+            if let Ok(s) = std::fs::read_to_string(&sem_path) {
+                if let Ok(entries) = serde_json::from_str::<Vec<serde_json::Value>>(&s) {
+                    if !entries.is_empty() {
+                        let facts: Vec<String> = entries.iter().filter_map(|e| {
+                            let content = e["content"].as_str()?;
+                            let tags = e["tags"].as_array()?;
+                            let tag_str: Vec<&str> = tags.iter().filter_map(|t| t.as_str()).collect();
+                            Some(format!("- {} [tags: {}]", content, tag_str.join(", ")))
+                        }).collect();
+                        let context = format!(
+                            "You have a persistent memory. Here are the facts you know about the user and the project:\n{}\n\nUse these facts when answering. If the user asks something you don't know, say so.",
+                            facts.join("\n")
+                        );
+                        messages.push(serde_json::json!({"role": "system", "content": context}));
+                    }
+                }
+            }
+        }
+    }
+    messages.push(serde_json::json!({"role": "user", "content": prompt}));
+
     let body = serde_json::json!({
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "stream": false,
         "options": { "num_ctx": 32768 }
     });
