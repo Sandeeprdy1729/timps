@@ -31,6 +31,7 @@ import { CodeGraph } from '../memory/codeGraph.js';
 import { ConstitutionalFilter, ConstitutionalSandbox } from '@timps/memory-core';
 import type { PromptAnalysis, SandboxExecutionRecord, ExecResult } from '@timps/memory-core';
 import { SessionIngestionPipeline } from '../memory/sessionIngestion.js';
+import { ReActAgent } from './reactAgent.js';
 
 const getProvenForge = async () => {
   try {
@@ -65,6 +66,7 @@ export interface AgentOptions {
   selfImproving?: SelfImprovingAgent;
   durableJob?: DurableJobEngine;
   codeGraph?: CodeGraph;
+  reactMode?: boolean;          // use clean ReAct loop instead of streaming loop
 }
 
 export const TIMPS_SYSTEM_PROMPT = `You are TIMPS Code — a highly capable AI coding agent running in the user's terminal.
@@ -178,6 +180,8 @@ export class Agent {
   private codeGraph?: CodeGraph;
   private constitutionalFilter?: ConstitutionalFilter;
   private constitutionalSandbox?: ConstitutionalSandbox;
+  private reactMode: boolean;
+  private reactAgent: ReActAgent | null = null;
 
   constructor(opts: AgentOptions) {
     this.provider = opts.provider;
@@ -203,6 +207,16 @@ export class Agent {
     this.codeGraph = opts.codeGraph;
     this.branchName = opts.branchName;
     this.pluginManager = opts.pluginManager;
+    this.reactMode = opts.reactMode ?? false;
+    if (this.reactMode) {
+      this.reactAgent = new ReActAgent({
+        provider: this.provider,
+        cwd: this.cwd,
+        memory: this.memory,
+        maxCycles: this.maxTurns,
+        localMode: this.isLocalModel,
+      });
+    }
 
     // ── ConstitutionalFilter: refine user input before it reaches the LLM ──
     try {
@@ -402,6 +416,12 @@ End your response with a confirmation question.`;
 
   async *run(userMessage: string): AsyncGenerator<AgentEvent> {
     this.abortController = new AbortController();
+
+    // ReAct mode: delegate to the clean ReAct loop
+    if (this.reactMode && this.reactAgent) {
+      yield* this.reactAgent.execute(userMessage);
+      return;
+    }
 
     // ── Pre-flight: self-improvement check (silent — only yields in verbose) ──
     if (this.selfImproving) {
@@ -1102,6 +1122,34 @@ ${historyText}`;
 
   switchProvider(provider: ModelProvider): void {
     this.provider = provider;
+    if (this.reactAgent) {
+      // Re-create ReActAgent with new provider
+      this.reactAgent = new ReActAgent({
+        provider: this.provider,
+        cwd: this.cwd,
+        memory: this.memory,
+        maxCycles: this.maxTurns,
+        localMode: this.isLocalModel,
+      });
+    }
+  }
+
+  toggleReactMode(): boolean {
+    this.reactMode = !this.reactMode;
+    if (this.reactMode && !this.reactAgent) {
+      this.reactAgent = new ReActAgent({
+        provider: this.provider,
+        cwd: this.cwd,
+        memory: this.memory,
+        maxCycles: this.maxTurns,
+        localMode: this.isLocalModel,
+      });
+    }
+    return this.reactMode;
+  }
+
+  isReactMode(): boolean {
+    return this.reactMode;
   }
 
   setTechStack(techStack: import('../config/types.js').TechStack | undefined): void {

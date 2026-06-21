@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { api } from '../api';
+import { useTheme } from '../theme/ThemeProvider';
 import { APP, PROVIDERS } from '../constants/index';
 import './SettingsView.css';
 
@@ -15,6 +16,7 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewProps) {
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [provider, setProvider] = useState(() => 
     localStorage.getItem('timps:provider') || 'ollama'
   );
@@ -23,7 +25,7 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
   const [autostartEnabled, setAutostartEnabled] = useState(false);
   const [autostartLoading, setAutostartLoading] = useState(false);
   const [clipboardWatcher, setClipboardWatcher] = useState(
-    () => localStorage.getItem('timps:clipboardWatcher') === 'true'
+    () => localStorage.getItem('timps:clipboardWatcher') !== 'false'
   );
 
   // Load autostart state on mount
@@ -94,6 +96,23 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
           <p className="settings-hint">
             TIMPS memory stored in <code>~/.timps/memory/&lt;hash&gt;/</code>
           </p>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>Appearance</h2>
+        <div className="settings-field">
+          <label>Theme</label>
+          <div className="settings-row">
+            <select value={theme} onChange={e => setTheme(e.target.value as 'dark' | 'light' | 'system')}>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="system">System</option>
+            </select>
+            <p className="settings-hint">
+              Current: {resolvedTheme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+            </p>
+          </div>
         </div>
       </section>
 

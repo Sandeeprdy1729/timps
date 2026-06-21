@@ -35,6 +35,29 @@ export interface MemoryStats {
   working_goals: number;
 }
 
+export interface KnowledgeNode {
+  id: string;
+  entity: string;
+  entityType: string;
+  attributes: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface KnowledgeEdge {
+  id: string;
+  subject: string;
+  relation: string;
+  object: string;
+  weight: number;
+  timestamp: number;
+}
+
+export interface KnowledgeGraph {
+  nodes: KnowledgeNode[];
+  edges: KnowledgeEdge[];
+}
+
 export interface LensLink {
   id: string;
   url: string;
@@ -85,7 +108,9 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     get_memory_stats: { project_hash: 'devcafe123456', semantic_count: 0, episode_count: 0, working_goals: 0 },
     list_projects: [],
     search_memory: [],
-    chat: '(stub) timps-server not running in dev mode',
+    chat: '(stub) Ollama not available in dev mode',
+    chatStream: undefined,
+    listOllamaModels: [],
     store_memory: undefined,
     delete_memory: 0,
     passive_store: 'stub_id',
@@ -97,6 +122,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     stop_clipboard_watcher: undefined,
     run_background_summarizer: 0,
     check_proactive_notifications: [],
+    load_knowledge_graph: { nodes: [], edges: [] },
     detect_link_type: 'other',
     save_to_lens_queue: 'stub_lens_id',
     get_lens_queue: [],
@@ -125,6 +151,9 @@ export const api = {
   loadWorking: (projectPath: string) =>
     invoke<WorkingState>('load_working', { projectPath }),
 
+  loadKnowledgeGraph: (projectPath: string) =>
+    invoke<KnowledgeGraph>('load_knowledge_graph', { projectPath }),
+
   getMemoryStats: (projectPath: string) =>
     invoke<MemoryStats>('get_memory_stats', { projectPath }),
 
@@ -134,8 +163,62 @@ export const api = {
   searchMemory: (projectPath: string, query: string, limit = 20) =>
     invoke<SemanticEntry[]>('search_memory', { projectPath, query, limit }),
 
-  chat: (prompt: string, projectPath?: string, provider?: string) =>
-    invoke<string>('chat', { prompt, projectPath, provider }),
+  /** Chat with Ollama — returns full response text. Wraps streaming events. */
+  chat: (prompt: string, projectPath?: string, model?: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      api.chatStream(prompt, {
+        onDone: (text) => resolve(text),
+        onError: (msg) => reject(new Error(msg)),
+      }, model, projectPath);
+    }),
+
+  /** Chat with Ollama via streaming events. Calls invoke('chat') then
+   *  listens for chat:token / chat:done / chat:error events on the Tauri
+   *  event bus. Returns an unsubscribe function. */
+  chatStream: (
+    prompt: string,
+    callbacks: {
+      onToken?: (token: string) => void;
+      onDone?: (text: string, inputTokens: number, outputTokens: number) => void;
+      onError?: (message: string) => void;
+    },
+    model?: string,
+    projectPath?: string,
+  ): (() => void) => {
+    let unlistenToken: (() => void) | undefined;
+    let unlistenDone: (() => void) | undefined;
+    let unlistenError: (() => void) | undefined;
+
+    // Register listeners FIRST, then invoke (avoid race)
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlistenToken = await listen('chat:token', (event) => {
+        const payload = event.payload as { token: string };
+        callbacks.onToken?.(payload.token);
+      });
+      unlistenDone = await listen('chat:done', (event) => {
+        const payload = event.payload as { text: string; inputTokens: number; outputTokens: number };
+        callbacks.onDone?.(payload.text, payload.inputTokens, payload.outputTokens);
+      });
+      unlistenError = await listen('chat:error', (event) => {
+        const payload = event.payload as { message: string };
+        callbacks.onError?.(payload.message);
+      });
+
+      // Start the Ollama chat (fires events)
+      invoke<void>('chat', { prompt, model: model ?? null, projectPath: projectPath ?? null })
+        .catch((err) => callbacks.onError?.(String(err)));
+    });
+
+    return () => {
+      unlistenToken?.();
+      unlistenDone?.();
+      unlistenError?.();
+    };
+  },
+
+  /** List Ollama models available locally. */
+  listOllamaModels: () =>
+    invoke<string[]>('list_ollama_models'),
 
   storeMemory: (
     projectPath: string,
