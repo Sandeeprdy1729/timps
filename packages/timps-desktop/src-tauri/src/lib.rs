@@ -1,4 +1,8 @@
 mod commands;
+mod nexus_bridge;
+
+#[cfg(target_os = "macos")]
+mod notch;
 
 use tauri::Emitter;
 use tauri::Manager;
@@ -17,14 +21,65 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        // ── Hide to tray on window close (don't quit) ──────────────────
+        // ── Window event handling ───────────────────────────────────────
+        // "main" → hide to tray on close.
+        // "chat-popup" → hide on close or on blur (dropdown behavior).
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                let _ = window.hide();
-                api.prevent_close();
+            match window.label() {
+                "main" => {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        let _ = window.hide();
+                        api.prevent_close();
+                    }
+                }
+                "chat-popup" => {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        let _ = window.hide();
+                        api.prevent_close();
+                    }
+                }
+                _ => {}
             }
         })
         .setup(|app| {
+            // ── Create the chat-popup window (hidden, top-right) ────────
+            use tauri::WebviewWindowBuilder;
+            use tauri::WebviewUrl;
+
+            let (popup_x, popup_y) = app
+                .primary_monitor()
+                .ok()
+                .flatten()
+                .map(|monitor| {
+                    let size = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let screen_w = size.width as f64 / scale;
+                    let x = (screen_w - 400.0) / 2.0;
+                    (x.max(0.0), 36.0)
+                })
+                .unwrap_or((1440.0, 36.0));
+
+            let popup_result = WebviewWindowBuilder::new(
+                app,
+                "chat-popup",
+                WebviewUrl::App("popup.html".into()),
+            )
+            .title("")
+            .inner_size(400.0, 520.0)
+            .position(popup_x, popup_y)
+            .decorations(false)
+            .resizable(false)
+            .always_on_top(true)
+            .shadow(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .build();
+            match &popup_result {
+                Ok(_) => eprintln!("[setup] chat-popup created at ({}, {})", popup_x, popup_y),
+                Err(e) => eprintln!("[setup] chat-popup creation FAILED: {}", e),
+            }
+            let _ = popup_result;
+
             // ── Build tray icon and menu ────────────────────────────────
             use tauri::tray::{TrayIconBuilder, TrayIconEvent};
             use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -100,12 +155,20 @@ pub fn run() {
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click { .. } = event {
                         let app = tray.app_handle();
-                        if let Some(w) = app.get_webview_window("main") {
-                            if w.is_visible().unwrap_or(false) {
-                                let _ = w.hide();
+                        if let Some(popup) = app.get_webview_window("chat-popup") {
+                            if popup.is_visible().unwrap_or(false) {
+                                let _ = popup.hide();
                             } else {
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                                if let Some(monitor) = app.primary_monitor().ok().flatten() {
+                                    let size = monitor.size();
+                                    let scale = monitor.scale_factor();
+                                    let sw = size.width as f64 / scale;
+                                    let _ = popup.set_position(
+                                        tauri::LogicalPosition::new((sw - 400.0) / 2.0, 36.0),
+                                    );
+                                }
+                                let _ = popup.show();
+                                let _ = popup.set_focus();
                             }
                         }
                     }
@@ -119,6 +182,15 @@ pub fn run() {
                     let _ = w.hide();
                 }
             }
+
+            // ── Notch activation (macOS only) ───────────────────────────
+            #[cfg(target_os = "macos")]
+            {
+                eprintln!("[setup] starting notch watcher...");
+                notch::start(app.handle().clone());
+            }
+            #[cfg(not(target_os = "macos"))]
+            eprintln!("[setup] notch watcher skipped (not macOS)");
 
             // ── Global shortcuts ────────────────────────────────────────
             use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -144,6 +216,28 @@ pub fn run() {
                         let _ = w.show();
                         let _ = w.set_focus();
                         let _ = w.emit("show-quick-capture", ());
+                    }
+                }
+            })?;
+
+            let popup_shortcut: Shortcut = "CommandOrControl+Shift+P".parse().unwrap();
+            app.global_shortcut().on_shortcut(popup_shortcut, |app, _s, ev| {
+                if ev.state() == ShortcutState::Pressed {
+                    if let Some(popup) = app.get_webview_window("chat-popup") {
+                        if popup.is_visible().unwrap_or(false) {
+                            let _ = popup.hide();
+                        } else {
+                            if let Some(monitor) = app.primary_monitor().ok().flatten() {
+                                let size = monitor.size();
+                                let scale = monitor.scale_factor();
+                                let sw = size.width as f64 / scale;
+                                let _ = popup.set_position(
+                                    tauri::LogicalPosition::new((sw - 400.0) / 2.0, 36.0),
+                                );
+                            }
+                            let _ = popup.show();
+                            let _ = popup.set_focus();
+                        }
                     }
                 }
             })?;
@@ -191,6 +285,9 @@ pub fn run() {
             commands::fetch_github_meta,
             commands::fetch_hf_meta,
             commands::analyze_lens_link,
+            nexus_bridge::load_unified_graph,
+            // Project path auto-detection
+            commands::detect_project_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

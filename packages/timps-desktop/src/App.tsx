@@ -17,6 +17,31 @@ export default function App() {
   const [stats, setStats] = useState<MemoryStats | null>(null);
   const { theme, setTheme } = useTheme();
 
+  // Auto-detect project path on first launch
+  useEffect(() => {
+    if (!localStorage.getItem('timps:lastProject')) {
+      api.detectProjectPath().then(p => {
+        if (p) {
+          setProjectPath(p);
+          localStorage.setItem('timps:lastProject', p);
+        }
+      });
+    }
+  }, []);
+
+  const handleBrowse = async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({ directory: true, multiple: false, title: 'Select project directory' });
+      if (selected && typeof selected === 'string') {
+        setProjectPath(selected);
+        localStorage.setItem('timps:lastProject', selected);
+      }
+    } catch {
+      // Fallback if dialog plugin is unavailable
+    }
+  };
+
   useEffect(() => {
     if (!projectPath) { setStats(null); return; }
     api.getMemoryStats(projectPath).then(setStats).catch(() => setStats(null));
@@ -58,6 +83,11 @@ export default function App() {
                 localStorage.setItem('timps:lastProject', e.target.value);
               }}
             />
+            <button className="browse-btn" onClick={handleBrowse} title="Browse for project directory">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
           </div>
         </div>
         <div className="topbar-right">

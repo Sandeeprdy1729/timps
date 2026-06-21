@@ -116,6 +116,26 @@
   color: var(--text-tertiary);
 }
 
+.browse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.browse-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
