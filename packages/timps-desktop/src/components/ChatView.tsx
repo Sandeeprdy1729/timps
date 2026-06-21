@@ -233,6 +233,21 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
           const summary = query.length > 120 ? query.slice(0, 120) + '…' : query;
           void api.storeEpisode(projectPath, summary, 'success', ['chat', mode]);
           void api.storeMemory(projectPath, `chat_${now}`, text.slice(0, 500), 0.5, ['chat', mode, 'assistant']);
+          // Store user query as a semantic entry so it's searchable as context
+          void api.storeMemory(projectPath, `user_${now}`, summary, 0.6, ['chat', mode, 'user']);
+          // Extract personal facts from user query for persistent recall
+          const nameMatch = query.match(/\bmy name is\s+(\w+)/i);
+          if (nameMatch) {
+            void api.storeMemory(projectPath, 'user_name', `The user's name is ${nameMatch[1]}.`, 0.95, ['user', 'identity', 'name', 'personal']);
+          }
+          const emailMatch = query.match(/\bmy email is\s+(\S+@\S+)/i);
+          if (emailMatch) {
+            void api.storeMemory(projectPath, 'user_email', `The user's email is ${emailMatch[1]}.`, 0.95, ['user', 'identity', 'email', 'personal']);
+          }
+          const locationMatch = query.match(/\b(?:i(?:'m| am) from|my (?:city|country) is)\s+(.+)/i);
+          if (locationMatch) {
+            void api.storeMemory(projectPath, 'user_location', `The user is from ${locationMatch[1].trim()}.`, 0.85, ['user', 'identity', 'location', 'personal']);
+          }
         }
       },
       onError: (message) => {
