@@ -313,7 +313,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
     agent.setPendingMergeTarget(opts.merge);
   }
 
-  const isTTY = process.stdin.isTTY !== false;
+  const isTTY = process.stdin.isTTY === true;
 
   // Session directory
   const sessionDir = path.join(os.homedir(), '.timps', 'sessions', projectId);
@@ -351,7 +351,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
     });
 
     if (collected) {
-      await runSingleTurn(agent, collected, provider.model);
+      await runSingleTurn(agent, collected, provider.model, sessionDir);
       return;
     }
 
@@ -368,6 +368,8 @@ export async function startApp(opts: AppOptions): Promise<void> {
 
   // ── TTY Interactive Mode (Ink/React TUI) ──
   process.on('SIGINT', () => {
+    agent.saveSession(sessionDir);
+    agent.saveEpisode('success').catch(() => {});
     process.exit(0);
   });
 
@@ -394,7 +396,7 @@ export async function startApp(opts: AppOptions): Promise<void> {
   // Single-shot execution
   // ═══════════════════════════════════════
 
-async function runSingleTurn(agent: Agent, message: string, model: string): Promise<void> {
+async function runSingleTurn(agent: Agent, message: string, model: string, sessionDir?: string): Promise<void> {
   console.log(`  ${t.brandBold('⚡ TIMPS')} ${t.dim(model)}\n`);
   try {
     for await (const event of agent.run(message)) {
@@ -405,6 +407,7 @@ async function runSingleTurn(agent: Agent, message: string, model: string): Prom
     renderError((err as Error).message);
     process.exit(1);
   }
+  if (sessionDir) agent.saveSession(sessionDir);
   await agent.saveEpisode('success');
 }
 
