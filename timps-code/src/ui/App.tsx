@@ -139,7 +139,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
     const defaultActions: Record<string, () => void> = {
       commandPalette: () => setShowCommandPalette(v => !v),
       help: () => setShowHelp(v => !v),
-      quit: () => process.exit(0),
+      quit: () => { agent.saveSession?.(sessionDir); process.exit(0); },
       clear: () => { setMessages([]); toast.show('Conversation cleared', 'info', 2000); },
       provider: () => setShowProviderSelect(v => !v),
       undo: () => handleSlashCommand('/undo', agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem),
@@ -186,7 +186,7 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
       c: () => handleSlashCommand('/cost', agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem),
       S: () => handleSlashCommand('/snap', agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem),
       k: () => handleSlashCommand('/skills', agent, memory, todos, snapshots, permissions, currentProvider, cwd, sessionDir, currentProvider?.name || 'ollama', multimodalMem),
-      q: () => process.exit(0),
+      q: () => { agent.saveSession?.(sessionDir); process.exit(0); },
     };
 
     for (const [key, handler] of Object.entries(leaderActions)) {

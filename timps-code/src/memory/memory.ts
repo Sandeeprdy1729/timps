@@ -23,6 +23,19 @@ import {
   VelocityTracker,
   ArchitectureDriftDetector,
   PatternLearner,
+  FalseMemoryDetector,
+  SourceAttributor,
+  ConflictResolver,
+  MemoryAuditor,
+  SchemaInferrer,
+  MeetingGhost,
+  DeadReckoning,
+  LivingManifesto,
+  RelationshipIntelligence,
+  SkillShadow,
+  CurriculumArchitect,
+  CodebaseAnthropologist,
+  InstitutionalMemory,
 } from '@timps/memory-core';
 
 // ── NEW: Extended memory components ──
@@ -42,6 +55,12 @@ import type { ChronosDomain } from './chronosVeil.js';
 import { EchoForge } from '@timps/memory-core';
 import { HarmonicSheafWeaver } from '@timps/memory-core';
 import { AetherForgeERL, SupraSheaf, QPTW, TitanicForge, QERW, QISRD, EclipseForge, QITRL } from '@timps/memory-core';
+import {
+  EngramLog, ConsolidationEngine, SynapticPruner, ProvenanceForge,
+  SpacedRepetitionForge, ConstitutionalGuard, AuditForge,
+  ProspectiveTrigger, BiasRevealer, ContextVector, RehearsalEngine,
+  SchemaDistorter, ConfidenceCalibrator,
+} from '@timps/memory-core';
 import { SynapseQuench } from './synapseQuench.js';
 
 export class Memory {
@@ -61,6 +80,19 @@ export class Memory {
   private _velocity?: VelocityTracker;
   private _architecture?: ArchitectureDriftDetector;
   private _patterns?: PatternLearner;
+  private _falseMemory?: FalseMemoryDetector;
+  private _sourceAttributor?: SourceAttributor;
+  private _conflictResolver?: ConflictResolver;
+  private _memoryAuditor?: MemoryAuditor;
+  private _schemaInferrer?: SchemaInferrer;
+  private _meetingGhost?: MeetingGhost;
+  private _deadReckoning?: DeadReckoning;
+  private _livingManifesto?: LivingManifesto;
+  private _relationship?: RelationshipIntelligence;
+  private _skillShadow?: SkillShadow;
+  private _curriculum?: CurriculumArchitect;
+  private _codebaseAnthropologist?: CodebaseAnthropologist;
+  private _institutionalMemory?: InstitutionalMemory;
 
   // ── NEW: Extended memory components ──
   private _retriever?: HybridRetriever;
@@ -100,6 +132,21 @@ export class Memory {
 
   // ── Layer 18: QITRL (quantum-inspired temporal resonance lattice) ──
   private _qitrl?: QITRL;
+
+  // ── Operational layers (L10-L22) ──
+  private _engramLog?: EngramLog;
+  private _consolidation?: ConsolidationEngine;
+  private _synapticPruner?: SynapticPruner;
+  private _provenanceForge?: ProvenanceForge;
+  private _spacedRepetition?: SpacedRepetitionForge;
+  private _constitutionalGuard?: ConstitutionalGuard;
+  private _auditForge?: AuditForge;
+  private _prospectiveTrigger?: ProspectiveTrigger;
+  private _biasRevealer?: BiasRevealer;
+  private _contextVector?: ContextVector;
+  private _rehearsalEngine?: RehearsalEngine;
+  private _schemaDistorter?: SchemaDistorter;
+  private _confidenceCalibrator?: ConfidenceCalibrator;
 
   // Turn counter for self-reflection
   private _turnCount = 0;
@@ -261,6 +308,90 @@ export class Memory {
   }
   get patternLearner(): PatternLearner {
     return (this._patterns ??= new PatternLearner(this.dir));
+  }
+
+  // ── New intelligence tool getters ──
+
+  get falseMemoryDetector(): FalseMemoryDetector {
+    return (this._falseMemory ??= new FalseMemoryDetector(this.dir));
+  }
+  get sourceAttributor(): SourceAttributor {
+    return (this._sourceAttributor ??= new SourceAttributor(this.dir));
+  }
+  get conflictResolver(): ConflictResolver {
+    return (this._conflictResolver ??= new ConflictResolver(this.dir));
+  }
+  get memoryAuditor(): MemoryAuditor {
+    return (this._memoryAuditor ??= new MemoryAuditor(this.dir));
+  }
+  get schemaInferrer(): SchemaInferrer {
+    return (this._schemaInferrer ??= new SchemaInferrer(this.dir));
+  }
+  get meetingGhost(): MeetingGhost {
+    return (this._meetingGhost ??= new MeetingGhost(this.dir));
+  }
+  get deadReckoning(): DeadReckoning {
+    return (this._deadReckoning ??= new DeadReckoning(this.dir));
+  }
+  get livingManifesto(): LivingManifesto {
+    return (this._livingManifesto ??= new LivingManifesto(this.dir));
+  }
+  get relationshipIntelligence(): RelationshipIntelligence {
+    return (this._relationship ??= new RelationshipIntelligence(this.dir));
+  }
+  get skillShadow(): SkillShadow {
+    return (this._skillShadow ??= new SkillShadow(this.dir));
+  }
+  get curriculumArchitect(): CurriculumArchitect {
+    return (this._curriculum ??= new CurriculumArchitect(this.dir));
+  }
+  get codebaseAnthropologist(): CodebaseAnthropologist {
+    return (this._codebaseAnthropologist ??= new CodebaseAnthropologist(this.dir));
+  }
+  get institutionalMemory(): InstitutionalMemory {
+    return (this._institutionalMemory ??= new InstitutionalMemory(this.dir));
+  }
+
+  // ── Operational layer getters (L10-L22) ──
+
+  get engramLog(): EngramLog {
+    return (this._engramLog ??= new EngramLog(this.dir));
+  }
+  get consolidationEngine(): ConsolidationEngine {
+    return (this._consolidation ??= new ConsolidationEngine(this.dir, []));
+  }
+  get synapticPruner(): SynapticPruner {
+    return (this._synapticPruner ??= new SynapticPruner(this.dir));
+  }
+  get provenanceForge(): ProvenanceForge {
+    return (this._provenanceForge ??= new ProvenanceForge(this.dir));
+  }
+  get spacedRepetitionForge(): SpacedRepetitionForge {
+    return (this._spacedRepetition ??= new SpacedRepetitionForge());
+  }
+  get constitutionalGuard(): ConstitutionalGuard {
+    return (this._constitutionalGuard ??= new ConstitutionalGuard(this.dir));
+  }
+  get auditForge(): AuditForge {
+    return (this._auditForge ??= new AuditForge(this.dir));
+  }
+  get prospectiveTrigger(): ProspectiveTrigger {
+    return (this._prospectiveTrigger ??= new ProspectiveTrigger(this.dir));
+  }
+  get biasRevealer(): BiasRevealer {
+    return (this._biasRevealer ??= new BiasRevealer(this.dir));
+  }
+  get contextVector(): ContextVector {
+    return (this._contextVector ??= new ContextVector(this.dir));
+  }
+  get rehearsalEngine(): RehearsalEngine {
+    return (this._rehearsalEngine ??= new RehearsalEngine(this.dir));
+  }
+  get schemaDistorter(): SchemaDistorter {
+    return (this._schemaDistorter ??= new SchemaDistorter(this.dir));
+  }
+  get confidenceCalibrator(): ConfidenceCalibrator {
+    return (this._confidenceCalibrator ??= new ConfidenceCalibrator(this.dir));
   }
 
   // ── Layer 1: Working Memory ──
@@ -495,6 +626,48 @@ export class Memory {
     if (combined.length > 50) {
       this.storeFact(combined.slice(0, 300), 'pattern', []);
     }
+  }
+
+  extractEntities(userMessage: string, assistantResponse: string): void {
+    const graph = this.graph;
+    const conversationId = generateId('conv');
+    graph.addNode(conversationId, 'concept', { userMessage: userMessage.slice(0, 200), assistantResponse: assistantResponse.slice(0, 200), timestamp: Date.now() });
+
+    const topics = this.extractTopics(userMessage + ' ' + assistantResponse);
+    for (const topic of topics) {
+      graph.addNode(topic, 'concept', {});
+      graph.addEdge(conversationId, 'about', topic);
+    }
+  }
+
+  private extractTopics(text: string): string[] {
+    const topics: string[] = [];
+    const seen = new Set<string>();
+
+    const patterns = [
+      /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b/g,
+      /\b(?:who|what|how|why|where|when|tell\sme|explain|describe|what\sis|what\sare)\s+(.+?)(?:\?|\.|$)/gi,
+    ];
+
+    for (const line of text.split(/[.?!\n]+/)) {
+      const lower = line.toLowerCase().trim();
+      if (!lower || lower.length < 5) continue;
+
+      const stopwords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also', 'now', 'i', 'me', 'my', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'it', 'we', 'us', 'our', 'they', 'them', 'their', 'this', 'that', 'these', 'those', 'please', 'tell']);
+
+      const words = line.split(/\s+/).filter(w => w.length > 2 && !stopwords.has(w));
+      const key = words.slice(0, 4).join(' ');
+      if (!seen.has(key) && words.length >= 2) {
+        seen.add(key);
+        topics.push(key);
+      }
+    }
+
+    return topics.slice(0, 10);
+  }
+
+  graphQuery(question: string): string {
+    return this.graph.query(question).answer;
   }
 
   query(q: string, limit = 10): MemoryEntry[] {

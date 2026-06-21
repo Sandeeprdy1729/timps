@@ -30,6 +30,7 @@ import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
 import { ConstitutionalFilter, ConstitutionalSandbox } from '@timps/memory-core';
 import type { PromptAnalysis, SandboxExecutionRecord, ExecResult } from '@timps/memory-core';
+import { SessionIngestionPipeline } from '../memory/sessionIngestion.js';
 
 const getProvenForge = async () => {
   try {
@@ -164,8 +165,12 @@ export class Agent {
   private pendingMergeTarget?: string;
   private pluginManager?: PluginManager;
 
+  private sessionDir?: string;
+  private _sessionTurnCounter = 0;
+
   // New intelligence layers
   private sessionBridge?: SessionBridge;
+
   private riskEngine?: RiskEngine;
   private contextOrchestrator?: ContextOrchestrator;
   private selfImproving?: SelfImprovingAgent;
@@ -211,6 +216,29 @@ export class Agent {
 
     // Initialize with system prompt
     this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
+
+    // Async ingestion of past sessions — fire and forget
+    this.ingestHistory().catch(() => {});
+  }
+
+  private async ingestHistory(): Promise<void> {
+    try {
+      const baseDir = path.join(os.homedir(), '.timps', 'sessions');
+      if (!fs.existsSync(baseDir)) return;
+      const entries = fs.readdirSync(baseDir);
+      for (const entry of entries) {
+        const sessionDir = path.join(baseDir, entry);
+        if (!fs.statSync(sessionDir).isDirectory()) continue;
+        const files = fs.readdirSync(sessionDir).filter(f => f.endsWith('.json') && f.startsWith('session_'));
+        for (const file of files) {
+          try {
+            const filePath = path.join(sessionDir, file);
+            const pipe = new SessionIngestionPipeline(this.memory);
+            pipe.ingestSessionFile(filePath);
+          } catch { /* best-effort */ }
+        }
+      }
+    } catch { /* base dir may not exist */ }
   }
 
   /** Whether the provider is a local/small model that needs a simpler prompt */
@@ -225,11 +253,22 @@ export class Agent {
       if (this.customInstructions) {
         prompt += `\nUser instructions: ${this.customInstructions}\n`;
       }
+      // ── Cross-session context from knowledge graph ──
+      const graphCtx = this.memory.graphQuery('project knowledge');
+      if (graphCtx && !graphCtx.includes('No relevant knowledge')) {
+        prompt += `\nPast context: ${graphCtx}\n`;
+      }
       prompt += `\nWorking directory: ${this.cwd}\n`;
       return prompt;
     }
 
     let prompt = TIMPS_SYSTEM_PROMPT;
+
+    // ── Cross-session context from knowledge graph ──
+    const graphCtx = this.memory.graphQuery('project knowledge');
+    if (graphCtx && !graphCtx.includes('No relevant knowledge')) {
+      prompt += `\n## Previous Sessions Context\n${graphCtx}\n`;
+    }
 
     // ── Memory injection ──
     const memCtx = this.memory.getContextString();
@@ -531,6 +570,20 @@ End your response with a confirmation question.`;
       };
       if (toolCalls.length > 0) assistantMsg.toolCalls = toolCalls;
       this.messages.push(assistantMsg);
+
+      // Turn counter and auto-save for ALL conversations (Q&A + tools)
+      this._sessionTurnCounter++;
+      if (this.sessionDir && this._sessionTurnCounter % 3 === 0) {
+        try {
+          fs.mkdirSync(this.sessionDir, { recursive: true });
+          const archiveName = `turn_${this._sessionTurnCounter}_${Date.now()}.json`;
+          fs.writeFileSync(
+            path.join(this.sessionDir, archiveName),
+            JSON.stringify({ messages: this.messages, totalUsage: this.totalUsage, timestamp: Date.now() }, null, 2),
+            'utf-8',
+          );
+        } catch { /* best-effort */ }
+      }
 
       // If no tool calls, we're done — extract memories and finish
       if (!hasToolCalls || toolCalls.length === 0) {
@@ -1088,6 +1141,7 @@ ${historyText}`;
   }
 
   saveSession(sessionDir: string): void {
+    this.sessionDir = sessionDir;
     fs.mkdirSync(sessionDir, { recursive: true });
     const sessionData = {
       messages: this.messages,
@@ -1096,11 +1150,16 @@ ${historyText}`;
       model: this.provider.model,
       provider: this.provider.name,
     };
-    fs.writeFileSync(
-      path.join(sessionDir, 'latest.json'),
-      JSON.stringify(sessionData, null, 2),
-      'utf-8',
-    );
+    const sessionFile = path.join(sessionDir, 'latest.json');
+    fs.writeFileSync(sessionFile, JSON.stringify(sessionData, null, 2), 'utf-8');
+
+    const archiveName = `session_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    fs.writeFileSync(path.join(sessionDir, archiveName), JSON.stringify(sessionData, null, 2), 'utf-8');
+
+    try {
+      const pipe = new SessionIngestionPipeline(this.memory);
+      pipe.ingestMessages(this.messages);
+    } catch { /* best-effort */ }
   }
 
   restoreSession(sessionDir: string): boolean {
@@ -1163,6 +1222,12 @@ ${historyText}`;
       toolsUsed: [...toolsUsed],
       outcome,
     });
+
+    // ── Post-session ingestion: feed full conversation into all memory layers ──
+    try {
+      const pipe = new SessionIngestionPipeline(this.memory);
+      pipe.ingestMessages(this.messages);
+    } catch { /* best-effort */ }
 
     // Sync to team memory if active
     if (this.teamMemory) {

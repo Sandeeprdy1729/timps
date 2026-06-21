@@ -237,6 +237,14 @@ export {
   ProspectiveTriggerTool,
   BiasRevealerTool,
   SchemaInferrer,
+  MeetingGhost,
+  DeadReckoning,
+  LivingManifesto,
+  RelationshipIntelligence,
+  SkillShadow,
+  CurriculumArchitect,
+  CodebaseAnthropologist,
+  InstitutionalMemory,
 } from './intelligence/index.js';
 
 export type {
