@@ -1,8 +1,8 @@
 mod commands;
 
-pub use commands::*;
-
+use tauri::Emitter;
 use tauri::Manager;
+pub use commands::*;
 
 pub fn run() {
     tauri::Builder::default()
@@ -55,7 +55,7 @@ pub fn run() {
                 .icon(icon)
                 .tooltip("🤖 TIMPS — Listening in background (⌘⇧T)")
                 .menu(&menu)
-                .menu_on_left_click(false)
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
                     match event.id().as_ref() {
                         "open" => {
@@ -156,11 +156,13 @@ pub fn run() {
             commands::load_episodes,
             commands::load_working,
             commands::get_memory_stats,
+            commands::load_knowledge_graph,
             commands::list_projects,
             commands::search_memory,
             commands::store_memory,
             commands::delete_memory,
             commands::chat,
+            commands::list_ollama_models,
             commands::get_version,
             commands::get_provider,
             commands::set_provider,

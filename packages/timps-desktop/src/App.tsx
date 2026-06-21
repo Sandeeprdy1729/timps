@@ -1,105 +1,31 @@
-import { useState, useEffect, useCallback } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
-import { Sidebar } from './components/Sidebar';
-import { SemanticView } from './components/SemanticView';
-import { EpisodicView } from './components/EpisodicView';
-import { StatsView } from './components/StatsView';
-import { SearchView } from './components/SearchView';
+import { useState, useEffect } from 'react';
 import { ChatView } from './components/ChatView';
 import { SettingsView } from './components/SettingsView';
-import { CommandCenter } from './components/CommandCenter';
-import { QuickCapture } from './components/QuickCapture';
-import { CommandBar } from './components/CommandBar';
-import { PassiveListener } from './components/PassiveListener';
-import { BackgroundDaemon } from './components/BackgroundDaemon';
-import { LensView } from './components/LensView';
-import { LinkToast } from './components/LinkToast';
-import { IntelligenceDashboard } from './components/IntelligenceDashboard';
-import './styles/design-system.css';
+import { NexusView } from './components/NexusView';
+import { Sidebar } from './components/Sidebar';
+import { useTheme } from './theme/ThemeProvider';
+import { api, MemoryStats } from './api';
 import './App.css';
 
-export type Tab = 'chat' | 'command' | 'semantic' | 'episodic' | 'stats' | 'search' | 'settings' | 'lens' | 'intelligence';
+type View = 'chat' | 'nexus' | 'settings';
 
 export default function App() {
   const [projectPath, setProjectPath] = useState<string>(() => {
     return localStorage.getItem('timps:lastProject') ?? '';
   });
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [view, setView] = useState<View>('chat');
   const [stats, setStats] = useState<MemoryStats | null>(null);
-  const [semantic, setSemantic] = useState<SemanticEntry[]>([]);
-  const [episodes, setEpisodes] = useState<EpisodicEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showQuickCapture, setShowQuickCapture] = useState(false);
-  const [showCommandBar, setShowCommandBar] = useState(false);
-  const [chatDraft, setChatDraft] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-
-  const refresh = useCallback(async (path: string) => {
-    if (!path.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [s, e, st] = await Promise.all([
-        api.loadSemantic(path),
-        api.loadEpisodes(path, 100),
-        api.getMemoryStats(path),
-      ]);
-      setSemantic(s);
-      setEpisodes(e);
-      setStats(st);
-      localStorage.setItem('timps:lastProject', path);
-      setIsConnected(true);
-    } catch (err) {
-      setError(String(err));
-      setIsConnected(false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    if (projectPath) {
-      void refresh(projectPath);
-    }
-  }, [projectPath, refresh]);
+    if (!projectPath) { setStats(null); return; }
+    api.getMemoryStats(projectPath).then(setStats).catch(() => setStats(null));
+  }, [projectPath]);
 
-  useEffect(() => {
-    const unlistenQuickCapture = listen('show-quick-capture', () => {
-      setShowQuickCapture(true);
-    });
-    const unlistenSettings = listen('show-settings', () => {
-      setActiveTab('settings');
-    });
-    const unlistenLens = listen('show-lens', () => {
-      setActiveTab('lens');
-    });
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'n') {
-        e.preventDefault();
-        setShowQuickCapture(true);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'k') {
-        e.preventDefault();
-        setShowCommandBar(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      unlistenQuickCapture.then(fn => fn());
-      unlistenSettings.then(fn => fn());
-      unlistenLens.then(fn => fn());
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  const viewLabel = view === 'chat' ? 'Chat' : view === 'nexus' ? 'Nexus' : 'Settings';
 
   return (
     <div className="app">
-      {/* Top Navigation Bar */}
       <header className="topbar">
         <div className="topbar-left">
           <div className="topbar-brand">
@@ -113,10 +39,9 @@ export default function App() {
               </svg>
             </div>
             <span className="brand-name">TIMPS</span>
-            <span className="brand-badge">Intelligence Cockpit</span>
+            <span className="brand-badge">{viewLabel}</span>
           </div>
         </div>
-
         <div className="topbar-center">
           <div className="project-input-group">
             <svg className="input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -128,175 +53,48 @@ export default function App() {
               type="text"
               placeholder="Enter project path..."
               value={projectPath}
-              onChange={(e) => setProjectPath(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void refresh(projectPath);
+              onChange={(e) => {
+                setProjectPath(e.target.value);
+                localStorage.setItem('timps:lastProject', e.target.value);
               }}
             />
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => void refresh(projectPath)}
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="loading-spinner" />
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-              )}
-              {loading ? '' : 'Load'}
-            </button>
           </div>
         </div>
-
         <div className="topbar-right">
-          <div className={`connection-status ${isConnected ? 'connected' : ''}`}>
-            <span className="status-dot" />
-            <span className="status-text">{isConnected ? 'Connected' : 'Disconnected'}</span>
-          </div>
-        </div>
-      </header>
-
-      {error && (
-        <div className="error-banner">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span>{error}</span>
-          <button className="banner-close" onClick={() => setError(null)}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button
+            className="topbar-btn"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            {theme === 'dark' ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
           </button>
         </div>
-      )}
-
+      </header>
       <div className="app-body">
-        <Sidebar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} stats={stats} />
-
+        <Sidebar
+          activeTab={view}
+          onTabChange={(tab) => setView(tab as View)}
+          stats={stats}
+        />
         <main className="main-content">
-          {!projectPath && activeTab !== 'command' && activeTab !== 'settings' && (
-            <div className="welcome-screen animate-fade-in">
-              <div className="welcome-content">
-                <div className="welcome-icon">
-                  <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                    <rect x="4" y="18" width="72" height="48" rx="10" fill="var(--color-primary-200)" opacity="0.5"/>
-                    <rect x="10" y="24" width="60" height="36" rx="6" fill="var(--bg-card)" stroke="var(--border)" strokeWidth="1.5"/>
-                    <circle cx="26" cy="38" r="6" fill="var(--color-primary-500)"/>
-                    <circle cx="54" cy="38" r="6" fill="var(--color-primary-500)"/>
-                    <rect x="36" y="36" width="8" height="4" rx="1" fill="var(--bg-card)"/>
-                    <rect x="8" y="54" width="24" height="3" rx="1.5" fill="var(--border)"/>
-                    <rect x="8" y="60" width="16" height="3" rx="1.5" fill="var(--border-light)"/>
-                  </svg>
-                </div>
-                <h1>Welcome to TIMPS</h1>
-                <p>Your AI memory cockpit. Point it at any project to explore, search, and interact with TIMPS's persistent intelligence.</p>
-                <div className="welcome-actions">
-                  <div className="welcome-card" onClick={() => {
-                    const path = prompt('Enter project path:');
-                    if (path) setProjectPath(path);
-                  }}>
-                    <div className="welcome-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                      </svg>
-                    </div>
-                    <span>Open Project</span>
-                  </div>
-                  <div className="welcome-card" onClick={() => setActiveTab('command')}>
-                    <div className="welcome-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
-                      </svg>
-                    </div>
-                    <span>Commands</span>
-                  </div>
-                  <div className="welcome-card" onClick={() => setActiveTab('settings')}>
-                    <div className="welcome-card-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                      </svg>
-                    </div>
-                    <span>Settings</span>
-                  </div>
-                </div>
-                <div className="welcome-shortcuts">
-                  <span className="shortcut-label">Quick actions:</span>
-                  <kbd>⌘⇧K</kbd><span>Command palette</span>
-                  <kbd>⌘⇧N</kbd><span>Quick capture</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {projectPath && activeTab === 'chat' && (
-            <ChatView
-              projectPath={projectPath}
-              draftPrompt={chatDraft}
-              onDraftConsumed={() => setChatDraft(null)}
-            />
-          )}
-
-          {activeTab === 'command' && (
-            <CommandCenter
-              projectPath={projectPath}
-              stats={stats}
-              onRunPrompt={(prompt) => {
-                setChatDraft(prompt);
-                setActiveTab('chat');
-              }}
-            />
-          )}
-
-          {projectPath && activeTab === 'stats' && (
-            <StatsView stats={stats} loading={loading} />
-          )}
-
-          {projectPath && activeTab === 'semantic' && (
-            <SemanticView entries={semantic} loading={loading} />
-          )}
-
-          {projectPath && activeTab === 'episodic' && (
-            <EpisodicView entries={episodes} loading={loading} />
-          )}
-
-          {projectPath && activeTab === 'search' && (
-            <SearchView
-              projectPath={projectPath}
-              semanticEntries={semantic}
-            />
-          )}
-
-          {activeTab === 'settings' && (
+          {view === 'chat' && <ChatView projectPath={projectPath} />}
+          {view === 'nexus' && <NexusView projectPath={projectPath} />}
+          {view === 'settings' && (
             <SettingsView
               projectPath={projectPath}
               onProjectPathChange={setProjectPath}
             />
           )}
-
-          {activeTab === 'lens' && <LensView />}
-
-          {activeTab === 'intelligence' && (
-            <IntelligenceDashboard projectPath={projectPath} />
-          )}
         </main>
       </div>
-
-      <QuickCapture
-        isOpen={showQuickCapture}
-        onClose={() => setShowQuickCapture(false)}
-        projectPath={projectPath}
-      />
-
-      <CommandBar
-        isOpen={showCommandBar}
-        onClose={() => setShowCommandBar(false)}
-        projectPath={projectPath}
-      />
-
-      <PassiveListener projectPath={projectPath} />
-      <BackgroundDaemon projectPath={projectPath} />
-      <LinkToast onOpenLens={() => setActiveTab('lens')} />
     </div>
   );
 }

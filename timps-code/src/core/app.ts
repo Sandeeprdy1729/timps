@@ -2235,6 +2235,17 @@ export async function handleSlashCommand(
       break;
     }
 
+    case 'react': {
+      const nowEnabled = agent.toggleReactMode();
+      console.log(`\n  ${t.success(icons.success)} ReAct mode ${nowEnabled ? 'enabled' : 'disabled'}\n`);
+      if (nowEnabled) {
+        console.log(`  ${t.dim('Using clean Thought → Action → Observation cycle')}\n`);
+      } else {
+        console.log(`  ${t.dim('Using standard streaming agent loop')}\n`);
+      }
+      break;
+    }
+
     default:
       console.log(`\n  ${t.dim(`Unknown command: /${cmd}. Type /help for commands.`)}\n`);
   }

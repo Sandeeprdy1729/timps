@@ -30,9 +30,9 @@ export function BackgroundDaemon({ projectPath }: Props) {
     })();
   }, []);
 
-  // ── Clipboard watcher (opt-in from localStorage) ─────────────────────────
+  // ── Clipboard watcher (enabled by default, toggle off in Settings) ──────
   useEffect(() => {
-    const enabled = localStorage.getItem('timps:clipboardWatcher') === 'true';
+    const enabled = localStorage.getItem('timps:clipboardWatcher') !== 'false';
     if (enabled) {
       void api.startClipboardWatcher(projectPath);
     }

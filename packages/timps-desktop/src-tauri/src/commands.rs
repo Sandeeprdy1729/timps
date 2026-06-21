@@ -7,6 +7,35 @@ use std::path::PathBuf;
 // ── Types ──────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KnowledgeNode {
+    pub id: String,
+    pub entity: String,
+    #[serde(rename = "entityType")]
+    pub entity_type: String,
+    pub attributes: serde_json::Value,
+    #[serde(rename = "createdAt")]
+    pub created_at: i64,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KnowledgeEdge {
+    pub id: String,
+    pub subject: String,
+    pub relation: String,
+    pub object: String,
+    pub weight: f64,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KnowledgeGraph {
+    pub nodes: Vec<KnowledgeNode>,
+    pub edges: Vec<KnowledgeEdge>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SemanticEntry {
     pub id: String,
     pub timestamp: i64,
@@ -165,6 +194,17 @@ pub fn get_memory_stats(project_path: String) -> Result<MemoryStats, String> {
     })
 }
 
+/// Load the knowledge graph (nodes + edges) for a project
+#[tauri::command]
+pub fn load_knowledge_graph(project_path: String) -> Result<KnowledgeGraph, String> {
+    let dir = memory_dir(&project_path);
+    let p = format!("{}/knowledge-graph.json", dir);
+    match fs::read_to_string(&p) {
+        Ok(s) => serde_json::from_str(&s).map_err(|e| e.to_string()),
+        Err(_) => Ok(KnowledgeGraph { nodes: vec![], edges: vec![] }),
+    }
+}
+
 /// List all known project hashes (directories under ~/.timps/memory/)
 #[tauri::command]
 pub fn list_projects() -> Result<Vec<String>, String> {
@@ -269,32 +309,93 @@ pub fn delete_memory(project_path: String, key: String) -> Result<usize, String>
     Ok(before - entries.len())
 }
 
-/// Chat with the TIMPS server (requires timps-server running at http://localhost:3000)
+/// Chat directly with Ollama (no proxy server needed).
+/// Emits the full response via "chat:done" event (streaming TBD).
 #[tauri::command]
 pub async fn chat(
+    app: tauri::AppHandle,
     prompt: String,
-    project_path: Option<String>,
-    provider: Option<String>,
-) -> Result<String, String> {
-    let url = std::env::var("TIMPS_SERVER_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+    model: Option<String>,
+    _project_path: Option<String>,
+) -> Result<(), String> {
+    use tauri::Emitter;
+
+    let ollama_url = std::env::var("OLLAMA_URL")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let model = model.unwrap_or_else(|| "llama3.2:1b".to_string());
+
     let body = serde_json::json!({
-        "prompt": prompt,
-        "provider": provider,
-        "project_path": project_path,
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": false,
+        "options": { "num_ctx": 32768 }
     });
-    let resp = reqwest::Client::new()
-        .post(format!("{url}/chat"))
+
+    let client = reqwest::Client::new();
+    let resp = match client
+        .post(format!("{}/api/chat", ollama_url))
         .json(&body)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
-    if resp.status().is_success() {
-        let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        Ok(j["output"].as_str().unwrap_or("").to_string())
-    } else {
-        Err(format!("Server error: {}", resp.status()))
+    {
+        Ok(r) => r,
+        Err(_) => {
+            let msg = format!("Cannot reach Ollama at {ollama_url}. Is it running? (ollama serve)");
+            let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
+            return Err(msg);
+        }
+    };
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        let msg = format!("Ollama {status}: {text}");
+        let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
+        return Err(msg);
     }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| {
+        let msg = format!("Failed to parse Ollama response: {e}");
+        let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
+        msg
+    })?;
+
+    let text = j["message"]["content"].as_str().unwrap_or("").to_string();
+    let input_tokens = j["prompt_eval_count"].as_u64().unwrap_or(0) as u32;
+    let output_tokens = j["eval_count"].as_u64().unwrap_or(0) as u32;
+
+    let _ = app.emit("chat:done", serde_json::json!({
+        "text": text,
+        "inputTokens": input_tokens,
+        "outputTokens": output_tokens,
+    }));
+    Ok(())
+}
+
+/// List models available in Ollama
+#[tauri::command]
+pub async fn list_ollama_models() -> Result<Vec<String>, String> {
+    let ollama_url = std::env::var("OLLAMA_URL")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(format!("{}/api/tags", ollama_url))
+        .send()
+        .await
+        .map_err(|e| format!("Cannot reach Ollama: {}", e))?;
+    if !resp.status().is_success() {
+        return Ok(vec![]);
+    }
+    let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+    let models = j["models"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| m["name"].as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(models)
 }
 
 /// Get the current TIMPS version
