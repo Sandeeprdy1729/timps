@@ -58,6 +58,37 @@ export interface KnowledgeGraph {
   edges: KnowledgeEdge[];
 }
 
+export interface UnifiedNode {
+  id: string;
+  label: string;
+  layer: string;
+  kind: string;
+  size: number;
+  timestamp: number;
+  attributes: Record<string, unknown>;
+}
+
+export interface UnifiedEdge {
+  id: string;
+  source: string;
+  target: string;
+  relation: string;
+  layer: string;
+  weight: number;
+  timestamp: number;
+}
+
+export interface LayerStats {
+  nodes: number;
+  edges: number;
+}
+
+export interface UnifiedGraph {
+  nodes: UnifiedNode[];
+  edges: UnifiedEdge[];
+  stats: Record<string, LayerStats>;
+}
+
 export interface LensLink {
   id: string;
   url: string;
@@ -123,6 +154,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     run_background_summarizer: 0,
     check_proactive_notifications: [],
     load_knowledge_graph: { nodes: [], edges: [] },
+    load_unified_graph: { nodes: [], edges: [], stats: {} },
+    detect_project_path: '',
     detect_link_type: 'other',
     save_to_lens_queue: 'stub_lens_id',
     get_lens_queue: [],
@@ -153,6 +186,12 @@ export const api = {
 
   loadKnowledgeGraph: (projectPath: string) =>
     invoke<KnowledgeGraph>('load_knowledge_graph', { projectPath }),
+
+  loadUnifiedGraph: (projectPath: string) =>
+    invoke<UnifiedGraph>('load_unified_graph', { projectPath }),
+
+  detectProjectPath: () =>
+    invoke<string>('detect_project_path'),
 
   getMemoryStats: (projectPath: string) =>
     invoke<MemoryStats>('get_memory_stats', { projectPath }),

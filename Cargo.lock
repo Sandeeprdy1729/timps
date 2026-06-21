@@ -5071,11 +5071,11 @@ dependencies = [
 name = "timps-desktop"
 version = "0.1.0"
 dependencies = [
- "hex",
+ "cc",
+ "core-graphics",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",

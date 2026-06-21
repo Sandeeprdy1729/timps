@@ -228,6 +228,12 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
         });
         setSending(false);
         void emit('timps:chat-message', { role: 'assistant', content: text });
+        // Store chat interaction as memory so it appears in the graph
+        if (projectPath.trim()) {
+          const summary = query.length > 120 ? query.slice(0, 120) + '…' : query;
+          void api.storeEpisode(projectPath, summary, 'success', ['chat', mode]);
+          void api.storeMemory(projectPath, `chat_${now}`, text.slice(0, 500), 0.5, ['chat', mode, 'assistant']);
+        }
       },
       onError: (message) => {
         setSending(false);

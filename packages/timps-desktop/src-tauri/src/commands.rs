@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -75,13 +73,24 @@ pub struct MemoryStats {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+fn to_base36(mut n: u32) -> String {
+    const DIGITS: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+    if n == 0 { return "0".to_string(); }
+    let mut result = Vec::new();
+    while n > 0 {
+        result.push(DIGITS[(n % 36) as usize]);
+        n /= 36;
+    }
+    result.reverse();
+    String::from_utf8(result).unwrap()
+}
+
 fn project_hash_inner(project_path: &str) -> String {
-    let canonical = fs::canonicalize(project_path)
-        .unwrap_or_else(|_| PathBuf::from(project_path));
-    let mut hasher = Sha256::new();
-    hasher.update(canonical.to_string_lossy().as_bytes());
-    let result = hasher.finalize();
-    hex::encode(result)[..12].to_string()
+    let mut h: i32 = 0;
+    for b in project_path.bytes() {
+        h = h.wrapping_mul(31).wrapping_add(b as i32);
+    }
+    to_base36(h.unsigned_abs())
 }
 
 fn memory_dir(project_path: &str) -> String {
@@ -1306,4 +1315,49 @@ pub async fn analyze_lens_link(
     } else {
         Err(format!("Server error {}: {}", resp.status(), resp.text().await.unwrap_or_default()))
     }
+}
+
+/// Auto-detect a project path by scanning common locations for project markers.
+/// Checks: Desktop, Documents, Home, CWD. Looks for .git, package.json, Cargo.toml.
+#[tauri::command]
+pub fn detect_project_path() -> String {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let candidates = vec![
+        format!("{}/Desktop", home),
+        format!("{}/Documents", home),
+        home.clone(),
+    ];
+
+    // Try common locations for a directory with project markers
+    for base in &candidates {
+        if let Ok(entries) = std::fs::read_dir(base) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() { continue; }
+                // Skip hidden dirs, node_modules, .timps
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if name.starts_with('.') || name == "node_modules" || name == "target" || name == ".timps" {
+                    continue;
+                }
+                // Check for project markers
+                for marker in &[".git", "package.json", "Cargo.toml", "go.mod", "pyproject.toml"] {
+                    if path.join(marker).exists() {
+                        return path.to_string_lossy().to_string();
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: check if CWD has a project marker
+    if let Ok(cwd) = std::env::current_dir() {
+        for marker in &[".git", "package.json", "Cargo.toml"] {
+            if cwd.join(marker).exists() {
+                return cwd.to_string_lossy().to_string();
+            }
+        }
+    }
+
+    // Last resort: return Desktop
+    format!("{}/Desktop", home)
 }
