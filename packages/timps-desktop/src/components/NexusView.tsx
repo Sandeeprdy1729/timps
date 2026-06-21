@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { api, UnifiedNode, UnifiedEdge, UnifiedGraph, LayerStats } from '../api';
+import { api, UnifiedNode, UnifiedEdge, UnifiedGraph } from '../api';
 import './NexusView.css';
 
 interface PosNode extends UnifiedNode {
@@ -14,93 +14,64 @@ interface NexusViewProps {
 }
 
 const LAYER_COLORS: Record<string, string> = {
-  'L1-working': '#06b6d4',
-  'L2-episodic': '#3b82f6',
-  'L3-semantic': '#6366f1',
-  'L5-chronos': '#10b981',
-  'L6-resonance': '#14b8a6',
-  'L7-echo': '#22c55e',
-  'L8-synapse': '#84cc16',
-  'L9-sheaf': '#eab308',
-  'L10-engram': '#f59e0b',
-  'kg-core': '#8b5cf6',
-  'sheaf-aether': '#a855f7',
-  'L3-contradiction': '#ef4444',
-  'L3-regret': '#f97316',
-  'L3-burnout': '#f43f5e',
-  'L3-techdebt': '#78716c',
-  'L3-bugprophet': '#ec4899',
-  'L3-apiarch': '#0ea5e9',
-  'L3-velocity': '#06b6d4',
-  'L3-pattern': '#a78bfa',
-  'L3-meeting': '#fb923c',
-  'L3-deadreckon': '#f87171',
-  'L3-manifesto': '#34d399',
-  'L3-relationship': '#f472b6',
-  'L3-institutional': '#2dd4bf',
-  'L3-anthropologist': '#c084fc',
-  'L3-curriculum': '#facc15',
-  'L3-conflict': '#fb7185',
+  'L1-working': '#06b6d4', 'L2-episodic': '#3b82f6', 'L3-semantic': '#6366f1',
+  'L5-chronos': '#10b981', 'L6-resonance': '#14b8a6', 'L7-echo': '#22c55e',
+  'L8-synapse': '#84cc16', 'L9-sheaf': '#eab308', 'L10-engram': '#f59e0b',
+  'kg-core': '#8b5cf6', 'sheaf-aether': '#a855f7',
 };
 
 function layerColor(layer: string): string {
   return LAYER_COLORS[layer] || '#6b7280';
 }
 
-const LAYER_ORDER = [
-  'L1-working', 'L2-episodic', 'L3-semantic', 'L5-chronos',
-  'L6-resonance', 'L7-echo', 'L8-synapse', 'L9-sheaf',
-  'L10-engram', 'kg-core', 'sheaf-aether',
-  'L3-contradiction', 'L3-regret', 'L3-burnout', 'L3-techdebt',
-  'L3-bugprophet', 'L3-apiarch', 'L3-velocity', 'L3-pattern',
-  'L3-meeting', 'L3-deadreckon', 'L3-manifesto', 'L3-relationship',
-  'L3-institutional', 'L3-anthropologist', 'L3-curriculum', 'L3-conflict',
-];
+function layerGlow(layer: string): string {
+  const c = layerColor(layer);
+  return `${c}44`;
+}
+
+const LAYER_ORDER = Object.keys(LAYER_COLORS);
 
 function friendlyLayer(name: string): string {
   const map: Record<string, string> = {
-    'L1-working': 'Working',
-    'L2-episodic': 'Episodic',
-    'L3-semantic': 'Semantic',
-    'L5-chronos': 'ChronosForge',
-    'L6-resonance': 'ResonanceForge',
-    'L7-echo': 'EchoForge',
-    'L8-synapse': 'SynapseQuench',
-    'L9-sheaf': 'SheafWeaver',
-    'L10-engram': 'EngramLog',
-    'kg-core': 'Knowledge Graph',
-    'sheaf-aether': 'AetherForge',
-    'L3-contradiction': 'Contradiction',
-    'L3-regret': 'Regret Oracle',
-    'L3-burnout': 'Burnout',
-    'L3-techdebt': 'Tech Debt',
-    'L3-bugprophet': 'Bug Prophet',
-    'L3-apiarch': 'API Arch',
-    'L3-velocity': 'Velocity',
-    'L3-pattern': 'Patterns',
-    'L3-meeting': 'Meetings',
-    'L3-deadreckon': 'Dead Reckoning',
-    'L3-manifesto': 'Manifesto',
-    'L3-relationship': 'Relationships',
-    'L3-institutional': 'Institutional',
-    'L3-anthropologist': 'Codebase Anthro',
-    'L3-curriculum': 'Curriculum',
-    'L3-conflict': 'Conflict',
+    'L1-working': 'Working', 'L2-episodic': 'Episodic', 'L3-semantic': 'Semantic',
+    'L5-chronos': 'ChronosForge', 'L6-resonance': 'ResonanceForge', 'L7-echo': 'EchoForge',
+    'L8-synapse': 'SynapseQuench', 'L9-sheaf': 'SheafWeaver', 'L10-engram': 'EngramLog',
+    'kg-core': 'Knowledge Graph', 'sheaf-aether': 'AetherForge',
   };
   return map[name] || name;
 }
 
-function runSimulation(nodes: PosNode[], edges: UnifiedEdge[], width: number, height: number, iterations = 150): PosNode[] {
-  const k = 200;
-  const repulsion = 8000;
-  const damping = 0.85;
-  const layerCenterX: Record<string, number> = {};
-  const layers = [...new Set(nodes.map(n => n.layer))];
-  layers.forEach((l, i) => {
-    layerCenterX[l] = width * (i + 0.5) / layers.length;
-  });
+function hashColor(str: string): string {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return `hsl(${Math.abs(h) % 360}, 60%, 55%)`;
+}
 
-  for (let iter = 0; iter < iterations; iter++) {
+export function NexusView({ projectPath }: NexusViewProps) {
+  const [graph, setGraph] = useState<UnifiedGraph | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<{ node?: PosNode; edge?: UnifiedEdge } | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set(LAYER_ORDER));
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<number>(0);
+  const posNodesRef = useRef<PosNode[]>([]);
+  const edgesRef = useRef<UnifiedEdge[]>([]);
+  const dragRef = useRef<{ node: PosNode | null; ox: number; oy: number }>({ node: null, ox: 0, oy: 0 });
+  const prevNodeIds = useRef<Set<string>>(new Set());
+  const simRunning = useRef(false);
+
+  const k = 200;
+  const repulsion = 6000;
+  const damping = 0.7;
+  const lx: Record<string, number> = {};
+
+  function runSimStep(nodes: PosNode[], edges: UnifiedEdge[], w: number, h: number) {
+    const layers = [...new Set(nodes.map(n => n.layer))];
+    layers.forEach((l, i) => { lx[l] = w * (i + 0.5) / Math.max(layers.length, 1); });
+
     for (const n of nodes) {
       if (n.pinned) continue;
       let fx = 0, fy = 0;
@@ -116,35 +87,23 @@ function runSimulation(nodes: PosNode[], edges: UnifiedEdge[], width: number, he
       }
 
       for (const e of edges) {
-        let linked = false;
-        if (e.source === n.id) {
-          const target = nodes.find(no => no.id === e.target);
-          if (target) {
-            const dx = target.x - n.x;
-            const dy = target.y - n.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            fx += dx * (dist - k) / dist * 0.03;
-            fy += dy * (dist - k) / dist * 0.03;
-            linked = true;
+        const pair: [string, string][] = [[e.source, e.target], [e.target, e.source]];
+        for (const [srcId, tgtId] of pair) {
+          if (srcId === n.id) {
+            const other = nodes.find(no => no.id === tgtId);
+            if (other) {
+              const dx = other.x - n.x, dy = other.y - n.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              fx += dx * (dist - k) / dist * 0.02;
+              fy += dy * (dist - k) / dist * 0.02;
+            }
           }
         }
-        if (e.target === n.id) {
-          const source = nodes.find(no => no.id === e.source);
-          if (source) {
-            const dx = source.x - n.x;
-            const dy = source.y - n.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            fx += dx * (dist - k) / dist * 0.03;
-            fy += dy * (dist - k) / dist * 0.03;
-            linked = true;
-          }
-        }
-        if (linked) break;
       }
 
-      const cx = layerCenterX[n.layer] || width / 2;
+      const cx = lx[n.layer] || w / 2;
       fx += (cx - n.x) * 0.002;
-      fy += (height / 2 - n.y) * 0.001;
+      fy += (h / 2 - n.y) * 0.001;
 
       n.vx = (n.vx + fx) * damping;
       n.vy = (n.vy + fy) * damping;
@@ -152,27 +111,10 @@ function runSimulation(nodes: PosNode[], edges: UnifiedEdge[], width: number, he
       n.y += n.vy;
 
       const margin = 20;
-      n.x = Math.max(margin, Math.min(width - margin, n.x));
-      n.y = Math.max(margin, Math.min(height - margin, n.y));
+      n.x = Math.max(margin, Math.min(w - margin, n.x));
+      n.y = Math.max(margin, Math.min(h - margin, n.y));
     }
   }
-  return nodes;
-}
-
-export function NexusView({ projectPath }: NexusViewProps) {
-  const [graph, setGraph] = useState<UnifiedGraph | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<{ node?: PosNode; edge?: UnifiedEdge } | null>(null);
-  const [search, setSearch] = useState('');
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set(LAYER_ORDER));
-
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animRef = useRef<number>(0);
-  const posNodesRef = useRef<PosNode[]>([]);
-  const edgesRef = useRef<UnifiedEdge[]>([]);
-  const dragRef = useRef<{ node: PosNode | null; ox: number; oy: number }>({ node: null, ox: 0, oy: 0 });
 
   const loadGraph = useCallback(() => {
     if (!projectPath) { setLoading(false); return; }
@@ -181,31 +123,39 @@ export function NexusView({ projectPath }: NexusViewProps) {
       setGraph(ug);
       const w = containerRef.current?.clientWidth || 800;
       const h = containerRef.current?.clientHeight || 600;
-      const layers = [...new Set(ug.nodes.map(n => n.layer))];
-      const layerIndex: Record<string, number> = {};
-      layers.forEach((l, i) => { layerIndex[l] = i; });
-      const totalLayers = layers.length || 1;
 
-      posNodesRef.current = ug.nodes.map(n => {
-        const li = layerIndex[n.layer] || 0;
-        return {
-          ...n,
-          x: w * (li + 0.5) / totalLayers + (Math.random() - 0.5) * 60,
-          y: h * 0.3 + Math.random() * h * 0.4,
-          vx: 0, vy: 0,
-          pinned: false,
-          radius: 6 + n.size * 10,
-        };
-      });
+      const existingIds = new Set(posNodesRef.current.map(n => n.id));
+      const newIds = new Set(ug.nodes.map(n => n.id));
+
+      const layers = [...new Set(ug.nodes.map(n => n.layer))];
+      layers.forEach((l, i) => { lx[l] = w * (i + 0.5) / Math.max(layers.length, 1); });
+
+      const oldNodes = posNodesRef.current.filter(n => newIds.has(n.id));
+      const removed = posNodesRef.current.filter(n => !newIds.has(n.id));
+
+      const addedNodes: PosNode[] = ug.nodes
+        .filter(n => !existingIds.has(n.id))
+        .map(n => {
+          const li = layers.indexOf(n.layer);
+          return {
+            ...n,
+            x: w * (li >= 0 ? li + 0.5 : 0.5) / Math.max(layers.length, 1) + (Math.random() - 0.5) * 40,
+            y: h * 0.3 + Math.random() * h * 0.4,
+            vx: 0, vy: 0,
+            pinned: false,
+            radius: 4 + n.size * 8,
+          };
+        });
+
+      posNodesRef.current = [...oldNodes, ...addedNodes];
       edgesRef.current = ug.edges;
-      posNodesRef.current = runSimulation(posNodesRef.current, ug.edges, w, h);
+      prevNodeIds.current = newIds;
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [projectPath]);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
 
-  // Auto-refresh every 5 seconds so new memory data appears
   useEffect(() => {
     if (!projectPath) return;
     const id = setInterval(loadGraph, 5000);
@@ -244,66 +194,93 @@ export function NexusView({ projectPath }: NexusViewProps) {
       const dst = nodes.find(n => n.id === e.target);
       if (!src || !dst) continue;
 
-      const isHighlighted = hovered && (e.source === hovered || e.target === hovered);
-      const isSelected = selectedId && (e.source === selectedId || e.target === selectedId);
+      const hl = hovered && (e.source === hovered || e.target === hovered);
+      const sel = selectedId && (e.source === selectedId || e.target === selectedId);
 
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(dst.x, dst.y);
-      ctx.strokeStyle = isSelected ? '#fff' : isHighlighted ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = isSelected ? 2 : isHighlighted ? 1.5 : 0.5 + e.weight * 1.5;
+      ctx.strokeStyle = sel ? 'rgba(255,255,255,0.6)' : hl ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = sel ? 2 : hl ? 1.5 : 0.5 + e.weight * 1.2;
       ctx.stroke();
-
-      if (isSelected && ctx.measureText) {
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.font = '9px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(e.relation, (src.x + dst.x) / 2, (src.y + dst.y) / 2 - 6);
-      }
     }
 
     for (const n of visibleNodes) {
-      const isSelected = selectedId === n.id;
-      const isHovered = hovered === n.id;
+      const sel = selectedId === n.id;
+      const hov = hovered === n.id;
+
+      ctx.save();
+      if (hov || sel) {
+        ctx.shadowColor = layerColor(n.layer);
+        ctx.shadowBlur = sel ? 30 : 18;
+      }
 
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
       ctx.fillStyle = layerColor(n.layer);
-      ctx.globalAlpha = isSelected ? 1 : isHovered ? 0.9 : 0.6;
+      ctx.globalAlpha = sel ? 1 : hov ? 0.95 : 0.7;
       ctx.fill();
       ctx.globalAlpha = 1;
+      ctx.restore();
 
-      if (isSelected) {
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+      if (sel) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
       }
 
-      ctx.fillStyle = '#fff';
-      ctx.font = `${Math.min(10 + n.radius * 0.12, 12)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = hov || sel ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)';
+      ctx.font = '10px Inter, system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const label = n.label.length > 20 ? n.label.slice(0, 18) + '…' : n.label;
-      ctx.fillText(label, n.x, n.y + n.radius + 4);
+      const label = n.label.length > 25 ? n.label.slice(0, 23) + '…' : n.label;
+      ctx.fillText(label, n.x, n.y + n.radius + 5);
     }
   }, [selected, hovered, activeLayers]);
 
-  useEffect(() => {
+  const simLoop = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) { simRunning.current = false; return; }
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+
+    runSimStep(posNodesRef.current, edgesRef.current, w, h);
     draw();
-  }, [draw, graph]);
+
+    const energy = posNodesRef.current.reduce((s, n) => s + Math.abs(n.vx) + Math.abs(n.vy), 0);
+    if (energy > 0.01) {
+      animRef.current = requestAnimationFrame(simLoop);
+    } else {
+      simRunning.current = false;
+    }
+  }, [draw]);
 
   useEffect(() => {
-    const onResize = () => draw();
+    if (!simRunning.current) {
+      simRunning.current = true;
+      animRef.current = requestAnimationFrame(simLoop);
+    }
+    return () => { cancelAnimationFrame(animRef.current); simRunning.current = false; };
+  }, [simLoop, graph]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (!simRunning.current) {
+        simRunning.current = true;
+        animRef.current = requestAnimationFrame(simLoop);
+      }
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [draw]);
+  }, [simLoop]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
     for (const n of posNodesRef.current) {
       if (!activeLayers.has(n.layer)) continue;
@@ -320,17 +297,12 @@ export function NexusView({ projectPath }: NexusViewProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
     let found: string | null = null;
     for (const n of posNodesRef.current) {
       if (!activeLayers.has(n.layer)) continue;
       const dx = mx - n.x, dy = my - n.y;
-      if (dx * dx + dy * dy <= n.radius * n.radius) {
-        found = n.id;
-        break;
-      }
+      if (dx * dx + dy * dy <= n.radius * n.radius) { found = n.id; break; }
     }
     setHovered(found);
     canvas.style.cursor = found ? 'pointer' : 'default';
@@ -340,9 +312,7 @@ export function NexusView({ projectPath }: NexusViewProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
     for (const n of posNodesRef.current) {
       if (!activeLayers.has(n.layer)) continue;
       const dx = mx - n.x, dy = my - n.y;
@@ -372,7 +342,6 @@ export function NexusView({ projectPath }: NexusViewProps) {
 
   const totalNodes = graph?.nodes.length ?? 0;
   const totalEdges = graph?.edges.length ?? 0;
-
   const selectedNode = selected?.node;
   const selectedEdges = selectedNode
     ? edgesRef.current.filter(e => e.source === selectedNode.id || e.target === selectedNode.id)
@@ -383,25 +352,11 @@ export function NexusView({ projectPath }: NexusViewProps) {
       <div className="view-header">
         <h2>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
           </svg>
           Nexus
         </h2>
         <div className="nexus-controls">
-          <div className="nexus-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              type="text"
-              placeholder="Search nodes..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
           <span className="nexus-stats-badge">{totalNodes} nodes · {totalEdges} edges</span>
         </div>
       </div>
@@ -409,14 +364,12 @@ export function NexusView({ projectPath }: NexusViewProps) {
       {loading ? (
         <div className="nexus-loading">
           <span className="loading-spinner" style={{ borderColor: 'var(--text-tertiary)', borderTopColor: 'var(--color-primary-500)' }} />
-          Loading unified knowledge graph...
+          Loading…
         </div>
       ) : totalNodes === 0 ? (
         <div className="nexus-empty">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
           </svg>
           <h3>No knowledge graph yet</h3>
           <p>The knowledge graph is built automatically as you use TIMPS. Start chatting to grow it.</p>
@@ -433,22 +386,15 @@ export function NexusView({ projectPath }: NexusViewProps) {
               onMouseLeave={handleMouseUp}
             />
             <div className="nexus-legend">
-              <div className="legend-title">Layers</div>
-              {LAYER_ORDER.filter(l => !l.startsWith('L3-')).concat(
-                LAYER_ORDER.filter(l => l.startsWith('L3-'))
-              ).filter(l => graph?.stats[l]).map(layer => (
+              {LAYER_ORDER.filter(l => graph?.stats[l]).map(layer => (
                 <div
                   key={layer}
                   className={`legend-item ${activeLayers.has(layer) ? '' : 'legend-dimmed'}`}
                   onClick={() => toggleLayer(layer)}
                 >
                   <span className="legend-dot" style={{ background: layerColor(layer) }} />
-                  <span>
-                    {friendlyLayer(layer)}
-                    <span className="legend-count">
-                      {graph?.stats[layer] && ` (${graph.stats[layer].nodes})`}
-                    </span>
-                  </span>
+                  <span className="legend-label">{friendlyLayer(layer)}</span>
+                  <span className="legend-count">{graph?.stats[layer]?.nodes ?? 0}</span>
                 </div>
               ))}
             </div>
@@ -478,13 +424,9 @@ export function NexusView({ projectPath }: NexusViewProps) {
                   <label>Kind</label>
                   <span>{selectedNode.kind}</span>
                 </div>
-                <div className="detail-field">
-                  <label>Size (importance)</label>
-                  <span>{(selectedNode.size * 100).toFixed(0)}%</span>
-                </div>
                 {selectedNode.timestamp > 0 && (
                   <div className="detail-field">
-                    <label>Timestamp</label>
+                    <label>Time</label>
                     <span>{new Date(selectedNode.timestamp).toLocaleString()}</span>
                   </div>
                 )}
@@ -493,8 +435,8 @@ export function NexusView({ projectPath }: NexusViewProps) {
                     <label>Attributes</label>
                     <div className="detail-attrs">
                       {Object.entries(selectedNode.attributes).map(([k, v]) => {
-                        const val = typeof v === 'string' ? v :
-                          v && typeof v === 'object' ? JSON.stringify(v).slice(0, 100) : String(v ?? '');
+                        const val = typeof v === 'string' ? v
+                          : v && typeof v === 'object' ? JSON.stringify(v).slice(0, 100) : String(v ?? '');
                         return (
                           <div key={k} className="attr-row">
                             <span className="attr-key">{k}</span>
@@ -512,7 +454,7 @@ export function NexusView({ projectPath }: NexusViewProps) {
                       {selectedEdges.slice(0, 20).map((e, i) => (
                         <div key={i} className="relation-row">
                           <span className="relation-sub">{e.source === selectedNode.id ? '' : e.source.slice(0, 20)}</span>
-                          <span className="relation-label">—[{e.relation}]→</span>
+                          <span className="relation-label">—{e.relation}→</span>
                           <span className="relation-obj">{e.target === selectedNode.id ? '' : e.target.slice(0, 20)}</span>
                         </div>
                       ))}
