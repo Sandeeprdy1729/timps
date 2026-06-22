@@ -12,8 +12,8 @@ jobs:
     strategy:
       matrix:
         package:
-          - config
-          - integration-base
+          - event-bus
+          - connection-manager
           - event-bus
           - connection-manager
           - timps-desktop

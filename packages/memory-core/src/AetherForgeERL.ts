@@ -38,6 +38,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
+import type { Provenance } from './ProvenanceForge';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -571,10 +573,10 @@ function computeSmallestEigenpairs(
 
 // ── Main Class ────────────────────────────────────────────────────────────
 
-export class AetherForgeERL {
+export class AetherForgeERL implements IMemoryLayer {
   private dir: string;
   private storeFile: string;
-  private store: ERLStore;
+  private storeData: ERLStore;
   private adjOut: Map<string, ERLEdge[]> = new Map();
   private adjIn: Map<string, ERLEdge[]> = new Map();
   /** TempestForge: explicit parent→children tree rebuilt from causal edges */
@@ -585,7 +587,7 @@ export class AetherForgeERL {
     fs.mkdirSync(aetherDir, { recursive: true });
     this.dir = aetherDir;
     this.storeFile = path.join(aetherDir, "aether.json");
-    this.store = this.loadStore();
+    this.storeData = this.loadStore();
     this.rebuildAdjacency();
     this.rebuildTree();
   }
@@ -616,14 +618,14 @@ export class AetherForgeERL {
   private persist(): void {
     try {
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
-      fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");
+      fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData, null, 2), "utf-8");
     } catch { /* best effort */ }
   }
 
   private rebuildAdjacency(): void {
     this.adjOut.clear();
     this.adjIn.clear();
-    for (const e of this.store.edges) {
+    for (const e of this.storeData.edges) {
       if (!this.adjOut.has(e.fromId)) this.adjOut.set(e.fromId, []);
       this.adjOut.get(e.fromId)!.push(e);
       if (!this.adjIn.has(e.toId)) this.adjIn.set(e.toId, []);
@@ -634,7 +636,7 @@ export class AetherForgeERL {
   /** TempestForge: rebuild the explicit parent→children tree from causal edges. */
   private rebuildTree(): void {
     this.treeChildren.clear();
-    for (const e of this.store.edges) {
+    for (const e of this.storeData.edges) {
       if (e.edgeType === "causes" || e.edgeType === "supersedes") {
         if (!this.treeChildren.has(e.fromId)) this.treeChildren.set(e.fromId, []);
         this.treeChildren.get(e.fromId)!.push(e.toId);
@@ -649,14 +651,14 @@ export class AetherForgeERL {
   // ── Lattice level management ─────────────────────────────────────────────
 
   private assignToLatticeLevel(nodeId: string, level: number): void {
-    if (!this.store.latticeLevels[level]) {
-      this.store.latticeLevels[level] = [];
+    if (!this.storeData.latticeLevels[level]) {
+      this.storeData.latticeLevels[level] = [];
     }
-    this.store.latticeLevels[level].push(nodeId);
+    this.storeData.latticeLevels[level].push(nodeId);
   }
 
   private removeFromLatticeLevel(nodeId: string, level: number): void {
-    const levelNodes = this.store.latticeLevels[level];
+    const levelNodes = this.storeData.latticeLevels[level];
     if (levelNodes) {
       const idx = levelNodes.indexOf(nodeId);
       if (idx >= 0) levelNodes.splice(idx, 1);
@@ -671,8 +673,8 @@ export class AetherForgeERL {
    * Returns null if nodes are too contradictory to join (should use meet instead).
    */
   join(nodeIdA: string, nodeIdB: string): ERLJoinResult | null {
-    const nodeA = this.store.nodes[nodeIdA];
-    const nodeB = this.store.nodes[nodeIdB];
+    const nodeA = this.storeData.nodes[nodeIdA];
+    const nodeB = this.storeData.nodes[nodeIdB];
     if (!nodeA || !nodeB) return null;
 
     // Check epistemic compatibility: both must be beliefs or hypotheses,
@@ -740,7 +742,7 @@ export class AetherForgeERL {
 
     // Count contradictions the join may have created
     let contradictionsCreated = 0;
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       if (edge.edgeType === "contradicts" &&
           (edge.fromId === survivor.id || edge.toId === survivor.id)) {
         contradictionsCreated++;
@@ -766,8 +768,8 @@ export class AetherForgeERL {
    * creates a synthetic resolution node.
    */
   meet(nodeIdA: string, nodeIdB: string): ERLMeetResult {
-    const nodeA = this.store.nodes[nodeIdA];
-    const nodeB = this.store.nodes[nodeIdB];
+    const nodeA = this.storeData.nodes[nodeIdA];
+    const nodeB = this.storeData.nodes[nodeIdB];
     const resolvedIds: string[] = [];
     const resolutionEdgeIds: string[] = [];
 
@@ -776,7 +778,7 @@ export class AetherForgeERL {
     }
 
     // Find the contradiction edge between them
-    const contraEdge = this.store.edges.find(
+    const contraEdge = this.storeData.edges.find(
       (e) =>
         e.edgeType === "contradicts" &&
         ((e.fromId === nodeIdA && e.toId === nodeIdB) ||
@@ -831,7 +833,7 @@ export class AetherForgeERL {
         createdAt: nowMs,
       };
 
-      this.store.nodes[resolutionId] = resolutionNode;
+      this.storeData.nodes[resolutionId] = resolutionNode;
       this.assignToLatticeLevel(resolutionId, resolutionNode.latticeLevel);
 
       // Create resolution edges
@@ -899,8 +901,8 @@ export class AetherForgeERL {
 
     // Compute phase deterministically
     let phase: number;
-    if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
-      phase = deterministicPhase(content, this.store.nodes[opts.causalParentId].phase);
+    if (opts.causalParentId && this.storeData.nodes[opts.causalParentId]) {
+      phase = deterministicPhase(content, this.storeData.nodes[opts.causalParentId].phase);
     } else {
       phase = deterministicPhase(content);
     }
@@ -908,7 +910,7 @@ export class AetherForgeERL {
     // Compute frequency from recent domain activity
     const weekAgo = nowMs - 7 * 86_400_000;
     let recentCount = 0;
-    for (const n of Object.values(this.store.nodes)) {
+    for (const n of Object.values(this.storeData.nodes)) {
       if (n.domain === domain && n.createdAt > weekAgo && n.status !== "superseded" && n.status !== "quenched") recentCount++;
     }
     const frequency = Math.min(1, recentCount / 20);
@@ -947,7 +949,7 @@ export class AetherForgeERL {
     let joinResult: ERLJoinResult | undefined;
     let meetResult: ERLMeetResult | undefined;
 
-    const activeDomainNodes = Object.values(this.store.nodes).filter(
+    const activeDomainNodes = Object.values(this.storeData.nodes).filter(
       (n) => n.domain === domain && n.status !== "superseded" && n.status !== "quenched" && (!n.validTo || n.validTo > nowMs)
     );
 
@@ -1005,7 +1007,7 @@ export class AetherForgeERL {
     }
 
     // Causal edge from parent
-    if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
+    if (opts.causalParentId && this.storeData.nodes[opts.causalParentId]) {
       this.addEdge({
         fromId: opts.causalParentId,
         toId: nodeId,
@@ -1043,14 +1045,14 @@ export class AetherForgeERL {
       }
     }
 
-    this.store.nodes[nodeId] = node;
+    this.storeData.nodes[nodeId] = node;
     this.assignToLatticeLevel(nodeId, level);
 
     // Invalidate spectral cache
-    this.store.cachedEigenvalues = [];
-    this.store.cachedEigenvectors = [];
-    this.store.cachedEigenK = 0;
-    this.store.cachedEigenN = 0;
+    this.storeData.cachedEigenvalues = [];
+    this.storeData.cachedEigenvectors = [];
+    this.storeData.cachedEigenK = 0;
+    this.storeData.cachedEigenN = 0;
 
     this.persist();
 
@@ -1082,7 +1084,7 @@ export class AetherForgeERL {
   detectContradictions(opts: { domain?: ERLDomain } = {}): ERLCohomologyResult {
     const nowMs = Date.now();
 
-    const activeNodes = Object.values(this.store.nodes).filter((n) => {
+    const activeNodes = Object.values(this.storeData.nodes).filter((n) => {
       if (n.status === "superseded" || n.status === "quenched") return false;
       if (n.validTo && n.validTo < nowMs) return false;
       if (opts.domain && n.domain !== opts.domain) return false;
@@ -1104,7 +1106,7 @@ export class AetherForgeERL {
     const nodeMap: Record<string, ERLNode> = {};
     for (const n of activeNodes) nodeMap[n.id] = n;
 
-    const relevantEdges = this.store.edges.filter(
+    const relevantEdges = this.storeData.edges.filter(
       (e) => nodeMap[e.fromId] && nodeMap[e.toId]
     );
 
@@ -1113,10 +1115,10 @@ export class AetherForgeERL {
 
     const { values } = computeSmallestEigenpairs(n, triples, k);
 
-    this.store.cachedEigenvalues = Array.from(values);
-    this.store.cachedEigenK = k;
-    this.store.cachedEigenN = n;
-    this.store.lastCohomologyAt = Date.now();
+    this.storeData.cachedEigenvalues = Array.from(values);
+    this.storeData.cachedEigenK = k;
+    this.storeData.cachedEigenN = n;
+    this.storeData.lastCohomologyAt = Date.now();
 
     let betti1 = 0;
     let spectralGap = 1.0;
@@ -1164,7 +1166,7 @@ export class AetherForgeERL {
 
   private computeEpistemicDistribution(): Partial<Record<EpistemicStatus, number>> {
     const dist: Partial<Record<EpistemicStatus, number>> = {};
-    for (const n of Object.values(this.store.nodes)) {
+    for (const n of Object.values(this.storeData.nodes)) {
       dist[n.status] = (dist[n.status] ?? 0) + 1;
     }
     return dist;
@@ -1191,7 +1193,7 @@ export class AetherForgeERL {
     const lookback = (opts.lookbackDays ?? 14) * 86_400_000;
     const steps = Math.min(opts.steps ?? TRAJECTORY_STEPS, TRAJECTORY_STEPS);
 
-    const domainNodes = Object.values(this.store.nodes).filter(
+    const domainNodes = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.domain === domain &&
         n.status !== "superseded" &&
@@ -1235,7 +1237,7 @@ export class AetherForgeERL {
     const nodeSet = new Set(domainNodes.map((n) => n.id));
     let constructiveBoost = 0;
     let destructiveDamp = 0;
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       if (!nodeSet.has(edge.fromId) || !nodeSet.has(edge.toId)) continue;
       if (edge.edgeType === "causes" || edge.edgeType === "correlates" || edge.edgeType === "reinforces") {
         constructiveBoost += edge.weight * 0.05;
@@ -1323,7 +1325,7 @@ export class AetherForgeERL {
     const topK = opts.topK ?? DEFAULT_TOP_K;
     const queryEmb = aetherEmbed(queryText);
 
-    const active = Object.values(this.store.nodes).filter((n) => {
+    const active = Object.values(this.storeData.nodes).filter((n) => {
       if (n.status === "superseded" || n.status === "quenched") return false;
       if (n.validTo && n.validTo < nowMs) return false;
       if (opts.domain && n.domain !== opts.domain) return false;
@@ -1385,16 +1387,16 @@ export class AetherForgeERL {
     let epistemicUpgrades = 0;
 
     // Process lattice levels from oldest to newest
-    const sortedLevels = Object.keys(this.store.latticeLevels)
+    const sortedLevels = Object.keys(this.storeData.latticeLevels)
       .map(Number)
       .sort((a, b) => a - b);
 
     for (const level of sortedLevels) {
-      const nodeIds = this.store.latticeLevels[level] ?? [];
+      const nodeIds = this.storeData.latticeLevels[level] ?? [];
       let levelRetained = 0;
 
       for (const nodeId of nodeIds) {
-        const node = this.store.nodes[nodeId];
+        const node = this.storeData.nodes[nodeId];
         if (!node) continue;
         if (node.status === "superseded" || node.status === "quenched") continue;
         if (node.validTo && node.validTo < nowMs) continue;
@@ -1432,11 +1434,11 @@ export class AetherForgeERL {
       const maxLevel = sortedLevels.length > 0 ? sortedLevels[sortedLevels.length - 1] : level;
       if (level !== maxLevel && levelRetained > MAX_NODES_PER_LEVEL) {
         const sorted = nodeIds
-          .map((id) => ({ id, amp: this.store.nodes[id] ? effectiveAmplitude(this.store.nodes[id], nowMs) : 0 }))
+          .map((id) => ({ id, amp: this.storeData.nodes[id] ? effectiveAmplitude(this.storeData.nodes[id], nowMs) : 0 }))
           .sort((a, b) => b.amp - a.amp);
         const toPrune = sorted.slice(MAX_NODES_PER_LEVEL);
         for (const { id } of toPrune) {
-          const n = this.store.nodes[id];
+          const n = this.storeData.nodes[id];
           if (n && n.status !== "superseded" && n.status !== "quenched") {
             n.status = "quenched";
             n.validTo = nowMs;
@@ -1448,10 +1450,10 @@ export class AetherForgeERL {
     }
 
     // Resolve contradictions where one side has been quenched/superseded
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       if (edge.edgeType !== "contradicts") continue;
-      const from = this.store.nodes[edge.fromId];
-      const to = this.store.nodes[edge.toId];
+      const from = this.storeData.nodes[edge.fromId];
+      const to = this.storeData.nodes[edge.toId];
       if ((from?.status === "quenched" || from?.status === "superseded" ||
            to?.status === "quenched" || to?.status === "superseded") &&
           !(from?.status === "quenched" && to?.status === "quenched")) {
@@ -1465,7 +1467,7 @@ export class AetherForgeERL {
     // Record session snapshot for cross-session staleness tracking
     this.recordSessionSnapshot();
 
-    this.store.lastConsolidatedAt = nowMs;
+    this.storeData.lastConsolidatedAt = nowMs;
     this.persist();
 
     return {
@@ -1488,7 +1490,7 @@ export class AetherForgeERL {
    */
   getContextString(domain: ERLDomain, limit = 5): string {
     const nowMs = Date.now();
-    const domainNodes = Object.values(this.store.nodes)
+    const domainNodes = Object.values(this.storeData.nodes)
       .filter(
         (n) =>
           n.domain === domain &&
@@ -1531,18 +1533,18 @@ export class AetherForgeERL {
     if (Object.keys(queryEmb).length === 0) return { nodes: [], scores: [] };
     const scored: Array<{ node: ERLNode; score: number }> = [];
 
-    const sortedLevels = Object.keys(this.store.latticeLevels)
+    const sortedLevels = Object.keys(this.storeData.latticeLevels)
       .map(Number)
       .sort((a, b) => b - a); // newest first
 
     for (const level of sortedLevels) {
       if (scored.length >= topK * 2) break; // early exit
 
-      const nodeIds = this.store.latticeLevels[level] ?? [];
+      const nodeIds = this.storeData.latticeLevels[level] ?? [];
       const levelScored: Array<{ node: ERLNode; score: number }> = [];
 
       for (const nodeId of nodeIds) {
-        const n = this.store.nodes[nodeId];
+        const n = this.storeData.nodes[nodeId];
         if (!n) continue;
         if (n.status === "superseded" || n.status === "quenched") continue;
         if (n.validTo && n.validTo < nowMs) continue;
@@ -1589,7 +1591,7 @@ export class AetherForgeERL {
     const steps = opts.horizonSteps ?? FORWARD_QUENCH_STEPS;
     const threshold = opts.quenchThreshold ?? QUENCH_THRESHOLD;
 
-    const domainNodes = Object.values(this.store.nodes).filter(
+    const domainNodes = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.domain === domain &&
         n.status !== "superseded" &&
@@ -1632,7 +1634,7 @@ export class AetherForgeERL {
 
     // Restore original amplitudes (simulation was destructive)
     for (let i = 0; i < domainNodes.length; i++) {
-      const node = this.store.nodes[domainNodes[i].id];
+      const node = this.storeData.nodes[domainNodes[i].id];
       if (node) {
         // Recompute from scratch since we mutated amplitude
         const origAmp = node.amplitude / Math.pow(RESONANCE_DAMPING, steps);
@@ -1687,7 +1689,7 @@ export class AetherForgeERL {
     for (let d = days - 1; d >= 0; d--) {
       const start = nowMs - (d + 1) * dayMs;
       const end = nowMs - d * dayMs;
-      const count = Object.values(this.store.nodes).filter(
+      const count = Object.values(this.storeData.nodes).filter(
         (n) =>
           n.domain === domain &&
           n.status !== "superseded" &&
@@ -1736,23 +1738,23 @@ export class AetherForgeERL {
     const dist = this.computeEpistemicDistribution();
     const domainCounts: Partial<Record<ERLDomain, number>> = {};
     let contradictionCount = 0;
-    for (const n of Object.values(this.store.nodes)) {
+    for (const n of Object.values(this.storeData.nodes)) {
       if (n.status !== "superseded" && n.status !== "quenched") {
         domainCounts[n.domain] = (domainCounts[n.domain] ?? 0) + 1;
         if (n.status === "contradiction") contradictionCount++;
       }
     }
 
-    this.store.sessionSnapshots.push({
+    this.storeData.sessionSnapshots.push({
       timestamp: Date.now(),
       epistemicDist: dist,
       domainCounts,
-      nodeCount: Object.keys(this.store.nodes).length,
+      nodeCount: Object.keys(this.storeData.nodes).length,
       contradictionCount,
     });
 
-    if (this.store.sessionSnapshots.length > MAX_SESSION_SNAPSHOTS) {
-      this.store.sessionSnapshots = this.store.sessionSnapshots.slice(-MAX_SESSION_SNAPSHOTS);
+    if (this.storeData.sessionSnapshots.length > MAX_SESSION_SNAPSHOTS) {
+      this.storeData.sessionSnapshots = this.storeData.sessionSnapshots.slice(-MAX_SESSION_SNAPSHOTS);
     }
   }
 
@@ -1762,7 +1764,7 @@ export class AetherForgeERL {
    * epistemic statuses with significant proportion shifts.
    */
   stalenessReport(): ERLStalenessReport {
-    const snapshots = this.store.sessionSnapshots;
+    const snapshots = this.storeData.sessionSnapshots;
     if (snapshots.length < 2) {
       return {
         hasDrift: false,
@@ -1777,7 +1779,7 @@ export class AetherForgeERL {
     const current = this.computeEpistemicDistribution();
     const currentDomainCounts: Partial<Record<ERLDomain, number>> = {};
     let totalCurrent = 0;
-    for (const n of Object.values(this.store.nodes)) {
+    for (const n of Object.values(this.storeData.nodes)) {
       if (n.status !== "superseded" && n.status !== "quenched") {
         currentDomainCounts[n.domain] = (currentDomainCounts[n.domain] ?? 0) + 1;
         totalCurrent++;
@@ -1832,7 +1834,7 @@ export class AetherForgeERL {
 
   getStatus(): ERLStatus {
     const nowMs = Date.now();
-    const active = Object.values(this.store.nodes).filter(
+    const active = Object.values(this.storeData.nodes).filter(
       (n) => n.status !== "superseded" && n.status !== "quenched" && (!n.validTo || n.validTo > nowMs)
     );
     const amps = active.map((n) => effectiveAmplitude(n, nowMs));
@@ -1843,41 +1845,169 @@ export class AetherForgeERL {
 
     let betti1 = 0;
     let spectralGap = 1.0;
-    if (this.store.cachedEigenvalues.length > 1) {
-      for (let i = 1; i < this.store.cachedEigenvalues.length; i++) {
-        if (this.store.cachedEigenvalues[i] < COHOMOLOGY_GAP_THRESHOLD) betti1++;
-        else { spectralGap = this.store.cachedEigenvalues[i]; break; }
+    if (this.storeData.cachedEigenvalues.length > 1) {
+      for (let i = 1; i < this.storeData.cachedEigenvalues.length; i++) {
+        if (this.storeData.cachedEigenvalues[i] < COHOMOLOGY_GAP_THRESHOLD) betti1++;
+        else { spectralGap = this.storeData.cachedEigenvalues[i]; break; }
       }
     }
 
     return {
-      nodeCount: Object.keys(this.store.nodes).length,
+      nodeCount: Object.keys(this.storeData.nodes).length,
       activeNodeCount: active.length,
-      edgeCount: this.store.edges.length,
+      edgeCount: this.storeData.edges.length,
       avgAmplitude: parseFloat(avgAmp.toFixed(4)),
       spectralGap,
       betti1,
       domainCounts,
       epistemicDistribution: this.computeEpistemicDistribution(),
-      latticeLevelCount: Object.keys(this.store.latticeLevels).length,
-      lastCohomologyMs: this.store.lastCohomologyAt,
+      latticeLevelCount: Object.keys(this.storeData.latticeLevels).length,
+      lastCohomologyMs: this.storeData.lastCohomologyAt,
     };
+  }
+
+  // ── IMemoryLayer ─────────────────────────────────────────────────────────
+
+  async store(layer: LayerId, entry: Omit<MemoryEntry, 'id' | 'timestamp'>): Promise<string> {
+    const result = this.weave(entry.content, {
+      domain: (entry.tags?.[0] || 'general') as ERLDomain,
+      tags: entry.tags,
+    });
+    return result.nodeId;
+  }
+
+  async retrieve(layer: LayerId, query: MemoryQuery): Promise<MemoryRetrievalResult[]> {
+    const qLower = query.text.toLowerCase();
+    const limit = query.limit ?? 10;
+    const matches: MemoryRetrievalResult[] = [];
+    const now = Date.now();
+    const active = Object.values(this.storeData.nodes).filter(
+      n => n.status !== 'superseded' && n.status !== 'quenched' && (!n.validTo || n.validTo > now)
+    );
+    for (const node of active) {
+      if (query.tags?.length && !query.tags.some(t => node.tags.includes(t))) continue;
+      if (qLower && !node.content.toLowerCase().includes(qLower)) continue;
+      matches.push({
+        entry: {
+          id: node.id,
+          layerId: layer,
+          timestamp: node.createdAt,
+          content: node.content,
+          tags: [node.domain, ...node.tags],
+          confidence: node.confidence ?? 0.5,
+          evidenceCount: node.evidenceCount ?? 1,
+          sourceDiversity: node.tags.length,
+        },
+        score: node.amplitude ?? 0.5,
+        provenance: null,
+      });
+      if (matches.length >= limit) break;
+    }
+    return matches;
+  }
+
+  async verify(entryId: string, evidence: VerificationEvidence): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.amplitude = evidence.outcome === 'confirmed'
+        ? Math.min(1, (this.storeData.nodes[entryId]!.amplitude ?? 0.5) * 1.1)
+        : Math.max(0, (this.storeData.nodes[entryId]!.amplitude ?? 0.5) * 0.9);
+      this.persist();
+    }
+  }
+
+  async contradict(entryId: string, counterEntryId: string): Promise<void> {
+    if (this.storeData.nodes[entryId] && this.storeData.nodes[counterEntryId]) {
+      this.storeData.edges.push({
+        fromId: entryId,
+        toId: counterEntryId,
+        weight: 0.9,
+        edgeType: 'contradicts',
+        restrictionError: 0,
+        createdAt: Date.now(),
+      });
+      this.storeData.cachedEigenvalues = [];
+      this.storeData.cachedEigenvectors = [];
+      this.persist();
+    }
+  }
+
+  async archive(entryId: string, _reason: string): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.validTo = Date.now();
+      this.storeData.nodes[entryId]!.status = 'quenched';
+      this.persist();
+    }
+  }
+
+  async getProvenance(entryId: string): Promise<Provenance | null> {
+    const node = this.storeData.nodes[entryId];
+    if (!node) return null;
+    return {
+      id: entryId,
+      sourceKind: 'agent_inference' as const,
+      sourceDetail: 'aether',
+      actorId: 'forge',
+      confidence: node.confidence ?? 0.5,
+      evidenceCount: node.evidenceCount ?? 1,
+      parentIds: [],
+      observedAt: node.createdAt,
+      validFrom: node.createdAt,
+      chainOfCustody: [],
+    };
+  }
+
+  async explain(entryId: string): Promise<string> {
+    const node = this.storeData.nodes[entryId];
+    if (!node) return `No aether node ${entryId}`;
+    return `Aether node ${entryId}: "${node.content.slice(0, 80)}" domain=${node.domain} amp=${(node.amplitude ?? 0).toFixed(3)} edges=${this.storeData.edges.filter(e => e.fromId === entryId || e.toId === entryId).length}`;
+  }
+
+  async audit(): Promise<AuditReport> {
+    const now = Date.now();
+    const active = Object.values(this.storeData.nodes).filter(
+      n => n.status !== 'superseded' && n.status !== 'quenched' && (!n.validTo || n.validTo > now)
+    );
+    const weak = active.filter(n => (n.amplitude ?? 0.5) < 0.3);
+    const domains: Record<string, number> = {};
+    for (const n of active) {
+      domains[n.domain] = (domains[n.domain] ?? 0) + 1;
+    }
+    return {
+      totalEntries: active.length,
+      weak: weak.length,
+      contradicted: this.storeData.edges.filter(e => e.edgeType === 'contradicts').length,
+      outdated: 0,
+      unsourced: 0,
+      layerBreakdown: { L8: active.length },
+      timestamp: now,
+    };
+  }
+
+  async decay(): Promise<number> {
+    const before = Object.values(this.storeData.nodes).filter(
+      n => n.status !== 'superseded' && n.status !== 'quenched' && (!n.validTo || n.validTo > Date.now())
+    ).length;
+    this.consolidate();
+    const after = Object.values(this.storeData.nodes).filter(
+      n => n.status !== 'superseded' && n.status !== 'quenched' && (!n.validTo || n.validTo > Date.now())
+    ).length;
+    return before - after;
   }
 
   // ── Core API: exportNodes / exportEdges ──────────────────────────────────
 
   exportNodes(): ERLNode[] {
-    return Object.values(this.store.nodes);
+    return Object.values(this.storeData.nodes);
   }
 
   exportEdges(): ERLEdge[] {
-    return [...this.store.edges];
+    return [...this.storeData.edges];
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
   private addEdge(edge: ERLEdge): void {
-    this.store.edges.push(edge);
+    this.storeData.edges.push(edge);
     if (!this.adjOut.has(edge.fromId)) this.adjOut.set(edge.fromId, []);
     this.adjOut.get(edge.fromId)!.push(edge);
     if (!this.adjIn.has(edge.toId)) this.adjIn.set(edge.toId, []);
@@ -1951,14 +2081,14 @@ export class AetherForgeERL {
 
     // Walk from all root nodes (nodes with no incoming causal edge)
     const hasParent = new Set<string>();
-    for (const e of this.store.edges) {
+    for (const e of this.storeData.edges) {
       if (e.edgeType === "causes" || e.edgeType === "supersedes") {
         hasParent.add(e.toId);
       }
     }
-    for (const nid of Object.keys(this.store.nodes)) {
+    for (const nid of Object.keys(this.storeData.nodes)) {
       if (!hasParent.has(nid) && results.length < limit) {
-        dfs(nid, this.treeChildren, this.store.nodes, minAmplitude);
+        dfs(nid, this.treeChildren, this.storeData.nodes, minAmplitude);
       }
     }
 
@@ -1989,7 +2119,7 @@ export class AetherForgeERL {
     collect(nodeId, 0);
 
     // Find contradiction edges wholly within the subtree
-    const contradictions = this.store.edges.filter(
+    const contradictions = this.storeData.edges.filter(
       (e) => e.edgeType === "contradicts" && subNodes.includes(e.fromId) && subNodes.includes(e.toId)
     );
 
@@ -2050,7 +2180,7 @@ export class AetherForgeERL {
     const atRisk: string[] = [];
 
     let currentId = rootId;
-    let current = this.store.nodes[currentId];
+    let current = this.storeData.nodes[currentId];
     if (!current) return { trajectory, terminalAmplitude: 0, atRisk: [] };
 
     for (let d = 0; d < maxDepth; d++) {
@@ -2068,12 +2198,12 @@ export class AetherForgeERL {
       let bestKid: string | null = null;
       let bestAmp = -1;
       for (const k of kids) {
-        const kn = this.store.nodes[k];
+        const kn = this.storeData.nodes[k];
         if (kn && kn.amplitude > bestAmp) { bestAmp = kn.amplitude; bestKid = k; }
       }
       if (!bestKid) break;
 
-      const childNode = this.store.nodes[bestKid];
+      const childNode = this.storeData.nodes[bestKid];
       // Propagate amplitude with damping and phase interference
       childNode.amplitude *= damping;
       childNode.phase = (current.phase + Math.PI / 4) % (2 * Math.PI);
@@ -2100,7 +2230,7 @@ export class AetherForgeERL {
    * Range: (0, 1) — approaches 1 as evidence → ∞.
    */
   private fisherMetric(nodeId: string): number {
-    const n = this.store.nodes[nodeId];
+    const n = this.storeData.nodes[nodeId];
     if (!n) return 0;
     return n.evidenceCount / (n.evidenceCount + 1);
   }
@@ -2142,7 +2272,7 @@ export class AetherForgeERL {
     const horizon = opts.horizon ?? 12;
     const dt = opts.dt ?? 0.1;
 
-    const domainNodes = Object.values(this.store.nodes).filter(
+    const domainNodes = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.domain === domain &&
         n.status !== "superseded" &&
@@ -2172,7 +2302,7 @@ export class AetherForgeERL {
     // where A_fisher[i][j] = fisher_metric(i) * fisher_metric(j) * edge_weight
     // and D_fisher is the diagonal degree of A_fisher
     const laplacianTriples: Array<{ i: number; j: number; v: number }> = [];
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       const fi = idxMap.get(edge.fromId);
       const fj = idxMap.get(edge.toId);
       if (fi === undefined || fj === undefined) continue;
@@ -2248,7 +2378,7 @@ export class AetherForgeERL {
     threshold: number;
   } {
     const nowMs = Date.now();
-    const activeNodes = Object.values(this.store.nodes).filter((n) => {
+    const activeNodes = Object.values(this.storeData.nodes).filter((n) => {
       if (n.status === "superseded" || n.status === "quenched") return false;
       if (n.validTo && n.validTo < nowMs) return false;
       if (domain && n.domain !== domain) return false;
@@ -2265,7 +2395,7 @@ export class AetherForgeERL {
 
     // Build full Laplacian for curvature computation
     const laplacianTriples: Array<{ i: number; j: number; v: number }> = [];
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       const fi = idxMap.get(edge.fromId);
       const fj = idxMap.get(edge.toId);
       if (fi === undefined || fj === undefined) continue;
@@ -2337,7 +2467,7 @@ export class AetherForgeERL {
     const l2 = opts.l2 ?? 0.1;
     const nowMs = Date.now();
 
-    const activeNodes = Object.values(this.store.nodes).filter((n) => {
+    const activeNodes = Object.values(this.storeData.nodes).filter((n) => {
       if (n.status === "superseded" || n.status === "quenched") return false;
       if (n.validTo && n.validTo < nowMs) return false;
       return true;
@@ -2361,7 +2491,7 @@ export class AetherForgeERL {
 
     // Build Laplacian once
     const laplacianTriples: Array<{ i: number; j: number; v: number }> = [];
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       const fi = idxMap.get(edge.fromId);
       const fj = idxMap.get(edge.toId);
       if (fi === undefined || fj === undefined) continue;
@@ -2375,7 +2505,7 @@ export class AetherForgeERL {
     }
 
     // Count contradictions for H¹ proxy
-    const contradictionCount = this.store.edges.filter(
+    const contradictionCount = this.storeData.edges.filter(
       (e) => e.edgeType === "contradicts"
     ).length;
 
@@ -2404,7 +2534,7 @@ export class AetherForgeERL {
       return { energy, contraCount };
     };
 
-    const storeNodes = this.store.nodes;
+    const storeNodes = this.storeData.nodes;
 
     const energyBefore = computeEnergy(
       storeNodes,
@@ -2423,10 +2553,10 @@ export class AetherForgeERL {
       const grads: number[] = [];
       for (let i = 0; i < N; i++) {
         const nid = activeNodes[i].id;
-        const origAmp = this.store.nodes[nid].amplitude;
+        const origAmp = this.storeData.nodes[nid].amplitude;
 
         // Perturb forward
-        this.store.nodes[nid].amplitude = Math.min(1, Math.max(0, origAmp + eps));
+        this.storeData.nodes[nid].amplitude = Math.min(1, Math.max(0, origAmp + eps));
         const ePlus = computeEnergy(
           storeNodes,
           activeNodes.map((n) => n.id),
@@ -2434,7 +2564,7 @@ export class AetherForgeERL {
         );
 
         // Restore
-        this.store.nodes[nid].amplitude = origAmp;
+        this.storeData.nodes[nid].amplitude = origAmp;
 
         const gradient = (ePlus.energy - prevEnergy) / eps;
         grads.push(gradient);
@@ -2445,10 +2575,10 @@ export class AetherForgeERL {
       let maxAdjustment = 0;
       for (let i = 0; i < N; i++) {
         const nid = activeNodes[i].id;
-        const origAmp = this.store.nodes[nid].amplitude;
+        const origAmp = this.storeData.nodes[nid].amplitude;
         const newAmp = Math.min(1, Math.max(0.01, origAmp - lr * grads[i]));
         if (Math.abs(newAmp - origAmp) > 1e-6) {
-          this.store.nodes[nid].amplitude = newAmp;
+          this.storeData.nodes[nid].amplitude = newAmp;
           adjustedCount++;
         }
         gradNorm += grads[i] * grads[i];
@@ -2501,9 +2631,9 @@ export class AetherForgeERL {
       const nid = stack.pop()!;
       if (visited.has(nid)) continue;
       visited.add(nid);
-      if (!sparedIds.has(nid) && this.store.nodes[nid]) {
-        this.store.nodes[nid].status = "quenched";
-        this.store.nodes[nid].amplitude = 0.05;
+      if (!sparedIds.has(nid) && this.storeData.nodes[nid]) {
+        this.storeData.nodes[nid].status = "quenched";
+        this.storeData.nodes[nid].amplitude = 0.05;
         count++;
       }
       const kids = this.treeChildren.get(nid);

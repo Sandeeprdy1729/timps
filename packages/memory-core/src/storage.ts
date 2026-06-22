@@ -5,7 +5,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
-import type { MemoryEntry, EpisodicEntry, WorkingState } from './types.js';
+import type { MemoryEntry, EpisodicEntry, WorkingState, MemoryScope } from './types.js';
 import { getNative } from './native.js';
 
 const TIMPS_DIR = path.join(os.homedir(), '.timps');
@@ -20,8 +20,10 @@ export function projectHash(projectPath: string): string {
   return crypto.createHash('sha256').update(path.resolve(projectPath)).digest('hex').slice(0, 12);
 }
 
-export function memoryDir(projectPath: string): string {
-  const dir = path.join(TIMPS_DIR, 'memory', projectHash(projectPath));
+export function memoryDir(projectPath: string, scope?: MemoryScope): string {
+  const hash = projectHash(projectPath);
+  const scopeSeg = scope ? `_${scope.userId ?? ''}_${scope.teamId ?? ''}` : '';
+  const dir = path.join(TIMPS_DIR, 'memory', `${hash}${scopeSeg}`);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

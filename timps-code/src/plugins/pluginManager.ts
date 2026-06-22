@@ -49,15 +49,15 @@ function buildMemoryAPI(memory: Memory): MemoryAPI {
       memory.importMemory(JSON.stringify({ semantic: mapped }));
     },
 
-    async loadEpisodes(_projectPath: string, count = 10): Promise<EpisodicEntry[]> {
-      return memory.loadEpisodes(count).map((ep) => ({
+    async loadEpisodes(_projectPath: string, count = 10): Promise<any[]> {
+      return memory.loadEpisodes(count).map((ep: any) => ({
         ts: new Date(ep.timestamp).toISOString(),
         summary: ep.summary,
         outcome: ep.outcome === 'failed' ? 'failure' : ep.outcome,
         tags: [],
-        toolsUsed: ep.toolsUsed,
-        filesChanged: ep.filesChanged,
-        durationMs: 0,
+        toolsUsed: ep.toolsUsed ?? [],
+        filesChanged: ep.filesChanged ?? [],
+        durationMs: ep.durationMs ?? 0,
       }));
     },
 

@@ -32,6 +32,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
+import type { Provenance } from './ProvenanceForge';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -445,10 +447,10 @@ function deterministicPhase(content: string, parentPhase?: number): number {
 
 // ── Main Class ────────────────────────────────────────────────────────────
 
-export class HarmonicSheafWeaver {
+export class HarmonicSheafWeaver implements IMemoryLayer {
   private dir: string;
   private storeFile: string;
-  private store: SheafStore;
+  private storeData: SheafStore;
   private adjOut: Map<string, SheafEdge[]> = new Map();
   private adjIn: Map<string, SheafEdge[]> = new Map();
 
@@ -460,7 +462,7 @@ export class HarmonicSheafWeaver {
       this.dir = dirOrPath;
     }
     this.storeFile = path.join(this.dir, "sheaf-weaver.json");
-    this.store = this.loadStore();
+    this.storeData = this.loadStore();
     this.rebuildAdjacency();
   }
 
@@ -488,14 +490,14 @@ export class HarmonicSheafWeaver {
   private persist(): void {
     try {
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
-      fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");
+      fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData, null, 2), "utf-8");
     } catch { /* best effort */ }
   }
 
   private rebuildAdjacency(): void {
     this.adjOut.clear();
     this.adjIn.clear();
-    for (const e of this.store.edges) {
+    for (const e of this.storeData.edges) {
       if (!this.adjOut.has(e.fromId)) this.adjOut.set(e.fromId, []);
       this.adjOut.get(e.fromId)!.push(e);
       if (!this.adjIn.has(e.toId)) this.adjIn.set(e.toId, []);
@@ -532,8 +534,8 @@ export class HarmonicSheafWeaver {
 
     // Compute phase deterministically
     let phase: number;
-    if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
-      phase = deterministicPhase(content, this.store.nodes[opts.causalParentId].phase);
+    if (opts.causalParentId && this.storeData.nodes[opts.causalParentId]) {
+      phase = deterministicPhase(content, this.storeData.nodes[opts.causalParentId].phase);
     } else {
       phase = deterministicPhase(content);
     }
@@ -541,7 +543,7 @@ export class HarmonicSheafWeaver {
     // Compute frequency from recent activity
     const weekAgo = nowMs - 7 * 86_400_000;
     let recentCount = 0;
-    for (const n of Object.values(this.store.nodes)) {
+    for (const n of Object.values(this.storeData.nodes)) {
       if (n.domain === domain && n.createdAt > weekAgo && !n.invalidAt) recentCount++;
     }
     const frequency = Math.min(1, recentCount / 20);
@@ -569,7 +571,7 @@ export class HarmonicSheafWeaver {
     const detectedContradictions: string[] = [];
     let restrictionErrors = 0;
 
-    const domainNodes = Object.values(this.store.nodes).filter(
+    const domainNodes = Object.values(this.storeData.nodes).filter(
       (n) => n.domain === domain && !n.invalidAt && !n.validTo
     );
 
@@ -621,7 +623,7 @@ export class HarmonicSheafWeaver {
     }
 
     // Causal edge from parent
-    if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
+    if (opts.causalParentId && this.storeData.nodes[opts.causalParentId]) {
       this.addEdge({
         fromId: opts.causalParentId,
         toId: nodeId,
@@ -632,12 +634,12 @@ export class HarmonicSheafWeaver {
       });
     }
 
-    this.store.nodes[nodeId] = node;
+    this.storeData.nodes[nodeId] = node;
     // Invalidate spectral cache
-    this.store.cachedEigenvalues = [];
-    this.store.cachedEigenvectors = [];
-    this.store.cachedEigenK = 0;
-    this.store.cachedEigenN = 0;
+    this.storeData.cachedEigenvalues = [];
+    this.storeData.cachedEigenvectors = [];
+    this.storeData.cachedEigenK = 0;
+    this.storeData.cachedEigenN = 0;
 
     this.persist();
 
@@ -670,7 +672,7 @@ export class HarmonicSheafWeaver {
     const nowMs = Date.now();
 
     // Collect active nodes
-    const activeNodes = Object.values(this.store.nodes).filter((n) => {
+    const activeNodes = Object.values(this.storeData.nodes).filter((n) => {
       if (n.invalidAt) return false;
       if (n.validTo && n.validTo < nowMs) return false;
       if (opts.domain && n.domain !== opts.domain) return false;
@@ -692,7 +694,7 @@ export class HarmonicSheafWeaver {
     for (const n of activeNodes) nodeMap[n.id] = n;
 
     // Filter edges to active nodes
-    const relevantEdges = this.store.edges.filter(
+    const relevantEdges = this.storeData.edges.filter(
       (e) => nodeMap[e.fromId] && nodeMap[e.toId]
     );
 
@@ -704,10 +706,10 @@ export class HarmonicSheafWeaver {
     const { values } = computeSmallestEigenpairs(n, triples, k);
 
     // Cache for reuse
-    this.store.cachedEigenvalues = Array.from(values);
-    this.store.cachedEigenK = k;
-    this.store.cachedEigenN = n;
-    this.store.lastCohomologyAt = Date.now();
+    this.storeData.cachedEigenvalues = Array.from(values);
+    this.storeData.cachedEigenK = k;
+    this.storeData.cachedEigenN = n;
+    this.storeData.lastCohomologyAt = Date.now();
 
     // H¹ detection: count eigenvalues below threshold (non-trivial cohomology)
     // The first eigenvalue is always ~0 (trivial section, connected component).
@@ -769,7 +771,7 @@ export class HarmonicSheafWeaver {
     const steps = Math.min(opts.steps ?? TRAJECTORY_STEPS, TRAJECTORY_STEPS);
 
     // Gather active nodes in domain within lookback
-    const domainNodes = Object.values(this.store.nodes).filter(
+    const domainNodes = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.domain === domain &&
         !n.invalidAt &&
@@ -799,7 +801,7 @@ export class HarmonicSheafWeaver {
     const amplitudes = domainNodes.map((nd) => effectiveAmplitude(nd, nowMs));
 
     // Build and decompose sheaf Laplacian for this domain subset
-    const relevantEdges = this.store.edges.filter(
+    const relevantEdges = this.storeData.edges.filter(
       (e) => nodeMap[e.fromId] && nodeMap[e.toId]
     );
     const { n: gn, triples } = buildSheafLaplacian(nodeIds, nodeMap, relevantEdges);
@@ -864,7 +866,7 @@ export class HarmonicSheafWeaver {
       riskLevel,
       trajectory,
       drivingNodeIds,
-      explanation: `${icon} HSW (${domain}): ${riskLevel.toUpperCase()} at ${Math.round(finalRisk * 100)}%. Sheaf H¹=${this.store.cachedEigenvalues.filter((v) => v < COHOMOLOGY_GAP_THRESHOLD).length - 1}, spectral gap=${(eigenvalues[1] ?? 0).toFixed(3)}.`,
+      explanation: `${icon} HSW (${domain}): ${riskLevel.toUpperCase()} at ${Math.round(finalRisk * 100)}%. Sheaf H¹=${this.storeData.cachedEigenvalues.filter((v) => v < COHOMOLOGY_GAP_THRESHOLD).length - 1}, spectral gap=${(eigenvalues[1] ?? 0).toFixed(3)}.`,
       confidence: parseFloat(confidence.toFixed(3)),
       eigenmodeWeights: eigenmodeWeights.map((w) => parseFloat(w.toFixed(4))),
     };
@@ -901,7 +903,7 @@ export class HarmonicSheafWeaver {
     const topK = opts.topK ?? DEFAULT_TOP_K;
     const queryEmb = sheafEmbed(queryText);
 
-    const active = Object.values(this.store.nodes).filter((n) => {
+    const active = Object.values(this.storeData.nodes).filter((n) => {
       if (n.invalidAt) return false;
       if (n.validTo && n.validTo < nowMs) return false;
       if (opts.domain && n.domain !== opts.domain) return false;
@@ -957,7 +959,7 @@ export class HarmonicSheafWeaver {
     let crystallised = 0;
     let contradictionsResolved = 0;
 
-    for (const node of Object.values(this.store.nodes)) {
+    for (const node of Object.values(this.storeData.nodes)) {
       if (node.invalidAt) continue;
       if (node.validTo && node.validTo < nowMs) continue;
 
@@ -983,10 +985,10 @@ export class HarmonicSheafWeaver {
     }
 
     // Resolve contradictions where one side is quenched
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       if (edge.edgeType !== "contradicts") continue;
-      const from = this.store.nodes[edge.fromId];
-      const to = this.store.nodes[edge.toId];
+      const from = this.storeData.nodes[edge.fromId];
+      const to = this.storeData.nodes[edge.toId];
       if ((from?.invalidAt || to?.invalidAt) && !(from?.invalidAt && to?.invalidAt)) {
         contradictionsResolved++;
       }
@@ -995,7 +997,7 @@ export class HarmonicSheafWeaver {
     // Compute final cohomology
     const coh = this.detectContradictions();
 
-    this.store.lastConsolidatedAt = nowMs;
+    this.storeData.lastConsolidatedAt = nowMs;
     this.persist();
 
     return {
@@ -1015,7 +1017,7 @@ export class HarmonicSheafWeaver {
    */
   getContextString(domain: SheafDomain, limit = 5): string {
     const nowMs = Date.now();
-    const domainNodes = Object.values(this.store.nodes)
+    const domainNodes = Object.values(this.storeData.nodes)
       .filter((n) => n.domain === domain && !n.invalidAt && (!n.validTo || n.validTo > nowMs))
       .map((n) => ({ node: n, amp: effectiveAmplitude(n, nowMs) }))
       .sort((a, b) => b.amp - a.amp)
@@ -1034,7 +1036,7 @@ export class HarmonicSheafWeaver {
 
   getStatus(): SheafStatus {
     const nowMs = Date.now();
-    const active = Object.values(this.store.nodes).filter(
+    const active = Object.values(this.storeData.nodes).filter(
       (n) => !n.invalidAt && (!n.validTo || n.validTo > nowMs)
     );
     const amps = active.map((n) => effectiveAmplitude(n, nowMs));
@@ -1046,39 +1048,157 @@ export class HarmonicSheafWeaver {
     // Use cached cohomology if available
     let betti1 = 0;
     let spectralGap = 1.0;
-    if (this.store.cachedEigenvalues.length > 1) {
-      for (let i = 1; i < this.store.cachedEigenvalues.length; i++) {
-        if (this.store.cachedEigenvalues[i] < COHOMOLOGY_GAP_THRESHOLD) betti1++;
-        else { spectralGap = this.store.cachedEigenvalues[i]; break; }
+    if (this.storeData.cachedEigenvalues.length > 1) {
+      for (let i = 1; i < this.storeData.cachedEigenvalues.length; i++) {
+        if (this.storeData.cachedEigenvalues[i] < COHOMOLOGY_GAP_THRESHOLD) betti1++;
+        else { spectralGap = this.storeData.cachedEigenvalues[i]; break; }
       }
     }
 
     return {
-      nodeCount: Object.keys(this.store.nodes).length,
+      nodeCount: Object.keys(this.storeData.nodes).length,
       activeNodeCount: active.length,
-      edgeCount: this.store.edges.length,
+      edgeCount: this.storeData.edges.length,
       avgAmplitude: parseFloat(avgAmp.toFixed(4)),
       spectralGap,
       betti1,
       domainCounts,
-      lastCohomologyMs: this.store.lastCohomologyAt,
+      lastCohomologyMs: this.storeData.lastCohomologyAt,
     };
+  }
+
+  // ── IMemoryLayer ──────────────────────────────────────────────────────────
+
+  async store(layer: LayerId, entry: Omit<MemoryEntry, 'id' | 'timestamp'>): Promise<string> {
+    const result = this.weave(entry.content, {
+      domain: (entry.tags?.[0] || 'general') as SheafDomain,
+      tags: entry.tags,
+    });
+    return result.nodeId;
+  }
+
+  async retrieve(layer: LayerId, query: MemoryQuery): Promise<MemoryRetrievalResult[]> {
+    const now = Date.now();
+    const qLower = query.text.toLowerCase();
+    const limit = query.limit ?? 10;
+    const matches: MemoryRetrievalResult[] = [];
+    const active = Object.values(this.storeData.nodes).filter(s => s.invalidAt === null);
+    for (const site of active) {
+      if (query.tags?.length && !query.tags.some(t => site.tags.includes(t))) continue;
+      if (qLower && !site.content.toLowerCase().includes(qLower)) continue;
+      matches.push({
+        entry: {
+          id: site.id,
+          layerId: layer,
+          timestamp: site.createdAt,
+          content: site.content,
+          tags: [site.domain, ...site.tags],
+          confidence: site.amplitude ?? 0.5,
+          evidenceCount: site.retrievalCount ?? 1,
+          sourceDiversity: site.tags.length,
+        },
+        score: site.amplitude ?? 0.5,
+        provenance: null,
+      });
+      if (matches.length >= limit) break;
+    }
+    return matches;
+  }
+
+  async verify(entryId: string, evidence: VerificationEvidence): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.amplitude = evidence.outcome === 'confirmed'
+        ? Math.min(1, (this.storeData.nodes[entryId]!.amplitude ?? 0.5) * 1.1)
+        : Math.max(0, (this.storeData.nodes[entryId]!.amplitude ?? 0.5) * 0.9);
+      this.persist();
+    }
+  }
+
+  async contradict(entryId: string, counterEntryId: string): Promise<void> {
+    if (this.storeData.nodes[entryId] && this.storeData.nodes[counterEntryId]) {
+      this.addEdge({
+        fromId: entryId,
+        toId: counterEntryId,
+        weight: 0.9,
+        edgeType: 'contradicts',
+        restrictionError: 0,
+        createdAt: Date.now(),
+      });
+      this.storeData.cachedEigenvalues = [];
+      this.persist();
+    }
+  }
+
+  async archive(entryId: string, _reason: string): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.invalidAt = Date.now();
+      this.persist();
+    }
+  }
+
+  async getProvenance(entryId: string): Promise<Provenance | null> {
+    const site = this.storeData.nodes[entryId];
+    if (!site) return null;
+    return {
+      id: entryId,
+      sourceKind: 'agent_inference' as const,
+      sourceDetail: 'harmonic',
+      actorId: 'forge',
+      confidence: site.amplitude ?? 0.5,
+      evidenceCount: site.retrievalCount ?? 1,
+      parentIds: [],
+      observedAt: site.createdAt,
+      validFrom: site.createdAt,
+      chainOfCustody: [],
+    };
+  }
+
+  async explain(entryId: string): Promise<string> {
+    const site = this.storeData.nodes[entryId];
+    if (!site) return `No sheaf node ${entryId}`;
+    return `Sheaf node ${entryId}: "${site.content.slice(0, 80)}" domain=${site.domain} amp=${(site.amplitude ?? 0).toFixed(3)} edges=${this.storeData.edges.filter(e => e.fromId === entryId || e.toId === entryId).length}`;
+  }
+
+  async audit(): Promise<AuditReport> {
+    const now = Date.now();
+    const active = Object.values(this.storeData.nodes).filter(s => s.invalidAt === null);
+    const weak = active.filter(s => (s.amplitude ?? 0.5) < 0.3);
+    const domains: Record<string, number> = {};
+    for (const s of active) {
+      domains[s.domain] = (domains[s.domain] ?? 0) + 1;
+    }
+    return {
+      totalEntries: active.length,
+      weak: weak.length,
+      contradicted: this.storeData.edges.filter(e => e.edgeType === 'contradicts').length,
+      outdated: 0,
+      unsourced: 0,
+      layerBreakdown: { L9: active.length },
+      timestamp: now,
+    };
+  }
+
+  async decay(): Promise<number> {
+    const before = Object.values(this.storeData.nodes).filter(s => s.invalidAt === null).length;
+    this.consolidate();
+    const after = Object.values(this.storeData.nodes).filter(s => s.invalidAt === null).length;
+    return before - after;
   }
 
   // ── Core API: exportNodes / exportEdges ──────────────────────────────────
 
   exportNodes(): SheafNode[] {
-    return Object.values(this.store.nodes);
+    return Object.values(this.storeData.nodes);
   }
 
   exportEdges(): SheafEdge[] {
-    return [...this.store.edges];
+    return [...this.storeData.edges];
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
 
   private addEdge(edge: SheafEdge): void {
-    this.store.edges.push(edge);
+    this.storeData.edges.push(edge);
     if (!this.adjOut.has(edge.fromId)) this.adjOut.set(edge.fromId, []);
     this.adjOut.get(edge.fromId)!.push(edge);
     if (!this.adjIn.has(edge.toId)) this.adjIn.set(edge.toId, []);

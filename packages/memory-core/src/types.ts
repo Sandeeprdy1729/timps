@@ -210,6 +210,12 @@ export interface CalibrationResult {
   };
 }
 
+/** Optional scope for multi-user/team isolation */
+export interface MemoryScope {
+  userId?: string;
+  teamId?: string;
+}
+
 export interface LayerIdString {
   layerId: 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6' | 'L7' | 'L8' | 'L9'
     | 'L10' | 'L11' | 'L12' | 'L13' | 'L14' | 'L15' | 'L16' | 'L17'

@@ -18,6 +18,8 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
+import type { Provenance } from './ProvenanceForge';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -152,7 +154,7 @@ function inferDomain(content: string): SignalDomain {
 
 // ── ChronosForge (file-backed) ─────────────────────────────────────────────
 
-export class ChronosForge {
+export class ChronosForge implements IMemoryLayer {
   private readonly nodesFile: string;
   private readonly edgesFile: string;
 
@@ -497,6 +499,129 @@ export class ChronosForge {
       lines.push(`Causal chain: ${result.causalChain.slice(0, 4).join(' → ')}`);
     }
     return lines.join('\n');
+  }
+
+  // ── IMemoryLayer ──────────────────────────────────────────────────────────
+
+  async store(layer: LayerId, entry: Omit<MemoryEntry, 'id' | 'timestamp'>): Promise<string> {
+    const result = this.weave(entry.content, {
+      domain: entry.tags?.[0] as SignalDomain | undefined,
+      tags: entry.tags,
+    });
+    return result.nodeId;
+  }
+
+  async retrieve(layer: LayerId, query: MemoryQuery): Promise<MemoryRetrievalResult[]> {
+    const result = this.queryNow({
+      domain: query.tags?.[0] as SignalDomain | undefined,
+      limit: query.limit,
+      minScore: query.minConfidence,
+    });
+    const matches: MemoryRetrievalResult[] = [];
+    for (const node of result.nodes) {
+      if (query.tags?.length && !query.tags.some(t => node.tags.includes(t) || node.domain === t)) continue;
+      if (query.text && !node.content.toLowerCase().includes(query.text.toLowerCase())) continue;
+      matches.push({
+        entry: {
+          id: node.id,
+          layerId: layer,
+          timestamp: node.createdAt,
+          content: node.content,
+          tags: [node.domain, ...node.tags],
+          confidence: effectiveScore(node),
+          evidenceCount: node.retrievalCount,
+          sourceDiversity: node.tags.length,
+        },
+        score: effectiveScore(node),
+        provenance: null,
+      });
+    }
+    return matches.slice(0, query.limit ?? 10);
+  }
+
+  async verify(entryId: string, evidence: VerificationEvidence): Promise<void> {
+    const nodes = this._loadNodes();
+    const idx = nodes.findIndex(n => n.id === entryId);
+    if (idx === -1) return;
+    const node = nodes[idx]!;
+    node.baseImportance = evidence.outcome === 'confirmed'
+      ? Math.min(1, node.baseImportance * 1.1)
+      : Math.max(0, node.baseImportance * 0.9);
+    this._saveNodes(nodes);
+  }
+
+  async contradict(entryId: string, counterEntryId: string): Promise<void> {
+    const nodes = this._loadNodes();
+    if (!nodes.some(n => n.id === entryId) || !nodes.some(n => n.id === counterEntryId)) return;
+    this._persistEdge({
+      fromId: entryId,
+      toId: counterEntryId,
+      weight: 0.9,
+      edgeType: 'contradicts',
+      createdAt: Date.now(),
+    });
+  }
+
+  async archive(entryId: string, _reason: string): Promise<void> {
+    const nodes = this._loadNodes();
+    const idx = nodes.findIndex(n => n.id === entryId);
+    if (idx === -1) return;
+    nodes[idx]!.invalidAt = Date.now();
+    this._saveNodes(nodes);
+  }
+
+  async getProvenance(entryId: string): Promise<Provenance | null> {
+    const nodes = this._loadNodes();
+    const node = nodes.find(n => n.id === entryId);
+    if (!node) return null;
+    return {
+      id: entryId,
+      sourceKind: 'agent_inference' as const,
+      sourceDetail: 'chronos',
+      actorId: 'forge',
+      confidence: node.baseImportance,
+      evidenceCount: node.retrievalCount,
+      parentIds: node.causalParentId ? [node.causalParentId] : [],
+      observedAt: node.validFrom,
+      validFrom: node.validFrom,
+      validUntil: node.validTo ?? undefined,
+      chainOfCustody: [],
+    };
+  }
+
+  async explain(entryId: string): Promise<string> {
+    const nodes = this._loadNodes();
+    const node = nodes.find(n => n.id === entryId);
+    if (!node) return `No chronos node ${entryId}`;
+    return `Chronos node ${entryId}: "${node.content.slice(0, 80)}" domain=${node.domain} importance=${node.baseImportance.toFixed(3)} retrievals=${node.retrievalCount} validFrom=${new Date(node.validFrom).toISOString()}`;
+  }
+
+  async audit(): Promise<AuditReport> {
+    const now = Date.now();
+    const nodes = this._loadNodes();
+    const valid = nodes.filter(n => n.invalidAt === null && (n.validTo === null || n.validTo > now));
+    const weak = valid.filter(n => n.baseImportance < 0.3);
+    const contradicted = this._loadEdges().filter(e => e.edgeType === 'contradicts').length;
+    const domains: Record<string, number> = {};
+    for (const n of valid) {
+      domains[n.domain] = (domains[n.domain] ?? 0) + 1;
+    }
+    return {
+      totalEntries: valid.length,
+      weak: weak.length,
+      contradicted,
+      outdated: nodes.filter(n => n.validTo !== null && n.validTo < now && n.invalidAt === null).length,
+      unsourced: 0,
+      layerBreakdown: { L5: valid.length },
+      timestamp: now,
+    };
+  }
+
+  async decay(): Promise<number> {
+    const before = this._loadNodes().filter(n => n.invalidAt === null).length;
+    this.consolidate();
+    const after = this._loadNodes().filter(n => n.invalidAt === null).length;
+    return before - after;
   }
 
   getStats(): { totalNodes: number; validNodes: number; totalEdges: number; domains: Partial<Record<SignalDomain, number>> } {

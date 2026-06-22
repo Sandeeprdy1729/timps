@@ -799,7 +799,6 @@ async function runDebugCommand(): Promise<CommandResult> {
 
 async function runSheafCommand(args: string): Promise<CommandResult> {
   const { Memory } = await import('../memory/memory.js');
-  const { getSheafReport, injectSheafContext } = await import('../memory/sheafVeil.js');
   const mem = new Memory(process.cwd());
   const parts = args.trim().split(/\s+/);
   const sub = parts[0] ?? 'status';
@@ -904,7 +903,6 @@ async function runSheafCommand(args: string): Promise<CommandResult> {
 
 async function runAetherCommand(args: string): Promise<CommandResult> {
   const { Memory } = await import('../memory/memory.js');
-  const { getAetherReport, injectAetherContext } = await import('../memory/aetherVeil.js');
   const mem = new Memory(process.cwd());
   const parts = args.trim().split(/\s+/);
   const sub = parts[0] ?? 'status';
