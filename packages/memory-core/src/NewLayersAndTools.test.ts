@@ -134,8 +134,8 @@ describe('ConsolidationEngine — L11: episodic-to-semantic promotion', () => {
   });
 
   it('run with episodes promotes matching entries to semantic.json', () => {
-    const epFile = path.join(dir, 'episodes.jsonl');
-    fs.writeFileSync(epFile, JSON.stringify({ summary: 'test episode', tags: ['test'], outcome: 'success', timestamp: Date.now() }) + '\n', 'utf-8');
+    const epFile = path.join(dir, 'episodes.json');
+    fs.writeFileSync(epFile, JSON.stringify([{ summary: 'test episode', tags: ['test'], outcome: 'success', timestamp: Date.now() }]), 'utf-8');
     const result = engine.run({ dryRun: false });
     expect(result.promoted).toBe(1);
     const sem = JSON.parse(fs.readFileSync(path.join(dir, 'semantic.json'), 'utf-8'));
@@ -144,8 +144,8 @@ describe('ConsolidationEngine — L11: episodic-to-semantic promotion', () => {
   });
 
   it('run in dryRun mode does not write semantic.json', () => {
-    const epFile = path.join(dir, 'episodes.jsonl');
-    fs.writeFileSync(epFile, JSON.stringify({ summary: 'dry run test', tags: [], outcome: 'neutral', timestamp: Date.now() }) + '\n', 'utf-8');
+    const epFile = path.join(dir, 'episodes.json');
+    fs.writeFileSync(epFile, JSON.stringify([{ summary: 'dry run test', tags: [], outcome: 'neutral', timestamp: Date.now() }]), 'utf-8');
     engine.run({ dryRun: true });
     expect(fs.existsSync(path.join(dir, 'semantic.json'))).toBe(false);
   });
@@ -489,8 +489,8 @@ describe('AuditForge — L16: memory health auditor', () => {
 
   it('run counts outdated episodic entries', () => {
     const old = Date.now() - 60 * 24 * 60 * 60 * 1000;
-    const epFile = path.join(dir, 'episodes.jsonl');
-    fs.writeFileSync(epFile, JSON.stringify({ summary: 'old episode', timestamp: old }) + '\n', 'utf-8');
+    const epFile = path.join(dir, 'episodes.json');
+    fs.writeFileSync(epFile, JSON.stringify([{ summary: 'old episode', timestamp: old }]), 'utf-8');
     const report = audit.run();
     expect(report.episodic.outdated).toBe(1);
   });
@@ -1194,11 +1194,12 @@ describe('SchemaInferrer — Tool 25: schema auto-extraction', () => {
     expect(result.schemas[0].type).toMatch(/^pattern_/);
   });
 
-  it('infer reads from episodes.jsonl as well', () => {
-    fs.writeFileSync(path.join(dir, 'episodes.jsonl'),
-      JSON.stringify({ id: 'e1', summary: 'review pull request for main branch', timestamp: Date.now() }) + '\n' +
-      JSON.stringify({ id: 'e2', summary: 'review pull request for feature branch', timestamp: Date.now() }) + '\n',
-    'utf-8');
+  it('infer reads from episodes.json as well', () => {
+    fs.writeFileSync(path.join(dir, 'episodes.json'),
+      JSON.stringify([
+        { id: 'e1', summary: 'review pull request for main branch', timestamp: Date.now() },
+        { id: 'e2', summary: 'review pull request for feature branch', timestamp: Date.now() },
+      ]), 'utf-8');
     const result = inferrer.infer();
     expect(result.totalEntriesAnalyzed).toBe(2);
   });

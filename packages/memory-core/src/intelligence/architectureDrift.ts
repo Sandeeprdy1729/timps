@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -38,15 +39,22 @@ export interface DriftCheckResult {
 export class ArchitectureDriftDetector {
   private file: string;
   private insights: CodebaseInsight[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'codebase_culture.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.insights = data.insights || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.insights = data.insights || [];
       }
@@ -54,7 +62,12 @@ export class ArchitectureDriftDetector {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ insights: this.insights }, null, 2), 'utf-8');
+    const data = { insights: this.insights };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** record_insight: save a codebase insight */

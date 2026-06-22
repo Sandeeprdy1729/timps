@@ -18,6 +18,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
 import type { Provenance } from './ProvenanceForge';
 
@@ -160,12 +161,14 @@ export class ChronosForge implements IMemoryLayer {
 
   /** In-process adjacency index: nodeId → outbound edges */
   private adjOut = new Map<string, CausalEdge[]>();
+  private _backend?: StorageBackend;
 
-  constructor(memoryDir: string) {
+  constructor(memoryDir: string, backend?: StorageBackend) {
     const dir = path.join(memoryDir, 'chronos');
     fs.mkdirSync(dir, { recursive: true });
     this.nodesFile = path.join(dir, 'nodes.json');
     this.edgesFile = path.join(dir, 'edges.json');
+    this._backend = backend;
     this._warmAdjacency();
   }
 
@@ -173,23 +176,27 @@ export class ChronosForge implements IMemoryLayer {
 
   private _loadNodes(): ChronosNode[] {
     try {
+      if (this._backend) return this._backend.read('chronos/nodes.json') ?? [];
       if (!fs.existsSync(this.nodesFile)) return [];
       return JSON.parse(fs.readFileSync(this.nodesFile, 'utf-8')) as ChronosNode[];
     } catch { return []; }
   }
 
   private _saveNodes(nodes: ChronosNode[]): void {
+    if (this._backend) { this._backend.write('chronos/nodes.json', nodes); return; }
     fs.writeFileSync(this.nodesFile, JSON.stringify(nodes, null, 2), 'utf-8');
   }
 
   private _loadEdges(): CausalEdge[] {
     try {
+      if (this._backend) return this._backend.read('chronos/edges.json') ?? [];
       if (!fs.existsSync(this.edgesFile)) return [];
       return JSON.parse(fs.readFileSync(this.edgesFile, 'utf-8')) as CausalEdge[];
     } catch { return []; }
   }
 
   private _saveEdges(edges: CausalEdge[]): void {
+    if (this._backend) { this._backend.write('chronos/edges.json', edges); return; }
     fs.writeFileSync(this.edgesFile, JSON.stringify(edges, null, 2), 'utf-8');
   }
 

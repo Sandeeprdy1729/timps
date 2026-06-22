@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface AuditReport {
   timestamp: number;
@@ -23,7 +24,11 @@ export interface AuditReport {
 }
 
 export class MemoryAuditor {
-  constructor(private dir: string) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   async audit(): Promise<AuditReport> {
     const semantic = this.loadSemantic();
@@ -48,7 +53,25 @@ export class MemoryAuditor {
     }
 
     const provDir = path.join(this.dir, 'provenance');
-    if (fs.existsSync(provDir)) {
+    if (this._backend) {
+      const backend = this._backend;
+      const provFiles = backend.list('provenance/');
+      if (provFiles && Array.isArray(provFiles)) {
+        for (const entry of semantic) {
+          const hasProv = provFiles.some((f: string) => {
+            try {
+              const p = backend.read(f);
+              return p && (p.parentIds?.includes(entry.id) || p.id === entry.id);
+            } catch { return false; }
+          });
+          if (!hasProv) {
+            unsourcedEntries.push({ id: entry.id, content: (entry.content ?? '').slice(0, 100) });
+          }
+        }
+      } else {
+        unsourcedEntries.push(...semantic.map(e => ({ id: e.id, content: (e.content ?? '').slice(0, 100) })));
+      }
+    } else if (fs.existsSync(provDir)) {
       const provFiles = new Set(fs.readdirSync(provDir).filter(f => f.endsWith('.json')));
       for (const entry of semantic) {
         const hasProv = [...provFiles].some(f => {
@@ -118,6 +141,11 @@ export class MemoryAuditor {
 
   private loadSemantic(): any[] {
     try {
+      if (this._backend) {
+        const data = this._backend.read('semantic.json');
+        if (data) return Array.isArray(data) ? data : [];
+        return [];
+      }
       const f = path.join(this.dir, 'semantic.json');
       if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf-8'));
     } catch { /* ignore */ }
@@ -126,10 +154,12 @@ export class MemoryAuditor {
 
   private loadEpisodes(): any[] {
     try {
-      const f = path.join(this.dir, 'episodes.jsonl');
+      if (this._backend) {
+        return this._backend.read('episodes.json') ?? [];
+      }
+      const f = path.join(this.dir, 'episodes.json');
       if (!fs.existsSync(f)) return [];
-      const content = fs.readFileSync(f, 'utf-8').trim();
-      return content ? content.split('\n').map(l => JSON.parse(l)) : [];
+      return JSON.parse(fs.readFileSync(f, 'utf-8')) as any[];
     } catch { return []; }
   }
 }

@@ -18,6 +18,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -363,17 +364,32 @@ export class EclipseForge {
   private dir: string;
   private storeFile: string;
   private store: EclipseStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, EclipseEdge[]> = new Map();
   private adjIn: Map<string, EclipseEdge[]> = new Map();
 
-  constructor(dirOrPath: string) {
+  constructor(dirOrPath: string, backend?: StorageBackend) {
     this.dir = dirOrPath;
+    this._backend = backend;
     this.storeFile = path.join(this.dir, "eclipse-forge.json");
     this.store = this.loadStore();
     this.rebuildAdjacency();
   }
 
   private loadStore(): EclipseStore {
+    if (this._backend) {
+      return this._backend.read('eclipse/eclipse-forge.json') ?? {
+        version: "1.0",
+        nodes: {},
+        edges: [],
+        cachedEigenvalues: [],
+        cachedEigenvectors: [],
+        cachedEigenK: 0,
+        cachedEigenN: 0,
+        lastCohomologyAt: 0,
+        lastConsolidatedAt: 0,
+      };
+    }
     try {
       if (fs.existsSync(this.storeFile)) {
         return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
@@ -393,6 +409,10 @@ export class EclipseForge {
   }
 
   private persist(): void {
+    if (this._backend) {
+      this._backend.write('eclipse/eclipse-forge.json', this.store);
+      return;
+    }
     try {
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");

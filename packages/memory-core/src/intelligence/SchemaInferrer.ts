@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface InferredSchema {
   type: string;
@@ -22,7 +23,11 @@ export interface SchemaInferenceResult {
 }
 
 export class SchemaInferrer {
-  constructor(private dir: string) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   infer(): SchemaInferenceResult {
     const episodes = this.loadEpisodes();
@@ -79,15 +84,22 @@ export class SchemaInferrer {
 
   private loadEpisodes(): any[] {
     try {
-      const f = path.join(this.dir, 'episodes.jsonl');
+      if (this._backend) {
+        return this._backend.read('episodes.json') ?? [];
+      }
+      const f = path.join(this.dir, 'episodes.json');
       if (!fs.existsSync(f)) return [];
-      const content = fs.readFileSync(f, 'utf-8').trim();
-      return content ? content.split('\n').map(l => JSON.parse(l)) : [];
+      return JSON.parse(fs.readFileSync(f, 'utf-8')) as any[];
     } catch { return []; }
   }
 
   private loadSemantic(): any[] {
     try {
+      if (this._backend) {
+        const data = this._backend.read('semantic.json');
+        if (data) return Array.isArray(data) ? data : [];
+        return [];
+      }
       const f = path.join(this.dir, 'semantic.json');
       if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf-8'));
     } catch { /* ignore */ }

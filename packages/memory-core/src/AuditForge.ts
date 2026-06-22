@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export interface AuditSection {
   weak: number;
@@ -25,7 +26,11 @@ export interface AuditReport {
 }
 
 export class AuditForge {
-  constructor(private dir: string) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   run(): AuditReport {
     const working = this.auditWorking();
@@ -76,16 +81,15 @@ export class AuditForge {
   }
 
   private auditEpisodic(): AuditSection {
-    const file = path.join(this.dir, 'episodes.jsonl');
+    const file = path.join(this.dir, 'episodes.json');
     if (!fs.existsSync(file)) return { weak: 0, contradicted: 0, outdated: 0, unsourced: 0, entries: [] };
     const content = fs.readFileSync(file, 'utf-8').trim();
     if (!content) return { weak: 0, contradicted: 0, outdated: 0, unsourced: 0, entries: [] };
-    const lines = content.split('\n');
+    const episodes = JSON.parse(content) as any[];
     const entries: AuditSection['entries'] = [];
     let outdated = 0;
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    for (const line of lines) {
-      const ep = JSON.parse(line);
+    for (const ep of episodes) {
       if (ep.timestamp < thirtyDaysAgo) outdated++;
     }
     return { weak: 0, contradicted: 0, outdated, unsourced: 0, entries };

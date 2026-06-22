@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export interface ContextProfile {
   id: string;
@@ -24,24 +25,33 @@ export interface ContextMatch {
 }
 
 export class ContextVector {
+  private _backend?: StorageBackend;
   private filePath: string;
   private profiles: ContextProfile[] = [];
 
-  constructor(private dir: string) {
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.filePath = path.join(dir, 'context-vectors.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.filePath)) {
+      if (this._backend) {
+        const data = this._backend.read('context/vectors.json');
+        if (data) this.profiles = data;
+      } else if (fs.existsSync(this.filePath)) {
         this.profiles = JSON.parse(fs.readFileSync(this.filePath, 'utf-8'));
       }
     } catch { this.profiles = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.filePath, JSON.stringify(this.profiles, null, 2), 'utf-8');
+    if (this._backend) {
+      this._backend.write('context/vectors.json', this.profiles);
+    } else {
+      fs.writeFileSync(this.filePath, JSON.stringify(this.profiles, null, 2), 'utf-8');
+    }
   }
 
   capture(input: Omit<ContextProfile, 'id' | 'storedAt'>): ContextProfile {

@@ -40,6 +40,7 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
 import type { Provenance } from './ProvenanceForge';
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -577,12 +578,14 @@ export class AetherForgeERL implements IMemoryLayer {
   private dir: string;
   private storeFile: string;
   private storeData: ERLStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, ERLEdge[]> = new Map();
   private adjIn: Map<string, ERLEdge[]> = new Map();
   /** TempestForge: explicit parent→children tree rebuilt from causal edges */
   private treeChildren: Map<string, string[]> = new Map();
 
-  constructor(baseDir: string) {
+  constructor(baseDir: string, backend?: StorageBackend) {
+    this._backend = backend;
     const aetherDir = path.join(baseDir, "aether");
     fs.mkdirSync(aetherDir, { recursive: true });
     this.dir = aetherDir;
@@ -595,11 +598,20 @@ export class AetherForgeERL implements IMemoryLayer {
   // ── Persistence ──────────────────────────────────────────────────────────
 
   private loadStore(): ERLStore {
+    if (this._backend) {
+      const result = this._backend.read('aether/aether.json');
+      if (result) return result as ERLStore;
+      return this._emptyStore();
+    }
     try {
       if (fs.existsSync(this.storeFile)) {
         return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
       }
     } catch { /* start fresh */ }
+    return this._emptyStore();
+  }
+
+  private _emptyStore(): ERLStore {
     return {
       version: "1.0",
       nodes: {},
@@ -616,6 +628,10 @@ export class AetherForgeERL implements IMemoryLayer {
   }
 
   private persist(): void {
+    if (this._backend) {
+      this._backend.write('aether/aether.json', this.storeData);
+      return;
+    }
     try {
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData, null, 2), "utf-8");

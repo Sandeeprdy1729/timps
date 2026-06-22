@@ -10,6 +10,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 import type { HarmonicSheafWeaver, SheafPrediction } from '../HarmonicSheafWeaver.js';
 
 export interface BurnoutSignal {
@@ -40,10 +41,12 @@ export class BurnoutSeismograph {
   private file: string;
   private signals: BurnoutSignal[] = [];
   private baseline: BurnoutBaseline | null = null;
+  private _backend?: StorageBackend;
   /** Optional HarmonicSheafWeaver for eigenmode foresight */
   private sheaf?: HarmonicSheafWeaver;
 
-  constructor(dir: string, sheaf?: HarmonicSheafWeaver) {
+  constructor(dir: string, backend?: StorageBackend, sheaf?: HarmonicSheafWeaver) {
+    this._backend = backend;
     this.file = path.join(dir, 'burnout_signals.json');
     this.sheaf = sheaf;
     this.load();
@@ -51,7 +54,13 @@ export class BurnoutSeismograph {
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.signals = data.signals || [];
+          this.baseline = data.baseline || null;
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.signals = data.signals || [];
         this.baseline = data.baseline || null;
@@ -60,9 +69,12 @@ export class BurnoutSeismograph {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify(
-      { signals: this.signals, baseline: this.baseline }, null, 2
-    ), 'utf-8');
+    const data = { signals: this.signals, baseline: this.baseline };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** record: log a burnout signal value */

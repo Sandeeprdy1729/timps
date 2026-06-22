@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -42,15 +43,22 @@ export interface DebtReport {
 export class TechDebtSeismograph {
   private file: string;
   private incidents: CodeIncident[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'code_incidents.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.incidents = data.incidents || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.incidents = data.incidents || [];
       }
@@ -58,7 +66,12 @@ export class TechDebtSeismograph {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ incidents: this.incidents }, null, 2), 'utf-8');
+    const data = { incidents: this.incidents };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** record_incident: log a production incident tied to a code pattern */

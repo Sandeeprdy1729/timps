@@ -3,6 +3,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface Commitment {
   id: string;
@@ -57,15 +58,22 @@ function isLikelyCommitment(text: string): boolean {
 export class MeetingGhost {
   private file: string;
   private commitments: Commitment[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'commitments.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.commitments = data.commitments || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.commitments = data.commitments || [];
       }
@@ -73,7 +81,12 @@ export class MeetingGhost {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ commitments: this.commitments }, null, 2), 'utf-8');
+    const data = { commitments: this.commitments };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Extract commitments from meeting notes (deterministic regex-based). */

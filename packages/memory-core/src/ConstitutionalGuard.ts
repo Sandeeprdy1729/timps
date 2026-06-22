@@ -8,6 +8,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Provenance, SourceKind } from './ProvenanceForge.js';
+import type { StorageBackend } from './backends/types.js';
 
 export interface GuardVerdict {
   allowed: boolean;
@@ -31,10 +32,12 @@ const DEFAULT_CONFIG: GuardConfig = {
 };
 
 export class ConstitutionalGuard {
+  private _backend?: StorageBackend;
   private config: GuardConfig;
   private rejectionLog: string[] = [];
 
-  constructor(private dir: string, config?: Partial<GuardConfig>) {
+  constructor(private dir: string, config?: Partial<GuardConfig>, backend?: StorageBackend) {
+    this._backend = backend;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 

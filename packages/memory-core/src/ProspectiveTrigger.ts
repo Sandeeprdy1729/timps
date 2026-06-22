@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generateId } from './storage.js';
+import type { StorageBackend } from './backends/types.js';
 
 export interface Trigger {
   id: string;
@@ -25,24 +26,33 @@ export interface TriggerMatch {
 }
 
 export class ProspectiveTrigger {
+  private _backend?: StorageBackend;
   private triggers: Trigger[] = [];
   private filePath: string;
 
-  constructor(private dir: string) {
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.filePath = path.join(dir, 'prospective-triggers.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.filePath)) {
+      if (this._backend) {
+        const data = this._backend.read('prospective/triggers.json');
+        if (data) this.triggers = data;
+      } else if (fs.existsSync(this.filePath)) {
         this.triggers = JSON.parse(fs.readFileSync(this.filePath, 'utf-8'));
       }
     } catch { this.triggers = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.filePath, JSON.stringify(this.triggers, null, 2), 'utf-8');
+    if (this._backend) {
+      this._backend.write('prospective/triggers.json', this.triggers);
+    } else {
+      fs.writeFileSync(this.filePath, JSON.stringify(this.triggers, null, 2), 'utf-8');
+    }
   }
 
   register(input: { when: string; surface: string; memoryId: string }): Trigger {

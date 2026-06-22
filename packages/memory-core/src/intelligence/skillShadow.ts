@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface ShadowPattern {
   pattern_id: string;
@@ -32,8 +33,10 @@ function jaccard(a: string, b: string): number {
 
 export class SkillShadow {
   private patternsFile: string;
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.patternsFile = path.join(dir, 'workflow_patterns.json');
   }
 
@@ -41,7 +44,10 @@ export class SkillShadow {
   shadow(situation: string): ShadowPattern | null {
     let patterns: RawPattern[] = [];
     try {
-      if (fs.existsSync(this.patternsFile)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.patternsFile));
+        if (data) patterns = data.patterns || [];
+      } else if (fs.existsSync(this.patternsFile)) {
         const data = JSON.parse(fs.readFileSync(this.patternsFile, 'utf-8'));
         patterns = data.patterns || [];
       }

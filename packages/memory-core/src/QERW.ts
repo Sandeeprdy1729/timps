@@ -40,6 +40,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -207,13 +208,15 @@ export class QERW {
   private dir: string;
   private storeFile: string;
   private store: QERWStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, QERWEdge[]>;
   private adjIn: Map<string, QERWEdge[]>;
   /** Cache of embeddings for fast geodesic computation */
   private embCache: Map<string, Float64Array>;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
     this.dir = dir;
+    this._backend = backend;
     this.storeFile = path.join(dir, "qerw-store.json");
     this.store = this.loadStore();
     this.adjOut = new Map();
@@ -226,6 +229,11 @@ export class QERW {
   // ── Persistence ──────────────────────────────────────────────────────────
 
   private loadStore(): QERWStore {
+    if (this._backend) {
+      const result = this._backend.read('qerw/qerw.json');
+      if (result) return result as QERWStore;
+      return { nodes: {}, edges: [] };
+    }
     try {
       if (!fs.existsSync(this.storeFile)) return { nodes: {}, edges: [] };
       return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
@@ -235,6 +243,10 @@ export class QERW {
   }
 
   private persist(): void {
+    if (this._backend) {
+      this._backend.write('qerw/qerw.json', this.store);
+      return;
+    }
     try {
       fs.mkdirSync(path.dirname(this.storeFile), { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");

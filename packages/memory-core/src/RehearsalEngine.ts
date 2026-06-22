@@ -7,6 +7,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generateId } from './storage.js';
 import { SpacedRepetitionForge } from './SpacedRepetitionForge.js';
+import type { StorageBackend } from './backends/types.js';
 
 export interface RehearsalItem {
   id: string;
@@ -24,11 +25,13 @@ export interface RehearsalSession {
 }
 
 export class RehearsalEngine {
+  private _backend?: StorageBackend;
   private rehearsalFile: string;
   private items: RehearsalItem[] = [];
   private srf: SpacedRepetitionForge;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.rehearsalFile = path.join(dir, 'rehearsal-items.json');
     this.srf = new SpacedRepetitionForge();
     this.load();
@@ -36,14 +39,21 @@ export class RehearsalEngine {
 
   private load(): void {
     try {
-      if (fs.existsSync(this.rehearsalFile)) {
+      if (this._backend) {
+        const data = this._backend.read('rehearsal/items.json');
+        if (data) this.items = data;
+      } else if (fs.existsSync(this.rehearsalFile)) {
         this.items = JSON.parse(fs.readFileSync(this.rehearsalFile, 'utf-8'));
       }
     } catch { this.items = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.rehearsalFile, JSON.stringify(this.items, null, 2), 'utf-8');
+    if (this._backend) {
+      this._backend.write('rehearsal/items.json', this.items);
+    } else {
+      fs.writeFileSync(this.rehearsalFile, JSON.stringify(this.items, null, 2), 'utf-8');
+    }
   }
 
   enqueue(content: string, sourceLayer: string, sourceId: string): RehearsalItem {

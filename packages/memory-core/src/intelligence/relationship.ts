@@ -3,6 +3,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface Contact {
   name: string;             // canonical lowercase name
@@ -28,15 +29,23 @@ const DRIFT_DAYS = 90;
 export class RelationshipIntelligence {
   private file: string;
   private contacts: Map<string, Contact> = new Map();
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'relationships.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          const arr: Contact[] = data.contacts || [];
+          for (const c of arr) this.contacts.set(c.name, c);
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         const arr: Contact[] = data.contacts || [];
         for (const c of arr) this.contacts.set(c.name, c);
@@ -45,7 +54,12 @@ export class RelationshipIntelligence {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ contacts: Array.from(this.contacts.values()) }, null, 2), 'utf-8');
+    const data = { contacts: Array.from(this.contacts.values()) };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Record that a person was mentioned in some context. */

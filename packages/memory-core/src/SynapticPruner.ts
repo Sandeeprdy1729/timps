@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export interface MemoryMeta {
   id: string;
@@ -30,9 +31,11 @@ const DEFAULT_POLICY: PrunePolicy = {
 };
 
 export class SynapticPruner {
+  private _backend?: StorageBackend;
   private policy: PrunePolicy;
 
-  constructor(private dir: string, policy?: Partial<PrunePolicy>) {
+  constructor(private dir: string, policy?: Partial<PrunePolicy>, backend?: StorageBackend) {
+    this._backend = backend;
     this.policy = { ...DEFAULT_POLICY, ...policy };
   }
 
