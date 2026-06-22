@@ -23,8 +23,6 @@ import * as os from 'node:os';
 import { SessionBridge } from '../memory/sessionBridge.js';
 import { RiskEngine } from '../utils/riskEngine.js';
 import { ContextOrchestrator } from './contextOrchestrator.js';
-import { injectEchoContext } from '../memory/echoVeil.js';
-import { injectQISRDContext } from '../memory/qisrdVeil.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
@@ -429,33 +427,19 @@ End your response with a confirmation question.`;
       this.selfImproving.preflightCheck(userMessage, taskType, []);
     }
 
-    // ── Pre-flight: EchoForge intelligence injection (silent context injection) ──
+    // ── Pre-flight: MemoryEngine context injection (silent context injection) ──
     try {
-      const echoResult = await injectEchoContext(this.memory);
-      if (echoResult.promptFragment) {
+      const ctx = this.memory.engine.getContextString(userMessage);
+      if (ctx) {
         const sysIdx = this.messages.findIndex(m => m.role === 'system');
         if (sysIdx !== -1) {
           this.messages[sysIdx] = {
             ...this.messages[sysIdx]!,
-            content: this.messages[sysIdx]!.content + echoResult.promptFragment,
+            content: this.messages[sysIdx]!.content + '\n' + ctx,
           };
         }
       }
-    } catch { /* echo is best-effort */ }
-
-    // ── Pre-flight: QISRD resonance intelligence injection (silent context injection) ──
-    try {
-      const qisrdResult = injectQISRDContext(this.memory);
-      if (qisrdResult.promptFragment) {
-        const sysIdx = this.messages.findIndex(m => m.role === 'system');
-        if (sysIdx !== -1) {
-          this.messages[sysIdx] = {
-            ...this.messages[sysIdx]!,
-            content: this.messages[sysIdx]!.content + qisrdResult.promptFragment,
-          };
-        }
-      }
-    } catch { /* qisrd is best-effort */ }
+    } catch { /* context injection is best-effort */ }
 
     // ── ConstitutionalFilter: refine input before sending to LLM ──
     let refinedMessage = userMessage;

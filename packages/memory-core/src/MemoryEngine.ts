@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 
 import type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
-  SearchOptions, ScoredMemoryEntry, MemoryPack, MemorySnapshot, MergeResult, MemoryStats,
+  SearchOptions, ScoredMemoryEntry, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
 } from './types.js';
 
 import {
@@ -88,6 +88,9 @@ export type {
 import { EchoForge } from './EchoForge.js';
 export type { EchoPrediction, EchoStatus, EchoDomain } from './EchoForge.js';
 
+// Layer 9: HarmonicSheafWeaver — sheaf-cohomology harmonic oscillator layer
+import { HarmonicSheafWeaver } from './HarmonicSheafWeaver.js';
+
 // Layer 10: AetherForgeERL — Epistemic Resonance Lattice
 import { AetherForgeERL } from './AetherForgeERL.js';
 import { SupraSheaf } from './SupraSheaf.js';
@@ -121,9 +124,17 @@ export type { Contribution, DepartedContributor } from './intelligence/instituti
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
 
+export interface MemoryEngineOptions {
+  /** Optional scope for multi-user/team isolation. Affects storage directory and actor identity. */
+  scope?: MemoryScope;
+  /** Override the storage directory. If not set, derived from projectPath + optional scope. */
+  dir?: string;
+}
+
 export class MemoryEngine {
   private dir: string;
   private hash: string;
+  private scope?: MemoryScope;
   private working: WorkingState;
 
   // ── Layer 5: ChronosForge (lazy-init) ──
@@ -131,6 +142,9 @@ export class MemoryEngine {
 
   // ── Layer 7: EchoForge (lazy-init) ──
   private _echo?: EchoForge;
+
+  // ── Layer 9: HarmonicSheafWeaver (lazy-init) ──
+  private _harmonicSheaf?: HarmonicSheafWeaver;
 
   // ── Layer 10: AetherForgeERL (lazy-init) ──
   private _aether?: AetherForgeERL;
@@ -192,10 +206,16 @@ export class MemoryEngine {
   private _codebaseAnthropologist?: CodebaseAnthropologist;
   private _institutionalMemory?: InstitutionalMemory;
 
-  constructor(projectPath: string) {
-    this.dir = memoryDir(projectPath);
+  constructor(projectPath: string, options?: MemoryEngineOptions) {
+    this.scope = options?.scope;
+    this.dir = options?.dir ?? memoryDir(projectPath, this.scope);
     this.hash = projectHash(projectPath);
     this.working = loadWorking(this.dir);
+  }
+
+  /** The scope this engine was created with, if any. */
+  get engineScope(): Readonly<MemoryScope> | undefined {
+    return this.scope;
   }
 
   // ── Lazy getters for tool instances ──
@@ -262,6 +282,14 @@ export class MemoryEngine {
    */
   get echoForge(): EchoForge {
     return (this._echo ??= new EchoForge(this.dir));
+  }
+
+  /**
+   * Layer 9: HarmonicSheafWeaver — sheaf-cohomology harmonic oscillator layer.
+   * Algebraic contradiction detection (H¹), eigenmode foresight, O(k·N) after precompute.
+   */
+  get harmonicSheafWeaver(): HarmonicSheafWeaver {
+    return (this._harmonicSheaf ??= new HarmonicSheafWeaver(this.dir));
   }
 
   /**
@@ -485,6 +513,11 @@ export class MemoryEngine {
 
   // ── Layer 3: Semantic Memory ──
 
+  /** The actor identity — uses scope if provided, otherwise defaults to 'agent'. */
+  private get actorId(): string {
+    return this.scope?.userId ?? 'agent';
+  }
+
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
   store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }, opts?: { skipGuard?: boolean }): void {
     const facts = loadSemantic(this.dir);
@@ -492,6 +525,7 @@ export class MemoryEngine {
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     const id = generateId('mem');
     const timestamp = Date.now();
+    const actor = this.actorId;
 
     // L15: ConstitutionalGuard gate — check before storing
     let confidence = 0.7;
@@ -516,7 +550,7 @@ export class MemoryEngine {
       op: 'store',
       layerId: 'L3',
       entryId: id,
-      actorId: 'agent',
+      actorId: actor,
       payload: { content, type, tags },
       justification: `Stored ${type}: ${content.slice(0, 80)}`,
     });
@@ -524,8 +558,8 @@ export class MemoryEngine {
     this.provenanceForge.record({
       sourceKind: 'agent_inference',
       sourceDetail: 'MemoryEngine.store()',
-      actorId: 'agent',
-      actor: 'agent',
+      actorId: actor,
+      actor,
       observedAt: timestamp,
       evidenceCount,
       confidence,

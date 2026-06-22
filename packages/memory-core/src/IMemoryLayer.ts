@@ -60,4 +60,5 @@ export interface IMemoryLayer {
   getProvenance(entryId: string): Promise<Provenance | null>;
   explain(entryId: string): Promise<string>;
   audit(): Promise<AuditReport>;
+  decay(): Promise<number>;
 }

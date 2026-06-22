@@ -155,8 +155,11 @@ export type {
 // Types
 export type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
-  SearchOptions, MemoryPack, MemorySnapshot, MergeResult, MemoryStats,
+  SearchOptions, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
 } from './types.js';
+
+// Engine options
+export type { MemoryEngineOptions } from './MemoryEngine.js';
 
 // Storage utilities (advanced usage)
 export { projectHash, memoryDir, generateId, jaccardSimilarity } from './storage.js';

@@ -383,7 +383,7 @@ export type GenerateFn = (
 
 export class TreeOfThoughtPlugin extends SelfConsistencyPlugin {}
 
-export classReflectionPlugin implements Plugin {
+export class ReflectionPlugin implements Plugin {
   public manifest: PluginManifest = {
     id: '@timps/reflection-local',
     name: 'Self-Reflection',

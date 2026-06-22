@@ -35,15 +35,30 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 - TUI: `src/ui/App.tsx` (Ink/React 19).
 - MCP client: `src/services/mcp/`, auto-discovery at `src/tools/mcpDiscovery.ts`.
 
-## Memory — three implementations
+## Memory — unified implementations
 
 1. **`packages/memory-core/`** — canonical, source of truth for 17 intelligence tools.
-2. **`timps-code/src/memory/`** — runtime wrappers + L8 SynapseQuench.
-3. **`packages/server/memory/`** — server-side re-implementations, may drift.
+2. **`timps-code/src/memory/`** — thin adapter (337 lines), delegates to `MemoryEngine`.
+3. **`packages/server/memory/`** — thin adapters over `MemoryEngine`, re-export forge types from `@timps/memory-core`.
 
-9 layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 SynapseQuench → L9 HarmonicSheafWeaver.
+9 forge layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 AetherForgeERL → L9 HarmonicSheafWeaver.
 
 All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, class-based, file-based JSON storage, **no `Math.random()`**.
+
+### IMemoryLayer interface
+
+All forge classes implement `IMemoryLayer` (defined in `packages/memory-core/src/IMemoryLayer.ts`):
+
+| Forge | File | store→storeData renamed? | Notes |
+|---|---|---|---|
+| EchoForge | `EchoForge.ts` | ✅ Yes | First IMemoryLayer implementation |
+| ChronosForge | `ChronosForge.ts` | N/A (no conflict) | Weave-based store |
+| HarmonicSheafWeaver | `HarmonicSheafWeaver.ts` | ✅ Yes | Persists via `persist()` |
+| AetherForgeERL | `AetherForgeERL.ts` | ✅ Yes | Persists via `persist()` |
+
+All provide: `store()`, `retrieve()`, `verify()`, `contradict()`, `archive()`, `getProvenance()`, `explain()`, `audit()`, `decay()`.
+
+**Gotcha:** When implementing IMemoryLayer on a forge with a `private store` field, rename it to `private storeData` to avoid method/property conflict. Update ALL `this.store.` → `this.storeData.` references and any test code accessing `forge['store']` (via bracket notation) to `forge['storeData']`.
 
 ## Style & conventions
 
@@ -80,3 +95,8 @@ All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, clas
 - `MemoryEngine.contradiction.check(statement, autoStore?)` defaults `autoStore=true` — pass `false` in tests.
 - ContradictionDetector requires >50% Jaccard vocabulary overlap to trigger. Exact phrasings needed for `CONTRADICTION`.
 - **4 test runners in use:** Jest 29 (memory-core, acp, connection-manager, event-bus, timps-vscode, timps-mcp), Jest 30 (timps-code), Vitest (timps-desktop, plugin-sdk), raw tsx (timps-enterprise). No single `npm test` runs all tests. Standardizing on one runner is deferred.
+- `packages/server` is missing `@timps/memory-core` in its package.json `dependencies` — it's installed by hoisting but won't resolve in `npm ci --production`.
+- `timps-desktop` has a JSX parsing issue in `global.d.ts` (missing space before `declare` keyword after a JSX block). If `npx tsc --noEmit` fails for timps-desktop, check `.d.ts` files for similar syntax issues.
+- `test-coverage.yml` matrix includes `config`, `integration-base` packages that no longer exist. Drop them from the matrix if they're removed from the workspace.
+- `supply-chain-audit.yml` uses `google/osv-scanner-action@v1.0.2` (old). Update to `v2.3.8` if the action fails.
+- `packages/server` `check` script is `tsc` but TypeScript isn't installed as a devDependency — it's hoisted from the root. CI may fail on strict isolated environments unless `typescript` is added to its devDependencies.

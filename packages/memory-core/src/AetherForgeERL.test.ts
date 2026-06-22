@@ -705,7 +705,7 @@ describe('AetherForgeERL — staleness detection', () => {
       const past = Date.now() - 10_000;
       const n1 = forge.weave('old decision', { domain: 'decision', evidenceCount: 3 });
       // Backdate this node
-      forge['store'].nodes[n1.nodeId].createdAt = past;
+      forge['storeData'].nodes[n1.nodeId].createdAt = past;
       const n2 = forge.weave('recent decision', { domain: 'decision', evidenceCount: 2 });
       const results = forge.queryPointInTime(Date.now(), { windowMs: 5000, limit: 10 });
       expect(results.length).toBeGreaterThanOrEqual(1);
@@ -768,9 +768,9 @@ describe('AetherForgeERL — staleness detection', () => {
       const c2 = forge.weave('grandchild', { domain: 'decision', causalParentId: c1.nodeId, evidenceCount: 1 });
       const count = forge.pruneBranch(root.nodeId);
       expect(count).toBe(3);
-      expect(forge['store'].nodes[root.nodeId].status).toBe('quenched');
-      expect(forge['store'].nodes[c1.nodeId].status).toBe('quenched');
-      expect(forge['store'].nodes[c2.nodeId].status).toBe('quenched');
+      expect(forge['storeData'].nodes[root.nodeId].status).toBe('quenched');
+      expect(forge['storeData'].nodes[c1.nodeId].status).toBe('quenched');
+      expect(forge['storeData'].nodes[c2.nodeId].status).toBe('quenched');
     });
 
     it('pruneBranch spares nodes in sparedIds set', () => {
@@ -778,8 +778,8 @@ describe('AetherForgeERL — staleness detection', () => {
       const root = forge.weave('root', { domain: 'decision', evidenceCount: 3 });
       const c1 = forge.weave('child', { domain: 'decision', causalParentId: root.nodeId, evidenceCount: 2 });
       forge.pruneBranch(root.nodeId, new Set([c1.nodeId]));
-      expect(forge['store'].nodes[root.nodeId].status).toBe('quenched');
-      expect(forge['store'].nodes[c1.nodeId].status).not.toBe('quenched');
+      expect(forge['storeData'].nodes[root.nodeId].status).toBe('quenched');
+      expect(forge['storeData'].nodes[c1.nodeId].status).not.toBe('quenched');
     });
   });
 

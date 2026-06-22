@@ -1,11 +1,6 @@
-// ── TIMPS Benchmark Infrastructure ──
-// Reproducible evaluation against LongMemEval-S style benchmarks
-
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { getMemoryDir } from '../config/config.js';
-import type { MemoryEntry } from './types.js';
-import { HybridRetriever } from './hybridRetriever.js';
+import { MemoryEngine } from '@timps/memory-core';
 
 interface BenchmarkQuery {
   id: string;
@@ -37,14 +32,12 @@ interface BenchmarkReport {
 
 export class MemoryBenchmark {
   private dir: string;
-  private hybridRetriever: HybridRetriever;
+  private engine: MemoryEngine;
 
   constructor(projectPath: string) {
     this.dir = projectPath;
-    this.hybridRetriever = new HybridRetriever(projectPath);
+    this.engine = new MemoryEngine(projectPath);
   }
-
-  // ── Benchmark Datasets ────────────────────────────────────
 
   generateSyntheticBenchmark(count = 50): BenchmarkQuery[] {
     const queries: BenchmarkQuery[] = [];
@@ -74,8 +67,6 @@ export class MemoryBenchmark {
     return queries;
   }
 
-  // ── Evaluation ─────────────────────────────────────────────
-
   private computeRecall(retrieved: string[], expected: string[]): number[] {
     const recall: number[] = [];
     for (const k of [1, 3, 5]) {
@@ -95,22 +86,13 @@ export class MemoryBenchmark {
     return 0;
   }
 
-  // ── Run Benchmark ──────────────────────────────────────────
-
   run(count = 50): BenchmarkReport {
     const queries = this.generateSyntheticBenchmark(count);
     const results: BenchmarkResult[] = [];
     let totalTokens = 0;
 
-    const entries = this.loadSemanticEntries();
-
     for (const q of queries) {
-      const hybridResults = this.hybridRetriever.search(q.query, 5);
-      const retrieved = hybridResults.map(r => r.entry.content);
-
-      const keywordMatches = retrieved.filter(r =>
-        q.expectedKeywords.some(k => r.toLowerCase().includes(k))
-      );
+      const retrieved = this.engine.recall(q.query, { limit: 5 }).map(r => r.content);
 
       const recall = this.computeRecall(retrieved, q.expectedKeywords);
       const mrr = this.computeMRR(retrieved, q.expectedKeywords);
@@ -121,7 +103,7 @@ export class MemoryBenchmark {
         expected: q.expectedKeywords,
         recallAtK: recall,
         mrr,
-        precisionAt5: keywordMatches.length / 5,
+        precisionAt5: retrieved.filter(r => q.expectedKeywords.some(k => r.toLowerCase().includes(k))).length / 5,
       });
 
       totalTokens += retrieved.reduce((s, r) => s + Math.ceil(r.length / 4), 0);
@@ -150,23 +132,13 @@ export class MemoryBenchmark {
     return report;
   }
 
-  // ── Legacy Compatibility: Linear Search Benchmark ──────────
-
   runLegacy(count = 50): BenchmarkReport {
     const queries = this.generateSyntheticBenchmark(count);
     const results: BenchmarkResult[] = [];
-    const entries = this.loadSemanticEntries();
     let totalTokens = 0;
 
     for (const q of queries) {
-      const qTokens = q.query.toLowerCase().split(/\s+/);
-      const scored = entries.map(e => {
-        const content = e.content.toLowerCase();
-        const matchCount = qTokens.filter(t => content.includes(t)).length;
-        return { content: e.content, score: matchCount / qTokens.length };
-      }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
-
-      const retrieved = scored.slice(0, 5).map(s => s.content);
+      const retrieved = this.engine.recall(q.query, { limit: 5 }).map(r => r.content);
       const recall = this.computeRecall(retrieved, q.expectedKeywords);
       const mrr = this.computeMRR(retrieved, q.expectedKeywords);
 
@@ -182,7 +154,7 @@ export class MemoryBenchmark {
       totalTokens += retrieved.reduce((s, r) => s + Math.ceil(r.length / 4), 0);
     }
 
-    const report: BenchmarkReport = {
+    return {
       timestamp: Date.now(),
       totalQueries: count,
       recallAt1: results.reduce((s, r) => s + r.recallAtK[0], 0) / results.length,
@@ -193,38 +165,22 @@ export class MemoryBenchmark {
       tokenEfficiency: totalTokens / results.length,
       results,
     };
-
-    return report;
   }
 
-  // ── Comparison Report ──────────────────────────────────────
-
   compare(): string {
-    const hybrid = this.run(50);
-    const legacy = this.runLegacy(50);
-
+    const results = this.run(50);
     return `
-════════════════════════════════════════════════════
-  TIMPS Memory Benchmark Report
-════════════════════════════════════════════════════
+Memory Benchmark Report
   Generated: ${new Date().toLocaleString()}
-  Memory entries: ${this.loadSemanticEntries().length}
-
-┌─────────────────────────────────────────────────────┐
-│ Metric              │ Legacy  │ Hybrid   │ Delta  │
-├─────────────────────┼─────────┼──────────┼────────┤
-│ Recall@1            │ ${(legacy.recallAt1 * 100).toFixed(1)}%  │ ${(hybrid.recallAt1 * 100).toFixed(1)}%   │ ${((hybrid.recallAt1 - legacy.recallAt1) * 100).toFixed(1)}% │
-│ Recall@3            │ ${(legacy.recallAt3 * 100).toFixed(1)}%  │ ${(hybrid.recallAt3 * 100).toFixed(1)}%   │ ${((hybrid.recallAt3 - legacy.recallAt3) * 100).toFixed(1)}% │
-│ Recall@5            │ ${(legacy.recallAt5 * 100).toFixed(1)}%  │ ${(hybrid.recallAt5 * 100).toFixed(1)}%   │ ${((hybrid.recallAt5 - legacy.recallAt5) * 100).toFixed(1)}% │
-│ MRR                 │ ${(legacy.mrr * 100).toFixed(1)}%  │ ${(hybrid.mrr * 100).toFixed(1)}%   │ ${((hybrid.mrr - legacy.mrr) * 100).toFixed(1)}% │
-│ Token Efficiency    │ ${legacy.tokenEfficiency.toFixed(0)}      │ ${hybrid.tokenEfficiency.toFixed(0)}      │ ${(hybrid.tokenEfficiency - legacy.tokenEfficiency).toFixed(0)}     │
-└─────────────────────────────────────────────────────┘
+  Recall@1: ${(results.recallAt1 * 100).toFixed(1)}%
+  Recall@3: ${(results.recallAt3 * 100).toFixed(1)}%
+  Recall@5: ${(results.recallAt5 * 100).toFixed(1)}%
+  MRR: ${(results.mrr * 100).toFixed(1)}%
+  Token efficiency: ${results.tokenEfficiency.toFixed(0)} tok/query
 `;
   }
 
-  // ── Utility ────────────────────────────────────────────────
-
-  private loadSemanticEntries(): MemoryEntry[] {
+  private loadSemanticEntries() {
     const semanticFile = path.join(this.dir, 'semantic.json');
     try {
       if (!fs.existsSync(semanticFile)) return [];

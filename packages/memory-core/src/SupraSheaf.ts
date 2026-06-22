@@ -138,7 +138,7 @@ export class SupraSheaf {
       try {
         const echo = this.engine.echoForge;
         if (echo) {
-          for (const n of Object.values((echo as any)['store'].nodes ?? {})) {
+          for (const n of Object.values((echo as any)['storeData'].nodes ?? {})) {
             nodes.push({
               layerId: 'echo', nodeId: (n as any).id, domain: (n as any).domain,
               content: (n as any).content, amplitude: (n as any).echoAmp ?? (n as any).salience ?? 0.5,
@@ -162,7 +162,7 @@ export class SupraSheaf {
       try {
         const aether = this.engine.aetherForge;
         if (aether) {
-          for (const n of Object.values((aether as any)['store'].nodes ?? {})) {
+          for (const n of Object.values((aether as any)['storeData'].nodes ?? {})) {
             nodes.push({
               layerId: 'aether', nodeId: (n as any).id, domain: (n as any).domain,
               content: (n as any).content, amplitude: (n as any).amplitude ?? 0.5,

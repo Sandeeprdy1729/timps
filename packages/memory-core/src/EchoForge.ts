@@ -32,6 +32,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -400,9 +401,9 @@ function reservoirReadout(
 
 // ── EchoForge class ───────────────────────────────────────────────────────
 
-export class EchoForge {
+export class EchoForge implements IMemoryLayer {
   private readonly storeFile: string;
-  private store: EchoStore;
+  private storeData: EchoStore;
 
   /** In-process adjacency indices: nodeId → outbound / inbound edges */
   private adjOut: Map<string, EchoEdge[]> = new Map();
@@ -415,7 +416,7 @@ export class EchoForge {
     const echoDir = path.join(baseDir, "echo");
     fs.mkdirSync(echoDir, { recursive: true });
     this.storeFile = path.join(echoDir, "echoforge.json");
-    this.store = this._load();
+    this.storeData = this._load();
     this._rebuildAdjacency();
     this._warmReservoirStates();
   }
@@ -437,7 +438,7 @@ export class EchoForge {
 
   private _save(): void {
     try {
-      fs.writeFileSync(this.storeFile, JSON.stringify(this.store), "utf-8");
+      fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData), "utf-8");
     } catch { /* never crash the agent on I/O errors */ }
   }
 
@@ -455,7 +456,7 @@ export class EchoForge {
   private _rebuildAdjacency(): void {
     this.adjOut.clear();
     this.adjIn.clear();
-    for (const edge of this.store.edges) {
+    for (const edge of this.storeData.edges) {
       if (!this.adjOut.has(edge.fromId)) this.adjOut.set(edge.fromId, []);
       this.adjOut.get(edge.fromId)!.push(edge);
       if (!this.adjIn.has(edge.toId)) this.adjIn.set(edge.toId, []);
@@ -464,11 +465,11 @@ export class EchoForge {
   }
 
   private _addEdge(edge: EchoEdge): void {
-    const dup = this.store.edges.some(
+    const dup = this.storeData.edges.some(
       (e) => e.fromId === edge.fromId && e.toId === edge.toId && e.edgeType === edge.edgeType
     );
     if (!dup) {
-      this.store.edges.push(edge);
+      this.storeData.edges.push(edge);
       if (!this.adjOut.has(edge.fromId)) this.adjOut.set(edge.fromId, []);
       this.adjOut.get(edge.fromId)!.push(edge);
       if (!this.adjIn.has(edge.toId)) this.adjIn.set(edge.toId, []);
@@ -484,7 +485,7 @@ export class EchoForge {
     ];
     for (const domain of domains) {
       // Find the most recently created active node in this domain
-      const latestNode = Object.values(this.store.nodes)
+      const latestNode = Object.values(this.storeData.nodes)
         .filter((n) => n.domain === domain && n.invalidAt === null)
         .sort((a, b) => b.createdAt - a.createdAt)[0];
       if (latestNode?.reservoirState) {
@@ -527,7 +528,7 @@ export class EchoForge {
     const detectedContradictions: string[] = [];
 
     // ── Step 1: Supersession + contradiction ──────────────────────────
-    const candidates = Object.values(this.store.nodes).filter(
+    const candidates = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.domain === domain &&
         n.invalidAt === null &&
@@ -537,8 +538,8 @@ export class EchoForge {
     for (const cand of candidates) {
       const overlap = jaccardSim(content, cand.content);
       if (overlap >= SUPERSESSION_THRESHOLD) {
-        this.store.nodes[cand.id]!.invalidAt = now;
-        this.store.nodes[cand.id]!.validTo = now;
+        this.storeData.nodes[cand.id]!.invalidAt = now;
+        this.storeData.nodes[cand.id]!.validTo = now;
         supersededIds.push(cand.id);
         this._addEdge({
           fromId: nodeId, toId: cand.id,
@@ -579,10 +580,10 @@ export class EchoForge {
       tags: opts.tags ?? [],
       createdAt: now,
     };
-    this.store.nodes[nodeId] = node;
+    this.storeData.nodes[nodeId] = node;
 
     // ── Step 4: Causal edge from parent ───────────────────────────────
-    if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
+    if (opts.causalParentId && this.storeData.nodes[opts.causalParentId]) {
       this._addEdge({
         fromId: opts.causalParentId, toId: nodeId,
         weight: 0.9, edgeType: "causes", createdAt: now,
@@ -593,13 +594,13 @@ export class EchoForge {
     const propagation = this._propagateEcho(nodeId, baseSalience, now);
 
     // ── Step 6: Update field cache ────────────────────────────────────
-    const cache = this.store.fieldCache[domain] ?? { sumAmp: 0, count: 0, lastUpdated: 0 };
+    const cache = this.storeData.fieldCache[domain] ?? { sumAmp: 0, count: 0, lastUpdated: 0 };
     cache.sumAmp += baseSalience;
     cache.count += 1;
     cache.lastUpdated = now;
-    this.store.fieldCache[domain] = cache;
+    this.storeData.fieldCache[domain] = cache;
 
-    this.store.lastPropagationMs = propagation.propagationMs;
+    this.storeData.lastPropagationMs = propagation.propagationMs;
     this._save();
 
     return { nodeId, supersededIds, detectedContradictions, propagation };
@@ -638,7 +639,7 @@ export class EchoForge {
       if (visited.has(nodeId) || depth > MAX_PROPAGATION_DEPTH || amp < 0.01) continue;
       visited.add(nodeId);
 
-      const node = this.store.nodes[nodeId];
+      const node = this.storeData.nodes[nodeId];
       if (!node) continue;
 
       // Temporal decay
@@ -647,7 +648,7 @@ export class EchoForge {
       echoMap[nodeId] = (echoMap[nodeId] ?? 0) + netAmp;
 
       // Update node echo amplitude in-place
-      this.store.nodes[nodeId]!.echoAmp = Math.min(2.0, (this.store.nodes[nodeId]!.echoAmp ?? 0) + netAmp * 0.1);
+      this.storeData.nodes[nodeId]!.echoAmp = Math.min(2.0, (this.storeData.nodes[nodeId]!.echoAmp ?? 0) + netAmp * 0.1);
 
       // Contradiction alarm: high net echo on a contradiction edge target
       if (echoMap[nodeId]! > CONTRADICTION_ALARM) {
@@ -698,13 +699,13 @@ export class EchoForge {
     let fromCache = false;
 
     // Fast field-cache pre-filter when no specific query text
-    const cacheEntry = opts.domain ? this.store.fieldCache[opts.domain] : undefined;
+    const cacheEntry = opts.domain ? this.storeData.fieldCache[opts.domain] : undefined;
     if ((opts.useCache ?? false) && cacheEntry && queryText.trim() === "") {
       // Return top nodes by echo amplitude — O(n) but cache-assisted
       fromCache = true;
     }
 
-    const activeNodes = Object.values(this.store.nodes).filter(
+    const activeNodes = Object.values(this.storeData.nodes).filter(
       (n) =>
         n.invalidAt === null &&
         (n.validTo === null || n.validTo > now) &&
@@ -725,7 +726,7 @@ export class EchoForge {
 
     // Increment retrieval counts
     for (const n of nodes) {
-      this.store.nodes[n.id]!.retrievalCount += 1;
+      this.storeData.nodes[n.id]!.retrievalCount += 1;
     }
 
     let predictions: EchoPrediction[] | undefined;
@@ -751,7 +752,7 @@ export class EchoForge {
     const now = nowMs();
     const lookbackMs = (opts.lookbackDays ?? 30) * 24 * 60 * 60 * 1000;
 
-    const recentNodes = Object.values(this.store.nodes).filter(
+    const recentNodes = Object.values(this.storeData.nodes).filter(
       (n) => n.domain === domain && n.invalidAt === null && n.createdAt > now - lookbackMs
     );
 
@@ -803,7 +804,7 @@ export class EchoForge {
     let crystallised = 0;
     let contradictionsResolved = 0;
 
-    for (const node of Object.values(this.store.nodes)) {
+    for (const node of Object.values(this.storeData.nodes)) {
       if (node.invalidAt !== null) continue;
 
       const amp = effectiveEcho(node, now);
@@ -811,29 +812,29 @@ export class EchoForge {
 
       if (amp < quenchThreshold && outbound === 0) {
         // Quench
-        this.store.nodes[node.id]!.invalidAt = now;
-        this.store.nodes[node.id]!.validTo = now;
+        this.storeData.nodes[node.id]!.invalidAt = now;
+        this.storeData.nodes[node.id]!.validTo = now;
         quenched++;
       } else {
         retained++;
         // Crystallise: old, well-remembered, high-amplitude
         const age = now - node.createdAt;
         if (age >= CRYSTALLISATION_AGE_MS && amp >= 0.5 && node.retrievalCount >= 3) {
-          this.store.nodes[node.id]!.salience = Math.min(1, node.salience * 1.25);
+          this.storeData.nodes[node.id]!.salience = Math.min(1, node.salience * 1.25);
           crystallised++;
         }
       }
     }
 
     // Resolve contradictions where one side has been superseded
-    const contEdges = this.store.edges.filter((e) => e.edgeType === "contradicts");
+    const contEdges = this.storeData.edges.filter((e) => e.edgeType === "contradicts");
     for (const edge of contEdges) {
-      const to = this.store.nodes[edge.toId];
+      const to = this.storeData.nodes[edge.toId];
       if (to && to.invalidAt !== null) {
         // The contradicted node was superseded — remove contradiction edge
-        const idx = this.store.edges.indexOf(edge);
+        const idx = this.storeData.edges.indexOf(edge);
         if (idx !== -1) {
-          this.store.edges.splice(idx, 1);
+          this.storeData.edges.splice(idx, 1);
           contradictionsResolved++;
         }
       }
@@ -842,7 +843,7 @@ export class EchoForge {
     // Rebuild adjacency after edge removal
     if (contradictionsResolved > 0) this._rebuildAdjacency();
 
-    this.store.lastConsolidatedAt = now;
+    this.storeData.lastConsolidatedAt = now;
     this._save();
     return { quenched, retained, crystallised, contradictionsResolved };
   }
@@ -861,7 +862,7 @@ export class EchoForge {
   }> {
     const limit = opts.limit ?? DEFAULT_TOP_K;
 
-    const valid = Object.values(this.store.nodes)
+    const valid = Object.values(this.storeData.nodes)
       .filter(
         (n) =>
           n.validFrom <= atTime &&
@@ -878,7 +879,7 @@ export class EchoForge {
     let depth = 0;
     while (cursor && depth < 8) {
       causalChain.push(cursor);
-      cursor = this.store.nodes[cursor]?.causalParentId ?? null;
+      cursor = this.storeData.nodes[cursor]?.causalParentId ?? null;
       depth++;
     }
 
@@ -896,7 +897,7 @@ export class EchoForge {
   /** Format top echo nodes for injection into agent prompts. */
   async getContextString(domain: EchoDomain, limit = 5): Promise<string> {
     const now = nowMs();
-    const nodes = Object.values(this.store.nodes)
+    const nodes = Object.values(this.storeData.nodes)
       .filter((n) => n.domain === domain && n.invalidAt === null)
       .sort((a, b) => (b.echoAmp ?? 0) - (a.echoAmp ?? 0))
       .slice(0, limit);
@@ -913,7 +914,7 @@ export class EchoForge {
   /** Full multi-domain status report for /echo command. */
   async getStatus(): Promise<EchoStatus> {
     const now = nowMs();
-    const allNodes = Object.values(this.store.nodes);
+    const allNodes = Object.values(this.storeData.nodes);
     const activeNodes = allNodes.filter((n) => n.invalidAt === null);
     const domainCounts: Partial<Record<EchoDomain, number>> = {};
     let totalAmp = 0;
@@ -926,9 +927,9 @@ export class EchoForge {
     return {
       nodeCount: allNodes.length,
       activeNodeCount: activeNodes.length,
-      edgeCount: this.store.edges.length,
+      edgeCount: this.storeData.edges.length,
       reservoirSize: RESERVOIR_SIZE,
-      lastPropagationMs: this.store.lastPropagationMs,
+      lastPropagationMs: this.storeData.lastPropagationMs,
       domainCounts,
       avgEchoAmp: activeNodes.length > 0 ? totalAmp / activeNodes.length : 0,
     };
@@ -936,12 +937,12 @@ export class EchoForge {
 
   /** Export all active nodes for external analysis */
   exportNodes(domain?: EchoDomain): EchoNode[] {
-    const nodes = Object.values(this.store.nodes).filter((n) => n.invalidAt === null);
+    const nodes = Object.values(this.storeData.nodes).filter((n) => n.invalidAt === null);
     return domain ? nodes.filter((n) => n.domain === domain) : nodes;
   }
 
   exportEdges(): EchoEdge[] {
-    return [...this.store.edges];
+    return [...this.storeData.edges];
   }
 
   // ── Private: reservoir prediction ─────────────────────────────────────
@@ -1034,6 +1035,120 @@ export class EchoForge {
       if ((c ?? 0) > maxCount) { maxCount = c!; maxDomain = d as EchoDomain; }
     }
     return maxDomain;
+  }
+
+  // ── IMemoryLayer implementation ─────────────────────────────────────────
+
+  async store(layer: LayerId, entry: Omit<MemoryEntry, 'id' | 'timestamp'>): Promise<string> {
+    const result = await this.weave(entry.content, {
+      domain: entry.tags?.[0] as EchoDomain | undefined,
+      tags: entry.tags,
+    });
+    return result.nodeId;
+  }
+
+  async retrieve(layer: LayerId, query: MemoryQuery): Promise<MemoryRetrievalResult[]> {
+    const now = nowMs();
+    const qLower = query.text.toLowerCase();
+    const limit = query.limit ?? 5;
+    const matches: MemoryRetrievalResult[] = [];
+    for (const node of Object.values(this.storeData.nodes)) {
+      if (node.invalidAt !== null) continue;
+      if (query.tags?.length && !query.tags.some(t => node.domain === t)) continue;
+      if (qLower && !node.content.toLowerCase().includes(qLower)) continue;
+      matches.push({
+        entry: {
+          id: node.id,
+          layerId: 'L7' as LayerId,
+          timestamp: node.createdAt,
+          content: node.content,
+          tags: [node.domain],
+          confidence: node.salience ?? 0.5,
+          evidenceCount: node.retrievalCount ?? 1,
+          sourceDiversity: 0,
+        },
+        score: node.echoAmp ?? node.salience ?? 0.5,
+        provenance: null,
+      });
+      if (matches.length >= limit) break;
+    }
+    return matches;
+  }
+
+  async verify(entryId: string, evidence: VerificationEvidence): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.salience = evidence.outcome === 'confirmed'
+        ? Math.min(1, (this.storeData.nodes[entryId]!.salience ?? 0.5) * 1.1)
+        : Math.max(0, (this.storeData.nodes[entryId]!.salience ?? 0.5) * 0.9);
+      this._save();
+    }
+  }
+
+  async contradict(entryId: string, counterEntryId: string): Promise<void> {
+    if (this.storeData.nodes[entryId] && this.storeData.nodes[counterEntryId]) {
+      this._addEdge({
+        fromId: entryId,
+        toId: counterEntryId,
+        weight: 0.9,
+        edgeType: 'contradicts',
+        createdAt: Date.now(),
+      });
+      this._save();
+    }
+  }
+
+  async archive(entryId: string, reason: string): Promise<void> {
+    if (this.storeData.nodes[entryId]) {
+      this.storeData.nodes[entryId]!.invalidAt = Date.now();
+      this.storeData.nodes[entryId]!.validTo = Date.now();
+      this._save();
+    }
+  }
+
+  async getProvenance(entryId: string): Promise<import('./ProvenanceForge.js').Provenance | null> {
+    const node = this.storeData.nodes[entryId];
+    if (!node) return null;
+    return {
+      id: entryId,
+      sourceKind: 'agent_inference' as const,
+      sourceDetail: 'echo',
+      actorId: 'forge',
+      confidence: node.salience ?? 0.5,
+      evidenceCount: node.retrievalCount ?? 1,
+      parentIds: node.causalParentId ? [node.causalParentId] : [],
+      observedAt: node.validFrom ?? Date.now(),
+      validFrom: node.validFrom ?? undefined,
+      validUntil: node.validTo ?? undefined,
+      chainOfCustody: [],
+    };
+  }
+
+  async explain(entryId: string): Promise<string> {
+    const node = this.storeData.nodes[entryId];
+    if (!node) return `No echo node ${entryId}`;
+    return `Echo node ${entryId}: "${node.content.slice(0, 80)}" domain=${node.domain} amp=${node.echoAmp?.toFixed(3)} salience=${node.salience?.toFixed(3)} edges=${this.storeData.edges.filter(e => e.fromId === entryId || e.toId === entryId).length}`;
+  }
+
+  async audit(): Promise<AuditReport> {
+    const now = Date.now();
+    const valid = Object.values(this.storeData.nodes).filter(n => n.invalidAt === null);
+    const weak = valid.filter(n => (n.salience ?? 0.5) < 0.3);
+    return {
+      totalEntries: valid.length,
+      weak: weak.length,
+      contradicted: this.storeData.edges.filter(e => e.edgeType === 'contradicts').length,
+      outdated: 0,
+      unsourced: 0,
+      layerBreakdown: { L7: valid.length },
+      timestamp: now,
+    };
+  }
+
+  async decay(): Promise<number> {
+    const before = Object.values(this.storeData.nodes).filter(n => n.invalidAt === null).length;
+    this.consolidate();
+    const after = Object.values(this.storeData.nodes).filter(n => n.invalidAt === null).length;
+    return before - after;
   }
 }
 
