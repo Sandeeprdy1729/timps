@@ -91,7 +91,24 @@ When no backend is provided, `MemoryEngine` creates a `FileBackend` via `getBack
 
 **Gotcha:** `FileBackend.write()` uses WAL: serialize to JSON → write to `{key}.wal` → fsync → rename to `{key}`. On startup, orphaned `.wal` files are replayed. This guarantees no half-written JSON even on process kill.
 
-**Gotcha:** Episodic storage format changed from JSONL (`episodes.jsonl`, one JSON per line) to JSON array (`episodes.json`). Existing on-disk data in the old format is not auto-migrated. Also update any hardcoded `episodes.jsonl` paths in tests, docs, and dependent packages.
+**Gotcha:** Episodic storage format changed from JSONL (`episodes.jsonl`, one JSON per line) to JSON array (`episodes.json`). Migration `v1_to_v2` handles this automatically on startup. Also update any hardcoded `episodes.jsonl` paths in tests, docs, and dependent packages.
+
+### Schema migrations (Phase 1c)
+
+Memory directories carry a `schema-version.json` file tracking the on-disk format version. On construction, `MemoryEngine` runs a `MigrationEngine` that detects the current version, runs any pending migrations sequentially, and updates the version file. Migrations live in `packages/memory-core/src/migrations/`:
+
+| Migration | From | To | What it does |
+|---|---|---|---|
+| `v1_to_v2` | v1 (JSONL) | v2 (JSON array) | Converts `episodes.jsonl` → `episodes.json`, merges existing data, cleans `.wal` files |
+| `v2_to_v3` | v2 (no _meta) | v3 (with _meta) | Adds `_meta` block (`schemaVersion`, `layerName`, `createdAt`, `migratedAt`) to all forge state files |
+
+To add a new migration:
+1. Create `vN_to_v{N+1}.ts` exporting a `Migration` object
+2. Add it to `ALL_MIGRATIONS` in `migrations/index.ts`
+3. Bump `CURRENT_SCHEMA_VERSION` in `migrations/types.ts`
+4. Write tests in `migrations/migrations.test.ts`
+
+**Gotcha:** Migrations run through the `StorageBackend` interface, not `fs` directly. The `v1_to_v2` migration uses `fs` because old JSONL files are outside the backend abstraction. All subsequent migrations should use `backend.read/write`.
 
 ## Style & conventions
 

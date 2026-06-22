@@ -22,6 +22,7 @@ import {
 import type { StorageBackend, FileBackendOptions } from './backends/index.js';
 
 import { searchEntries } from './search.js';
+import { MigrationEngine, CURRENT_SCHEMA_VERSION, ALL_MIGRATIONS } from './migrations/index.js';
 
 // ── New Layers (L10-L22) ──
 import { EngramLog } from './EngramLog.js';
@@ -221,7 +222,16 @@ export class MemoryEngine {
     this.dir = options?.dir ?? memoryDir(projectPath, this.scope);
     this.hash = projectHash(projectPath);
     this._backend = options?.backend ?? getBackend(this.dir);
+    this._runMigrations();
     this.working = loadWorking(this.dir);
+  }
+
+  /** Run pending schema migrations on startup. */
+  private _runMigrations(): void {
+    const engine = new MigrationEngine(this.dir, this._backend, ALL_MIGRATIONS);
+    if (engine.hasPending) {
+      engine.startup();
+    }
   }
 
   /** The active storage backend (useful for passing to forge layers). */
