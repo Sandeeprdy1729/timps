@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface ValueSignal {
   value: string;             // e.g. "shipping speed over perfection"
@@ -42,8 +43,10 @@ const STATED_VS_ACTUAL = [
 export class LivingManifesto {
   private file: string;
   private decisions: { text: string; source: 'contradiction' | 'regret' | 'decision'; created_at: string }[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'manifesto_signals.json');
     this.load();
   }
@@ -53,10 +56,10 @@ export class LivingManifesto {
       // Mine from the other tools' data — this is the "values from behavior" trick
       const candidates = ['positions.json', 'decisions.json', 'manifesto_signals.json'];
       const out: typeof this.decisions = [];
-      for (const f of candidates) {
-        const full = path.join(path.dirname(this.file), f);
-        if (fs.existsSync(full)) {
-          const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
+      if (this._backend) {
+        for (const f of candidates) {
+          const data = this._backend.read(f);
+          if (!data) continue;
           if (f === 'positions.json' && Array.isArray(data.positions)) {
             for (const p of data.positions) {
               if (p.claim) out.push({ text: p.claim, source: 'contradiction', created_at: p.stored_at || new Date().toISOString() });
@@ -73,6 +76,28 @@ export class LivingManifesto {
             }
           }
         }
+      } else {
+        for (const f of candidates) {
+          const full = path.join(path.dirname(this.file), f);
+          if (fs.existsSync(full)) {
+            const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
+            if (f === 'positions.json' && Array.isArray(data.positions)) {
+              for (const p of data.positions) {
+                if (p.claim) out.push({ text: p.claim, source: 'contradiction', created_at: p.stored_at || new Date().toISOString() });
+              }
+            }
+            if (f === 'decisions.json' && Array.isArray(data.decisions)) {
+              for (const d of data.decisions) {
+                if (d.decision) out.push({ text: d.decision, source: 'decision', created_at: d.created_at || new Date().toISOString() });
+              }
+            }
+            if (f === 'manifesto_signals.json' && Array.isArray(data.signals)) {
+              for (const s of data.signals) {
+                if (s.text) out.push({ text: s.text, source: 'decision', created_at: s.created_at || new Date().toISOString() });
+              }
+            }
+          }
+        }
       }
       this.decisions = out;
     } catch { /* ignore */ }
@@ -81,7 +106,12 @@ export class LivingManifesto {
   /** Ingest a behavior signal directly (for explicit logging). */
   ingest(text: string): void {
     this.decisions.push({ text, source: 'decision', created_at: new Date().toISOString() });
-    fs.writeFileSync(this.file, JSON.stringify({ signals: this.decisions.slice(-500) }, null, 2), 'utf-8');
+    const data = { signals: this.decisions.slice(-500) };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Generate the manifesto from observed behavior. */

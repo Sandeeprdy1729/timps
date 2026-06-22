@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { generateId } from './storage.js';
+import type { StorageBackend } from './backends/types.js';
 
 export interface ConsolidationRule {
   name: string;
@@ -15,22 +16,23 @@ export interface ConsolidationRule {
 }
 
 export class ConsolidationEngine {
-  constructor(private dir: string, private rules: ConsolidationRule[]) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, private rules: ConsolidationRule[], backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   run(opts: { sinceMs?: number; dryRun?: boolean } = {}): {
     promoted: number;
     archived: number;
     summary: string;
   } {
-    const episodicFile = path.join(this.dir, 'episodes.jsonl');
+    const episodicFile = path.join(this.dir, 'episodes.json');
     if (!fs.existsSync(episodicFile)) return { promoted: 0, archived: 0, summary: '' };
     const since = opts.sinceMs ?? Date.now() - 7 * 24 * 60 * 60 * 1000;
     const content = fs.readFileSync(episodicFile, 'utf-8').trim();
     if (!content) return { promoted: 0, archived: 0, summary: '' };
-    const recent = content
-      .split('\n')
-      .map(l => JSON.parse(l))
-      .filter(e => e.timestamp >= since);
+    const recent = JSON.parse(content).filter((e: any) => e.timestamp >= since);
 
     let promoted = 0;
     let archived = 0;

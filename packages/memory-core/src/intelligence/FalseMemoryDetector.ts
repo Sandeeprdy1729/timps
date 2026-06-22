@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 import type { Provenance, SourceKind } from '../ProvenanceForge.js';
 
 export interface FalseMemoryScore {
@@ -28,7 +29,11 @@ const SOURCE_RISK: Record<SourceKind, number> = {
 };
 
 export class FalseMemoryDetector {
-  constructor(private dir: string) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   score(memory: { id?: string; content?: string; provenance?: Provenance; evidenceCount: number; ageDays: number }): FalseMemoryScore {
     const prov = memory.provenance;

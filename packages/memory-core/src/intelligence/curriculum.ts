@@ -3,6 +3,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface LearningGap {
   topic: string;
@@ -46,8 +47,10 @@ export class CurriculumArchitect {
   private file: string;
   private questions: string[] = [];
   private decisions: string[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'curriculum_log.json');
     this.load();
   }
@@ -60,27 +63,48 @@ export class CurriculumArchitect {
       { name: 'curriculum_log.json', key: 'curriculum_log' },
     ];
     for (const { name, key } of files) {
-      const full = path.join(path.dirname(this.file), name);
-      if (!fs.existsSync(full)) continue;
-      try {
-        const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
-        if (key === 'positions' && Array.isArray(data.positions)) {
-          for (const p of data.positions) if (p.claim) this.decisions.push(p.claim);
-        }
-        if (key === 'decisions' && Array.isArray(data.decisions)) {
-          for (const d of data.decisions) if (d.decision) this.decisions.push(d.decision);
-        }
-        if (key === 'curriculum_log' && Array.isArray(data.questions)) {
-          for (const q of data.questions) this.questions.push(q);
-        }
-      } catch { /* ignore */ }
+      if (this._backend) {
+        const data = this._backend.read(name);
+        if (!data) continue;
+        try {
+          if (key === 'positions' && Array.isArray(data.positions)) {
+            for (const p of data.positions) if (p.claim) this.decisions.push(p.claim);
+          }
+          if (key === 'decisions' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.decision) this.decisions.push(d.decision);
+          }
+          if (key === 'curriculum_log' && Array.isArray(data.questions)) {
+            for (const q of data.questions) this.questions.push(q);
+          }
+        } catch { /* ignore */ }
+      } else {
+        const full = path.join(path.dirname(this.file), name);
+        if (!fs.existsSync(full)) continue;
+        try {
+          const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
+          if (key === 'positions' && Array.isArray(data.positions)) {
+            for (const p of data.positions) if (p.claim) this.decisions.push(p.claim);
+          }
+          if (key === 'decisions' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.decision) this.decisions.push(d.decision);
+          }
+          if (key === 'curriculum_log' && Array.isArray(data.questions)) {
+            for (const q of data.questions) this.questions.push(q);
+          }
+        } catch { /* ignore */ }
+      }
     }
   }
 
   /** Log a question you asked (so the system can detect what you keep asking about). */
   logQuestion(q: string): void {
     this.questions.push(q);
-    fs.writeFileSync(this.file, JSON.stringify({ questions: this.questions.slice(-500) }, null, 2), 'utf-8');
+    const data = { questions: this.questions.slice(-500) };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Generate a learning plan based on what you keep asking about vs what you've decided. */

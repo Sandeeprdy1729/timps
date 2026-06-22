@@ -166,7 +166,7 @@ TIMPS stores memory per-project in `~/.timps/memory/<project-hash>/`:
 
 ```
 semantic.json     — long-term facts and patterns
-episodes.jsonl    — past session summaries (rolling 100)
+episodes.json     — past session summaries (rolling 100)
 working.json      — current session state
 ```
 

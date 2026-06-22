@@ -3,6 +3,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -27,15 +28,22 @@ export class PatternLearner {
   private file: string;
   private patterns: LearnedPattern[] = [];
   private readonly DEDUP_THRESHOLD = 0.8;
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'learned_patterns.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.patterns = data.patterns || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.patterns = data.patterns || [];
       }
@@ -43,7 +51,12 @@ export class PatternLearner {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ patterns: this.patterns }, null, 2), 'utf-8');
+    const data = { patterns: this.patterns };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Store an observation — deduplicates by Jaccard similarity */

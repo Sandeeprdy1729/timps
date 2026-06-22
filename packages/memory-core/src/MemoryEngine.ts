@@ -12,13 +12,14 @@ import type {
 } from './types.js';
 
 import {
-  projectHash, memoryDir, generateId,
+  projectHash, memoryDir, generateId, getBackend,
   loadWorking, saveWorking,
   appendEpisode, loadEpisodes, episodeCount,
   loadSemantic, saveSemantic,
   trackFile, trackError, trackPattern,
   jaccardSimilarity,
 } from './storage.js';
+import type { StorageBackend, FileBackendOptions } from './backends/index.js';
 
 import { searchEntries } from './search.js';
 
@@ -129,6 +130,14 @@ export interface MemoryEngineOptions {
   scope?: MemoryScope;
   /** Override the storage directory. If not set, derived from projectPath + optional scope. */
   dir?: string;
+  /**
+   * Storage backend for all forge layers.
+   * Defaults to FileBackend with WAL if not provided.
+   * Pass InMemoryBackend for testing, PostgresBackend for multi-server, etc.
+   */
+  backend?: StorageBackend;
+  /** FileBackend options (only used when backend is not explicitly provided). */
+  fileBackendOptions?: FileBackendOptions;
 }
 
 export class MemoryEngine {
@@ -136,6 +145,7 @@ export class MemoryEngine {
   private hash: string;
   private scope?: MemoryScope;
   private working: WorkingState;
+  private _backend: StorageBackend;
 
   // ── Layer 5: ChronosForge (lazy-init) ──
   private _chronos?: ChronosForge;
@@ -210,7 +220,13 @@ export class MemoryEngine {
     this.scope = options?.scope;
     this.dir = options?.dir ?? memoryDir(projectPath, this.scope);
     this.hash = projectHash(projectPath);
+    this._backend = options?.backend ?? getBackend(this.dir);
     this.working = loadWorking(this.dir);
+  }
+
+  /** The active storage backend (useful for passing to forge layers). */
+  get backend(): StorageBackend {
+    return this._backend;
   }
 
   /** The scope this engine was created with, if any. */
@@ -220,60 +236,60 @@ export class MemoryEngine {
 
   // ── Lazy getters for tool instances ──
   get contradiction(): ContradictionDetector {
-    return (this._contradiction ??= new ContradictionDetector(this.dir));
+    return (this._contradiction ??= new ContradictionDetector(this.dir, this._backend));
   }
   get burnoutSeismograph(): BurnoutSeismograph {
-    return (this._burnout ??= new BurnoutSeismograph(this.dir));
+    return (this._burnout ??= new BurnoutSeismograph(this.dir, this._backend));
   }
   get regretOracle(): RegretOracle {
-    return (this._regret ??= new RegretOracle(this.dir));
+    return (this._regret ??= new RegretOracle(this.dir, this._backend));
   }
   get techDebt(): TechDebtSeismograph {
-    return (this._techDebt ??= new TechDebtSeismograph(this.dir));
+    return (this._techDebt ??= new TechDebtSeismograph(this.dir, this._backend));
   }
   get bugPattern(): BugPatternProphet {
-    return (this._bugPattern ??= new BugPatternProphet(this.dir));
+    return (this._bugPattern ??= new BugPatternProphet(this.dir, this._backend));
   }
   get apiArchaeologist(): APIArchaeologist {
-    return (this._api ??= new APIArchaeologist(this.dir));
+    return (this._api ??= new APIArchaeologist(this.dir, this._backend));
   }
   get velocityTracker(): VelocityTracker {
-    return (this._velocity ??= new VelocityTracker(this.dir));
+    return (this._velocity ??= new VelocityTracker(this.dir, this._backend));
   }
   get architectureDrift(): ArchitectureDriftDetector {
-    return (this._architecture ??= new ArchitectureDriftDetector(this.dir));
+    return (this._architecture ??= new ArchitectureDriftDetector(this.dir, this._backend));
   }
   get patternLearner(): PatternLearner {
-    return (this._patterns ??= new PatternLearner(this.dir));
+    return (this._patterns ??= new PatternLearner(this.dir, this._backend));
   }
   get meetingGhost(): MeetingGhost {
-    return (this._meetingGhost ??= new MeetingGhost(this.dir));
+    return (this._meetingGhost ??= new MeetingGhost(this.dir, this._backend));
   }
   get deadReckoning(): DeadReckoning {
-    return (this._deadReckoning ??= new DeadReckoning(this.dir));
+    return (this._deadReckoning ??= new DeadReckoning(this.dir, this._backend));
   }
   get livingManifesto(): LivingManifesto {
-    return (this._livingManifesto ??= new LivingManifesto(this.dir));
+    return (this._livingManifesto ??= new LivingManifesto(this.dir, this._backend));
   }
   get relationship(): RelationshipIntelligence {
-    return (this._relationship ??= new RelationshipIntelligence(this.dir));
+    return (this._relationship ??= new RelationshipIntelligence(this.dir, this._backend));
   }
   get skillShadow(): SkillShadow {
-    return (this._skillShadow ??= new SkillShadow(this.dir));
+    return (this._skillShadow ??= new SkillShadow(this.dir, this._backend));
   }
   get curriculum(): CurriculumArchitect {
-    return (this._curriculum ??= new CurriculumArchitect(this.dir));
+    return (this._curriculum ??= new CurriculumArchitect(this.dir, this._backend));
   }
   get codebaseAnthropologist(): CodebaseAnthropologist {
-    return (this._codebaseAnthropologist ??= new CodebaseAnthropologist(this.dir));
+    return (this._codebaseAnthropologist ??= new CodebaseAnthropologist(this.dir, this._backend));
   }
   get institutionalMemory(): InstitutionalMemory {
-    return (this._institutionalMemory ??= new InstitutionalMemory(this.dir));
+    return (this._institutionalMemory ??= new InstitutionalMemory(this.dir, this._backend));
   }
 
   /** Layer 5: ChronosForge — bi-temporal causal memory weaver + foresight simulator. */
   get chronosForge(): ChronosForge {
-    return (this._chronos ??= new ChronosForge(this.dir));
+    return (this._chronos ??= new ChronosForge(this.dir, this._backend));
   }
 
   /**
@@ -281,7 +297,7 @@ export class MemoryEngine {
    * Deterministic O(V+E) foresight: -85% latency vs MC rollouts, +17pt prediction.
    */
   get echoForge(): EchoForge {
-    return (this._echo ??= new EchoForge(this.dir));
+    return (this._echo ??= new EchoForge(this.dir, this._backend));
   }
 
   /**
@@ -289,7 +305,7 @@ export class MemoryEngine {
    * Algebraic contradiction detection (H¹), eigenmode foresight, O(k·N) after precompute.
    */
   get harmonicSheafWeaver(): HarmonicSheafWeaver {
-    return (this._harmonicSheaf ??= new HarmonicSheafWeaver(this.dir));
+    return (this._harmonicSheaf ??= new HarmonicSheafWeaver(this.dir, this._backend));
   }
 
   /**
@@ -298,7 +314,7 @@ export class MemoryEngine {
    * oscillators, and hierarchical MemTree-style indexing. O(log N + k) weave.
    */
   get aetherForge(): AetherForgeERL {
-    return (this._aether ??= new AetherForgeERL(this.dir));
+    return (this._aether ??= new AetherForgeERL(this.dir, this._backend));
   }
 
   /**
@@ -317,7 +333,7 @@ export class MemoryEngine {
    * O(log N) amortized updates vs O(N + E) for full Laplacian eigen-solve.
    */
   get qptw(): QPTW {
-    return (this._qptw ??= new QPTW(this.dir));
+    return (this._qptw ??= new QPTW(this.dir, this._backend));
   }
 
   /**
@@ -326,7 +342,7 @@ export class MemoryEngine {
    * memorization (Titans-style) + MAGMA multi-view projections.
    */
   get titanicForge(): TitanicForge {
-    return (this._titanic ??= new TitanicForge(this.dir));
+    return (this._titanic ??= new TitanicForge(this.dir, this._backend));
   }
 
   /**
@@ -335,7 +351,7 @@ export class MemoryEngine {
    * with sheaf curvature constraints. O(d log N) weave, O(d + k) query.
    */
   get qerw(): QERW {
-    return (this._qerw ??= new QERW(this.dir));
+    return (this._qerw ??= new QERW(this.dir, this._backend));
   }
 
   /**
@@ -344,7 +360,7 @@ export class MemoryEngine {
    * resonance for provably consistent, self-evolving multi-scale prediction.
    */
   get qisrd(): QISRD {
-    return (this._qisrd ??= new QISRD(this.dir));
+    return (this._qisrd ??= new QISRD(this.dir, this._backend));
   }
 
   /**
@@ -354,7 +370,7 @@ export class MemoryEngine {
    * +15-20pt temporal foresight vs pure eigenmode projection.
    */
   get eclipseForge(): EclipseForge {
-    return (this._eclipse ??= new EclipseForge(this.dir));
+    return (this._eclipse ??= new EclipseForge(this.dir, this._backend));
   }
 
   /**
@@ -364,27 +380,27 @@ export class MemoryEngine {
    * O(R²D) per edge propagation, O(log N) effective on lattice paths.
    */
   get qitrl(): QITRL {
-    return (this._qitrl ??= new QITRL(this.dir));
+    return (this._qitrl ??= new QITRL(this.dir, this._backend));
   }
 
   // ── L10: EngramLog — immutable hash-chained audit log ──
   get engramLog(): EngramLog {
-    return (this._engramLog ??= new EngramLog(this.dir));
+    return (this._engramLog ??= new EngramLog(this.dir, this._backend));
   }
 
   // ── L11: ConsolidationEngine — sleep-equivalent background consolidation ──
   get consolidationEngine(): ConsolidationEngine {
-    return (this._consolidation ??= new ConsolidationEngine(this.dir, []));
+    return (this._consolidation ??= new ConsolidationEngine(this.dir, [], this._backend));
   }
 
   // ── L12: SynapticPruner — active forgetting engine ──
   get synapticPruner(): SynapticPruner {
-    return (this._synapticPruner ??= new SynapticPruner(this.dir));
+    return (this._synapticPruner ??= new SynapticPruner(this.dir, undefined, this._backend));
   }
 
   // ── L13: ProvenanceForge — complete source tracking ──
   get provenanceForge(): ProvenanceForge {
-    return (this._provenanceForge ??= new ProvenanceForge(this.dir));
+    return (this._provenanceForge ??= new ProvenanceForge(this.dir, this._backend));
   }
 
   // ── L14: SpacedRepetitionForge — SM-2 scheduling ──
@@ -394,82 +410,82 @@ export class MemoryEngine {
 
   // ── L15: ConstitutionalGuard — gatekeeper against low-confidence writes ──
   get constitutionalGuard(): ConstitutionalGuard {
-    return (this._constitutionalGuard ??= new ConstitutionalGuard(this.dir));
+    return (this._constitutionalGuard ??= new ConstitutionalGuard(this.dir, undefined, this._backend));
   }
 
   // ── L16: AuditForge — memory health auditor ──
   get auditForge(): AuditForge {
-    return (this._auditForge ??= new AuditForge(this.dir));
+    return (this._auditForge ??= new AuditForge(this.dir, this._backend));
   }
 
   // ── L17: ProspectiveTrigger — "when X, surface Y" ──
   get prospectiveTrigger(): ProspectiveTrigger {
-    return (this._prospectiveTrigger ??= new ProspectiveTrigger(this.dir));
+    return (this._prospectiveTrigger ??= new ProspectiveTrigger(this.dir, this._backend));
   }
 
   // ── L18: BiasRevealer — over/under-representation detection ──
   get biasRevealer(): BiasRevealer {
-    return (this._biasRevealer ??= new BiasRevealer(this.dir));
+    return (this._biasRevealer ??= new BiasRevealer(this.dir, this._backend));
   }
 
   // ── L19: ContextVector — state-dependent recall context encoding ──
   get contextVector(): ContextVector {
-    return (this._contextVector ??= new ContextVector(this.dir));
+    return (this._contextVector ??= new ContextVector(this.dir, this._backend));
   }
 
   // ── L20: RehearsalEngine — spaced retrieval practice ──
   get rehearsalEngine(): RehearsalEngine {
-    return (this._rehearsalEngine ??= new RehearsalEngine(this.dir));
+    return (this._rehearsalEngine ??= new RehearsalEngine(this.dir, this._backend));
   }
 
   // ── L21: SchemaDistorter — schema-driven reconstruction detection ──
   get schemaDistorter(): SchemaDistorter {
-    return (this._schemaDistorter ??= new SchemaDistorter(this.dir));
+    return (this._schemaDistorter ??= new SchemaDistorter(this.dir, this._backend));
   }
 
   // ── L22: ConfidenceCalibrator — calibrated confidence scoring ──
   get confidenceCalibrator(): ConfidenceCalibrator {
-    return (this._confidenceCalibrator ??= new ConfidenceCalibrator(this.dir));
+    return (this._confidenceCalibrator ??= new ConfidenceCalibrator(this.dir, this._backend));
   }
 
   // ── Tool 18: FalseMemoryDetector ──
   get falseMemoryDetector(): FalseMemoryDetector {
-    return (this._falseMemoryDetector ??= new FalseMemoryDetector(this.dir));
+    return (this._falseMemoryDetector ??= new FalseMemoryDetector(this.dir, this._backend));
   }
 
   // ── Tool 19: ConfidenceCalibratorTool ──
   get calibratorTool(): ConfidenceCalibratorTool {
-    return (this._calibratorTool ??= new ConfidenceCalibratorTool(this.dir));
+    return (this._calibratorTool ??= new ConfidenceCalibratorTool(this.dir, this._backend));
   }
 
   // ── Tool 20: SourceAttributor ──
   get sourceAttributor(): SourceAttributor {
-    return (this._sourceAttributor ??= new SourceAttributor(this.dir));
+    return (this._sourceAttributor ??= new SourceAttributor(this.dir, this._backend));
   }
 
   // ── Tool 21: ConflictResolver ──
   get conflictResolver(): ConflictResolver {
-    return (this._conflictResolver ??= new ConflictResolver(this.dir));
+    return (this._conflictResolver ??= new ConflictResolver(this.dir, this._backend));
   }
 
   // ── Tool 22: MemoryAuditor ──
   get memoryAuditor(): MemoryAuditor {
-    return (this._memoryAuditor ??= new MemoryAuditor(this.dir));
+    return (this._memoryAuditor ??= new MemoryAuditor(this.dir, this._backend));
   }
 
   // ── Tool 23: ProspectiveTriggerTool ──
   get prospectiveTriggerTool(): ProspectiveTriggerTool {
-    return (this._prospectiveTriggerTool ??= new ProspectiveTriggerTool(this.dir));
+    return (this._prospectiveTriggerTool ??= new ProspectiveTriggerTool(this.dir, this._backend));
   }
 
   // ── Tool 24: BiasRevealerTool ──
   get biasRevealerTool(): BiasRevealerTool {
-    return (this._biasRevealerTool ??= new BiasRevealerTool(this.dir));
+    return (this._biasRevealerTool ??= new BiasRevealerTool(this.dir, this._backend));
   }
 
   // ── Tool 25: SchemaInferrer ──
   get schemaInferrer(): SchemaInferrer {
-    return (this._schemaInferrer ??= new SchemaInferrer(this.dir));
+    return (this._schemaInferrer ??= new SchemaInferrer(this.dir, this._backend));
   }
 
   // ── Layer 1: Working Memory ──

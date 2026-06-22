@@ -19,6 +19,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 export type QITRLDomain =
   | "burnout" | "relationship" | "decision" | "code_pattern"
@@ -426,17 +427,31 @@ export class QITRL {
   private dir: string;
   private storeFile: string;
   private store: QITRLStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, QITRLEdge[]> = new Map();
   private adjIn: Map<string, QITRLEdge[]> = new Map();
 
-  constructor(dirOrPath: string) {
+  constructor(dirOrPath: string, backend?: StorageBackend) {
     this.dir = dirOrPath;
+    this._backend = backend;
     this.storeFile = path.join(this.dir, "qitrl-lattice.json");
     this.store = this.loadStore();
     this.rebuildAdjacency();
   }
 
   private loadStore(): QITRLStore {
+    if (this._backend) {
+      const result = this._backend.read('qitrl/qitrl.json');
+      if (result) return result as QITRLStore;
+      return {
+        version: "1.0",
+        sites: {},
+        edges: [],
+        cachedEigenvalues: [],
+        lastCohomologyAt: 0,
+        lastConsolidatedAt: 0,
+      };
+    }
     try {
       if (fs.existsSync(this.storeFile)) {
         return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
@@ -453,6 +468,10 @@ export class QITRL {
   }
 
   private persist(): void {
+    if (this._backend) {
+      this._backend.write('qitrl/qitrl.json', this.store);
+      return;
+    }
     try {
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");

@@ -1,12 +1,15 @@
 // ── @timps/memory-core — File Storage Layer ──
 // Stores 3 layers of memory to ~/.timps/memory/<projectHash>/
+//
+// All file I/O goes through the FileBackend for WAL-based crash safety.
+// Forge layers should import StorageBackend and use it directly.
 
-import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
 import type { MemoryEntry, EpisodicEntry, WorkingState, MemoryScope } from './types.js';
 import { getNative } from './native.js';
+import { FileBackend, type StorageBackend } from './backends/index.js';
 
 const TIMPS_DIR = path.join(os.homedir(), '.timps');
 const MAX_SEMANTIC = 500;
@@ -15,8 +18,20 @@ const MAX_WORKING_FILES = 20;
 const MAX_WORKING_ERRORS = 10;
 const MAX_WORKING_PATTERNS = 20;
 
+/** Global FileBackend instances by base dir (shared across all forges) */
+const _backends = new Map<string, StorageBackend>();
+
+/** Get or create a FileBackend for a given base directory. */
+export function getBackend(baseDir: string): StorageBackend {
+  let backend = _backends.get(baseDir);
+  if (!backend) {
+    backend = new FileBackend({ baseDir });
+    _backends.set(baseDir, backend);
+  }
+  return backend;
+}
+
 export function projectHash(projectPath: string): string {
-  // Node.js crypto is already native C++ — no benefit going through NAPI boundary here
   return crypto.createHash('sha256').update(path.resolve(projectPath)).digest('hex').slice(0, 12);
 }
 
@@ -24,13 +39,16 @@ export function memoryDir(projectPath: string, scope?: MemoryScope): string {
   const hash = projectHash(projectPath);
   const scopeSeg = scope ? `_${scope.userId ?? ''}_${scope.teamId ?? ''}` : '';
   const dir = path.join(TIMPS_DIR, 'memory', `${hash}${scopeSeg}`);
-  fs.mkdirSync(dir, { recursive: true });
+  const backend = getBackend(dir);
+  // Ensure directory exists (via a no-op write to a dummy key to trigger mkdir)
+  backend.write('.init', true);
   return dir;
 }
 
 export function snapshotDir(projectPath: string): string {
   const dir = path.join(TIMPS_DIR, 'snapshots', projectHash(projectPath));
-  fs.mkdirSync(dir, { recursive: true });
+  const backend = getBackend(dir);
+  backend.write('.init', true);
   return dir;
 }
 
@@ -41,70 +59,48 @@ export function generateId(prefix = 'id'): string {
 // ── Working memory ──
 
 export function loadWorking(dir: string): WorkingState {
-  const n = getNative();
-  if (n) return JSON.parse(n.loadWorking(dir)) as WorkingState;
-  try {
-    const f = path.join(dir, 'working.json');
-    if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf-8')) as WorkingState;
-  } catch { /* ignore */ }
-  return { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
+  const backend = getBackend(dir);
+  return backend.read('working.json') ?? { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
 }
 
 export function saveWorking(dir: string, state: WorkingState): void {
-  const n = getNative();
-  if (n) { n.saveWorking(dir, JSON.stringify(state, null, 2)); return; }
-  fs.writeFileSync(path.join(dir, 'working.json'), JSON.stringify(state, null, 2), 'utf-8');
+  const backend = getBackend(dir);
+  backend.write('working.json', state);
 }
 
-// ── Episodic memory (append-only JSONL) ──
+// ── Episodic memory (JSON array) ──
 
 export function appendEpisode(dir: string, episode: EpisodicEntry): void {
-  const n = getNative();
-  if (n) { n.appendEpisode(dir, JSON.stringify(episode)); return; }
-  const file = path.join(dir, 'episodes.jsonl');
-  fs.appendFileSync(file, JSON.stringify(episode) + '\n', 'utf-8');
-  trimJsonl(file, MAX_EPISODES);
+  const backend = getBackend(dir);
+  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+  episodes.push(episode);
+  const trimmed = episodes.length > MAX_EPISODES ? episodes.slice(-MAX_EPISODES) : episodes;
+  backend.write('episodes.json', trimmed);
 }
 
 export function loadEpisodes(dir: string, count = 10): EpisodicEntry[] {
-  const n = getNative();
-  if (n) return JSON.parse(n.loadEpisodes(dir, count)) as EpisodicEntry[];
-  try {
-    const file = path.join(dir, 'episodes.jsonl');
-    if (!fs.existsSync(file)) return [];
-    const lines = fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean);
-    return lines
-      .slice(-count)
-      .map(l => { try { return JSON.parse(l) as EpisodicEntry; } catch { return null; } })
-      .filter((e): e is EpisodicEntry => e !== null);
-  } catch { return []; }
+  const backend = getBackend(dir);
+  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+  return episodes.slice(-count);
 }
 
 export function episodeCount(dir: string): number {
-  try {
-    const file = path.join(dir, 'episodes.jsonl');
-    if (!fs.existsSync(file)) return 0;
-    return fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean).length;
-  } catch { return 0; }
+  const backend = getBackend(dir);
+  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+  return episodes.length;
 }
 
 // ── Semantic memory ──
 
 export function loadSemantic(dir: string): MemoryEntry[] {
-  const n = getNative();
-  if (n) return JSON.parse(n.loadSemantic(dir)) as MemoryEntry[];
-  try {
-    const f = path.join(dir, 'semantic.json');
-    if (fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf-8')) as MemoryEntry[];
-  } catch { /* ignore */ }
-  return [];
+  const backend = getBackend(dir);
+  return backend.read('semantic.json') ?? [];
 }
 
 export function saveSemantic(dir: string, entries: MemoryEntry[]): void {
-  const n = getNative();
-  if (n) { n.saveSemantic(dir, JSON.stringify(entries, null, 2)); return; }
   const trimmed = entries.length > MAX_SEMANTIC ? entries.slice(-MAX_SEMANTIC) : entries;
-  fs.writeFileSync(path.join(dir, 'semantic.json'), JSON.stringify(trimmed, null, 2), 'utf-8');
+  const backend = getBackend(dir);
+  backend.write('semantic.json', trimmed);
 }
 
 // ── Working memory helpers ──
@@ -127,15 +123,6 @@ export function trackPattern(state: WorkingState, pattern: string): WorkingState
 }
 
 // ── Utilities ──
-
-function trimJsonl(file: string, maxLines: number): void {
-  try {
-    const lines = fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean);
-    if (lines.length > maxLines) {
-      fs.writeFileSync(file, lines.slice(-maxLines).join('\n') + '\n', 'utf-8');
-    }
-  } catch { /* ignore */ }
-}
 
 /** Jaccard similarity on word sets (0–1) */
 export function jaccardSimilarity(a: string, b: string): number {

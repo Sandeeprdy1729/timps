@@ -10,6 +10,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 import type { HarmonicSheafWeaver, CohomologyResult } from '../HarmonicSheafWeaver.js';
 
 export interface Position {
@@ -85,10 +86,12 @@ export class ContradictionDetector {
   private file: string;
   private positions: Position[] = [];
   private contradictions: ContradictionRecord[] = [];
+  private _backend?: StorageBackend;
   /** Optional HarmonicSheafWeaver for algebraic contradiction detection */
   private sheaf?: HarmonicSheafWeaver;
 
-  constructor(dir: string, sheaf?: HarmonicSheafWeaver) {
+  constructor(dir: string, backend?: StorageBackend, sheaf?: HarmonicSheafWeaver) {
+    this._backend = backend;
     this.file = path.join(dir, 'contradiction_positions.json');
     this.sheaf = sheaf;
     this.load();
@@ -96,7 +99,13 @@ export class ContradictionDetector {
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.positions = data.positions || [];
+          this.contradictions = data.contradictions || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.positions = data.positions || [];
         this.contradictions = data.contradictions || [];
@@ -105,9 +114,12 @@ export class ContradictionDetector {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify(
-      { positions: this.positions, contradictions: this.contradictions }, null, 2
-    ), 'utf-8');
+    const data = { positions: this.positions, contradictions: this.contradictions };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** check: analyze text for contradictions against stored positions */

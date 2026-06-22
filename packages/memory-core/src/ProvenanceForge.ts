@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export type SourceKind =
   | 'user_direct'
@@ -35,7 +36,10 @@ export interface Provenance {
 export type ProvenanceInput = Omit<Provenance, 'id' | 'chainOfCustody'> & { actor: string };
 
 export class ProvenanceForge {
-  constructor(private dir: string) {
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     fs.mkdirSync(this.dir, { recursive: true });
   }
 

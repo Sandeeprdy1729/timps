@@ -3,6 +3,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface CulturalNorm {
   norm: string;          // e.g. "uses async/await over .then()"
@@ -39,8 +40,10 @@ const NORM_PATTERNS: { rx: RegExp; norm: string }[] = [
 export class CodebaseAnthropologist {
   private file: string;
   private decisionTexts: string[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'culture_decisions.json');
     this.load();
   }
@@ -48,30 +51,54 @@ export class CodebaseAnthropologist {
   private load(): void {
     const files = ['positions.json', 'decisions.json', 'architecture_insights.json', 'culture_decisions.json'];
     for (const f of files) {
-      const full = path.join(path.dirname(this.file), f);
-      if (!fs.existsSync(full)) continue;
-      try {
-        const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
-        if (f === 'positions.json' && Array.isArray(data.positions)) {
-          for (const p of data.positions) if (p.claim) this.decisionTexts.push(p.claim);
-        }
-        if (f === 'decisions.json' && Array.isArray(data.decisions)) {
-          for (const d of data.decisions) if (d.decision) this.decisionTexts.push(d.decision);
-        }
-        if (f === 'architecture_insights.json' && Array.isArray(data.insights)) {
-          for (const i of data.insights) if (i.description) this.decisionTexts.push(i.description);
-        }
-        if (f === 'culture_decisions.json' && Array.isArray(data.decisions)) {
-          for (const d of data.decisions) if (d.text) this.decisionTexts.push(d.text);
-        }
-      } catch { /* ignore */ }
+      if (this._backend) {
+        const data = this._backend.read(f);
+        if (!data) continue;
+        try {
+          if (f === 'positions.json' && Array.isArray(data.positions)) {
+            for (const p of data.positions) if (p.claim) this.decisionTexts.push(p.claim);
+          }
+          if (f === 'decisions.json' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.decision) this.decisionTexts.push(d.decision);
+          }
+          if (f === 'architecture_insights.json' && Array.isArray(data.insights)) {
+            for (const i of data.insights) if (i.description) this.decisionTexts.push(i.description);
+          }
+          if (f === 'culture_decisions.json' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.text) this.decisionTexts.push(d.text);
+          }
+        } catch { /* ignore */ }
+      } else {
+        const full = path.join(path.dirname(this.file), f);
+        if (!fs.existsSync(full)) continue;
+        try {
+          const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
+          if (f === 'positions.json' && Array.isArray(data.positions)) {
+            for (const p of data.positions) if (p.claim) this.decisionTexts.push(p.claim);
+          }
+          if (f === 'decisions.json' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.decision) this.decisionTexts.push(d.decision);
+          }
+          if (f === 'architecture_insights.json' && Array.isArray(data.insights)) {
+            for (const i of data.insights) if (i.description) this.decisionTexts.push(i.description);
+          }
+          if (f === 'culture_decisions.json' && Array.isArray(data.decisions)) {
+            for (const d of data.decisions) if (d.text) this.decisionTexts.push(d.text);
+          }
+        } catch { /* ignore */ }
+      }
     }
   }
 
   /** Add a decision text directly (for new observations). */
   observe(text: string): void {
     this.decisionTexts.push(text);
-    fs.writeFileSync(this.file, JSON.stringify({ decisions: this.decisionTexts.slice(-500) }, null, 2), 'utf-8');
+    const data = { decisions: this.decisionTexts.slice(-500) };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** Surface the cultural norms of the codebase. */
@@ -100,14 +127,26 @@ export class CodebaseAnthropologist {
 
     // Taboos: things stored as regrets
     const taboos: string[] = [];
-    const regretFile = path.join(path.dirname(this.file), 'decisions.json');
-    if (fs.existsSync(regretFile)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(regretFile, 'utf-8'));
-        for (const d of data.decisions || []) {
-          if (d.regret_score > 0.6) taboos.push(`${d.decision} (regret ${(d.regret_score * 100).toFixed(0)}%)`);
-        }
-      } catch { /* ignore */ }
+    const regretKey = 'decisions.json';
+    if (this._backend) {
+      const data = this._backend.read(regretKey);
+      if (data) {
+        try {
+          for (const d of data.decisions || []) {
+            if (d.regret_score > 0.6) taboos.push(`${d.decision} (regret ${(d.regret_score * 100).toFixed(0)}%)`);
+          }
+        } catch { /* ignore */ }
+      }
+    } else {
+      const regretFile = path.join(path.dirname(this.file), 'decisions.json');
+      if (fs.existsSync(regretFile)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(regretFile, 'utf-8'));
+          for (const d of data.decisions || []) {
+            if (d.regret_score > 0.6) taboos.push(`${d.decision} (regret ${(d.regret_score * 100).toFixed(0)}%)`);
+          }
+        } catch { /* ignore */ }
+      }
     }
 
     return {

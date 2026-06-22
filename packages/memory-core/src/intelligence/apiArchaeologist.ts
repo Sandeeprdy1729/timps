@@ -5,6 +5,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface APIQuirk {
   id: string;
@@ -24,15 +25,22 @@ export interface APILookupResult {
 export class APIArchaeologist {
   private file: string;
   private knowledge: APIQuirk[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'api_knowledge.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.knowledge = data.knowledge || [];
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.knowledge = data.knowledge || [];
       }
@@ -40,7 +48,12 @@ export class APIArchaeologist {
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify({ knowledge: this.knowledge }, null, 2), 'utf-8');
+    const data = { knowledge: this.knowledge };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   /** record_quirk: save a discovered API quirk to institutional memory */

@@ -2,6 +2,7 @@
 // Re-calibrates confidence using retrieval score, source reliability,
 // corroboration count, and freshness. Thin wrapper around the L22 layer.
 
+import type { StorageBackend } from '../backends/types.js';
 import type { CalibrationInput, CalibrationResult } from '../ConfidenceCalibrator.js';
 import { ConfidenceCalibrator as L22ConfidenceCalibrator } from '../ConfidenceCalibrator.js';
 
@@ -9,8 +10,10 @@ export { CalibrationInput, CalibrationResult };
 
 export class ConfidenceCalibratorTool {
   private impl: L22ConfidenceCalibrator;
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.impl = new L22ConfidenceCalibrator(dir);
   }
 

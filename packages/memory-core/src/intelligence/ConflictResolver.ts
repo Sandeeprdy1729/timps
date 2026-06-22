@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface MemoryRef {
   id: string;
@@ -48,22 +49,32 @@ function sentimentConflict(a: string, b: string): boolean {
 export class ConflictResolver {
   private file: string;
   private resolutions: ConflictResolution[] = [];
+  private _backend?: StorageBackend;
 
-  constructor(private dir: string) {
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'conflict-resolutions.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) this.resolutions = data;
+      } else if (fs.existsSync(this.file)) {
         this.resolutions = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
       }
     } catch { this.resolutions = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.file, JSON.stringify(this.resolutions.slice(-200), null, 2), 'utf-8');
+    const data = this.resolutions.slice(-200);
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
+    }
   }
 
   resolve(a: MemoryRef, b: MemoryRef): ConflictResolution {

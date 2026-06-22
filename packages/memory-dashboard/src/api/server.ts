@@ -59,10 +59,10 @@ function loadSemantic(dir: string): MemoryEntry[] {
 
 function loadEpisodes(dir: string, count = 50): EpisodicEntry[] {
   try {
-    const f = path.join(dir, 'episodes.jsonl');
+    const f = path.join(dir, 'episodes.json');
     if (!fs.existsSync(f)) return [];
-    const lines = fs.readFileSync(f, 'utf-8').trim().split('\n').filter(Boolean);
-    return lines.slice(-count).map(l => JSON.parse(l) as EpisodicEntry).reverse();
+    const all = JSON.parse(fs.readFileSync(f, 'utf-8')) as EpisodicEntry[];
+    return all.slice(-count).reverse();
   } catch { /* ignore */ }
   return [];
 }

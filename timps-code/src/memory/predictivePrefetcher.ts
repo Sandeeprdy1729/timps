@@ -13,17 +13,14 @@ export class PredictivePrefetcher {
 
   constructor(projectPath: string) {
     this.dir = projectPath;
-    this.episodicFile = path.join(this.dir, 'episodes.jsonl');
+    this.episodicFile = path.join(this.dir, 'episodes.json');
     this.sessionProfilesFile = path.join(this.dir, 'session-profiles.json');
   }
 
   private loadEpisodes(): EpisodicMemory[] {
     try {
       if (!fs.existsSync(this.episodicFile)) return [];
-      return fs.readFileSync(this.episodicFile, 'utf-8').trim().split('\n')
-        .filter(l => l.trim())
-        .map(l => { try { return JSON.parse(l); } catch { return null; } })
-        .filter(Boolean) as EpisodicMemory[];
+      return JSON.parse(fs.readFileSync(this.episodicFile, 'utf-8')) as EpisodicMemory[];
     } catch { return []; }
   }
 

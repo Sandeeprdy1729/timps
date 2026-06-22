@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 import type { Provenance } from '../ProvenanceForge.js';
 
 export interface AttributionResult {
@@ -18,7 +19,11 @@ export interface AttributionResult {
 }
 
 export class SourceAttributor {
-  constructor(private dir: string) {}
+  private _backend?: StorageBackend;
+
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
+  }
 
   attribute(memoryId: string): AttributionResult | null {
     const prov = this.loadProvenance(memoryId);
@@ -67,6 +72,16 @@ export class SourceAttributor {
 
   private loadProvenance(memoryId: string): Provenance | null {
     try {
+      if (this._backend) {
+        const files = this._backend.list('provenance/');
+        if (!files) return null;
+        const jsonFiles = (Array.isArray(files) ? files : []).filter((f: string) => f.endsWith('.json'));
+        for (const f of jsonFiles) {
+          const p = this._backend.read(f) as Provenance | null;
+          if (p && (p.parentIds.includes(memoryId) || p.id === memoryId)) return p;
+        }
+        return null;
+      }
       const provDir = path.join(this.dir, 'provenance');
       if (!fs.existsSync(provDir)) return null;
       const files = fs.readdirSync(provDir).filter(f => f.endsWith('.json'));

@@ -27,6 +27,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -341,9 +342,11 @@ export class QISRD {
   private dir: string;
   private storeFile: string;
   private store: QISRDStore;
+  private _backend?: StorageBackend;
 
-  constructor(dirOrPath: string) {
+  constructor(dirOrPath: string, backend?: StorageBackend) {
     this.dir = dirOrPath;
+    this._backend = backend;
     this.storeFile = path.join(this.dir, "qisrd-store.json");
     this.store = this.loadStore();
   }
@@ -351,6 +354,18 @@ export class QISRD {
   // ── Persistence ─────────────────────────────────────────────────────────
 
   private loadStore(): QISRDStore {
+    if (this._backend) {
+      const result = this._backend.read('qisrd/qisrd.json');
+      if (result) return result as QISRDStore;
+      return {
+        nodes: {},
+        edges: [],
+        driftScore: 0,
+        lastTopologySurgeryAt: 0,
+        cachedEigenvalues: [],
+        lastCohomologyAt: 0,
+      };
+    }
     try {
       if (fs.existsSync(this.storeFile)) {
         return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
@@ -367,6 +382,10 @@ export class QISRD {
   }
 
   private save(): void {
+    if (this._backend) {
+      this._backend.write('qisrd/qisrd.json', this.store);
+      return;
+    }
     try {
       fs.mkdirSync(path.dirname(this.storeFile), { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");

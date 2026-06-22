@@ -26,6 +26,7 @@
 //   Zep/Graphiti — Temporal KGs with bi-temporal edges
 
 import * as fs from "node:fs";
+import type { StorageBackend } from './backends/types.js';
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 
@@ -287,11 +288,13 @@ export class CausalSheafFlux {
   private dir: string;
   private storeFile: string;
   private store: CSFStore;
+  private _backend?: StorageBackend;
   /** In-memory PQ for incremental propagation */
   private pq: PQueue<{ nodeId: string; priority: number }>;
 
-  constructor(dirOrPath: string) {
+  constructor(dirOrPath: string, backend?: StorageBackend) {
     this.dir = dirOrPath;
+    this._backend = backend;
     this.storeFile = path.join(this.dir, "csf-store.json");
     this.store = this.loadStore();
     this.pq = new PQueue(x => x.priority);
@@ -307,6 +310,19 @@ export class CausalSheafFlux {
   // ── Persistence ─────────────────────────────────────────────────────────
 
   private loadStore(): CSFStore {
+    if (this._backend) {
+      const data = this._backend.read('causal_sheaf/causal_sheaf.json');
+      if (data) return data as CSFStore;
+      return {
+        nodes: {},
+        edges: [],
+        pqBacklog: [],
+        cachedEigenvalues: [],
+        cachedEigenvectors: [],
+        lastFlowAt: 0,
+        lastCohomologyAt: 0,
+      };
+    }
     try {
       if (fs.existsSync(this.storeFile)) {
         return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
@@ -324,6 +340,14 @@ export class CausalSheafFlux {
   }
 
   private save(): void {
+    if (this._backend) {
+      const backlog: string[] = [];
+      const q = (this.pq as any).heap as Array<{ nodeId: string; priority: number }>;
+      for (const item of q ?? []) backlog.push(item.nodeId);
+      this.store.pqBacklog = backlog.slice(0, 200);
+      this._backend.write('causal_sheaf/causal_sheaf.json', this.store);
+      return;
+    }
     try {
       // Persist PQ backlog for re-hydration
       const backlog: string[] = [];

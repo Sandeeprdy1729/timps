@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export interface SchemaEntry {
   id: string;
@@ -25,24 +26,33 @@ export interface DistortionCheck {
 }
 
 export class SchemaDistorter {
+  private _backend?: StorageBackend;
   private schemas: SchemaEntry[] = [];
   private schemaFile: string;
 
-  constructor(private dir: string) {
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.schemaFile = path.join(dir, 'schema-patterns.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.schemaFile)) {
+      if (this._backend) {
+        const data = this._backend.read('schema/distorter.json');
+        if (data) this.schemas = data;
+      } else if (fs.existsSync(this.schemaFile)) {
         this.schemas = JSON.parse(fs.readFileSync(this.schemaFile, 'utf-8'));
       }
     } catch { this.schemas = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.schemaFile, JSON.stringify(this.schemas, null, 2), 'utf-8');
+    if (this._backend) {
+      this._backend.write('schema/distorter.json', this.schemas);
+    } else {
+      fs.writeFileSync(this.schemaFile, JSON.stringify(this.schemas, null, 2), 'utf-8');
+    }
   }
 
   learn(content: string): void {

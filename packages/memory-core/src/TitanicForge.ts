@@ -33,6 +33,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -186,14 +187,16 @@ export class TitanicForge {
   private dir: string;
   private storeFile: string;
   private store: TitanicStore;
+  private _backend?: StorageBackend;
   /** Neural weight as 2D view for fast access: W[row][col] */
   private W: Float64Array;
   private adjOut: Map<string, TitanicEdge[]>;
   private adjIn: Map<string, TitanicEdge[]>;
 
-  constructor(dir: string, dim = EMBEDDING_DIM) {
+  constructor(dir: string, backend?: StorageBackend, dim = EMBEDDING_DIM) {
     this.dim = dim;
     this.dir = dir;
+    this._backend = backend;
     this.storeFile = path.join(dir, "titanic-store.json");
     this.store = this.loadStore();
     this.W = new Float64Array(this.store.neuralWeights);
@@ -205,6 +208,12 @@ export class TitanicForge {
   // ── Persistence ──────────────────────────────────────────────────────────
 
   private loadStore(): TitanicStore {
+    if (this._backend) {
+      const result = this._backend.read('titanic/titanic.json');
+      if (result) return result as TitanicStore;
+      const w = xavierInit(this.dim);
+      return { nodes: {}, edges: [], neuralWeights: Array.from(w), neuralUpdateCount: 0 };
+    }
     try {
       if (!fs.existsSync(this.storeFile)) {
         const w = xavierInit(this.dim);
@@ -219,6 +228,10 @@ export class TitanicForge {
 
   private persist(): void {
     this.store.neuralWeights = Array.from(this.W);
+    if (this._backend) {
+      this._backend.write('titanic/titanic.json', this.store);
+      return;
+    }
     try {
       fs.mkdirSync(path.dirname(this.storeFile), { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.store, null, 2), "utf-8");

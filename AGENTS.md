@@ -41,9 +41,9 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 2. **`timps-code/src/memory/`** — thin adapter (337 lines), delegates to `MemoryEngine`.
 3. **`packages/server/memory/`** — thin adapters over `MemoryEngine`, re-export forge types from `@timps/memory-core`.
 
-9 forge layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 AetherForgeERL → L9 HarmonicSheafWeaver.
+22 forge layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 AetherForgeERL → L9 HarmonicSheafWeaver → L10–L22 (EngramLog through BiasRevealer).
 
-All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, class-based, file-based JSON storage, **no `Math.random()`**.
+All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, class-based, **no `Math.random()`**.
 
 ### IMemoryLayer interface
 
@@ -60,6 +60,39 @@ All provide: `store()`, `retrieve()`, `verify()`, `contradict()`, `archive()`, `
 
 **Gotcha:** When implementing IMemoryLayer on a forge with a `private store` field, rename it to `private storeData` to avoid method/property conflict. Update ALL `this.store.` → `this.storeData.` references and any test code accessing `forge['store']` (via bracket notation) to `forge['storeData']`.
 
+### StorageBackend abstraction (Phase 1b)
+
+All forge layers and intelligence tools accept an optional `backend?: StorageBackend` parameter after `dir`. When provided, all file I/O routes through the backend instead of direct `fs` calls.
+
+Interface defined in `packages/memory-core/src/backends/types.ts`:
+
+```
+read(key), write(key, value), delete(key), list(prefix?),
+query(filter), exists(key), append(key, line), beginTxn()
+```
+
+| Backend | File | Sync/Async | Driver | Notes |
+|---|---|---|---|---|
+| `FileBackend` | `backends/FileBackend.ts` | sync | `fs` | Default. WAL journaling: write → .wal → fsync → rename |
+| `InMemoryBackend` | `backends/InMemoryBackend.ts` | sync | `Map` | For tests |
+| `PostgresBackend` | `backends/PostgresBackend.ts` | async | `pg` | Lazy-loaded, key/value JSONB table |
+| `SQLiteBackend` | `backends/SQLiteBackend.ts` | sync | `better-sqlite3` | Lazy-loaded, WAL mode |
+| `RedisBackend` | `backends/RedisBackend.ts` | async | `ioredis` | Lazy-loaded, STRING + SET |
+
+Usage:
+```ts
+const engine = new MemoryEngine(dir, { backend: new InMemoryBackend() });
+// Forge layers automatically use engine._backend
+```
+
+When no backend is provided, `MemoryEngine` creates a `FileBackend` via `getBackend(dir)` in `storage.ts`. The `getBackend()` cache is shared across all forges using the same directory.
+
+**Gotcha:** The Rust native addon (`@timps/memory-core-rs`) writes episodes in JSONL format (`episodes.jsonl`), but the backend uses JSON array (`episodes.json`). To prevent format mismatch, all storage helpers in `storage.ts` (`appendEpisode`, `loadEpisodes`, `episodeCount`, `loadSemantic`, `saveSemantic`, `loadWorking`, `saveWorking`) bypass the native addon and use the backend. Native is still used for pure compute (`jaccardSimilarity`, `searchEntries`).
+
+**Gotcha:** `FileBackend.write()` uses WAL: serialize to JSON → write to `{key}.wal` → fsync → rename to `{key}`. On startup, orphaned `.wal` files are replayed. This guarantees no half-written JSON even on process kill.
+
+**Gotcha:** Episodic storage format changed from JSONL (`episodes.jsonl`, one JSON per line) to JSON array (`episodes.json`). Existing on-disk data in the old format is not auto-migrated. Also update any hardcoded `episodes.jsonl` paths in tests, docs, and dependent packages.
+
 ## Style & conventions
 
 - ESM in `timps-code`; CJS elsewhere.
@@ -75,6 +108,8 @@ All provide: `store()`, `retrieve()`, `verify()`, `contradict()`, `archive()`, `
 - Memory on-disk schema (backwards compat).
 - Public CLI flags, slash commands, env vars.
 - The 17-tool count and their `MemoryEngine` lazy getter names.
+- `StorageBackend` interface methods (backends must stay compatible).
+- Episodic storage format (`episodes.json` JSON array — not JSONL).
 
 ## PR checklist
 
@@ -86,6 +121,8 @@ All provide: `store()`, `retrieve()`, `verify()`, `contradict()`, `archive()`, `
 - [ ] If you changed memory on-disk format, add migration in `timps-code/src/migrations/`.
 - [ ] Changeset added for timps-code, timps-mcp, timps-vscode, or packages/server.
 - [ ] Updated `AGENTS.md` if public API changed.
+- [ ] If you added a new StorageBackend, implement all interface methods including `beginTxn()`, `exists()`, `append()`, and `query()`.
+- [ ] If you added a forge layer, ensure it accepts `backend?: StorageBackend` as a constructor param after `dir` and uses `this._backend.read/write` when available.
 
 ## Gotchas
 

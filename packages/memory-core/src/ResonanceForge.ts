@@ -22,6 +22,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import type { StorageBackend } from './backends/types.js';
 
 export type ResonanceDomain =
   | "burnout"
@@ -226,13 +227,15 @@ export function resonanceScore(
 export class ResonanceForge {
   private readonly storeFile: string;
   private store: ResonanceStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, ResonanceCausalEdge[]> = new Map();
   private adjIn: Map<string, ResonanceCausalEdge[]> = new Map();
 
-  constructor(baseDir: string) {
+  constructor(baseDir: string, backend?: StorageBackend) {
     const resonanceDir = path.join(baseDir, "resonance");
     fs.mkdirSync(resonanceDir, { recursive: true });
     this.storeFile = path.join(resonanceDir, "resonance.json");
+    this._backend = backend;
     this.store = this._load();
     this._rebuildAdjacency();
   }
@@ -867,30 +870,25 @@ export class ResonanceForge {
   }
 
   private _load(): ResonanceStore {
+    if (this._backend) {
+      return this._backend.read('resonance/resonance.json') ?? {
+        version: "1.0", nodes: {}, edges: [], patterns: [],
+        fieldCache: {}, lastConsolidatedAt: 0,
+      };
+    }
     if (fs.existsSync(this.storeFile)) {
       try {
-        return JSON.parse(
-          fs.readFileSync(this.storeFile, "utf8")
-        ) as ResonanceStore;
-      } catch {
-        // corrupted — start fresh
-      }
+        return JSON.parse(fs.readFileSync(this.storeFile, "utf8")) as ResonanceStore;
+      } catch { /* corrupted — start fresh */ }
     }
     return {
-      version: "1.0",
-      nodes: {},
-      edges: [],
-      patterns: [],
-      fieldCache: {},
-      lastConsolidatedAt: 0,
+      version: "1.0", nodes: {}, edges: [], patterns: [],
+      fieldCache: {}, lastConsolidatedAt: 0,
     };
   }
 
   private _save(): void {
-    fs.writeFileSync(
-      this.storeFile,
-      JSON.stringify(this.store),
-      "utf8"
-    );
+    if (this._backend) { this._backend.write('resonance/resonance.json', this.store); return; }
+    fs.writeFileSync(this.storeFile, JSON.stringify(this.store), "utf8");
   }
 }

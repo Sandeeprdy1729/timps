@@ -268,7 +268,7 @@ The 22-layer memory system is TIMPS's core differentiating feature. Each layer s
 | Layer | Storage | Persistence | Contents |
 |---|---|---|---|
 | **L1 Working** | In-process | Reset on exit | Current goals, active files, recent errors |
-| **L2 Episodic** | `episodes.jsonl` | Disk (append-only) | Conversation summaries, outcomes |
+| **L2 Episodic** | `episodes.json` | Disk (append-only) | Conversation summaries, outcomes |
 | **L3 Semantic** | `semantic.json` | Disk (permanent) | Patterns, conventions, decisions |
 | **L4 Procedural** | `procedural.json` | Disk | Workflows, recipes, skills |
 | **L5 ChronosForge** | `chronos/` | Disk | Causal graph, temporal dependencies |

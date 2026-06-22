@@ -31,12 +31,11 @@ const entries = Array.from({ length: ENTRY_COUNT }, (_, i) => ({
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'timps-bench-'));
 fs.writeFileSync(path.join(tmpDir, 'semantic.json'), JSON.stringify(entries, null, 2));
+const benchEpisodes: any[] = [];
 for (let i = 0; i < 50; i++) {
-  fs.appendFileSync(
-    path.join(tmpDir, 'episodes.jsonl'),
-    JSON.stringify({ id: `ep_${i}`, timestamp: Date.now(), summary: `session ${i}`, outcome: 'success' }) + '\n',
-  );
+  benchEpisodes.push({ id: `ep_${i}`, timestamp: Date.now(), summary: `session ${i}`, outcome: 'success' });
 }
+fs.writeFileSync(path.join(tmpDir, 'episodes.json'), JSON.stringify(benchEpisodes));
 
 const QUERY = 'TypeScript async hooks patterns';
 const ITERS = 500;
@@ -68,10 +67,10 @@ function tsLoadSemantic(dir: string): unknown[] {
 
 function tsLoadEpisodes(dir: string, count: number): unknown[] {
   try {
-    const f = path.join(dir, 'episodes.jsonl');
+    const f = path.join(dir, 'episodes.json');
     if (!fs.existsSync(f)) return [];
-    const lines = fs.readFileSync(f, 'utf-8').trim().split('\n').filter(Boolean);
-    return lines.slice(-count).map(l => JSON.parse(l)).reverse();
+    const all = JSON.parse(fs.readFileSync(f, 'utf-8')) as unknown[];
+    return all.slice(-count).reverse();
   } catch { return []; }
 }
 

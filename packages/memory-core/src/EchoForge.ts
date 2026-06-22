@@ -33,6 +33,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer.js';
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -404,6 +405,7 @@ function reservoirReadout(
 export class EchoForge implements IMemoryLayer {
   private readonly storeFile: string;
   private storeData: EchoStore;
+  private _backend?: StorageBackend;
 
   /** In-process adjacency indices: nodeId → outbound / inbound edges */
   private adjOut: Map<string, EchoEdge[]> = new Map();
@@ -412,9 +414,10 @@ export class EchoForge implements IMemoryLayer {
   /** Running reservoir state (domain-scoped) */
   private reservoirStates: Partial<Record<EchoDomain, Record<number, number>>> = {};
 
-  constructor(baseDir: string) {
+  constructor(baseDir: string, backend?: StorageBackend) {
     const echoDir = path.join(baseDir, "echo");
-    fs.mkdirSync(echoDir, { recursive: true });
+    this._backend = backend;
+    if (!backend) fs.mkdirSync(echoDir, { recursive: true });
     this.storeFile = path.join(echoDir, "echoforge.json");
     this.storeData = this._load();
     this._rebuildAdjacency();
@@ -425,9 +428,11 @@ export class EchoForge implements IMemoryLayer {
 
   private _load(): EchoStore {
     try {
+      if (this._backend) {
+        return this._backend.read('echo/echoforge.json') ?? this._emptyStore();
+      }
       if (!fs.existsSync(this.storeFile)) return this._emptyStore();
       const raw = JSON.parse(fs.readFileSync(this.storeFile, "utf-8")) as EchoStore;
-      // Migration: older stores may lack version / fieldCache
       if (!raw.version) (raw as EchoStore).version = "2.0";
       if (!raw.fieldCache) raw.fieldCache = {};
       return raw;
@@ -438,6 +443,10 @@ export class EchoForge implements IMemoryLayer {
 
   private _save(): void {
     try {
+      if (this._backend) {
+        this._backend.write('echo/echoforge.json', this.storeData);
+        return;
+      }
       fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData), "utf-8");
     } catch { /* never crash the agent on I/O errors */ }
   }

@@ -4,6 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from '../backends/types.js';
 
 export interface Contribution {
   id: string;
@@ -27,15 +28,23 @@ export class InstitutionalMemory {
   private file: string;
   private contributions: Contribution[] = [];
   private activity: Map<string, string> = new Map();  // contributor → last ISO date
+  private _backend?: StorageBackend;
 
-  constructor(dir: string) {
+  constructor(dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.file = path.join(dir, 'institutional_memory.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.file)) {
+      if (this._backend) {
+        const data = this._backend.read(path.basename(this.file));
+        if (data) {
+          this.contributions = data.contributions || [];
+          this.activity = new Map(Object.entries(data.activity || {}));
+        }
+      } else if (fs.existsSync(this.file)) {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf-8'));
         this.contributions = data.contributions || [];
         this.activity = new Map(Object.entries(data.activity || {}));
@@ -44,15 +53,17 @@ export class InstitutionalMemory {
   }
 
   private save(): void {
-    fs.writeSync(
-      fs.openSync(this.file, 'w'),
-      JSON.stringify({
-        contributions: this.contributions,
-        activity: Object.fromEntries(this.activity),
-      }, null, 2),
-      0,
-      'utf-8'
-    );
+    const data = { contributions: this.contributions, activity: Object.fromEntries(this.activity) };
+    if (this._backend) {
+      this._backend.write(path.basename(this.file), data);
+    } else {
+      fs.writeSync(
+        fs.openSync(this.file, 'w'),
+        JSON.stringify(data, null, 2),
+        0,
+        'utf-8'
+      );
+    }
   }
 
   /** Record a contribution from a person. Updates their last-seen date. */

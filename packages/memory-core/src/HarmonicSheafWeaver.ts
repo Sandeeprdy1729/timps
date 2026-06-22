@@ -34,6 +34,7 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
 import type { Provenance } from './ProvenanceForge';
+import type { StorageBackend } from './backends/types.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -451,16 +452,18 @@ export class HarmonicSheafWeaver implements IMemoryLayer {
   private dir: string;
   private storeFile: string;
   private storeData: SheafStore;
+  private _backend?: StorageBackend;
   private adjOut: Map<string, SheafEdge[]> = new Map();
   private adjIn: Map<string, SheafEdge[]> = new Map();
 
-  constructor(dirOrPath: string) {
+  constructor(dirOrPath: string, backend?: StorageBackend) {
     // Accept either a direct directory or a project path
     if (dirOrPath.includes(".timps") || fs.existsSync(path.join(dirOrPath, "semantic.json"))) {
       this.dir = dirOrPath;
     } else {
       this.dir = dirOrPath;
     }
+    this._backend = backend;
     this.storeFile = path.join(this.dir, "sheaf-weaver.json");
     this.storeData = this.loadStore();
     this.rebuildAdjacency();
@@ -470,8 +473,13 @@ export class HarmonicSheafWeaver implements IMemoryLayer {
 
   private loadStore(): SheafStore {
     try {
-      if (fs.existsSync(this.storeFile)) {
-        return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
+      if (this._backend) {
+        const data = this._backend.read('harmonic/sheaf.json');
+        if (data) return data as SheafStore;
+      } else {
+        if (fs.existsSync(this.storeFile)) {
+          return JSON.parse(fs.readFileSync(this.storeFile, "utf-8"));
+        }
       }
     } catch { /* start fresh */ }
     return {
@@ -489,6 +497,10 @@ export class HarmonicSheafWeaver implements IMemoryLayer {
 
   private persist(): void {
     try {
+      if (this._backend) {
+        this._backend.write('harmonic/sheaf.json', this.storeData);
+        return;
+      }
       if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
       fs.writeFileSync(this.storeFile, JSON.stringify(this.storeData, null, 2), "utf-8");
     } catch { /* best effort */ }

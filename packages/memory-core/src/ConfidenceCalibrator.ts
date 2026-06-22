@@ -6,6 +6,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { StorageBackend } from './backends/types.js';
 
 export interface CalibrationInput {
   similarity: number;
@@ -34,24 +35,33 @@ export interface CalibrationRecord {
 }
 
 export class ConfidenceCalibrator {
+  private _backend?: StorageBackend;
   private records: CalibrationRecord[] = [];
   private recordFile: string;
 
-  constructor(private dir: string) {
+  constructor(private dir: string, backend?: StorageBackend) {
+    this._backend = backend;
     this.recordFile = path.join(dir, 'confidence-calibrations.json');
     this.load();
   }
 
   private load(): void {
     try {
-      if (fs.existsSync(this.recordFile)) {
+      if (this._backend) {
+        const data = this._backend.read('confidence/calibrator.json');
+        if (data) this.records = data;
+      } else if (fs.existsSync(this.recordFile)) {
         this.records = JSON.parse(fs.readFileSync(this.recordFile, 'utf-8'));
       }
     } catch { this.records = []; }
   }
 
   private save(): void {
-    fs.writeFileSync(this.recordFile, JSON.stringify(this.records.slice(-500), null, 2), 'utf-8');
+    if (this._backend) {
+      this._backend.write('confidence/calibrator.json', this.records.slice(-500));
+    } else {
+      fs.writeFileSync(this.recordFile, JSON.stringify(this.records.slice(-500), null, 2), 'utf-8');
+    }
   }
 
   calibrate(input: CalibrationInput): CalibrationResult {
