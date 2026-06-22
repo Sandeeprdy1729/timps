@@ -318,8 +318,40 @@ pub fn delete_memory(project_path: String, key: String) -> Result<usize, String>
     Ok(before - entries.len())
 }
 
+/// Rough token estimate: 1 token ≈ 4 chars for English text
+fn rough_tokens(s: &str) -> usize {
+    (s.len() + 3) / 4
+}
+
+/// Score a memory entry by relevance to query keywords, recency, and importance.
+/// Formula (from ContextCompressor): relevance × 0.4 + recency × 0.3 + importance × 0.3
+fn score_entry(query_words: &[String], e: &serde_json::Value, now_secs: i64) -> Option<(f64, f64)> {
+    let content = e["content"].as_str()?;
+    let tags = e["tags"].as_array()?;
+    let haystack = format!(
+        "{} {} {}",
+        content.to_lowercase(),
+        e["type"].as_str().unwrap_or(""),
+        tags.iter().filter_map(|t| t.as_str()).collect::<Vec<&str>>().join(" ").to_lowercase()
+    );
+
+    let matched: f64 = query_words.iter().map(|w| if haystack.contains(w.as_str()) { 1.0 } else { 0.0 }).sum();
+    if matched == 0.0 { return None; }
+
+    let max_possible = query_words.len() as f64;
+    let relevance = if max_possible > 0.0 { matched / max_possible } else { 0.0 };
+
+    let entry_ts = e["timestamp"].as_i64().unwrap_or(0);
+    let days_old = (now_secs - entry_ts).max(0) as f64 / 86400.0;
+    let recency = 1.0 / (1.0 + days_old * 0.05).max(0.1).min(1.0);
+
+    let importance = e["score"].as_f64().unwrap_or(0.5);
+    let combined = relevance * 0.4 + recency * 0.3 + importance * 0.3;
+
+    Some((combined, relevance))
+}
+
 /// Chat directly with Ollama (no proxy server needed).
-/// Emits the full response via "chat:done" event (streaming TBD).
 #[tauri::command]
 pub async fn chat(
     app: tauri::AppHandle,
@@ -333,31 +365,101 @@ pub async fn chat(
         .unwrap_or_else(|_| "http://localhost:11434".to_string());
     let model = model.unwrap_or_else(|| "llama3.2:1b".to_string());
 
-    // Build context from stored semantic memories
     let mut messages: Vec<serde_json::Value> = Vec::new();
+    let token_budget: usize = 2000;
+
     if let Some(pp) = &project_path {
         if !pp.is_empty() {
             let mem_dir = memory_dir(pp);
+            let now_secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64;
+
+            let query_words: Vec<String> = prompt
+                .to_lowercase()
+                .split_whitespace()
+                .filter(|w| w.len() > 2)
+                .map(|w| w.to_string())
+                .collect();
+
+            // ── 1. Score semantic facts ──
             let sem_path = format!("{}/semantic.json", mem_dir);
+            let mut all_scored: Vec<(f64, f64, String, &str)> = Vec::new(); // (combined, relevance, content, layer)
+
             if let Ok(s) = std::fs::read_to_string(&sem_path) {
                 if let Ok(entries) = serde_json::from_str::<Vec<serde_json::Value>>(&s) {
-                    if !entries.is_empty() {
-                        let facts: Vec<String> = entries.iter().filter_map(|e| {
-                            let content = e["content"].as_str()?;
-                            let tags = e["tags"].as_array()?;
-                            let tag_str: Vec<&str> = tags.iter().filter_map(|t| t.as_str()).collect();
-                            Some(format!("- {} [tags: {}]", content, tag_str.join(", ")))
-                        }).collect();
-                        let context = format!(
-                            "You have a persistent memory. Here are the facts you know about the user and the project:\n{}\n\nUse these facts when answering. If the user asks something you don't know, say so.",
-                            facts.join("\n")
-                        );
-                        messages.push(serde_json::json!({"role": "system", "content": context}));
+                    for e in &entries {
+                        if let Some((combined, relevance)) = score_entry(&query_words, e, now_secs) {
+                            if let Some(content) = e["content"].as_str() {
+                                let tags: String = e["tags"].as_array()
+                                    .map(|a| a.iter().filter_map(|t| t.as_str()).collect::<Vec<&str>>().join(", "))
+                                    .unwrap_or_default();
+                                let formatted = format!("- {} [tags: {}]", content, tags);
+                                all_scored.push((combined, relevance, formatted, "semantic"));
+                            }
+                        }
                     }
                 }
             }
+
+            // ── 2. Score recent episodes ──
+            let ep_path = format!("{}/episodes.jsonl", mem_dir);
+            if let Ok(file) = std::fs::File::open(&ep_path) {
+                let episodes: Vec<serde_json::Value> = BufReader::new(file)
+                    .lines()
+                    .filter_map(|l| l.ok())
+                    .filter(|l| !l.trim().is_empty())
+                    .filter_map(|l| serde_json::from_str(&l).ok())
+                    .collect();
+
+                let window = episodes.len().min(20);
+                for e in episodes.iter().rev().take(window) {
+                    if let Some(summary) = e["summary"].as_str() {
+                        let ep_content = format!("[Episode] {} — outcome: {}", summary, e["outcome"].as_str().unwrap_or("unknown"));
+                        let ep_json = serde_json::json!({
+                            "content": ep_content,
+                            "tags": e["tags"].as_array().cloned().unwrap_or_default(),
+                            "score": 0.5,
+                            "timestamp": e["timestamp"].as_i64().unwrap_or(0),
+                            "type": "episode"
+                        });
+                        if let Some((combined, _)) = score_entry(&query_words, &ep_json, now_secs) {
+                            all_scored.push((combined, 0.0, ep_content, "episodic"));
+                        }
+                    }
+                }
+            }
+
+            // ── 3. Sort by combined score ──
+            all_scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+            // ── 4. Pack within token budget (ContextCompressor style) ──
+            if !all_scored.is_empty() {
+                let mut ctx_parts: Vec<&str> = Vec::new();
+                let mut used_tokens = 0usize;
+                let header = "Relevant memory:\n";
+                used_tokens += rough_tokens(header);
+
+                for (_, _, ref content, _) in &all_scored {
+                    let line_tokens = rough_tokens(content);
+                    if used_tokens + line_tokens + 1 > token_budget {
+                        break;
+                    }
+                    ctx_parts.push(content.as_str());
+                    used_tokens += line_tokens + 1;
+                }
+
+                let facts_str = ctx_parts.join("\n");
+                let context = format!(
+                    "You have a persistent memory. Here are the relevant facts about the user and the project:\n{}\n\nUse these facts when answering. If the user asks something you don't know, say so.\n[memory tokens: ~{}/{}]",
+                    facts_str, used_tokens, token_budget
+                );
+                messages.push(serde_json::json!({"role": "system", "content": context}));
+            }
         }
     }
+
     messages.push(serde_json::json!({"role": "user", "content": prompt}));
 
     let body = serde_json::json!({
