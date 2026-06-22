@@ -152,6 +152,10 @@ jobs:
         working-directory: .
         run: npm ci
 
+      - name: Build workspace dependency
+        working-directory: .
+        run: npm run build --workspace=packages/memory-core
+
       - name: Security audit
         continue-on-error: true
         run: npm audit --audit-level=high
