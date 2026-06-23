@@ -1,38 +1,40 @@
 // ── @timps/memory-core — RedisBackend ──
-// Async StorageBackend backed by Redis.
-// Requires `ioredis`: `npm install ioredis`
-//
-// Usage:
-//   const backend = new RedisBackend({ url: 'redis://localhost:6379' });
-//   const engine = new MemoryEngine('/tmp/mem', { backend });
+// Async StorageBackend backed by Redis with multi-tenant key scoping.
 
-import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction } from './types.js';
+import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction, OrgScope } from './types.js';
+import { buildKey, scopeListPrefix } from './types.js';
 
 export interface RedisBackendOptions {
   url?: string;
   keyPrefix?: string;
 }
 
-/**
- * Redis-backed storage.
- * Stores all values as JSON strings under prefixed keys.
- * Uses a SET for key listing and individual STRING keys for values.
- */
 export class RedisBackend implements StorageBackend {
   private options: RedisBackendOptions;
   private client: any = null;
   private ready: Promise<void>;
+  private _activeScope: OrgScope | null = null;
 
   constructor(options: RedisBackendOptions = {}) {
     this.options = { keyPrefix: 'timps:', ...options };
     this.ready = this._connect();
   }
 
+  setScope(scope: OrgScope | null): void {
+    this._activeScope = scope;
+  }
+
+  getScope(): OrgScope | null {
+    return this._activeScope;
+  }
+
+  private _resolveScope(scope?: OrgScope): OrgScope | null {
+    return scope ?? this._activeScope ?? null;
+  }
+
   private async _connect(): Promise<void> {
     try {
-      // Dynamic require so ioredis isn't needed at module load time
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Redis: any = require('ioredis');
+      const Redis = require('ioredis');
       this.client = this.options.url ? new Redis(this.options.url) : new Redis();
     } catch (e) {
       throw new Error(
@@ -49,38 +51,47 @@ export class RedisBackend implements StorageBackend {
     await this.ready;
   }
 
-  async read(key: string): Promise<any> {
+  async read(key: string, scope?: OrgScope): Promise<any> {
     await this._assertReady();
-    const raw = await this.client.get(this._prefixed(key));
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const raw = await this.client.get(this._prefixed(actualKey));
     if (raw === null) return null;
     try { return JSON.parse(raw); } catch { return raw; }
   }
 
-  async write(key: string, value: any): Promise<void> {
+  async write(key: string, value: any, scope?: OrgScope): Promise<void> {
     await this._assertReady();
-    const pkey = this._prefixed(key);
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const pkey = this._prefixed(actualKey);
     const multi = this.client.multi();
     multi.set(pkey, JSON.stringify(value));
     multi.sadd(`${this.options.keyPrefix}_keys`, pkey);
     await multi.exec();
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: string, scope?: OrgScope): Promise<void> {
     await this._assertReady();
-    const pkey = this._prefixed(key);
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const pkey = this._prefixed(actualKey);
     const multi = this.client.multi();
     multi.del(pkey);
     multi.srem(`${this.options.keyPrefix}_keys`, pkey);
     await multi.exec();
   }
 
-  async list(prefix?: string): Promise<string[]> {
+  async list(prefix?: string, scope?: OrgScope): Promise<string[]> {
     await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
+    const listPrefix = effectiveScope ? scopeListPrefix(prefix ?? '', effectiveScope) : prefix;
+
     const allKeys: string[] = await this.client.smembers(`${this.options.keyPrefix}_keys`);
     const results: string[] = [];
     for (const pkey of allKeys) {
       const raw = pkey.slice(this.options.keyPrefix!.length);
-      if (!prefix || raw.startsWith(prefix)) {
+      if (!listPrefix || raw.startsWith(listPrefix)) {
         results.push(raw);
       }
     }
@@ -89,9 +100,12 @@ export class RedisBackend implements StorageBackend {
 
   async query(filter: StorageQuery): Promise<StorageRecord[]> {
     await this._assertReady();
-    const keys = filter.prefix ? await this.list(filter.prefix) : await this.list();
-    const results: StorageRecord[] = [];
+    const effectiveScope = this._resolveScope(filter.orgScope);
+    const keys = effectiveScope
+      ? await this.list(filter.prefix, effectiveScope)
+      : filter.prefix ? await this.list(filter.prefix) : await this.list();
 
+    const results: StorageRecord[] = [];
     for (const key of keys) {
       const value = await this.read(key);
       if (value === null) continue;
@@ -115,22 +129,23 @@ export class RedisBackend implements StorageBackend {
     return results;
   }
 
-  async exists(key: string): Promise<boolean> {
+  async exists(key: string, scope?: OrgScope): Promise<boolean> {
     await this._assertReady();
-    const exists = await this.client.exists(this._prefixed(key));
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const exists = await this.client.exists(this._prefixed(actualKey));
     return exists === 1;
   }
 
-  async append(key: string, line: string): Promise<void> {
-    const existing = (await this.read(key)) || '';
-    await this.write(key, existing + line + '\n');
+  async append(key: string, line: string, scope?: OrgScope): Promise<void> {
+    const existing = (await this.read(key, scope)) || '';
+    await this.write(key, existing + line + '\n', scope);
   }
 
   beginTxn(): RedisTransaction {
     return new RedisTransaction(this);
   }
 
-  /** Close the Redis connection. */
   async close(): Promise<void> {
     if (this.client) {
       await this.client.quit();

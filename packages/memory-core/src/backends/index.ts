@@ -1,7 +1,7 @@
 // ── @timps/memory-core — Backends re-exports ──
 
-export type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction } from './types.js';
-export { KEY_PREFIXES } from './types.js';
+export type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction, OrgScope } from './types.js';
+export { KEY_PREFIXES, buildKey, scopeListPrefix } from './types.js';
 export { FileBackend } from './FileBackend.js';
 export type { FileBackendOptions } from './FileBackend.js';
 export { InMemoryBackend } from './InMemoryBackend.js';

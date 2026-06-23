@@ -2,18 +2,24 @@
 // All forge layers talk to storage through this interface.
 // FileBackend, PostgresBackend, SQLiteBackend, RedisBackend, InMemoryBackend all implement it.
 
+export interface OrgScope {
+  orgId: string;
+  teamId?: string;
+  projectId: string;
+}
+
 export interface StorageBackend {
   /** Read a value by key. Returns parsed object or null if not found. */
-  read(key: string): Promise<any> | any;
+  read(key: string, scope?: OrgScope): Promise<any> | any;
 
   /** Store a value. Creates or overwrites. Returns void. */
-  write(key: string, value: any): Promise<void> | void;
+  write(key: string, value: any, scope?: OrgScope): Promise<void> | void;
 
   /** Remove a key. No error if missing. */
-  delete(key: string): Promise<void> | void;
+  delete(key: string, scope?: OrgScope): Promise<void> | void;
 
   /** List all keys, optionally filtered by prefix. */
-  list(prefix?: string): Promise<string[]> | string[];
+  list(prefix?: string, scope?: OrgScope): Promise<string[]> | string[];
 
   /**
    * Advanced retrieval — find memories matching criteria.
@@ -25,10 +31,16 @@ export interface StorageBackend {
   beginTxn?(): Promise<StorageTransaction> | StorageTransaction;
 
   /** Check if a key exists. */
-  exists?(key: string): Promise<boolean> | boolean;
+  exists?(key: string, scope?: OrgScope): Promise<boolean> | boolean;
 
   /** Append a string line to a log-style key (JSONL). */
-  append(key: string, line: string): Promise<void> | void;
+  append(key: string, line: string, scope?: OrgScope): Promise<void> | void;
+
+  /** Set the active scope for this backend (used by MemoryEngine). */
+  setScope?(scope: OrgScope | null): void;
+
+  /** Get the active scope. */
+  getScope?(): OrgScope | null;
 }
 
 export interface StorageQuery {
@@ -39,6 +51,8 @@ export interface StorageQuery {
   /** Custom predicate evaluated on parsed values */
   filter?: (value: any) => boolean;
   limit?: number;
+  /** OrgScope filter for multi-tenant isolation */
+  orgScope?: OrgScope;
 }
 
 export interface StorageRecord {
@@ -110,3 +124,20 @@ export const KEY_PREFIXES = {
   biasRevealer: 'bias_revealer/',
   prospectiveTrigger: 'prospective_trigger/',
 } as const;
+
+/**
+ * Build a scoped storage key for multi-tenant isolation.
+ * Pattern: memory:{orgId}:{teamId?}:{projectId}:{prefix}{key}
+ */
+export function buildKey(prefix: string, key: string, scope?: OrgScope): string {
+  if (!scope) return `${prefix}${key}`;
+  const team = scope.teamId ? `${scope.teamId}:` : '';
+  return `memory:${scope.orgId}:${team}${scope.projectId}:${prefix}${key}`;
+}
+
+/** Build a scope prefix for list operations */
+export function scopeListPrefix(prefix: string, scope?: OrgScope): string {
+  if (!scope) return prefix;
+  const team = scope.teamId ? `${scope.teamId}:` : '';
+  return `memory:${scope.orgId}:${team}${scope.projectId}:${prefix}`;
+}

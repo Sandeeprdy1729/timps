@@ -226,7 +226,7 @@ describe('MemoryEngine runs migrations on construction', () => {
     backend.write('schema-version.json', { version: CURRENT_SCHEMA_VERSION, migratedAt: new Date().toISOString() });
     backend.write('episodes.json', [{ id: 'ep1', summary: 'session', timestamp: Date.now() }]);
 
-    const engine = new MemoryEngine('/tmp/testbot-migration', { dir, backend: new InMemoryBackend() });
+    const engine = new MemoryEngine('/tmp/testbot-migration', { dir });
 
     const stats = engine.getStats();
     expect(stats.episodeCount).toBe(1);

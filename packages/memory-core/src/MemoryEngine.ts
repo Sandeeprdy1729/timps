@@ -9,10 +9,11 @@ import { promisify } from 'node:util';
 import type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
   SearchOptions, ScoredMemoryEntry, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
+  OrgScope,
 } from './types.js';
 
 import {
-  projectHash, memoryDir, generateId, getBackend,
+  projectHash, memoryDir, generateId, getBackend, deriveProjectId,
   loadWorking, saveWorking,
   appendEpisode, loadEpisodes, episodeCount,
   loadSemantic, saveSemantic,
@@ -131,6 +132,12 @@ const gunzip = promisify(zlib.gunzip);
 export interface MemoryEngineOptions {
   /** Optional scope for multi-user/team isolation. Affects storage directory and actor identity. */
   scope?: MemoryScope;
+  /**
+   * Three-level isolation scope for multi-tenant deployments.
+   * When set, the backend's setScope() is called, and all storage keys
+   * are prefixed with memory:{orgId}:{teamId?}:{projectId}: for tenant isolation.
+   */
+  orgScope?: OrgScope;
   /** Override the storage directory. If not set, derived from projectPath + optional scope. */
   dir?: string;
   /**
@@ -159,6 +166,7 @@ export class MemoryEngine {
   private dir: string;
   private hash: string;
   private scope?: MemoryScope;
+  private orgScope?: OrgScope;
   private working: WorkingState;
   private _backend: StorageBackend;
   private _cacheManager?: CacheManager;
@@ -235,13 +243,20 @@ export class MemoryEngine {
 
   constructor(projectPath: string, options?: MemoryEngineOptions) {
     this.scope = options?.scope;
+    this.orgScope = options?.orgScope;
     this.dir = options?.dir ?? memoryDir(projectPath, this.scope);
     this.hash = projectHash(projectPath);
     this._backend = options?.backend ?? getBackend(this.dir);
+
+    // Set active scope on backend for tenant isolation
+    if (this.orgScope && typeof (this._backend as any).setScope === 'function') {
+      (this._backend as any).setScope(this.orgScope);
+    }
+
     this._cacheManager = options?.cacheManager;
     this._eventBus = options?.eventBus;
     this._runMigrations();
-    this.working = loadWorking(this.dir);
+    this.working = loadWorking(this.dir, this._backend);
   }
 
   /** Run pending schema migrations on startup. */
@@ -270,6 +285,14 @@ export class MemoryEngine {
   /** The scope this engine was created with, if any. */
   get engineScope(): Readonly<MemoryScope> | undefined {
     return this.scope;
+  }
+
+  /**
+   * The org/team/project isolation scope.
+   * When set, all storage is scoped to this org+project combination.
+   */
+  get engineOrgScope(): Readonly<OrgScope> | undefined {
+    return this.orgScope;
   }
 
   // ── Lazy getters for tool instances ──
@@ -532,37 +555,37 @@ export class MemoryEngine {
 
   setGoal(goal: string): void {
     this.working = { ...this.working, currentGoal: goal };
-    saveWorking(this.dir, this.working);
+    saveWorking(this.dir, this.working, this._backend);
   }
 
   trackFile(filePath: string): void {
     const next = trackFile(this.working, filePath);
-    if (next !== this.working) { this.working = next; saveWorking(this.dir, this.working); }
+    if (next !== this.working) { this.working = next; saveWorking(this.dir, this.working, this._backend); }
   }
 
   trackError(error: string): void {
     this.working = trackError(this.working, error);
-    saveWorking(this.dir, this.working);
+    saveWorking(this.dir, this.working, this._backend);
   }
 
   trackPattern(pattern: string): void {
     const next = trackPattern(this.working, pattern);
-    if (next !== this.working) { this.working = next; saveWorking(this.dir, this.working); }
+    if (next !== this.working) { this.working = next; saveWorking(this.dir, this.working, this._backend); }
   }
 
   clearWorking(): void {
     this.working = { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
-    saveWorking(this.dir, this.working);
+    saveWorking(this.dir, this.working, this._backend);
   }
 
   // ── Layer 2: Episodic Memory ──
 
   storeEpisode(episode: Omit<EpisodicEntry, 'id'>): void {
-    appendEpisode(this.dir, { id: generateId('ep'), ...episode });
+    appendEpisode(this.dir, { id: generateId('ep'), ...episode }, this._backend);
   }
 
   loadEpisodes(count = 10): EpisodicEntry[] {
-    return loadEpisodes(this.dir, count);
+    return loadEpisodes(this.dir, count, this._backend);
   }
 
   // ── Layer 3: Semantic Memory ──
@@ -574,7 +597,7 @@ export class MemoryEngine {
 
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
   store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }, opts?: { skipGuard?: boolean }): void {
-    const facts = loadSemantic(this.dir);
+    const facts = loadSemantic(this.dir, this._backend);
     const { content, type = 'fact', tags = [] } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     const id = generateId('mem');
@@ -591,8 +614,13 @@ export class MemoryEngine {
       }
     }
 
-    facts.push({ id, timestamp, type, content, tags });
-    saveSemantic(this.dir, facts);
+    // Include org/project scope in stored entry tags for traceability
+    const enrichedTags = this.orgScope
+      ? [...new Set([...tags, `org:${this.orgScope.orgId}`, `project:${this.orgScope.projectId}`, ...(this.orgScope.teamId ? [`team:${this.orgScope.teamId}`] : [])])]
+      : tags;
+
+    facts.push({ id, timestamp, type, content, tags: enrichedTags });
+    saveSemantic(this.dir, facts, this._backend);
 
     // Layer 5: weave into ChronosForge temporal graph
     this.chronosForge.weave(content, { tags });
@@ -638,9 +666,12 @@ export class MemoryEngine {
         id,
         content: content.slice(0, 200),
         type,
-        tags,
+        tags: enrichedTags,
         confidence,
         actorId: actor,
+        orgId: this.orgScope?.orgId,
+        projectId: this.orgScope?.projectId,
+        teamId: this.orgScope?.teamId,
       });
     }
   }
@@ -658,7 +689,7 @@ export class MemoryEngine {
    * 7. Final ranking and filtering (minConfidence, maxFalseMemoryRisk)
    */
   recall(query: string, options?: SearchOptions): ScoredMemoryEntry[] {
-    const entries = loadSemantic(this.dir);
+    const entries = loadSemantic(this.dir, this._backend);
     const candidates = searchEntries(entries, query, { ...options, limit: 50 });
     const now = Date.now();
     const useIntel = options?.useIntelligence ?? true;
@@ -758,7 +789,7 @@ export class MemoryEngine {
 
   /** Get a formatted context string for injection into agent prompts. */
   getContextString(task = ''): string {
-    const episodes = loadEpisodes(this.dir, 5);
+    const episodes = loadEpisodes(this.dir, 5, this._backend);
     const facts = this.recall(task, { limit: 5, context: { domain: task, activeFiles: this.working.activeFiles } });
     const parts: string[] = [];
 
@@ -796,13 +827,13 @@ export class MemoryEngine {
 
   /** Consolidate near-duplicate semantic entries. Returns count removed. */
   consolidate(): number {
-    const entries = loadSemantic(this.dir);
+    const entries = loadSemantic(this.dir, this._backend);
     const before = entries.length;
     const deduped: MemoryEntry[] = [];
     for (const e of entries) {
       if (!deduped.some(d => jaccardSimilarity(d.content, e.content) > 0.85)) deduped.push(e);
     }
-    saveSemantic(this.dir, deduped);
+    saveSemantic(this.dir, deduped, this._backend);
     const removed = before - deduped.length;
 
     if (this._eventBus && removed > 0) {
@@ -817,8 +848,8 @@ export class MemoryEngine {
 
   getStats(): MemoryStats {
     return {
-      semanticCount: loadSemantic(this.dir).length,
-      episodeCount: episodeCount(this.dir),
+      semanticCount: loadSemantic(this.dir, this._backend).length,
+      episodeCount: episodeCount(this.dir, this._backend),
       workingFiles: this.working.activeFiles.length,
       workingPatterns: this.working.discoveredPatterns.length,
     };
@@ -842,8 +873,8 @@ export class MemoryEngine {
   /** Export all memory as a signed, gzipped MemoryPack. */
   async export(): Promise<MemoryPack> {
     const working = this.working;
-    const episodic = loadEpisodes(this.dir, 9999);
-    const semantic = loadSemantic(this.dir);
+    const episodic = loadEpisodes(this.dir, 9999, this._backend);
+    const semantic = loadSemantic(this.dir, this._backend);
     const payload = JSON.stringify({ working, episodic, semantic });
     const signature = crypto.createHash('sha256').update(payload).digest('hex');
     return { version: '1.0', projectHash: this.hash, exportedAt: Date.now(), working, episodic, semantic, signature };
@@ -858,8 +889,8 @@ export class MemoryEngine {
       throw new Error('MemoryPack signature verification failed — pack may be corrupted or tampered.');
     }
 
-    const existingSemantic = loadSemantic(this.dir);
-    const existingEpisodic = loadEpisodes(this.dir, 9999);
+    const existingSemantic = loadSemantic(this.dir, this._backend);
+    const existingEpisodic = loadEpisodes(this.dir, 9999, this._backend);
 
     let addedSemantic = 0;
     let addedEpisodic = 0;
@@ -875,13 +906,13 @@ export class MemoryEngine {
         addedSemantic++;
       }
     }
-    saveSemantic(this.dir, merged);
+    saveSemantic(this.dir, merged, this._backend);
 
     // Merge episodic (by id dedup)
     const existingIds = new Set(existingEpisodic.map(e => e.id));
     for (const ep of pack.episodic) {
       if (!existingIds.has(ep.id)) {
-        appendEpisode(this.dir, ep);
+        appendEpisode(this.dir, ep, this._backend);
         addedEpisodic++;
       } else {
         skippedDuplicates++;
@@ -1042,12 +1073,12 @@ export class MemoryEngine {
 
   /** Get all semantic entries (used by ConflictDetector and gRPC handlers). */
   getSemanticEntries(): MemoryEntry[] {
-    return loadSemantic(this.dir);
+    return loadSemantic(this.dir, this._backend);
   }
 
   /** Replace semantic entries (used by conflict resolution and deletion). */
   saveSemanticEntries(entries: MemoryEntry[]): void {
-    saveSemantic(this.dir, entries);
+    saveSemantic(this.dir, entries, this._backend);
   }
 
   /**
@@ -1060,5 +1091,64 @@ export class MemoryEngine {
       { content } as MemoryEntry,
       entries,
     );
+  }
+
+  // ── Phase 2e: Multi-Project Recall ──
+
+  /**
+   * Cross-project recall — search across multiple projects within the same org.
+   * Only available when using a PostgresBackend with shared schema.
+   * This temporarily switches the backend scope to each project and merges results.
+   */
+  multiProjectRecall(
+    query: string,
+    projectIds: string[],
+    options?: SearchOptions & { teamId?: string }
+  ): Map<string, ScoredMemoryEntry[]> {
+    const results = new Map<string, ScoredMemoryEntry[]>();
+    const currentScope = this.orgScope;
+    if (!currentScope) {
+      // Fallback: single-project recall
+      results.set('default', this.recall(query, options));
+      return results;
+    }
+
+    for (const pid of projectIds) {
+      const pidScope: OrgScope = {
+        orgId: currentScope.orgId,
+        teamId: options?.teamId ?? currentScope.teamId,
+        projectId: pid,
+      };
+      if (typeof (this._backend as any).setScope === 'function') {
+        (this._backend as any).setScope(pidScope);
+      }
+      const scored = this.recall(query, options);
+      results.set(pid, scored);
+      // Restore prior scope
+      if (typeof (this._backend as any).setScope === 'function') {
+        (this._backend as any).setScope(currentScope);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Convenience: derive a stable project ID from git remote + branch.
+   */
+  static deriveProjectId(gitRemoteUrl: string, branch = 'main'): string {
+    return deriveProjectId(gitRemoteUrl, branch);
+  }
+
+  /**
+   * Convenience: extract OrgScope from an authenticated request.
+   * Returns null if no org scope is present.
+   */
+  static extractOrgScope(req: { headers: Record<string, string | string[] | undefined>; user?: any }): OrgScope | null {
+    const orgId = req.headers['x-org-id'] as string ?? req.user?.orgId ?? null;
+    const projectId = req.headers['x-project-id'] as string ?? req.user?.projectId ?? null;
+    const teamId = req.headers['x-team-id'] as string ?? req.user?.teamId ?? undefined;
+    if (!orgId || !projectId) return null;
+    return { orgId, projectId, teamId };
   }
 }

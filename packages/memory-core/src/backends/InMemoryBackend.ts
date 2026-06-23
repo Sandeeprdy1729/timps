@@ -2,32 +2,54 @@
 // Pure Map-based storage for testing. No disk I/O, no WAL.
 // All forge layers work identically with this backend — tests run 100x faster.
 
-import type { StorageBackend, StorageQuery, StorageRecord } from './types.js';
+import type { StorageBackend, StorageQuery, StorageRecord, OrgScope } from './types.js';
+import { buildKey, scopeListPrefix } from './types.js';
 
 export class InMemoryBackend implements StorageBackend {
   private store = new Map<string, string>();
+  private _activeScope: OrgScope | null = null;
 
-  read(key: string): any {
-    const raw = this.store.get(key);
+  setScope(scope: OrgScope | null): void {
+    this._activeScope = scope;
+  }
+
+  getScope(): OrgScope | null {
+    return this._activeScope;
+  }
+
+  private _resolveScope(scope?: OrgScope): OrgScope | null {
+    return scope ?? this._activeScope ?? null;
+  }
+
+  read(key: string, scope?: OrgScope): any {
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const raw = this.store.get(actualKey);
     if (raw === undefined) return null;
     try { return JSON.parse(raw); } catch { return raw; }
   }
 
-  write(key: string, value: any): void {
-    this.store.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+  write(key: string, value: any, scope?: OrgScope): void {
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    this.store.set(actualKey, typeof value === 'string' ? value : JSON.stringify(value));
   }
 
-  delete(key: string): void {
-    this.store.delete(key);
+  delete(key: string, scope?: OrgScope): void {
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    this.store.delete(actualKey);
   }
 
-  list(prefix?: string): string[] {
+  list(prefix?: string, scope?: OrgScope): string[] {
+    const effectiveScope = this._resolveScope(scope);
+    const listPrefix = effectiveScope ? scopeListPrefix(prefix ?? '', effectiveScope) : prefix;
     const keys = Array.from(this.store.keys());
-    return prefix ? keys.filter(k => k.startsWith(prefix)) : keys;
+    return listPrefix ? keys.filter(k => k.startsWith(listPrefix)) : keys;
   }
 
   query(filter: StorageQuery): StorageRecord[] {
-    const keys = filter.prefix ? this.list(filter.prefix) : this.list();
+    const keys = filter.prefix ? this.list(filter.prefix, filter.orgScope) : this.list(undefined, filter.orgScope);
     let results = keys.map(key => ({ key, value: this.read(key) }));
 
     if (filter.timestampMin !== undefined) {
@@ -47,13 +69,17 @@ export class InMemoryBackend implements StorageBackend {
     return results;
   }
 
-  exists(key: string): boolean {
-    return this.store.has(key);
+  exists(key: string, scope?: OrgScope): boolean {
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    return this.store.has(actualKey);
   }
 
-  append(key: string, line: string): void {
-    const existing = this.store.get(key) ?? '';
-    this.store.set(key, existing + line + '\n');
+  append(key: string, line: string, scope?: OrgScope): void {
+    const effectiveScope = this._resolveScope(scope);
+    const actualKey = effectiveScope ? buildKey('', key, effectiveScope) : key;
+    const existing = this.store.get(actualKey) ?? '';
+    this.store.set(actualKey, existing + line + '\n');
   }
 
   /** Clear all data — useful between tests. */

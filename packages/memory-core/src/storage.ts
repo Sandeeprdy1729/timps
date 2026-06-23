@@ -35,6 +35,46 @@ export function projectHash(projectPath: string): string {
   return crypto.createHash('sha256').update(path.resolve(projectPath)).digest('hex').slice(0, 12);
 }
 
+/**
+ * Derive a stable project ID from git remote URL + branch.
+ * Unlike projectHash (which uses the local filesystem path),
+ * this produces the same ID for all developers cloning the same repo.
+ *
+ * Examples:
+ *   deriveProjectId("git@github.com:org/repo.git", "main")
+ *   → sha256("github.com/org/repo#main").slice(0, 12)
+ *
+ *   deriveProjectId("https://github.com/org/repo.git", "feature/x")
+ *   → sha256("github.com/org/repo#feature/x").slice(0, 12)
+ */
+export function deriveProjectId(gitRemoteUrl: string, branch = 'main'): string {
+  // Normalize: strip protocol, auth, trailing .git, and whitespace
+  let normalized = gitRemoteUrl.trim();
+  if (normalized.endsWith('.git')) normalized = normalized.slice(0, -4);
+  // Strip git@ prefix → keep host:path
+  if (normalized.startsWith('git@')) {
+    normalized = normalized.slice(4).replace(':', '/');
+  } else {
+    // Strip protocol:// and auth
+    normalized = normalized.replace(/^https?:\/\/([^@]+@)?/, '');
+  }
+  // Strip leading www.
+  normalized = normalized.replace(/^www\./, '');
+  return crypto.createHash('sha256')
+    .update(`${normalized}#${branch}`)
+    .digest('hex')
+    .slice(0, 12);
+}
+
+/**
+ * Build a storage key prefix from an OrgScope.
+ * Pattern: memory:{orgId}:{teamId?}:{projectId}:
+ */
+export function scopePrefix(scope: { orgId: string; teamId?: string; projectId: string }): string {
+  const team = scope.teamId ? `${scope.teamId}:` : '';
+  return `memory:${scope.orgId}:${team}${scope.projectId}:`;
+}
+
 export function memoryDir(projectPath: string, scope?: MemoryScope): string {
   const hash = projectHash(projectPath);
   const scopeSeg = scope ? `_${scope.userId ?? ''}_${scope.teamId ?? ''}` : '';
@@ -58,49 +98,49 @@ export function generateId(prefix = 'id'): string {
 
 // ── Working memory ──
 
-export function loadWorking(dir: string): WorkingState {
-  const backend = getBackend(dir);
-  return backend.read('working.json') ?? { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
+export function loadWorking(dir: string, backend?: StorageBackend): WorkingState {
+  const bk = backend ?? getBackend(dir);
+  return bk.read('working.json') ?? { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
 }
 
-export function saveWorking(dir: string, state: WorkingState): void {
-  const backend = getBackend(dir);
-  backend.write('working.json', state);
+export function saveWorking(dir: string, state: WorkingState, backend?: StorageBackend): void {
+  const bk = backend ?? getBackend(dir);
+  bk.write('working.json', state);
 }
 
 // ── Episodic memory (JSON array) ──
 
-export function appendEpisode(dir: string, episode: EpisodicEntry): void {
-  const backend = getBackend(dir);
-  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+export function appendEpisode(dir: string, episode: EpisodicEntry, backend?: StorageBackend): void {
+  const bk = backend ?? getBackend(dir);
+  const episodes: EpisodicEntry[] = bk.read('episodes.json') ?? [];
   episodes.push(episode);
   const trimmed = episodes.length > MAX_EPISODES ? episodes.slice(-MAX_EPISODES) : episodes;
-  backend.write('episodes.json', trimmed);
+  bk.write('episodes.json', trimmed);
 }
 
-export function loadEpisodes(dir: string, count = 10): EpisodicEntry[] {
-  const backend = getBackend(dir);
-  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+export function loadEpisodes(dir: string, count = 10, backend?: StorageBackend): EpisodicEntry[] {
+  const bk = backend ?? getBackend(dir);
+  const episodes: EpisodicEntry[] = bk.read('episodes.json') ?? [];
   return episodes.slice(-count);
 }
 
-export function episodeCount(dir: string): number {
-  const backend = getBackend(dir);
-  const episodes: EpisodicEntry[] = backend.read('episodes.json') ?? [];
+export function episodeCount(dir: string, backend?: StorageBackend): number {
+  const bk = backend ?? getBackend(dir);
+  const episodes: EpisodicEntry[] = bk.read('episodes.json') ?? [];
   return episodes.length;
 }
 
 // ── Semantic memory ──
 
-export function loadSemantic(dir: string): MemoryEntry[] {
-  const backend = getBackend(dir);
-  return backend.read('semantic.json') ?? [];
+export function loadSemantic(dir: string, backend?: StorageBackend): MemoryEntry[] {
+  const bk = backend ?? getBackend(dir);
+  return bk.read('semantic.json') ?? [];
 }
 
-export function saveSemantic(dir: string, entries: MemoryEntry[]): void {
+export function saveSemantic(dir: string, entries: MemoryEntry[], backend?: StorageBackend): void {
   const trimmed = entries.length > MAX_SEMANTIC ? entries.slice(-MAX_SEMANTIC) : entries;
-  const backend = getBackend(dir);
-  backend.write('semantic.json', trimmed);
+  const bk = backend ?? getBackend(dir);
+  bk.write('semantic.json', trimmed);
 }
 
 // ── Working memory helpers ──
