@@ -1,0 +1,411 @@
+// ── TIMPS Memory Protocol — Protobuf Definitions ──
+// Language-agnostic contract for client-server memory operations.
+// One .proto to generate TypeScript, Rust, Python, Kotlin clients.
+
+syntax = "proto3";
+
+package timps.memory.v1;
+
+// ── Core Data Types ─────────────────────────────────────────────────────────
+
+message MemoryEntry {
+  string id = 1;
+  int64 timestamp = 2;
+  string type = 3;          // fact|pattern|preference|error|convention|bug|incident|architecture
+  string content = 4;
+  repeated string tags = 5;
+  double score = 6;
+}
+
+message EpisodicEntry {
+  string id = 1;
+  int64 timestamp = 2;
+  string summary = 3;
+  string outcome = 4;       // success|failure|partial|unknown
+  int64 duration_ms = 5;
+  int32 error_count = 6;
+  repeated string tags = 7;
+}
+
+message ScoredMemoryEntry {
+  MemoryEntry entry = 1;
+  double calibrated_confidence = 2;
+  double false_memory_risk = 3;
+  double source_reliability = 4;
+  string source_kind = 5;
+  double context_boost = 6;
+  double rehearsal_boost = 7;
+}
+
+message WorkingState {
+  string current_goal = 1;
+  repeated string active_files = 2;
+  repeated string recent_errors = 3;
+  repeated string discovered_patterns = 4;
+}
+
+// ── Request / Response Messages ────────────────────────────────────────────
+
+message StoreRequest {
+  oneof payload {
+    string content = 1;
+    EpisodicEntry episode = 4;
+  }
+  string type = 2;
+  repeated string tags = 3;
+  string user_id = 5;
+}
+
+message StoreResponse {
+  string status = 1;
+  string kind = 2;              // semantic | episode
+}
+
+message RecallRequest {
+  string query = 1;
+  int32 limit = 2;
+  string type = 3;
+  repeated string tags = 4;
+  double min_confidence = 5;
+  double max_false_memory_risk = 6;
+  string user_id = 7;
+}
+
+message RecallResponse {
+  repeated ScoredMemoryEntry results = 1;
+  int32 count = 2;
+}
+
+message StatsRequest {
+  string user_id = 1;
+}
+
+message StatsResponse {
+  int32 semantic_count = 1;
+  int32 episode_count = 2;
+  int32 working_files = 3;
+  int32 working_patterns = 4;
+}
+
+message DeleteRequest {
+  string id = 1;
+  string content = 2;
+  string user_id = 3;
+}
+
+message DeleteResponse {
+  string status = 1;
+  int32 deleted = 2;
+}
+
+message Empty {}
+
+message SetGoalRequest {
+  string goal = 1;
+  string user_id = 2;
+}
+
+message TrackFileRequest {
+  string file_path = 1;
+  string user_id = 2;
+}
+
+message TrackErrorRequest {
+  string error = 1;
+  string user_id = 2;
+}
+
+message ContextRequest {
+  string task = 1;
+  string user_id = 2;
+}
+
+message ContextResponse {
+  string context = 1;
+}
+
+message EpisodeStoreRequest {
+  string summary = 1;
+  string outcome = 2;
+  int64 duration_ms = 3;
+  int32 error_count = 4;
+  repeated string tags = 5;
+  string user_id = 6;
+}
+
+message EpisodesLoadRequest {
+  int32 count = 1;
+  string user_id = 2;
+}
+
+message EpisodesResponse {
+  repeated EpisodicEntry episodes = 1;
+  int32 count = 2;
+}
+
+message ExtractFactsRequest {
+  string user_message = 1;
+  string assistant_response = 2;
+  string user_id = 3;
+}
+
+message ConsolidationOpts {
+  int64 since_ms = 1;
+  bool dry_run = 2;
+}
+
+message MemoryPack {
+  string version = 1;
+  string project_hash = 2;
+  int64 exported_at = 3;
+  WorkingState working = 4;
+  repeated EpisodicEntry episodic = 5;
+  repeated MemoryEntry semantic = 6;
+  string signature = 7;
+}
+
+message ImportRequest {
+  MemoryPack pack = 1;
+  string user_id = 2;
+}
+
+message MergeResult {
+  int32 added_semantic = 1;
+  int32 added_episodic = 2;
+  int32 skipped_duplicates = 3;
+}
+
+message SnapshotRequest {
+  string branch_name = 1;
+  string user_id = 2;
+}
+
+message SnapshotResponse {
+  string branch_name = 1;
+  int64 created_at = 2;
+  MemoryPack pack = 3;
+}
+
+// ── Intelligence Types ──────────────────────────────────────────────────────
+
+message ContradictionRequest {
+  string text = 1;
+  bool auto_store = 2;
+  string user_id = 3;
+}
+
+message ContradictionResponse {
+  bool has_contradiction = 1;
+  MemoryEntry contradicting_entry = 2;
+  double similarity = 3;
+  string explanation = 4;
+}
+
+message BurnoutResponse {
+  string risk_level = 1;
+  repeated string indicators = 2;
+  string suggestion = 3;
+}
+
+message BugPatternRequest {
+  string context = 1;
+  string user_id = 2;
+}
+
+message BugPatternResponse {
+  bool has_bug_pattern = 1;
+  MemoryEntry matched_pattern = 2;
+  double confidence = 3;
+  string warning = 4;
+}
+
+message TechDebtRequest {
+  string pattern = 1;
+  string project_id = 2;
+  string user_id = 3;
+}
+
+message TechDebtResponse {
+  bool has_debt = 1;
+  MemoryEntry matched_incident = 2;
+  string severity = 3;
+  string warning = 4;
+}
+
+message DriftRequest {
+  repeated string current_patterns = 1;
+  string project_id = 2;
+  string user_id = 3;
+}
+
+message DriftResponse {
+  bool has_drift = 1;
+  repeated string drifted_areas = 2;
+  string explanation = 3;
+}
+
+message LearnPatternRequest {
+  string observation = 1;
+  repeated string tags = 2;
+  string user_id = 3;
+}
+
+// ── Forge Layer Types ───────────────────────────────────────────────────────
+
+message EngramVerifyResponse {
+  bool valid = 1;
+  int64 broken_at = 2;
+}
+
+message ConsolidationResponse {
+  int32 entries_consolidated = 1;
+  bool dry_run = 2;
+}
+
+message PruneResponse {
+  int32 entries_pruned = 1;
+}
+
+message ProvenanceRequest {
+  string id = 1;
+}
+
+message ProvenanceResponse {
+  string id = 1;
+  string source_kind = 2;
+  string source_detail = 3;
+  string actor_id = 4;
+  int64 observed_at = 5;
+  int64 valid_from = 6;
+  int64 valid_until = 7;
+  int32 evidence_count = 8;
+  double confidence = 9;
+  string json_payload = 10;   // JSON-encoded full provenance
+}
+
+message GuardRequest {
+  string content = 1;
+}
+
+message GuardResponse {
+  bool allowed = 1;
+  string reason = 2;
+  string json_payload = 3;    // JSON-encoded full verdict
+}
+
+message AuditResponse {
+  string json_payload = 1;    // JSON-encoded full audit report
+}
+
+message BiasResponse {
+  string json_payload = 1;    // JSON-encoded full bias report
+}
+
+message HealthResponse {
+  string status = 1;
+  int64 timestamp = 2;
+  string engine = 3;
+  string version = 4;
+}
+
+// ── Streaming Types ─────────────────────────────────────────────────────────
+
+message ContextStreamRequest {
+  string project_id = 1;
+  string user_id = 2;
+  repeated string layers = 3;     // filter to specific layers (empty = all)
+  double min_confidence = 4;      // minimum insight confidence to push
+}
+
+message MemoryInsight {
+  string type = 1;                // insight|contradiction|drift|pattern|decay|event
+  string layer = 2;               // working|episodic|semantic|echo|chronos|supra|etc
+  string title = 3;
+  string description = 4;
+  double confidence = 5;
+  int64 timestamp = 6;
+  map<string, string> metadata = 7;
+}
+
+message IngestEpisodesRequest {
+  repeated EpisodicEntry episodes = 1;
+}
+
+message IngestSummary {
+  int32 accepted = 1;
+  int32 deduplicated = 2;
+  int32 errors = 3;
+}
+
+message AgentEvent {
+  string agent_id = 1;
+  string session_id = 2;
+  string event_type = 3;          // edited_file|ran_test|stored_memory|recalled|error|insight|heartbeat
+  string payload = 4;             // JSON-encoded event payload
+  int64 timestamp = 5;
+}
+
+message AgentStreamMessage {
+  oneof message_type {
+    AgentEvent agent_event = 1;
+    MemoryInsight memory_insight = 2;
+    MemoryInsightError error = 3;
+  }
+}
+
+message MemoryInsightError {
+  string code = 1;
+  string message = 2;
+}
+
+// ── Service Definition ──────────────────────────────────────────────────────
+
+service MemoryService {
+  // ── Core Memory Operations (Unary) ──
+  rpc Store(StoreRequest) returns (StoreResponse);
+  rpc Recall(RecallRequest) returns (RecallResponse);
+  rpc GetStats(StatsRequest) returns (StatsResponse);
+  rpc DeleteMemory(DeleteRequest) returns (DeleteResponse);
+  rpc GetWorking(Empty) returns (WorkingState);
+  rpc SetGoal(SetGoalRequest) returns (StoreResponse);
+  rpc TrackFile(TrackFileRequest) returns (StoreResponse);
+  rpc TrackError(TrackErrorRequest) returns (StoreResponse);
+  rpc ClearWorking(Empty) returns (StoreResponse);
+  rpc GetContext(ContextRequest) returns (ContextResponse);
+  rpc StoreEpisode(EpisodeStoreRequest) returns (StoreResponse);
+  rpc LoadEpisodes(EpisodesLoadRequest) returns (EpisodesResponse);
+  rpc ExtractFacts(ExtractFactsRequest) returns (StoreResponse);
+  rpc Consolidate(ConsolidationOpts) returns (MergeResult);
+  rpc ExportMemory(Empty) returns (MemoryPack);
+  rpc ImportMemory(ImportRequest) returns (MergeResult);
+  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse);
+
+  // ── Intelligence Operations (Unary) ──
+  rpc CheckContradiction(ContradictionRequest) returns (ContradictionResponse);
+  rpc AnalyzeBurnout(Empty) returns (BurnoutResponse);
+  rpc CheckBugPattern(BugPatternRequest) returns (BugPatternResponse);
+  rpc CheckTechDebt(TechDebtRequest) returns (TechDebtResponse);
+  rpc DetectArchitectureDrift(DriftRequest) returns (DriftResponse);
+  rpc LearnPattern(LearnPatternRequest) returns (StoreResponse);
+
+  // ── Forge Layer Operations (Unary) ──
+  rpc VerifyEngramChain(Empty) returns (EngramVerifyResponse);
+  rpc RunConsolidation(ConsolidationOpts) returns (ConsolidationResponse);
+  rpc RunPruneSweep(Empty) returns (PruneResponse);
+  rpc GetProvenance(ProvenanceRequest) returns (ProvenanceResponse);
+  rpc GuardCheck(GuardRequest) returns (GuardResponse);
+  rpc RunAudit(Empty) returns (AuditResponse);
+  rpc RevealBias(Empty) returns (BiasResponse);
+
+  // ── Health ──
+  rpc Health(Empty) returns (HealthResponse);
+
+  // ── Server Streaming: server pushes memory insights to client ──
+  rpc StreamContext(ContextStreamRequest) returns (stream MemoryInsight);
+
+  // ── Client Streaming: client sends batch episodes, server responds once ──
+  rpc IngestEpisodes(stream IngestEpisodesRequest) returns (IngestSummary);
+
+  // ── Bidirectional Streaming: real-time agent-server dialogue ──
+  rpc AgentStream(stream AgentEvent) returns (stream AgentStreamMessage);
+}

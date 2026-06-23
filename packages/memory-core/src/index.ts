@@ -1,6 +1,15 @@
 // ── @timps/memory-core — public entry point ──
+
 // Memory engine
 export { MemoryEngine } from './MemoryEngine.js';
+
+// CacheManager — Redis-backed forge state cache for horizontal scaling
+export { CacheManager } from './cache/CacheManager.js';
+export type { CacheManagerOptions } from './cache/CacheManager.js';
+
+// EventBus — Redis Pub/Sub cross-server event propagation
+export { EventBus } from './events/EventBus.js';
+export type { EventBusChannel, EventBusMessage, EventBusOptions, EventHandler } from './events/EventBus.js';
 
 // Layer 5: ChronosForge — bi-temporal causal memory weaver
 export { ChronosForge } from './ChronosForge.js';
@@ -229,8 +238,16 @@ export { MemoryWsServer } from './server/websocket.js';
 export type { WsClient, WsEvent } from './server/websocket.js';
 export { createMemoryRoutes } from './server/routes.js';
 
+// ── Phase 2b: gRPC Server ──
+export { createGrpcServer, startGrpcServer, protoPath } from './server/grpc.js';
+export type { GrpcServerOptions } from './server/grpc.js';
+
 export { MemoryClient } from './client/MemoryClient.js';
-export type { MemoryClientOptions } from './client/MemoryClient.js';
+export type { MemoryClientOptions, TransportMode } from './client/MemoryClient.js';
+
+// ── Phase 2b: gRPC Client ──
+export { MemoryGrpcClient } from './client/grpc.js';
+export type { GrpcClientOptions } from './client/grpc.js';
 
 // Intelligence tools — direct access if needed
 export {

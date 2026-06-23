@@ -11,3 +11,5 @@ export { SQLiteBackend } from './SQLiteBackend.js';
 export type { SQLiteBackendOptions } from './SQLiteBackend.js';
 export { RedisBackend } from './RedisBackend.js';
 export type { RedisBackendOptions } from './RedisBackend.js';
+export { QdrantBackend } from './QdrantBackend.js';
+export type { QdrantBackendOptions, QdrantPoint } from './QdrantBackend.js';
