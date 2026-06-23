@@ -3,6 +3,10 @@ import type { Response } from 'express';
 import type { MemoryEngine } from '../MemoryEngine';
 import type { AuthenticatedRequest } from './auth';
 import type { MemoryWsServer, WsEvent } from './websocket';
+import type { MemoryEntry, ConflictEvent, ConflictResolutionRequest, ConflictResolutionAction } from '../types.js';
+import { generateId } from '../storage.js';
+
+const pendingConflicts = new Map<string, ConflictEvent>();
 
 export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServer): Router {
   const router = Router();
@@ -14,7 +18,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   // ── Store a memory event ────────────────────────────────────────────────
   router.post('/store', (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { content, type, tags, episode } = req.body;
+      const { content, type, tags, episode, projectId } = req.body;
       const userId = req.auth?.userId ?? 'anonymous';
 
       if (episode) {
@@ -32,6 +36,42 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
 
       if (!content) {
         return res.status(400).json({ error: 'content is required (or provide episode object)' });
+      }
+
+      // Phase 2d: Synchronous conflict detection at write time
+      const entries = engine.getSemanticEntries();
+      const conflictResult = (engine as any).contradiction?.checkBeforeStore(
+        { content, type: type ?? 'fact', tags: tags ?? [] } as MemoryEntry,
+        entries,
+      );
+
+      if (conflictResult?.hasConflict) {
+        const conflictId = generateId('conflict');
+        const conflict: ConflictEvent = {
+          conflictId,
+          projectId: projectId ?? 'default',
+          agentAId: conflictResult.conflictingEntry?.actorId ?? 'unknown',
+          agentBId: userId,
+          entryA: conflictResult.conflictingEntry!,
+          entryB: { content, type: type ?? 'fact', tags: tags ?? [] } as MemoryEntry,
+          similarity: conflictResult.similarity,
+          detectedAt: Date.now(),
+          suggestedResolution: conflictResult.explanation,
+          status: 'pending',
+        };
+        pendingConflicts.set(conflictId, conflict);
+
+        emit({
+          type: 'contradiction',
+          userId,
+          payload: { ...conflict } as unknown as Record<string, unknown>,
+        });
+
+        return res.status(409).json({
+          status: 'conflict',
+          conflict,
+          message: 'Memory conflicts with existing entry. Resolve before storing.',
+        });
       }
 
       engine.store({ content, type: type ?? 'fact', tags: tags ?? [] });
@@ -89,21 +129,21 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
 
       if (id) {
         // Delete from semantic store by id
-        const entries = (engine as any).getSemanticEntries?.() ?? [];
+        const entries = engine.getSemanticEntries();
         const filtered = entries.filter((e: any) => e.id !== id);
         if (filtered.length < entries.length) {
-          (engine as any).saveSemanticEntries?.(filtered);
+          engine.saveSemanticEntries(filtered);
           return res.json({ status: 'ok', deleted: 1 });
         }
         return res.status(404).json({ error: 'Memory not found' });
       }
 
       if (content) {
-        const entries = (engine as any).getSemanticEntries?.() ?? [];
+        const entries = engine.getSemanticEntries();
         const filtered = entries.filter((e: any) => !e.content.includes(content));
         const deleted = entries.length - filtered.length;
         if (deleted > 0) {
-          (engine as any).saveSemanticEntries?.(filtered);
+          engine.saveSemanticEntries(filtered);
           return res.json({ status: 'ok', deleted });
         }
         return res.status(404).json({ error: 'No matching memories found' });
@@ -360,6 +400,82 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
       if (!observation) return res.status(400).json({ error: 'observation is required' });
       const result = engine.learnPattern(observation, tags);
       res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Conflict Resolution API ──────────────────────────────────────────────
+
+  // Get all pending conflicts
+  router.get('/conflicts', (_req: AuthenticatedRequest, res: Response) => {
+    res.json({ conflicts: Array.from(pendingConflicts.values()) });
+  });
+
+  // Get a specific conflict
+  router.get('/conflicts/:id', (req: AuthenticatedRequest, res: Response) => {
+    const conflict = pendingConflicts.get(String(req.params.id));
+    if (!conflict) return res.status(404).json({ error: 'Conflict not found' });
+    res.json(conflict);
+  });
+
+  // Resolve a conflict
+  router.post('/resolve-conflict', (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { conflictId, action, mergedContent, resolvedBy }: ConflictResolutionRequest = req.body;
+      if (!conflictId) return res.status(400).json({ error: 'conflictId is required' });
+      if (!action) return res.status(400).json({ error: 'action is required' });
+
+      const conflict = pendingConflicts.get(conflictId);
+      if (!conflict) return res.status(404).json({ error: 'Conflict not found' });
+
+      // Apply resolution
+      switch (action) {
+        case 'keep_a':
+          // Keep the existing entry (entryA) — no-op for storage, just clear conflict
+          break;
+        case 'keep_b':
+          // Store the new entry (entryB) — overwrite the existing one
+          engine.store({ content: conflict.entryB.content, type: conflict.entryB.type ?? 'fact', tags: conflict.entryB.tags ?? [] });
+          break;
+        case 'merge':
+          // Merge content from both entries
+          if (!mergedContent) return res.status(400).json({ error: 'mergedContent is required for merge action' });
+          engine.store({ content: mergedContent, type: conflict.entryB.type ?? 'fact', tags: [...new Set([...(conflict.entryA.tags ?? []), ...(conflict.entryB.tags ?? [])])] });
+          break;
+        case 'overwrite':
+          // Overwrite with mergedContent
+          if (!mergedContent) return res.status(400).json({ error: 'mergedContent is required for overwrite action' });
+          engine.store({ content: mergedContent, type: conflict.entryB.type ?? 'fact', tags: conflict.entryB.tags ?? [] });
+          break;
+        default:
+          return res.status(400).json({ error: `Unknown action: ${action}` });
+      }
+
+      conflict.status = 'user_resolved';
+      pendingConflicts.delete(conflictId);
+
+      emit({
+        type: 'insight',
+        userId: resolvedBy ?? 'anonymous',
+        payload: { kind: 'conflict_resolved', conflictId, action },
+      });
+
+      res.json({ status: 'ok', conflict: { ...conflict, status: 'user_resolved' } });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Cancel/Dismiss a conflict (keep existing, discard new)
+  router.post('/cancel-conflict', (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { conflictId } = req.body;
+      if (!conflictId) return res.status(400).json({ error: 'conflictId is required' });
+      const conflict = pendingConflicts.get(conflictId);
+      if (!conflict) return res.status(404).json({ error: 'Conflict not found' });
+      pendingConflicts.delete(conflictId);
+      res.json({ status: 'ok', message: 'Conflict dismissed. New entry was not stored.' });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

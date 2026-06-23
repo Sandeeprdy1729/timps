@@ -15,7 +15,12 @@ export type WsEvent =
   | { type: 'contradiction'; userId: string; payload: Record<string, unknown> }
   | { type: 'error'; userId: string; payload: { message: string } }
   | { type: 'connected'; userId: string }
-  | { type: 'decay_complete'; userId: string; payload: { entriesPruned: number } };
+  | { type: 'decay_complete'; userId: string; payload: { entriesPruned: number } }
+  | { type: 'conflict_detected'; userId: string; payload: Record<string, unknown> }
+  | { type: 'conflict_resolved'; userId: string; payload: Record<string, unknown> }
+  | { type: 'agent_joined'; userId: string; payload: Record<string, unknown> }
+  | { type: 'agent_left'; userId: string; payload: Record<string, unknown> }
+  | { type: 'project_event'; userId: string; payload: Record<string, unknown> };
 
 export class MemoryWsServer {
   private wss: WebSocketServer;

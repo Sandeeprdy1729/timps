@@ -1037,4 +1037,28 @@ export class MemoryEngine {
   inferSchemas(): SchemaInferenceResult {
     return this.schemaInferrer.infer();
   }
+
+  // ── Phase 2d: Semantic entry access for conflict detection ──
+
+  /** Get all semantic entries (used by ConflictDetector and gRPC handlers). */
+  getSemanticEntries(): MemoryEntry[] {
+    return loadSemantic(this.dir);
+  }
+
+  /** Replace semantic entries (used by conflict resolution and deletion). */
+  saveSemanticEntries(entries: MemoryEntry[]): void {
+    saveSemantic(this.dir, entries);
+  }
+
+  /**
+   * Synchronous pre-store conflict check.
+   * Checks if new content contradicts any existing semantic entry.
+   */
+  checkBeforeStore(content: string): { hasConflict: boolean; conflictingEntry?: MemoryEntry; similarity: number; explanation: string } {
+    const entries = this.getSemanticEntries();
+    return this.contradiction.checkBeforeStore(
+      { content } as MemoryEntry,
+      entries,
+    );
+  }
 }

@@ -241,6 +241,25 @@ export class MemoryGrpcClient {
     return this.promisify('RevealBias', {});
   }
 
+  // ── Phase 2d: Conflict Resolution ──
+
+  resolveConflict(conflictId: string, action: string, mergedContent?: string): Promise<any> {
+    return this.promisify('ResolveConflict', {
+      conflict_id: conflictId,
+      action,
+      merged_content: mergedContent ?? '',
+      resolved_by: 'client',
+    });
+  }
+
+  cancelConflict(conflictId: string): Promise<{ status: string; message: string }> {
+    return this.promisify('CancelConflict', { conflict_id: conflictId });
+  }
+
+  listConflicts(): Promise<{ conflicts: any[] }> {
+    return this.promisify('ListConflicts', {});
+  }
+
   // ── Health ──
 
   health(): Promise<{ status: string; timestamp: number; engine: string; version: string }> {

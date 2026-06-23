@@ -1,3 +1,5 @@
+import type { MemoryEntry } from '../types.js';
+
 // ── Tool 5 port: Argument DNA Mapper → Contradiction Detector ──
 // Ported from packages/server/tools/contradictionTool.ts + positionStore.ts
 // Storage: JSON file instead of Postgres + Qdrant
@@ -181,6 +183,40 @@ export class ContradictionDetector {
       positions_checked: this.positions.length,
       sheafCohomology,
     };
+  }
+
+  /**
+   * Synchronous pre-store conflict check against a list of semantic entries.
+   * Used by Phase 2d conflict detection at write time.
+   */
+  checkBeforeStore(
+    newEntry: MemoryEntry,
+    existingEntries: MemoryEntry[],
+  ): { hasConflict: boolean; conflictingEntry?: MemoryEntry; similarity: number; explanation: string } {
+    let best: MemoryEntry | undefined;
+    let bestScore = 0;
+
+    for (const existing of existingEntries) {
+      const sim = jaccard(newEntry.content, existing.content);
+      if (sim < 0.15) continue;
+      const flip = sentimentFlip(newEntry.content, existing.content);
+      const score = sim * (flip ? 1.4 : 0.6);
+      if (score > bestScore) {
+        bestScore = score;
+        best = existing;
+      }
+    }
+
+    if (best && bestScore > 0.35) {
+      return {
+        hasConflict: true,
+        conflictingEntry: best,
+        similarity: Math.min(bestScore, 1),
+        explanation: `Conflicts with existing entry: "${best.content.slice(0, 100)}"`,
+      };
+    }
+
+    return { hasConflict: false, similarity: 0, explanation: 'No conflict detected' };
   }
 
   /** store: manually save a position/claim */

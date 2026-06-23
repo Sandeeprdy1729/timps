@@ -16,6 +16,8 @@ import { startGrpcServer, createGrpcServer } from './grpc';
 import type { GrpcServerOptions } from './grpc';
 import { PostgresBackend } from '../backends/PostgresBackend';
 import { RedisBackend } from '../backends/RedisBackend';
+import { ProjectRoom } from './ProjectRoom';
+import type { ProjectRoomEvent } from './ProjectRoom';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
@@ -53,6 +55,7 @@ export class MemoryServer {
   private grpcServer: grpc.Server | null = null;
   private grpcPort: number | null = null;
   private _eventBus: EventBus | null = null;
+  private projectRooms = new Map<string, ProjectRoom>();
 
   constructor(options: MemoryServerOptions) {
     this.options = {
@@ -175,6 +178,35 @@ export class MemoryServer {
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
       this.app.use('/memory', memoryRoutes);
     }
+
+    // ── Project Room endpoints ──
+    this.app.post('/room/join', (req, res) => {
+      const { projectId, agentId } = req.body;
+      if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+      const room = this.getOrCreateRoom(projectId);
+      // For REST, we just acknowledge the join — the real bidirectional stream handles push
+      res.json({ status: 'ok', projectId, agentCount: room.agentCount });
+    });
+
+    this.app.post('/room/leave', (req, res) => {
+      const { projectId, agentId } = req.body;
+      if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+      const room = this.projectRooms.get(projectId);
+      if (room) {
+        room.leave(agentId ?? 'anonymous');
+        if (room.agentCount === 0) {
+          room.destroy();
+          this.projectRooms.delete(projectId);
+        }
+      }
+      res.json({ status: 'ok' });
+    });
+
+    this.app.get('/room/:projectId/agents', (req, res) => {
+      const room = this.projectRooms.get(String(req.params.projectId));
+      if (!room) return res.json({ agents: [], count: 0 });
+      res.json({ agents: room.connectedAgentIds, count: room.agentCount });
+    });
 
     // Health check (always open)
     this.app.get('/health', (_req, res) => {
@@ -346,5 +378,43 @@ export class MemoryServer {
   /** Get the event bus instance */
   getEventBus(): EventBus | null {
     return this._eventBus;
+  }
+
+  /** Get or create a project room for collaborative agent memory */
+  getOrCreateRoom(projectId: string): ProjectRoom {
+    let room = this.projectRooms.get(projectId);
+    if (!room) {
+      room = new ProjectRoom({
+        projectId,
+        engine: this.engine,
+        eventBus: this._eventBus,
+      });
+      this.projectRooms.set(projectId, room);
+    }
+    return room;
+  }
+
+  /** Get all active project rooms */
+  getProjectRooms(): Map<string, ProjectRoom> {
+    return this.projectRooms;
+  }
+
+  /** Join an agent to a project room (called from gRPC AgentStream/StreamContext) */
+  joinProjectRoom(projectId: string, agentId: string, stream: { send: (msg: any) => boolean }): ProjectRoom {
+    const room = this.getOrCreateRoom(projectId);
+    room.join(agentId, stream);
+    return room;
+  }
+
+  /** Leave a project room (called from gRPC stream disconnect) */
+  leaveProjectRoom(projectId: string, agentId: string, stream?: { send: (msg: any) => boolean }): void {
+    const room = this.projectRooms.get(projectId);
+    if (room) {
+      room.leave(agentId, stream);
+      if (room.agentCount === 0) {
+        room.destroy();
+        this.projectRooms.delete(projectId);
+      }
+    }
   }
 }
