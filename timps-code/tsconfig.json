@@ -15,7 +15,7 @@
     "sourceMap": true,
     "jsx": "react-jsx",
     "paths": {},
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "../packages/server", "src/**/*.test.ts", "src/**/*.spec.ts"]

@@ -220,6 +220,18 @@ export type { PromptAnalysis, SandboxExecutionRecord, DetectedLanguage } from '.
 export { SandboxRouter, SubprocessSandbox, PythonSandbox, NodeSandbox, BashSandbox } from './sandbox/Sandbox.js';
 export type { SandboxHandle, SandboxOptions, ExecResult, Runtime, NetworkPolicy } from './sandbox/Sandbox.js';
 
+// ── Phase 2a: MemoryServer + MemoryClient ──
+export { MemoryServer } from './server/MemoryServer.js';
+export type { MemoryServerOptions } from './server/MemoryServer.js';
+export { createAuthMiddleware } from './server/auth.js';
+export type { AuthConfig, AuthPayload, AuthenticatedRequest } from './server/auth.js';
+export { MemoryWsServer } from './server/websocket.js';
+export type { WsClient, WsEvent } from './server/websocket.js';
+export { createMemoryRoutes } from './server/routes.js';
+
+export { MemoryClient } from './client/MemoryClient.js';
+export type { MemoryClientOptions } from './client/MemoryClient.js';
+
 // Intelligence tools — direct access if needed
 export {
   ContradictionDetector,

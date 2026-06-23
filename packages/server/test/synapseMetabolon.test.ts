@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
 import { SynapseMetabolon, MetabolicSignal } from '../core/synapseMetabolon';
 
 describe('SynapseMetabolon — Spreading Activation Metabolic Graph', () => {

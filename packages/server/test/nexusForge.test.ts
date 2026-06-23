@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { NexusForge, Signal, PolicyDecision, RetrievalResult } from '../core/nexusForge';
 
 describe('NexusForge — Episodic Sub-Agent Trinity', () => {

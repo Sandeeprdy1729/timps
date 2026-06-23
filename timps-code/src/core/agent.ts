@@ -429,7 +429,7 @@ End your response with a confirmation question.`;
 
     // ── Pre-flight: MemoryEngine context injection (silent context injection) ──
     try {
-      const ctx = this.memory.engine.getContextString(userMessage);
+      const ctx = this.memory.engine?.getContextString(userMessage);
       if (ctx) {
         const sysIdx = this.messages.findIndex(m => m.role === 'system');
         if (sysIdx !== -1) {

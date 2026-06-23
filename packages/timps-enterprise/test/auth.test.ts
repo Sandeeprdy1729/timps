@@ -1,73 +1,55 @@
+import { describe, it, expect, beforeAll } from 'vitest';
 import { registerUser, validatePassword, getUserById, listTeamMembers, signToken, verifyToken } from '../src/auth.js';
-import assert from 'node:assert';
-
-let passed = 0;
-let failed = 0;
-
-async function test(name: string, fn: () => Promise<void> | void) {
-  try {
-    await fn();
-    passed++;
-    console.log(`  ✓ ${name}`);
-  } catch (e: any) {
-    failed++;
-    console.log(`  ✗ ${name}: ${e.message}`);
-  }
-}
 
 const testEmail = `alice-${Date.now()}@test.com`;
 const testPassword = 'securePass123!';
 const testTeam = 'team-red';
 
-await registerUser(testEmail, testPassword, testTeam, 'member');
-
-console.log('\nauth tests:');
-
-await test('registerUser throws on duplicate email', async () => {
-  await assert.rejects(
-    () => registerUser(testEmail, 'other', testTeam),
-    /already exists/
-  );
+beforeAll(async () => {
+  await registerUser(testEmail, testPassword, testTeam, 'member');
 });
 
-await test('validatePassword returns user on correct password', async () => {
-  const user = await validatePassword(testEmail, testPassword);
-  assert.notStrictEqual(user, null);
-  assert.strictEqual(user!.email, testEmail);
-});
+describe('auth', () => {
+  it('registerUser throws on duplicate email', async () => {
+    await expect(() => registerUser(testEmail, 'other', testTeam)).rejects.toThrow(/already exists/);
+  });
 
-await test('validatePassword returns null on wrong password', async () => {
-  const user = await validatePassword(testEmail, 'wrong');
-  assert.strictEqual(user, null);
-});
+  it('validatePassword returns user on correct password', async () => {
+    const user = await validatePassword(testEmail, testPassword);
+    expect(user).not.toBeNull();
+    expect(user!.email).toBe(testEmail);
+  });
 
-await test('validatePassword returns null for unknown email', async () => {
-  const user = await validatePassword('nobody@test.com', testPassword);
-  assert.strictEqual(user, null);
-});
+  it('validatePassword returns null on wrong password', async () => {
+    const user = await validatePassword(testEmail, 'wrong');
+    expect(user).toBeNull();
+  });
 
-await test('getUserById returns undefined for unknown id', () => {
-  assert.strictEqual(getUserById('nope'), undefined);
-});
+  it('validatePassword returns null for unknown email', async () => {
+    const user = await validatePassword('nobody@test.com', testPassword);
+    expect(user).toBeNull();
+  });
 
-await test('listTeamMembers omits passwordHash', () => {
-  const members = listTeamMembers(testTeam);
-  assert.ok(members.length >= 1);
-  assert.strictEqual('passwordHash' in members[0], false);
-});
+  it('getUserById returns undefined for unknown id', () => {
+    expect(getUserById('nope')).toBeUndefined();
+  });
 
-await test('signs and verifies a JWT token', async () => {
-  const user = await validatePassword(testEmail, testPassword);
-  const token = signToken(user!);
-  const payload = verifyToken(token);
-  assert.strictEqual(payload.sub, user!.id);
-  assert.strictEqual(payload.teamId, testTeam);
-  assert.strictEqual(payload.role, 'member');
-});
+  it('listTeamMembers omits passwordHash', () => {
+    const members = listTeamMembers(testTeam);
+    expect(members.length).toBeGreaterThanOrEqual(1);
+    expect('passwordHash' in members[0]).toBe(false);
+  });
 
-await test('verifyToken throws on bad token', () => {
-  assert.throws(() => verifyToken('bad.token.here'));
-});
+  it('signs and verifies a JWT token', async () => {
+    const user = await validatePassword(testEmail, testPassword);
+    const token = signToken(user!);
+    const payload = verifyToken(token);
+    expect(payload.sub).toBe(user!.id);
+    expect(payload.teamId).toBe(testTeam);
+    expect(payload.role).toBe('member');
+  });
 
-console.log(`\n${passed} passed, ${failed} failed\n`);
-process.exit(failed > 0 ? 1 : 0);
+  it('verifyToken throws on bad token', () => {
+    expect(() => verifyToken('bad.token.here')).toThrow();
+  });
+});

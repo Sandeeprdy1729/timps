@@ -45,6 +45,10 @@ export interface AppOptions {
   binarySynth?: boolean;
   binaryArch?: string;
   binaryOptimizer?: string;
+  /** Remote MemoryServer URL (e.g. http://localhost:4100) */
+  memoryUrl?: string;
+  /** Auth token for remote MemoryServer */
+  memoryToken?: string;
 }
 
 export async function startApp(opts: AppOptions): Promise<void> {
@@ -246,7 +250,10 @@ export async function startApp(opts: AppOptions): Promise<void> {
 
   // Init subsystems
   const projectId = getProjectId(cwd);
-  const memory = new Memory(projectId);
+  const memory = new Memory(projectId, {
+    remoteUrl: opts.memoryUrl,
+    remoteToken: opts.memoryToken,
+  });
   const todos = new TodoStore(projectId);
   const snapshots = new SnapshotManager(projectId);
   const permissions = new Permissions();

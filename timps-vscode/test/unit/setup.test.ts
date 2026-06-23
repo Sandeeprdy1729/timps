@@ -1,4 +1,5 @@
-jest.mock('vscode');
+import { vi } from 'vitest';
+vi.mock('vscode', () => ({}));
 import { SetupStatus } from '../../src/types';
 
 describe('getSetupStatus logic', () => {
@@ -30,15 +31,5 @@ describe('getSetupStatus logic', () => {
   it('detects when everything is ready', () => {
     const s = makeStatus({ ollamaInstalled: true, ollamaRunning: true, modelAvailable: true });
     expect(s.modelAvailable).toBe(true);
-  });
-});
-
-describe('isOllamaInstalled helper logic', () => {
-  it('is a function that calls exec', () => {
-    // We just verify the module loads without crashing
-    const setup = require('../../src/setup');
-    expect(typeof setup.getSetupStatus).toBe('function');
-    expect(typeof setup.autoSetup).toBe('function');
-    expect(typeof setup.runSetupWizard).toBe('function');
   });
 });

@@ -7,12 +7,12 @@ Canonical instruction doc for AI agents (OpenCode, Copilot, Claude, Cursor). If 
 Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 
 | Surface | Path | Package | Build | Test | Typecheck |
-|---|---|---|---|---|---|
-| CLI | `timps-code/` | `timps-code` | `tsc` (ESM, NodeNext) | `jest` (Jest 30) | `tsc --noEmit` |
-| MCP server | `timps-mcp/` | `timps-mcp` | `tsup src/index.ts --format cjs --no-dts --out-dir dist` | none | `tsc --noEmit` (4GB heap) |
-| VS Code ext | `timps-vscode/` | `timps-ai-coding-agent` | `npm run compile` (tsc) | none | `tsc --noEmit` |
-| Full server | `packages/server/` | `@timps/server` | `tsc` (CJS) | `npx ts-node test_tool5.ts` ⚠️ requires server | `tsc --noEmit` |
-| Memory engine | `packages/memory-core/` | `@timps/memory-core` | `tsup` (CJS + dts) | `jest` (Jest 29) | `tsc --noEmit` |
+|---|---|---|---|---|---|---|
+| CLI | `timps-code/` | `timps-code` | `tsc` (ESM, NodeNext) | `vitest` (unified) | `tsc --noEmit` |
+| MCP server | `timps-mcp/` | `timps-mcp` | `tsup src/index.ts --format cjs --no-dts --out-dir dist` | `vitest` (unified) | `tsc --noEmit` (4GB heap) |
+| VS Code ext | `timps-vscode/` | `timps-ai-coding-agent` | `npm run compile` (tsc) | `vitest` (unified) | `tsc --noEmit` |
+| Full server | `packages/server/` | `@timps/server` | `tsc` (CJS) | `vitest` (unified) | `tsc --noEmit` |
+| Memory engine | `packages/memory-core/` | `@timps/memory-core` | `tsup` (CJS + dts) | `vitest` (unified) | `tsc --noEmit` |
 
 - `npm run build` — turbo run build (all packages; mobile/plugins/docs may need extra tooling).
 - `npm run build:ci` — CI-targeted build that **excludes** 10 packages (mobile, plugins, docs, timps-code, timps-mcp).
@@ -23,7 +23,7 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 - `timps-code` → ESM (`module: NodeNext`), `.js` extension in imports required.
 - `timps-mcp` → CJS, `strict: false`, no declarations.
 - `packages/server` → CJS, wide include.
-- `packages/memory-core` → CJS, `moduleNameMapper` strips `.js` for jest.
+- `packages/memory-core` → CJS, vitest resolves `.js` imports automatically.
 
 ## Agent entrypoints (timps-code)
 
@@ -131,7 +131,8 @@ To add a new migration:
 ## PR checklist
 
 - [ ] `npx tsc --noEmit` passes in affected package (`--max-old-space-size=4096` for timps-mcp).
-- [ ] Tests pass: `cd <pkg> && npm test` (Jest for timps-code/memory-core, vitest for integration-tests).
+- [ ] Tests pass: `npm test` (root vitest run).
+- [ ] Coverage passes: `npm run test:coverage` meets 80% threshold.
 - [ ] Benchmark passes: `npx tsx benchmark/index.ts --quick` → 17/17 tools green, R@5 ≥ 90%.
 - [ ] `grep -c "Math.random" benchmark/` returns 0.
 - [ ] If you added a tool, updated `ALL_TOOLS` and added smoke test to `benchmark/index.ts`.
@@ -148,7 +149,7 @@ To add a new migration:
 - Rust crates in `crates/` are parallel re-implementation, not usable from TS.
 - `MemoryEngine.contradiction.check(statement, autoStore?)` defaults `autoStore=true` — pass `false` in tests.
 - ContradictionDetector requires >50% Jaccard vocabulary overlap to trigger. Exact phrasings needed for `CONTRADICTION`.
-- **4 test runners in use:** Jest 29 (memory-core, acp, connection-manager, event-bus, timps-vscode, timps-mcp), Jest 30 (timps-code), Vitest (timps-desktop, plugin-sdk), raw tsx (timps-enterprise). No single `npm test` runs all tests. Standardizing on one runner is deferred.
+- **Unified test runner:** Vitest across all packages. Run `npm test` (root) or `vitest run` for all tests. Coverage: `npm run test:coverage` (80% threshold enforced).
 - `packages/server` is missing `@timps/memory-core` in its package.json `dependencies` — it's installed by hoisting but won't resolve in `npm ci --production`.
 - `timps-desktop` has a JSX parsing issue in `global.d.ts` (missing space before `declare` keyword after a JSX block). If `npx tsc --noEmit` fails for timps-desktop, check `.d.ts` files for similar syntax issues.
 - `test-coverage.yml` matrix includes `config`, `integration-base` packages that no longer exist. Drop them from the matrix if they're removed from the workspace.

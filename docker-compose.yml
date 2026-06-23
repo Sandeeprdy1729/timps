@@ -16,7 +16,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: sandeep_ai
+      POSTGRES_DB: timps
     ports:
       - '5432:5432'
     volumes:
@@ -55,7 +55,7 @@ services:
       PORT: 3000
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: sandeep_ai
+      POSTGRES_DB: timps
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       QDRANT_URL: http://qdrant:6333

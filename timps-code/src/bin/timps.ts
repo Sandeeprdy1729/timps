@@ -68,6 +68,8 @@ program
   .option('--memory-stats', 'Show memory statistics')
   .option('--memory-share', 'Export and share memory')
   .option('--memory-clone <path>', 'Import memory pack')
+  .option('--memory-url <url>', 'Remote MemoryServer URL (e.g. http://localhost:4100)')
+  .option('--memory-token <token>', 'Auth token for remote MemoryServer')
   .option('--query <question>', 'Query knowledge graph')
 
   // Benchmark & Diagnostics
@@ -370,6 +372,8 @@ program
       merge: opts.merge as string | undefined,
       warRoom: opts.warRoom as boolean | undefined,
       binarySynth: opts.binarySynth as boolean | undefined,
+      memoryUrl: opts.memoryUrl as string | undefined,
+      memoryToken: opts.memoryToken as string | undefined,
     });
   });
 

@@ -165,7 +165,7 @@ export function loadConfig(): Config {
     postgres: {
       host: process.env.POSTGRES_HOST || 'localhost',
       port: readInt('POSTGRES_PORT', 5432),
-      database: process.env.POSTGRES_DB || 'sandeep_ai',
+      database: process.env.POSTGRES_DB || 'timps',
       user: process.env.POSTGRES_USER || 'postgres',
       password: process.env.POSTGRES_PASSWORD || 'postgres',
     },
@@ -173,7 +173,7 @@ export function loadConfig(): Config {
     qdrant: {
       url: process.env.QDRANT_URL || 'http://localhost:6333',
       apiKey: process.env.QDRANT_API_KEY,
-      collectionName: process.env.QDRANT_COLLECTION || 'sandeep_ai_memories',
+      collectionName: process.env.QDRANT_COLLECTION || 'timps_memories',
     },
     
     redis: process.env.REDIS_HOST ? {

@@ -11,7 +11,7 @@ Object.defineProperty(globalThis, 'localStorage', {
   writable: true,
 });
 
-const mockFetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
+const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
 globalThis.fetch = mockFetch as any;
 
 function makeConfig(overrides: Partial<ConnectionConfig> = {}): ConnectionConfig {

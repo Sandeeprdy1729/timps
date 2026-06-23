@@ -3,13 +3,13 @@ import enCli from './en-cli.json';
 import de from './de.json';
 import deCli from './de-cli.json';
 import es from './es.json';
-import esCli from './en-cli.json';
+import esCli from './es-cli.json';
 import fr from './fr.json';
-import frCli from './en-cli.json';
+import frCli from './fr-cli.json';
 import ja from './ja.json';
-import jaCli from './en-cli.json';
+import jaCli from './ja-cli.json';
 import pt from './pt.json';
-import ptCli from './en-cli.json';
+import ptCli from './pt-cli.json';
 
 export type TranslationKeys = typeof en & typeof enCli;
 export type Language = 'en' | 'de' | 'es' | 'fr' | 'ja' | 'pt';
