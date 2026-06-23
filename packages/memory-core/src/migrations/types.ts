@@ -9,8 +9,9 @@ import type { StorageBackend } from '../backends/types.js';
  *   1 — Initial (JSONL episodes, no _meta anywhere)
  *   2 — episodes.jsonl → episodes.json JSON array format
  *   3 — _meta block added to all layer state files
+ *   4 — org-scope awareness (_meta.orgScope added to all data)
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface Migration {
   /** The version this migration produces (after running). */

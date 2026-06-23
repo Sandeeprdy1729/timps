@@ -237,3 +237,78 @@ Updated file in `timps-code/`:
 - gRPC `AgentStream` now pushes `ConflictEvent` memory insights to agents when they `check_conflicts` or emit `stored_memory` events.
 - `ProjectRoom` auto-subscribes to `room:{projectId}:events` on Redis. When `agentCount` drops to 0, `destroy()` is called and the subscription is released.
 - The `memoryCoordinator.ts` SSE stub in `timps-code` is now a shell — all real-time coordination goes through the MemoryServer gRPC/WebSocket endpoints.
+
+## Phase 2e — Project-Scoped Isolation at Scale (June 2026)
+
+New types and utilities:
+
+| File | What changed |
+|------|-------------|
+| `src/types.ts` | Added `OrgScope = { orgId: string; teamId?: string; projectId: string }` |
+| `src/backends/types.ts` | Added `OrgScope` re-export, `buildKey()`, `scopeListPrefix()` — stable key derivation `memory:{orgId}:{teamId}:{projectId}:{key}` |
+| `src/rateLimiter.ts` | `RateLimiter` class: Redis-backed with in-memory fallback, per-org sliding window counters with Lua scripts |
+
+Backend changes (all backends):
+
+- **`StorageBackend` interface** — new methods `setScope(scope)`, `getScope()`. All `read/write/delete/list/exists/append` accept optional `scope` param that overrides active scope.
+- **`InMemoryBackend`** — scope-aware Map storage, `_activeScope` state, `_resolveScope()` picks active scope or explicit param, keys prefixed with `memory:{org}:{team}:{project}:{key}`.
+- **`PostgresBackend`** — `setScope` manages session-level `org_id/team_id/project_id` via `SET SESSION` variables; RLS policies on `mem_store` table; `buildKey` generates scoped keys for non-RLS tables.
+- **`RedisBackend`** — `setScope` sets `_activeScope`, all keys prefixed with scope prefix for logical database partitioning.
+- **`QdrantBackend`** — `setScope` sets `_activeScope`, upsert/search inject `org_id` payload filter to enforce tenant isolation. Renamed internal `_generateId` → `_generateUuid` for clarity.
+- **`FileBackend`** — unchanged (no scope support; scope-aware backends are the future).
+
+MemoryEngine changes:
+
+- Accepts `orgScope` in `MemoryEngineOptions`.
+- Constructor calls `backend.setScope(orgScope)` and passes `this._backend` to all storage functions (`loadSemantic(dir, backend)`, `saveSemantic(dir, data, backend)`, etc.) — fixing the previous gap where `storage.ts` functions bypassed the engine's backend.
+- New method `multiProjectRecall(query, projectIds, options?)` — iterates project scopes, temporarily switches backend scope, calls `recall()`, restores original scope. Falls back to single-project recall when no orgScope set.
+- New static method `deriveProjectId(remoteUrl, branch?)` — stable 12-char hex hash from git remote + branch for cross-machine project ID consistency.
+- New static method `extractOrgScope(req)` — reads `x-org-id`, `x-team-id`, `x-project-id` headers from request-like objects.
+- New getter `backend` — exposes the underlying `StorageBackend`.
+- `store()` enriches stored entries with `org:`, `team:`, `project:` tags from `orgScope`.
+
+Auth middleware (`src/server/auth.ts`):
+
+- `requireOrgScope` middleware reads `x-org-id`/`x-team-id`/`x-project-id` headers and attaches them to the request.
+- Token/API key auth can now include `orgClaim`, `teamClaim`, `projectClaim`.
+- `requireAuth` exported alongside `authenticateRequest`.
+
+MemoryServer changes (`src/server/MemoryServer.ts`):
+
+- Rate limiter middleware (`rateLimiter.check(orgId, endpoint)`) on all write endpoints.
+- `GET /health/readiness` probes Postgres, Redis, EventBus, Cache, RateLimiter.
+- Server creates `RateLimiter` instance, injects into route handlers.
+
+Migration v3→v4 (`src/migrations/v3_to_v4.ts`):
+
+- Scans all backend keys, skips DATA_FILES (`episodes.json`, `semantic.json`, `working.json`) and meta files.
+- Writes `.org-scope.json` sidecar with `defaultScope: { orgId: "default", projectId: dirNameHash }`.
+- Adds `orgScope` to `_meta` blocks of layer state files.
+- Added to `ALL_MIGRATIONS`, `CURRENT_SCHEMA_VERSION` bumped to 4.
+
+New exports (`src/index.ts`):
+
+- `RateLimiter`, `OrgScope` type, `buildKey`, `scopeListPrefix`, `deriveProjectId`.
+
+### `storage.ts` changes
+
+All storage functions now accept an optional `backend?: StorageBackend` parameter:
+- `loadWorking(dir, backend?)`
+- `saveWorking(dir, state, backend?)`
+- `appendEpisode(dir, episode, backend?)`
+- `loadEpisodes(dir, count, backend?)`
+- `episodeCount(dir, backend?)`
+- `loadSemantic(dir, backend?)`
+- `saveSemantic(dir, entries, backend?)`
+
+When `backend` is omitted, falls back to `getBackend(dir)` (legacy FileBackend). MemoryEngine always passes `this._backend`.
+
+### Gotchas
+
+- **Arg order:** `saveSemantic(dir, entries, backend?)` — backend is the **3rd** param. `appendEpisode(dir, episode, backend?)` — backend is the **3rd** param. `loadSemantic(dir, backend?)` — backend is the **2nd** param. Double-check arg order when calling from MemoryEngine.
+- **Jaccard dedup triggers on short strings:** Content like `'A: pattern 1'` vs `'A: pattern 2'` have Jaccard similarity >0.8, triggering dedup. Use sufficiently distinct content strings in tests.
+- **Multi-project recall requires shared backend:** `multiProjectRecall` works by temporarily switching scope on the engine's backend. Engines with separate backends cannot cross-project recall. Use a single `InMemoryBackend` shared across scope-managed engines in tests.
+- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails because time/day matching (TimeDiff < 60min, same dayOfWeek) always triggers on captures/matches within the same second. Unrelated to Phase 2e.
+- **`StorageBackend.setScope()` is one-way:** Once set, all subsequent ops use that scope until changed. `multiProjectRecall` restores the original scope after each project iteration.
+- **Migration v3→v4 does NOT wrap data files:** `episodes.json`, `semantic.json`, `working.json` are raw arrays. They get a `.org-scope.json` sidecar instead of being wrapped with `_meta`. Layer state files (with `_meta`) get inline `orgScope` metadata.
+- **`CURRENT_SCHEMA_VERSION`** is now 4. Bump for any on-disk format change.

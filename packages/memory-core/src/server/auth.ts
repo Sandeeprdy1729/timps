@@ -13,6 +13,10 @@ export interface AuthPayload {
   iat?: number;
   exp?: number;
   iss?: string;
+  /** Org-scope claims for multi-tenant isolation */
+  orgId?: string;
+  teamId?: string;
+  projectId?: string;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -71,6 +75,30 @@ export function createAuthMiddleware(config: AuthConfig) {
   }
 
   return { sign, verify, middleware };
+}
+
+/**
+ * Extract OrgScope from an authenticated request.
+ * Checks JWT claims first, then falls back to X-Org-Id / X-Project-ID headers.
+ * Returns null if no org scope is present (backward compat).
+ */
+export function extractOrgScope(req: AuthenticatedRequest): { orgId: string; teamId?: string; projectId: string } | null {
+  const auth = req.auth;
+
+  // JWT claims take precedence
+  if (auth?.orgId && auth?.projectId) {
+    return { orgId: auth.orgId, teamId: auth.teamId, projectId: auth.projectId };
+  }
+
+  // Fall back to headers
+  const hdrOrgId = req.headers['x-org-id'] as string | undefined;
+  const hdrProjectId = req.headers['x-project-id'] as string | undefined;
+  const hdrTeamId = req.headers['x-team-id'] as string | undefined;
+  if (hdrOrgId && hdrProjectId) {
+    return { orgId: hdrOrgId, teamId: hdrTeamId, projectId: hdrProjectId };
+  }
+
+  return null;
 }
 
 function parseExpiry(input: string): number {

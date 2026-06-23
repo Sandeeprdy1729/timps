@@ -1,16 +1,7 @@
 // ── @timps/memory-core — QdrantBackend ──
-// Vector store backend for embedding storage and semantic search.
-// Requires `@qdrant/js-client-rest`: `npm install @qdrant/js-client-rest`
-//
-// StorageBackend methods store/recall raw JSON by key (for compatibility).
-// Specialized methods `upsertVector()` and `searchVectors()` handle embeddings.
-//
-// Usage:
-//   const backend = new QdrantBackend({ url: 'http://localhost:6333' });
-//   await backend.upsertVector('mem_abc', [0.1, 0.2, ...], { content: 'hello' });
-//   const results = await backend.searchVectors([0.1, 0.2, ...], { topK: 10 });
+// Vector store backend with multi-tenant payload filtering.
 
-import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction } from './types.js';
+import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction, OrgScope } from './types.js';
 
 export interface QdrantBackendOptions {
   url?: string;
@@ -31,6 +22,7 @@ export class QdrantBackend implements StorageBackend {
   private client: any = null;
   private ready: Promise<void>;
   private _initialized = false;
+  private _activeScope: OrgScope | null = null;
 
   constructor(options: QdrantBackendOptions = {}) {
     this.options = {
@@ -41,6 +33,42 @@ export class QdrantBackend implements StorageBackend {
       ...options,
     };
     this.ready = this._connect();
+  }
+
+  setScope(scope: OrgScope | null): void {
+    this._activeScope = scope;
+  }
+
+  getScope(): OrgScope | null {
+    return this._activeScope;
+  }
+
+  private _resolveScope(scope?: OrgScope): OrgScope | null {
+    return scope ?? this._activeScope ?? null;
+  }
+
+  /** Build Qdrant filter for org isolation */
+  private _scopeFilter(scope: OrgScope | null): Record<string, unknown> | undefined {
+    if (!scope) return undefined;
+    const must: Record<string, unknown>[] = [
+      { key: 'org_id', match: { value: scope.orgId } },
+      { key: 'project_id', match: { value: scope.projectId } },
+    ];
+    if (scope.teamId) {
+      must.push({ key: 'team_id', match: { value: scope.teamId } });
+    }
+    return { must };
+  }
+
+  /** Add scope fields to payload */
+  private _enrichPayload(payload: Record<string, unknown>, scope: OrgScope | null): Record<string, unknown> {
+    if (!scope) return payload;
+    return {
+      ...payload,
+      org_id: scope.orgId,
+      team_id: scope.teamId ?? '',
+      project_id: scope.projectId,
+    };
   }
 
   private async _connect(): Promise<void> {
@@ -80,10 +108,8 @@ export class QdrantBackend implements StorageBackend {
   }
 
   // ── StorageBackend interface ──
-  // JSON values stored in Qdrant point payloads using a fixed vector of zeros.
-  // This is NOT how you use Qdrant for vector search — use upsertVector/searchVectors for that.
 
-  async read(key: string): Promise<any> {
+  async read(key: string, scope?: OrgScope): Promise<any> {
     await this._assertReady();
     try {
       const result = await this.client.retrieve(this.options.collectionName, {
@@ -96,25 +122,27 @@ export class QdrantBackend implements StorageBackend {
     }
   }
 
-  async write(key: string, value: any): Promise<void> {
+  async write(key: string, value: any, scope?: OrgScope): Promise<void> {
     await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
+    const payload = this._enrichPayload({ __data: value }, effectiveScope);
     await this.client.upsert(this.options.collectionName, {
       points: [{
         id: key,
         vector: new Array(this.options.vectorSize).fill(0),
-        payload: { __data: value },
+        payload,
       }],
     });
   }
 
-  async delete(key: string): Promise<void> {
+  async delete(key: string, _scope?: OrgScope): Promise<void> {
     await this._assertReady();
     await this.client.delete(this.options.collectionName, {
       points: [key],
     });
   }
 
-  async list(prefix?: string): Promise<string[]> {
+  async list(prefix?: string, _scope?: OrgScope): Promise<string[]> {
     await this._assertReady();
     const result = await this.client.scroll(this.options.collectionName, {
       limit: 10000,
@@ -137,7 +165,7 @@ export class QdrantBackend implements StorageBackend {
     return results;
   }
 
-  async exists(key: string): Promise<boolean> {
+  async exists(key: string, _scope?: OrgScope): Promise<boolean> {
     await this._assertReady();
     try {
       const result = await this.client.retrieve(this.options.collectionName, {
@@ -149,56 +177,63 @@ export class QdrantBackend implements StorageBackend {
     }
   }
 
-  async append(key: string, line: string): Promise<void> {
-    const existing = (await this.read(key)) || '';
-    await this.write(key, existing + line + '\n');
+  async append(key: string, line: string, scope?: OrgScope): Promise<void> {
+    const existing = (await this.read(key, scope)) || '';
+    await this.write(key, existing + line + '\n', scope);
   }
 
   beginTxn(): QdrantTransaction {
     return new QdrantTransaction(this);
   }
 
-  /** Upsert a vector with metadata for semantic search. */
+  // ── Vector-specific methods ──
+
   async upsertVector(
     id: string,
     vector: number[],
-    payload: Record<string, unknown> = {}
+    payload: Record<string, unknown> = {},
+    scope?: OrgScope,
   ): Promise<void> {
     await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
+    const enrichedPayload = this._enrichPayload(payload, effectiveScope);
     await this.client.upsert(this.options.collectionName, {
-      points: [{
-        id,
-        vector,
-        payload,
-      }],
+      points: [{ id, vector, payload: enrichedPayload }],
     });
   }
 
-  /** Batch upsert multiple vectors. */
   async upsertVectors(
-    points: Array<{ id: string; vector: number[]; payload?: Record<string, unknown> }>
+    points: Array<{ id: string; vector: number[]; payload?: Record<string, unknown> }>,
+    scope?: OrgScope,
   ): Promise<void> {
     await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
     await this.client.upsert(this.options.collectionName, {
       points: points.map(p => ({
         id: p.id,
         vector: p.vector,
-        payload: p.payload ?? {},
+        payload: this._enrichPayload(p.payload ?? {}, effectiveScope),
       })),
     });
   }
 
-  /** Search for nearest vectors by cosine similarity. */
   async searchVectors(
     vector: number[],
-    options: { topK?: number; filter?: Record<string, unknown>; scoreThreshold?: number } = {}
+    options: { topK?: number; filter?: Record<string, unknown>; scoreThreshold?: number; scope?: OrgScope } = {}
   ): Promise<QdrantPoint[]> {
     await this._assertReady();
+    const effectiveScope = this._resolveScope(options.scope);
+    const scopeFilter = this._scopeFilter(effectiveScope);
+
+    const combinedFilter = scopeFilter && options.filter
+      ? { must: [...(scopeFilter as any).must, options.filter] }
+      : scopeFilter ?? options.filter;
+
     const result = await this.client.search(this.options.collectionName, {
       vector,
       limit: options.topK ?? 10,
       score_threshold: options.scoreThreshold,
-      filter: options.filter,
+      filter: combinedFilter,
       with_payload: true,
     });
     return result.map((p: any) => ({
@@ -209,15 +244,11 @@ export class QdrantBackend implements StorageBackend {
     }));
   }
 
-  /** Delete all points in the collection. */
   async clear(): Promise<void> {
     await this._assertReady();
-    await this.client.delete(this.options.collectionName, {
-      filter: {},
-    });
+    await this.client.delete(this.options.collectionName, { filter: {} });
   }
 
-  /** Get collection info. */
   async info(): Promise<{ pointsCount: number; vectorSize: number }> {
     await this._assertReady();
     const info = await this.client.getCollection(this.options.collectionName);
@@ -227,7 +258,6 @@ export class QdrantBackend implements StorageBackend {
     };
   }
 
-  /** Close the Qdrant connection. */
   async close(): Promise<void> {
     this.client = null;
   }

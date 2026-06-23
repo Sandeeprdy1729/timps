@@ -18,6 +18,8 @@ import { PostgresBackend } from '../backends/PostgresBackend';
 import { RedisBackend } from '../backends/RedisBackend';
 import { ProjectRoom } from './ProjectRoom';
 import type { ProjectRoomEvent } from './ProjectRoom';
+import { RateLimiter } from '../rateLimiter';
+import type { RateLimiterConfig } from '../rateLimiter';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
@@ -44,6 +46,8 @@ export interface MemoryServerOptions {
   eventBus?: { url?: string } | false;
   /** Server ID for event bus identification (default: auto-generated). */
   serverId?: string;
+  /** Org-scoped rate limit config. When set, per-org rate limits are enforced. */
+  rateLimiterConfig?: RateLimiterConfig;
 }
 
 export class MemoryServer {
@@ -55,6 +59,7 @@ export class MemoryServer {
   private grpcServer: grpc.Server | null = null;
   private grpcPort: number | null = null;
   private _eventBus: EventBus | null = null;
+  private rateLimiter: RateLimiter;
   private projectRooms = new Map<string, ProjectRoom>();
 
   constructor(options: MemoryServerOptions) {
@@ -67,6 +72,9 @@ export class MemoryServer {
       rateLimitMax: options.rateLimitMax ?? 200,
       rateLimitWindowMs: options.rateLimitWindowMs ?? 60000,
     };
+
+    // Initialize rate limiter
+    this.rateLimiter = new RateLimiter(options.rateLimiterConfig);
 
     // 1. Create event bus (before engine, so engine can use it)
     if (options.eventBus !== false) {
@@ -162,21 +170,39 @@ export class MemoryServer {
   private mountRoutes(): void {
     let memoryRoutes: express.Router;
 
+    // Per-org rate limiting middleware
+    const rateLimitMiddleware = async (req: any, res: any, next: any) => {
+      const orgId = req.auth?.orgId ?? req.headers['x-org-id'] as string;
+      if (orgId) {
+        const result = await this.rateLimiter.checkMemoryOp(orgId);
+        if (!result.allowed) {
+          res.set('Retry-After', String(Math.ceil((result.retryAfterMs ?? 60000) / 1000)));
+          return res.status(429).json({
+            error: 'Rate limit exceeded. Try again later.',
+            retryAfterMs: result.retryAfterMs,
+            orgId,
+          });
+        }
+      }
+      next();
+    };
+
     if (this.options.auth) {
       const auth = createAuthMiddleware(this.options.auth);
       this.app.post('/auth/token', (req, res) => {
-        const { userId, secret } = req.body;
+        const { userId, orgId, teamId, projectId, secret } = req.body;
         if (!userId || secret !== this.options.auth!.secret) {
           return res.status(401).json({ error: 'Invalid credentials' });
         }
-        const token = auth.sign({ userId });
-        res.json({ token, userId });
+        // Include org-scope claims when generating token
+        const token = auth.sign({ userId, orgId, teamId, projectId });
+        res.json({ token, userId, orgId, teamId, projectId });
       });
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
-      this.app.use('/memory', auth.middleware, memoryRoutes);
+      this.app.use('/memory', auth.middleware, rateLimitMiddleware, memoryRoutes);
     } else {
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
-      this.app.use('/memory', memoryRoutes);
+      this.app.use('/memory', rateLimitMiddleware, memoryRoutes);
     }
 
     // ── Project Room endpoints ──

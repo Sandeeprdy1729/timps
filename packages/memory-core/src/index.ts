@@ -167,6 +167,7 @@ export type {
   SearchOptions, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
   VectorClock, CrdtStatus,
   ConflictEvent, ConflictResolutionAction, ConflictResolutionRequest,
+  OrgScope,
 } from './types.js';
 
 // Phase 2d: CRDT Merge Logic
@@ -178,11 +179,15 @@ export {
 export { ProjectRoom } from './server/ProjectRoom.js';
 export type { ProjectRoomEvent, ProjectRoomOptions } from './server/ProjectRoom.js';
 
+// Rate limiter — per-org rate limiting for multi-tenant deployments
+export { RateLimiter } from './rateLimiter.js';
+export type { RateLimiterConfig, RateLimitResult } from './rateLimiter.js';
+
 // Engine options
 export type { MemoryEngineOptions } from './MemoryEngine.js';
 
 // Storage utilities (advanced usage)
-export { projectHash, memoryDir, generateId, jaccardSimilarity } from './storage.js';
+export { projectHash, memoryDir, generateId, jaccardSimilarity, deriveProjectId, scopePrefix } from './storage.js';
 
 // Native Rust addon status
 export { isNativeAvailable } from './native.js';
@@ -243,7 +248,7 @@ export type { SandboxHandle, SandboxOptions, ExecResult, Runtime, NetworkPolicy 
 // ── Phase 2a: MemoryServer + MemoryClient ──
 export { MemoryServer } from './server/MemoryServer.js';
 export type { MemoryServerOptions } from './server/MemoryServer.js';
-export { createAuthMiddleware } from './server/auth.js';
+export { createAuthMiddleware, extractOrgScope } from './server/auth.js';
 export type { AuthConfig, AuthPayload, AuthenticatedRequest } from './server/auth.js';
 export { MemoryWsServer } from './server/websocket.js';
 export type { WsClient, WsEvent } from './server/websocket.js';

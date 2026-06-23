@@ -250,6 +250,20 @@ export interface MemoryScope {
   teamId?: string;
 }
 
+/**
+ * Three-level isolation scope for multi-tenant deployments.
+ * Replaces the flat project hash with orgId → teamId → projectId hierarchy.
+ * All storage keys and queries are automatically scoped.
+ */
+export interface OrgScope {
+  /** Organization (tenant) — the top-level security boundary. Required. */
+  orgId: string;
+  /** Team (sub-tenant) — optional, for orgs with multiple teams. */
+  teamId?: string;
+  /** Project (repo) — derived from git remote URL, not local path. */
+  projectId: string;
+}
+
 export interface LayerIdString {
   layerId: 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6' | 'L7' | 'L8' | 'L9'
     | 'L10' | 'L11' | 'L12' | 'L13' | 'L14' | 'L15' | 'L16' | 'L17'
