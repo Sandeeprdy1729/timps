@@ -6,7 +6,12 @@ import type { MemoryEngine } from '../MemoryEngine';
 import type {
   MemoryEntry as MEMemoryEntry,
   ScoredMemoryEntry as MEScoredMemoryEntry,
+  ConflictEvent,
+  ConflictResolutionAction,
 } from '../types';
+import { generateId } from '../storage';
+
+const pendingConflicts = new Map<string, ConflictEvent>();
 
 function findProtoFile(): string {
   const candidates = [
@@ -105,7 +110,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
     Store: (call: any, callback: any) => {
       try {
         const req = call.request;
-        const { type, tags, user_id } = req;
+        const { type, tags, user_id, project_id } = req;
         // oneof: exactly one of content or episode is set
         const content: string | undefined = req.content;
         const episode: any = req.episode;
@@ -114,6 +119,34 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
           engine.storeEpisode(fromProtoEpisodic(episode));
           callback(null, { status: 'ok', kind: 'episode' });
         } else if (content) {
+          // Phase 2d: Synchronous conflict detection at write time
+          const conflictResult = (engine as any).contradiction?.checkBeforeStore(
+            { content, type: type ?? 'fact', tags: tags ?? [] } as MEMemoryEntry,
+            engine.getSemanticEntries(),
+          );
+          if (conflictResult?.hasConflict) {
+            const conflictId = generateId('conflict');
+            const conflict: ConflictEvent = {
+              conflictId,
+              projectId: project_id ?? 'default',
+              agentAId: conflictResult.conflictingEntry?.actorId ?? 'unknown',
+              agentBId: user_id ?? 'anonymous',
+              entryA: conflictResult.conflictingEntry!,
+              entryB: { content, type: type ?? 'fact', tags: tags ?? [] } as MEMemoryEntry,
+              similarity: conflictResult.similarity,
+              detectedAt: Date.now(),
+              suggestedResolution: conflictResult.explanation,
+              status: 'pending',
+            };
+            pendingConflicts.set(conflictId, conflict);
+            callback(null, {
+              status: 'conflict',
+              kind: 'conflict',
+              conflict_id: conflictId,
+              message: conflictResult.explanation,
+            });
+            return;
+          }
           engine.store({ content, type: type ?? 'fact', tags: tags ?? [] });
           callback(null, { status: 'ok', kind: 'semantic' });
         } else {
@@ -161,7 +194,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
     DeleteMemory: (call: any, callback: any) => {
       try {
         const { id, content } = call.request;
-        const entries: MEMemoryEntry[] = (engine as any).getSemanticEntries?.() ?? [];
+        const entries: MEMemoryEntry[] = engine.getSemanticEntries();
         let deleted = 0;
         let filtered = entries;
         if (id) {
@@ -172,7 +205,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
           deleted = entries.length - filtered.length;
         }
         if (deleted > 0) {
-          (engine as any).saveSemanticEntries?.(filtered);
+          engine.saveSemanticEntries(filtered);
         }
         callback(null, { status: deleted > 0 ? 'ok' : 'not_found', deleted });
       } catch (err: any) {
@@ -543,6 +576,73 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
       }
     },
 
+    // ── Conflict Resolution ──
+    ResolveConflict: (call: any, callback: any) => {
+      try {
+        const { conflict_id, action, merged_content, resolved_by } = call.request;
+        if (!conflict_id) {
+          return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'conflict_id required' });
+        }
+        const conflict = pendingConflicts.get(conflict_id);
+        if (!conflict) {
+          return callback({ code: grpc.status.NOT_FOUND, message: 'Conflict not found' });
+        }
+        switch (action) {
+          case 'keep_a':
+            break;
+          case 'keep_b':
+            engine.store({ content: conflict.entryB.content, type: conflict.entryB.type ?? 'fact', tags: conflict.entryB.tags ?? [] });
+            break;
+          case 'merge':
+          case 'overwrite':
+            if (!merged_content) {
+              return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'merged_content required for merge/overwrite' });
+            }
+            engine.store({ content: merged_content, type: conflict.entryB.type ?? 'fact', tags: [...new Set([...(conflict.entryA.tags ?? []), ...(conflict.entryB.tags ?? [])])] });
+            break;
+          default:
+            return callback({ code: grpc.status.INVALID_ARGUMENT, message: `Unknown action: ${action}` });
+        }
+        conflict.status = 'user_resolved';
+        pendingConflicts.delete(conflict_id);
+        callback(null, { status: 'ok', conflict_id, resolution: action });
+      } catch (err: any) {
+        callback({ code: grpc.status.INTERNAL, message: err.message });
+      }
+    },
+
+    CancelConflict: (call: any, callback: any) => {
+      try {
+        const { conflict_id } = call.request;
+        if (!conflict_id) {
+          return callback({ code: grpc.status.INVALID_ARGUMENT, message: 'conflict_id required' });
+        }
+        const conflict = pendingConflicts.get(conflict_id);
+        if (!conflict) {
+          return callback({ code: grpc.status.NOT_FOUND, message: 'Conflict not found' });
+        }
+        pendingConflicts.delete(conflict_id);
+        callback(null, { status: 'ok', message: 'Conflict dismissed' });
+      } catch (err: any) {
+        callback({ code: grpc.status.INTERNAL, message: err.message });
+      }
+    },
+
+    ListConflicts: (_call: any, callback: any) => {
+      callback(null, {
+        conflicts: Array.from(pendingConflicts.values()).map(c => ({
+          conflict_id: c.conflictId,
+          project_id: c.projectId,
+          agent_a_id: c.agentAId,
+          agent_b_id: c.agentBId,
+          similarity: c.similarity,
+          detected_at: c.detectedAt,
+          status: c.status,
+          suggested_resolution: c.suggestedResolution ?? '',
+        })),
+      });
+    },
+
     // ── Health ──
     Health: (_call: any, callback: any) => {
       callback(null, {
@@ -662,12 +762,15 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
     // ── Bidirectional Streaming ──
     AgentStream: (call: any) => {
       const agents = new Map<string, { agentId: string; sessionId: string; lastSeen: number }>();
+      let projectId: string | null = null;
 
       call.on('data', (event: any) => {
         try {
           if (call.cancelled) return;
 
-          const { agent_id, session_id, event_type, payload, timestamp } = event;
+          const { agent_id, session_id, event_type, payload, timestamp, project_id } = event;
+
+          if (project_id) projectId = project_id;
 
           agents.set(agent_id ?? 'unknown', {
             agentId: agent_id ?? 'unknown',
@@ -675,8 +778,35 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
             lastSeen: timestamp ?? Date.now(),
           });
 
+          // Check for pending conflicts for this agent and push them
+          if (event_type === 'check_conflicts' || event_type === 'stored_memory') {
+            const agentConflicts = Array.from(pendingConflicts.values())
+              .filter(c => c.status === 'pending' && (c.agentAId === agent_id || c.agentBId === agent_id));
+            for (const conflict of agentConflicts) {
+              call.write({
+                agent_event: null,
+                memory_insight: {
+                  type: 'conflict_detected',
+                  layer: 'semantic',
+                  title: 'Write Conflict Detected',
+                  description: conflict.suggestedResolution ?? '',
+                  confidence: conflict.similarity,
+                  timestamp: Date.now(),
+                  metadata: {
+                    conflict_id: conflict.conflictId,
+                    project_id: conflict.projectId,
+                    agent_a_id: conflict.agentAId,
+                    agent_b_id: conflict.agentBId,
+                    status: conflict.status,
+                  },
+                },
+                error: null,
+              });
+            }
+          }
+
           // Store the event as an episode
-          if (event_type && event_type !== 'heartbeat') {
+          if (event_type && event_type !== 'heartbeat' && event_type !== 'check_conflicts') {
             engine.storeEpisode({
               summary: `[${event_type}] ${payload ? payload.substring(0, 200) : ''}`,
               outcome: event_type === 'error' ? 'failure' : 'success',
@@ -741,6 +871,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
 
       call.on('cancelled', () => {
         agents.clear();
+        projectId = null;
       });
     },
   };

@@ -2,6 +2,10 @@
 
 export type MemoryEntryType = 'fact' | 'pattern' | 'preference' | 'error' | 'convention' | 'bug' | 'incident' | 'architecture';
 
+export type VectorClock = Record<string, number>;
+
+export type CrdtStatus = 'active' | 'conflict_pending' | 'auto_merged' | 'user_resolved';
+
 export interface MemoryEntry {
   id: string;
   timestamp: number;
@@ -9,6 +13,11 @@ export interface MemoryEntry {
   content: string;
   tags: string[];
   score?: number;
+  actorId?: string;
+  vectorClock?: VectorClock;
+  crdtStatus?: CrdtStatus;
+  conflicts?: string[];
+  mergedFrom?: string[];
 }
 
 export interface EpisodicEntry {
@@ -77,6 +86,31 @@ export interface MemoryStats {
   episodeCount: number;
   workingFiles: number;
   workingPatterns: number;
+}
+
+/** A conflict detected between two concurrent writes */
+export interface ConflictEvent {
+  conflictId: string;
+  projectId: string;
+  agentAId: string;
+  agentBId: string;
+  entryA: MemoryEntry;
+  entryB: MemoryEntry;
+  similarity: number;
+  detectedAt: number;
+  suggestedResolution?: string;
+  status: 'pending' | 'auto_merged' | 'user_resolved';
+}
+
+/** Resolution action for a conflict */
+export type ConflictResolutionAction = 'keep_a' | 'keep_b' | 'merge' | 'overwrite';
+
+/** Request payload to resolve a conflict */
+export interface ConflictResolutionRequest {
+  conflictId: string;
+  action: ConflictResolutionAction;
+  mergedContent?: string;
+  resolvedBy: string;
 }
 
 // ── Intelligence result types ──

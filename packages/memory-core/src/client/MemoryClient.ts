@@ -7,6 +7,8 @@ import type {
   MemorySnapshot,
   MergeResult,
   MemoryStats,
+  ConflictEvent,
+  ConflictResolutionAction,
 } from '../types';
 import { MemoryGrpcClient } from './grpc';
 import type { GrpcClientOptions } from './grpc';
@@ -608,6 +610,76 @@ export class MemoryClient {
       );
     }
     return this.fetch('/memory/forge/bias');
+  }
+
+  // ── Phase 2d: Conflict Resolution API ─────────────────────────────────────
+
+  /** Resolve a detected conflict between two concurrent writes */
+  async resolveConflict(
+    conflictId: string,
+    action: ConflictResolutionAction,
+    mergedContent?: string,
+  ): Promise<any> {
+    return this.grpcOrRest(
+      () => this.grpcClient!.resolveConflict(conflictId, action, mergedContent),
+      () => this.fetch('/memory/resolve-conflict', {
+        method: 'POST',
+        body: { conflictId, action, mergedContent, resolvedBy: 'client' },
+      }),
+    );
+  }
+
+  /** Cancel/dismiss a conflict (keep existing, discard new entry) */
+  async cancelConflict(conflictId: string): Promise<any> {
+    return this.grpcOrRest(
+      () => this.grpcClient!.cancelConflict(conflictId),
+      () => this.fetch('/memory/cancel-conflict', {
+        method: 'POST',
+        body: { conflictId },
+      }),
+    );
+  }
+
+  /** List all pending conflicts */
+  async listConflicts(): Promise<ConflictEvent[]> {
+    if (this.useGrpc && this.grpcClient) {
+      const r = await this.grpcClient!.listConflicts();
+      return (r.conflicts ?? []).map((c: any) => ({
+        conflictId: c.conflict_id,
+        projectId: c.project_id,
+        agentAId: c.agent_a_id,
+        agentBId: c.agent_b_id,
+        similarity: c.similarity,
+        detectedAt: c.detected_at,
+        status: c.status,
+        suggestedResolution: c.suggested_resolution,
+      } as ConflictEvent));
+    }
+    const res = await this.fetch('/memory/conflicts');
+    return res.conflicts ?? [];
+  }
+
+  // ── Phase 2d: Agent Presence & Project Rooms ─────────────────────────────
+
+  /** Join a project room (receives real-time events for the project) */
+  async joinRoom(projectId: string): Promise<any> {
+    return this.fetch('/room/join', {
+      method: 'POST',
+      body: { projectId, agentId: this.token ?? 'anonymous' },
+    });
+  }
+
+  /** Leave a project room */
+  async leaveRoom(projectId: string): Promise<any> {
+    return this.fetch('/room/leave', {
+      method: 'POST',
+      body: { projectId, agentId: this.token ?? 'anonymous' },
+    });
+  }
+
+  /** Get connected agents in a project room */
+  async getRoomAgents(projectId: string): Promise<{ agents: string[]; count: number }> {
+    return this.fetch(`/room/${projectId}/agents`);
   }
 
   // ── gRPC Streaming API ───────────────────────────────────────────────────

@@ -195,3 +195,45 @@ New files in `packages/memory-core/`:
 - The `memory:recalled` event only fires for queries >10 chars to reduce noise.
 - Scale out: `docker compose up -d --scale memory=3` spins 3 server instances.
 - The 6s StreamContext polling timer remains — Phase 2c replaces it with reactive forge-layer event pushes. This is marked as the gap before Phase 2d.
+
+## Phase 2d — Real-Time Sync (June 2026)
+
+New/updated files in `packages/memory-core/`:
+
+| File | Purpose |
+|------|---------|
+| `src/crdt/MemoryCRDT.ts` | LWW-Register-MV CRDT: `incrementClock`, `mergeClocks`, `compareClocks`, `mergeEntries` |
+| `src/server/ProjectRoom.ts` | Project-scoped agent room: `join/leave/broadcast`, auto Redis Pub/Sub on `room:{projectId}:events` |
+| `src/types.ts` | New fields on `MemoryEntry`: `vectorClock`, `actorId`, `crdtStatus`, `conflicts`, `mergedFrom`. New types: `VectorClock`, `CrdtStatus`, `ConflictEvent`, `ConflictResolutionAction`, `ConflictResolutionRequest` |
+
+Updated files in `packages/memory-core/`:
+
+| File | What changed |
+|------|-------------|
+| `src/events/EventBus.ts` | Added `subscribeRaw`/`publishRaw`/`unsubscribeRaw` for dynamic `room:` prefixed channels; widened `EventBusChannel` type |
+| `src/intelligence/contradiction.ts` | Added `checkBeforeStore(newEntry, existingEntries)` — synchronous Jaccard-based check against semantic entries |
+| `src/MemoryEngine.ts` | Added `getSemanticEntries()`, `saveSemanticEntries()`, `checkBeforeStore(content)` convenience methods |
+| `src/server/routes.ts` | Store handler runs sync conflict check before write; returns `409 Conflict` on hit. New endpoints: `GET /conflicts`, `GET /conflicts/:id`, `POST /resolve-conflict`, `POST /cancel-conflict` |
+| `src/server/grpc.ts` | Store handler runs sync conflict check. New RPCs: `ResolveConflict`, `CancelConflict`, `ListConflicts`. `AgentStream` pushes `ConflictEvent` to affected agents |
+| `src/server/MemoryServer.ts` | ProjectRoom lifecycle: `getOrCreateRoom`, `joinProjectRoom`, `leaveProjectRoom`. REST endpoints: `POST /room/join`, `POST /room/leave`, `GET /room/:projectId/agents` |
+| `src/server/websocket.ts` | New `WsEvent` variants: `conflict_detected`, `conflict_resolved`, `agent_joined`, `agent_left`, `project_event` |
+| `src/client/MemoryClient.ts` | New methods: `resolveConflict`, `cancelConflict`, `listConflicts`, `joinRoom`, `leaveRoom`, `getRoomAgents` |
+| `src/client/grpc.ts` | New RPC wrappers: `resolveConflict`, `cancelConflict`, `listConflicts` |
+| `src/index.ts` | Exports new CRDT functions and ProjectRoom class |
+| `proto/timps/memory/v1/memory.proto` | Added `project_id` to `StoreRequest`, `conflict_id`/`message` to `StoreResponse`. New messages: `ResolveConflictRequest/Response`, `CancelConflictRequest/Response`, `ConflictInfo`, `ListConflictsResponse`, `ProjectEvent`. Added `project_event` to `AgentStreamMessage` oneof. New RPCs: `ResolveConflict`, `CancelConflict`, `ListConflicts` |
+
+Updated file in `timps-code/`:
+
+| File | What changed |
+|------|-------------|
+| `src/memory/memoryCoordinator.ts` | SSE stub replaced with thin backward-compat adapter. SSE server removed — use gRPC + WebSocket instead. Leases/conflict queue delegated to memory-core CRDT infrastructure. |
+
+### Gotchas
+
+- `MemoryEngine.getSemanticEntries()` returns the raw semantic entries array (not a copy). Mutation is safe since `loadSemantic` re-reads from disk.
+- Synchronous conflict detection runs at write time in both REST and gRPC Store handlers. If a conflict is found, the store is aborted and a `409 Conflict` response is returned with the `ConflictEvent` payload.
+- To bypass conflict detection (e.g., for internal writes), use `(engine as any).contradiction?.checkBeforeStore(...)` is called from routes/grpc — internal engine methods (`engine.store()`) do NOT run conflict detection.
+- `EventBus.subscribeRaw` returns an unsubscribe function. ProjectRoom stores this for cleanup on `destroy()`.
+- gRPC `AgentStream` now pushes `ConflictEvent` memory insights to agents when they `check_conflicts` or emit `stored_memory` events.
+- `ProjectRoom` auto-subscribes to `room:{projectId}:events` on Redis. When `agentCount` drops to 0, `destroy()` is called and the subscription is released.
+- The `memoryCoordinator.ts` SSE stub in `timps-code` is now a shell — all real-time coordination goes through the MemoryServer gRPC/WebSocket endpoints.

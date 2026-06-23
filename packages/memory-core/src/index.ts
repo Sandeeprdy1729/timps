@@ -165,7 +165,18 @@ export type {
 export type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
   SearchOptions, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
+  VectorClock, CrdtStatus,
+  ConflictEvent, ConflictResolutionAction, ConflictResolutionRequest,
 } from './types.js';
+
+// Phase 2d: CRDT Merge Logic
+export {
+  incrementClock, mergeClocks, compareClocks, mergeEntries,
+} from './crdt/MemoryCRDT.js';
+
+// Phase 2d: Project Room — collaborative agent room
+export { ProjectRoom } from './server/ProjectRoom.js';
+export type { ProjectRoomEvent, ProjectRoomOptions } from './server/ProjectRoom.js';
 
 // Engine options
 export type { MemoryEngineOptions } from './MemoryEngine.js';

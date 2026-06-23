@@ -54,11 +54,14 @@ message StoreRequest {
   string type = 2;
   repeated string tags = 3;
   string user_id = 5;
+  string project_id = 6;        // Phase 2d: project-scoped conflict detection
 }
 
 message StoreResponse {
-  string status = 1;
-  string kind = 2;              // semantic | episode
+  string status = 1;            // ok | conflict
+  string kind = 2;              // semantic | episode | conflict
+  string conflict_id = 3;       // set when status=conflict
+  string message = 4;           // human-readable resolution hint
 }
 
 message RecallRequest {
@@ -350,12 +353,60 @@ message AgentStreamMessage {
     AgentEvent agent_event = 1;
     MemoryInsight memory_insight = 2;
     MemoryInsightError error = 3;
+    ProjectEvent project_event = 4;   // Phase 2d: project room events
   }
 }
 
 message MemoryInsightError {
   string code = 1;
   string message = 2;
+}
+
+// ── Phase 2d: Conflict Resolution Types ─────────────────────────────────────
+
+message ResolveConflictRequest {
+  string conflict_id = 1;
+  string action = 2;            // keep_a | keep_b | merge | overwrite
+  string merged_content = 3;    // required for merge/overwrite
+  string resolved_by = 4;
+}
+
+message ResolveConflictResponse {
+  string status = 1;
+  string conflict_id = 2;
+  string resolution = 3;        // which action was applied
+}
+
+message CancelConflictRequest {
+  string conflict_id = 1;
+}
+
+message CancelConflictResponse {
+  string status = 1;
+  string message = 2;
+}
+
+message ConflictInfo {
+  string conflict_id = 1;
+  string project_id = 2;
+  string agent_a_id = 3;
+  string agent_b_id = 4;
+  double similarity = 5;
+  int64 detected_at = 6;
+  string status = 7;            // pending | auto_merged | user_resolved
+  string suggested_resolution = 8;
+}
+
+message ListConflictsResponse {
+  repeated ConflictInfo conflicts = 1;
+}
+
+message ProjectEvent {
+  string type = 1;              // agent_joined | agent_left | conflict_detected | conflict_resolved | memory_stored
+  string project_id = 2;
+  string agent_id = 3;
+  int64 timestamp = 4;
+  string json_payload = 5;
 }
 
 // ── Service Definition ──────────────────────────────────────────────────────
@@ -408,4 +459,9 @@ service MemoryService {
 
   // ── Bidirectional Streaming: real-time agent-server dialogue ──
   rpc AgentStream(stream AgentEvent) returns (stream AgentStreamMessage);
+
+  // ── Phase 2d: Conflict Resolution ──
+  rpc ResolveConflict(ResolveConflictRequest) returns (ResolveConflictResponse);
+  rpc CancelConflict(CancelConflictRequest) returns (CancelConflictResponse);
+  rpc ListConflicts(Empty) returns (ListConflictsResponse);
 }
