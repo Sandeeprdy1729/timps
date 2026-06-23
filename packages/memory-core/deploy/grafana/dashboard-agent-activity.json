@@ -1,0 +1,54 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — Multi-Agent Activity",
+  "uid": "timps-agent-activity",
+  "version": 1,
+  "description": "Active agents, CRDT conflicts, and event throughput",
+  "schemaVersion": 39,
+  "tags": ["timps", "agents"],
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "title": "CRDT Conflicts Detected vs Resolved",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "rate(timps_crdt_conflict_detected_total[5m])", "legendFormat": "detected" },
+        { "expr": "rate(timps_crdt_conflict_resolved_total[5m])", "legendFormat": "resolved" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "CRDT Merge Latency p95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(timps_crdt_merge_latency_bucket[5m]))",
+        "legendFormat": "p95"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Concurrent Agents",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "count(timps_agent_connected)",
+        "legendFormat": "agents"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "title": "Events per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 8 },
+      "targets": [{
+        "expr": "rate(timps_eventbus_messages_total[5m])",
+        "legendFormat": "events/sec"
+      }],
+      "fieldConfig": { "defaults": { "unit": "eps" } }
+    }
+  ]
+}

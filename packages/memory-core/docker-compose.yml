@@ -140,6 +140,9 @@ services:
       MEMORY_PROJECT_PATH: /data
       MEMORY_PORT: 4100
       MEMORY_GRPC_PORT: 4101
+      # Telemetry: local mode (self-hosted Prometheus + Grafana)
+      TIMPS_TELEMETRY_LEVEL: local
+      TIMPS_TELEMETRY_OTEL_ENDPOINT: http://otel-collector:4318/v1/traces
       # Postgres (writes via PgBouncer, reads via replicas round-robin)
       POSTGRES_PRIMARY: postgresql://timps:timps_secret@pgbouncer:6432/timps_memory
       POSTGRES_REPLICAS: postgresql://timps:timps_secret@postgres-replica-1:5432/timps_memory,postgresql://timps:timps_secret@postgres-replica-2:5432/timps_memory
@@ -160,8 +163,60 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      prometheus:
+        condition: service_started
     volumes:
       - memory-data:/data
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Prometheus (metrics scraper) ──
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Grafana (dashboards) ──
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/timps.yml:ro
+      - ./deploy/grafana/dashboard-memory-health.json:/var/lib/grafana/dashboards/timps-memory-health.json:ro
+      - ./deploy/grafana/dashboard-performance.json:/var/lib/grafana/dashboards/timps-performance.json:ro
+      - ./deploy/grafana/dashboard-agent-activity.json:/var/lib/grafana/dashboards/timps-agent-activity.json:ro
+      - ./deploy/grafana/dashboard-system.json:/var/lib/grafana/dashboards/timps-system.json:ro
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_NAME: "TIMPS"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── OpenTelemetry Collector (traces bridge) ──
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"   # gRPC
+      - "4318:4318"   # HTTP
+      - "8888:8888"   # metrics
+    volumes:
+      - ./deploy/otel/otel-collector.yml:/etc/otel-collector.yml:ro
+    command:
+      - '--config=/etc/otel-collector.yml'
     logging: *default-logging
     restart: unless-stopped
 
@@ -172,3 +227,5 @@ volumes:
   redis-data:
   qdrant-data:
   memory-data:
+  prometheus-data:
+  grafana-data:

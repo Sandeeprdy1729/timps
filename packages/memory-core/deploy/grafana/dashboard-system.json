@@ -1,0 +1,63 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — System Resources",
+  "uid": "timps-system",
+  "version": 1,
+  "description": "MemoryServer CPU, memory, GC, and dependency health",
+  "schemaVersion": 39,
+  "tags": ["timps", "system"],
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "title": "MemoryServer CPU Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "process_cpu_seconds_total{job=\"memory-server\"}",
+        "legendFormat": "CPU seconds"
+      }]
+    },
+    {
+      "title": "MemoryServer RSS",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "process_resident_memory_bytes{job=\"memory-server\"}",
+        "legendFormat": "RSS"
+      }],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "GC Pause Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "rate(nodejs_gc_duration_seconds_sum[1m]) / rate(nodejs_gc_duration_seconds_count[1m])",
+        "legendFormat": "avg GC pause"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "Qdrant Index Size",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [{
+        "expr": "qdrant_index_size_bytes",
+        "legendFormat": "index size"
+      }],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "Redis Memory Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [{
+        "expr": "redis_memory_used_bytes",
+        "legendFormat": "used"
+      }],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    }
+  ]
+}

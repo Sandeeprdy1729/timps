@@ -1,0 +1,62 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — Performance",
+  "uid": "timps-performance",
+  "version": 1,
+  "description": "Per-server latency, throughput, and storage backend breakdown",
+  "schemaVersion": 39,
+  "tags": ["timps", "performance"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      { "name": "layer", "type": "query", "query": "label_values(timps_recall_latency_count, layer)", "refresh": 1 },
+      { "name": "backend", "type": "query", "query": "label_values(timps_backend_latency_count, backend)", "refresh": 1 }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Recall Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, rate(timps_recall_latency_bucket[1m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(timps_recall_latency_bucket[1m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(timps_recall_latency_bucket[1m]))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Store Latency p50/p95/p99",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.5, rate(timps_store_latency_bucket[1m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(timps_store_latency_bucket[1m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(timps_store_latency_bucket[1m]))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Backend Latency by Type",
+      "type": "bar",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(timps_backend_latency_bucket{backend=~\"$backend\"}[5m]))",
+        "legendFormat": "{{backend}} - {{operation}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Operations per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "rate(timps_store_count_total[1m])", "legendFormat": "store" },
+        { "expr": "rate(timps_recall_count_total[1m])", "legendFormat": "recall" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    }
+  ]
+}
