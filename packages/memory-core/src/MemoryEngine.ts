@@ -23,6 +23,9 @@ import {
 import type { StorageBackend, FileBackendOptions } from './backends/index.js';
 import type { CacheManager } from './cache/CacheManager.js';
 import type { EventBus, EventBusChannel } from './events/EventBus.js';
+import { TelemetryManager } from './telemetry/TelemetryManager.js';
+import type { TelemetryConfig } from './telemetry/types.js';
+import { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
 
 import { searchEntries } from './search.js';
 import { MigrationEngine, CURRENT_SCHEMA_VERSION, ALL_MIGRATIONS } from './migrations/index.js';
@@ -160,6 +163,13 @@ export interface MemoryEngineOptions {
    * to all connected MemoryServer instances.
    */
   eventBus?: EventBus;
+  /**
+   * Telemetry configuration.
+   * When set to a level other than 'off', forge layers and backends
+   * are instrumented with spans and metrics.
+   * Default: undefined (telemetry off)
+   */
+  telemetry?: TelemetryConfig;
 }
 
 export class MemoryEngine {
@@ -171,6 +181,8 @@ export class MemoryEngine {
   private _backend: StorageBackend;
   private _cacheManager?: CacheManager;
   private _eventBus?: EventBus;
+  private _telemetry?: TelemetryManager;
+  private _crdtMetrics: { recordConflict: (r: string) => void; recordMerge: (d: number) => void; recordCheck: () => void };
 
   // ── Layer 5: ChronosForge (lazy-init) ──
   private _chronos?: ChronosForge;
@@ -255,6 +267,17 @@ export class MemoryEngine {
 
     this._cacheManager = options?.cacheManager;
     this._eventBus = options?.eventBus;
+
+    // Initialize telemetry
+    if (options?.telemetry && options.telemetry.level !== 'off') {
+      this._telemetry = new TelemetryManager(options.telemetry);
+      this._backend = instrumentBackend(this._backend, options?.backend ? options.backend.constructor.name.toLowerCase().replace('backend', '') : 'file', this._telemetry);
+    }
+    this._crdtMetrics = { recordConflict: () => {}, recordMerge: () => {}, recordCheck: () => {} };
+    if (this._telemetry) {
+      this._crdtMetrics = instrumentCRDT(this._telemetry);
+    }
+
     this._runMigrations();
     this.working = loadWorking(this.dir, this._backend);
   }
@@ -280,6 +303,11 @@ export class MemoryEngine {
   /** The event bus, if configured. */
   get eventBus(): EventBus | undefined {
     return this._eventBus;
+  }
+
+  /** The telemetry manager, if configured. */
+  get telemetry(): TelemetryManager | undefined {
+    return this._telemetry;
   }
 
   /** The scope this engine was created with, if any. */
@@ -350,7 +378,11 @@ export class MemoryEngine {
 
   /** Layer 5: ChronosForge — bi-temporal causal memory weaver + foresight simulator. */
   get chronosForge(): ChronosForge {
-    return (this._chronos ??= new ChronosForge(this.dir, this._backend));
+    if (!this._chronos) {
+      const forge = new ChronosForge(this.dir, this._backend);
+      this._chronos = this._telemetry ? instrumentLayer(forge, 'chronos', this._telemetry) as unknown as ChronosForge : forge;
+    }
+    return this._chronos;
   }
 
   /**
@@ -358,7 +390,11 @@ export class MemoryEngine {
    * Deterministic O(V+E) foresight: -85% latency vs MC rollouts, +17pt prediction.
    */
   get echoForge(): EchoForge {
-    return (this._echo ??= new EchoForge(this.dir, this._backend));
+    if (!this._echo) {
+      const forge = new EchoForge(this.dir, this._backend);
+      this._echo = this._telemetry ? instrumentLayer(forge, 'echo', this._telemetry) as unknown as EchoForge : forge;
+    }
+    return this._echo;
   }
 
   /**
@@ -366,7 +402,11 @@ export class MemoryEngine {
    * Algebraic contradiction detection (H¹), eigenmode foresight, O(k·N) after precompute.
    */
   get harmonicSheafWeaver(): HarmonicSheafWeaver {
-    return (this._harmonicSheaf ??= new HarmonicSheafWeaver(this.dir, this._backend));
+    if (!this._harmonicSheaf) {
+      const forge = new HarmonicSheafWeaver(this.dir, this._backend);
+      this._harmonicSheaf = this._telemetry ? instrumentLayer(forge, 'harmonic', this._telemetry) as unknown as HarmonicSheafWeaver : forge;
+    }
+    return this._harmonicSheaf;
   }
 
   /**
@@ -375,7 +415,11 @@ export class MemoryEngine {
    * oscillators, and hierarchical MemTree-style indexing. O(log N + k) weave.
    */
   get aetherForge(): AetherForgeERL {
-    return (this._aether ??= new AetherForgeERL(this.dir, this._backend));
+    if (!this._aether) {
+      const forge = new AetherForgeERL(this.dir, this._backend);
+      this._aether = this._telemetry ? instrumentLayer(forge, 'aether', this._telemetry) as unknown as AetherForgeERL : forge;
+    }
+    return this._aether;
   }
 
   /**
@@ -597,6 +641,9 @@ export class MemoryEngine {
 
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
   store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }, opts?: { skipGuard?: boolean }): void {
+    const _span = this._telemetry?.tracer.startSpan('engine.store', { 'timps.operation': 'store' });
+    const startTime = Date.now();
+    try {
     const facts = loadSemantic(this.dir, this._backend);
     const { content, type = 'fact', tags = [] } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
@@ -674,6 +721,14 @@ export class MemoryEngine {
         teamId: this.orgScope?.teamId,
       });
     }
+    } finally {
+      const duration = Date.now() - startTime;
+      if (this._telemetry) {
+        this._telemetry.metrics.histogram('store.latency', duration);
+        this._telemetry.metrics.counter('store.count', 1);
+      }
+      if (_span && 'end' in _span) (_span as any).end();
+    }
   }
 
   /**
@@ -689,6 +744,9 @@ export class MemoryEngine {
    * 7. Final ranking and filtering (minConfidence, maxFalseMemoryRisk)
    */
   recall(query: string, options?: SearchOptions): ScoredMemoryEntry[] {
+    const _span = this._telemetry?.tracer.startSpan('engine.recall', { 'timps.operation': 'recall', 'query.length': query.length });
+    const startTime = Date.now();
+    try {
     const entries = loadSemantic(this.dir, this._backend);
     const candidates = searchEntries(entries, query, { ...options, limit: 50 });
     const now = Date.now();
@@ -785,6 +843,14 @@ export class MemoryEngine {
     }
 
     return results;
+    } finally {
+      const duration = Date.now() - startTime;
+      if (this._telemetry) {
+        this._telemetry.metrics.histogram('recall.latency', duration);
+        this._telemetry.metrics.counter('recall.count', 1);
+      }
+      if (_span && 'end' in _span) (_span as any).end();
+    }
   }
 
   /** Get a formatted context string for injection into agent prompts. */
@@ -827,6 +893,9 @@ export class MemoryEngine {
 
   /** Consolidate near-duplicate semantic entries. Returns count removed. */
   consolidate(): number {
+    const _span = this._telemetry?.tracer.startSpan('engine.consolidate', { 'timps.operation': 'consolidate' });
+    const startTime = Date.now();
+    try {
     const entries = loadSemantic(this.dir, this._backend);
     const before = entries.length;
     const deduped: MemoryEntry[] = [];
@@ -844,6 +913,14 @@ export class MemoryEngine {
     }
 
     return removed;
+    } finally {
+      const duration = Date.now() - startTime;
+      if (this._telemetry) {
+        this._telemetry.metrics.histogram('consolidate.latency', duration);
+        this._telemetry.metrics.counter('consolidate.count', 1);
+      }
+      if (_span && 'end' in _span) (_span as any).end();
+    }
   }
 
   getStats(): MemoryStats {

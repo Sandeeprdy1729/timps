@@ -387,3 +387,80 @@ Plugin Author                         TIMPS User
 - **Dependency resolver has no package registry fallback** — it only resolves from the `available` map passed in. For production, wire to the PluginRegistry.
 - **All 14 marketplace tests must pass before push** — run `npx vitest run packages/memory-core/src/marketplace.test.ts`
 - **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3a)
+
+## Phase 3b — Observability & Telemetry (Privacy-Preserving)
+
+New files in `packages/memory-core/`:
+
+| File | Purpose |
+|------|---------|
+| `src/telemetry/types.ts` | Telemetry level (`off`/`local`/`anonymous`), config, span, metric, histogram, anonymous payload types |
+| `src/telemetry/MetricsRegistry.ts` | Counter, histogram, gauge storage with Prometheus text export and percentile computation |
+| `src/telemetry/TracerProvider.ts` | Lightweight tracer with span lifecycle, no-op fallback, `SpanHandle` for safe usage |
+| `src/telemetry/RedactionPipeline.ts` | Privacy redaction — strips all content/identifiers, preserves only safe structural attributes |
+| `src/telemetry/TelemetryManager.ts` | Central config — `off` (zero alloc), `local` (in-memory + /metrics), `anonymous` (+ redacted hourly export) |
+| `src/telemetry/instrumentation.ts` | Proxy-based wrappers for `IMemoryLayer` (9 methods) and `StorageBackend` (read/write/delete/list/exists/append); CRDT conflict recording |
+| `src/telemetry/telemetry.test.ts` | 16 tests covering metrics, spans, redaction, telemetry manager, layer/backend/CRDT instrumentation |
+| `src/server/telemetryRoutes.ts` | Express router: `GET /metrics` (Prometheus), `GET /metrics/json`, `POST /metrics/reset` |
+| `deploy/prometheus/prometheus.yml` | Prometheus scrape config for memory-server /metrics endpoint |
+| `deploy/otel/otel-collector.yml` | OTel Collector config: OTLP receiver → batch processor → Prometheus exporter + debug |
+| `deploy/grafana/dashboards.yml` | Grafana dashboard provisioning config (auto-loads from /var/lib/grafana/dashboards) |
+| `deploy/grafana/dashboard-memory-health.json` | Panel: stores by layer, storage growth, contradiction rate, cache hit rate |
+| `deploy/grafana/dashboard-performance.json` | Panel: recall latency p50/p95/p99, store latency, backend breakdown, ops/sec |
+| `deploy/grafana/dashboard-agent-activity.json` | Panel: CRDT conflicts, merge latency, concurrent agents, events/sec |
+| `deploy/grafana/dashboard-system.json` | Panel: CPU, RSS, GC pauses, Qdrant index size, Redis memory |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `src/MemoryEngine.ts` | Added `telemetry?: TelemetryConfig` to `MemoryEngineOptions`; initializes `TelemetryManager`, instruments backend on construction; wraps 4 IMemoryLayer forges (Chronos, Echo, Harmonic, Aether) via Proxy; adds spans + metrics to `store()`, `recall()`, `consolidate()`; adds `telemetry` getter |
+| `src/server/MemoryServer.ts` | Added `telemetry?: TelemetryConfig` to `MemoryServerOptions`; creates `TelemetryManager` and injects into engine; mounts `/metrics` from `telemetryRoutes`; adds telemetry health check to `/health/readiness`; adds `telemetryManager` getter |
+| `src/index.ts` | Exports `TelemetryManager`, `MetricsRegistry`, `Tracer`, `NoopTracer`, `RedactionPipeline`, `instrumentLayer`, `instrumentBackend`, `instrumentCRDT` + all types |
+| `docker-compose.yml` | Added `prometheus`, `grafana`, `otel-collector` services; added `TIMPS_TELEMETRY_LEVEL` and `TIMPS_TELEMETRY_OTEL_ENDPOINT` env vars to memory service; added volumes for prometheus, grafana |
+
+### Telemetry Architecture
+
+```
+MemoryServer (instrumented)
+  │
+  ├─ /metrics (Prometheus text) ←─ Prometheus (scrape)
+  ├─ POST /metrics/reset
+  └─ OTLP exporter (optional) → OTel Collector → Jaeger/Grafana Tempo
+```
+
+### Three Modes
+
+| Level | Metrics | Traces | Export | Privacy |
+|-------|---------|--------|--------|---------|
+| `off` | None (no-op tracer, zero alloc) | None | None | N/A |
+| `local` | In-memory counter/histogram/gauge | In-memory spans (ring buffer, capped 10k) | Prometheus scrape at `/metrics` | All data stays on server |
+| `anonymous` | Same as local | Same as local | Hourly redacted export (aggregates only) | Redaction pipeline strips content + identifiers |
+
+### Redaction Guarantee
+
+The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys preserved: `timps.layer`, `timps.version`, `db.system`, `db.operation`, `error.type`, `backend.type`, `cache.hit`, `plugin.name`, `resolution`, `exception.*`, `http.*`, `net.*`. **Stripped** keys: `content`, `query`, `query.text`, `org_id`, `project_id`, `actor_id`, `file.path`, `user.*`, `agent.*`, `entry.id`, any custom keys in `extraRedactKeys`.
+
+### Grafana Dashboards
+
+4 pre-built dashboards at `deploy/grafana/dashboard-*.json`:
+1. **Memory Health** — stores by layer (stacked), storage growth, contradiction rate, cache hit rate
+2. **Performance** — recall/store latency p50/p95/p99, backend breakdown, ops/sec
+3. **Multi-Agent Activity** — CRDT conflict rate, merge latency, concurrent agents, event throughput
+4. **System Resources** — CPU, RSS, GC pauses, Qdrant index size, Redis memory
+
+### Architecture Notes
+
+- **No OTel SDK dependency.** Telemetry is pure TypeScript with zero runtime dependencies. OTel Collector receives metrics via Prometheus scrape, not OTLP push (by default). For full OTLP tracing, add `@opentelemetry/sdk-node` as an optional peer dependency.
+- **Proxy-based instrumentation.** `instrumentLayer()` uses `Proxy` to intercept IMemoryLayer methods without modifying forge classes. Non-IMemoryLayer methods pass through transparently.
+- **Anonymous export runs hourly.** The `TelemetryManager` sets a `setInterval` that calls `onAnonymousExport` with the redacted payload. Wire this to an HTTP endpoint or file sink in production.
+- **Prometheus `/metrics` endpoint** is mounted at the MemoryServer when telemetry level is `local` or `anonymous`. The OTel Collector in `docker-compose` can be configured to scrape this endpoint.
+
+### Gotchas
+
+- **Anonymous export is opt-in only.** Setting `level: 'anonymous'` enables hourly redacted export. By default (`level: 'off'`), zero telemetry is collected.
+- **Telemetry config must be set before MemoryEngine construction.** The `telemetry` field in `MemoryEngineOptions` is read during construction to wrap the backend and forge layers.
+- **Proxy wrapping is shallow.** Only the 9 IMemoryLayer methods (store, retrieve, verify, contradict, archive, getProvenance, explain, audit, decay) are instrumented. Forge-specific methods like `weave()`, `foresight()`, `predict()` are not wrapped — they appear on the forge classes but not on IMemoryLayer. Instrument them directly in MemoryEngine's store/recall methods instead.
+- **Histogram buckets** are fixed: `[1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms. Tune these for your latency range.
+- **CRDT metrics** are only collected when `instrumentCRDT()` is called with an active telemetry manager. The CRDT module itself is not modified.
+- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3b).

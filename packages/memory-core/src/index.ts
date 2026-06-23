@@ -324,3 +324,12 @@ export type {
   AuditReport,
   InferredSchema, SchemaInferenceResult,
 } from './intelligence/index.js';
+
+// ── Telemetry & Observability ──
+export { TelemetryManager } from './telemetry/TelemetryManager.js';
+export type { TelemetryConfig, TelemetryLevel, Span, SpanAttributes, SpanStatusCode, MetricPoint, AnonymousMetricsPayload } from './telemetry/types.js';
+export { MetricsRegistry } from './telemetry/MetricsRegistry.js';
+export { Tracer, NoopTracer } from './telemetry/TracerProvider.js';
+export type { SpanHandle, NoopSpanHandle } from './telemetry/TracerProvider.js';
+export { RedactionPipeline } from './telemetry/RedactionPipeline.js';
+export { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';

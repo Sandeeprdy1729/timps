@@ -1,0 +1,66 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — Memory Health",
+  "uid": "timps-memory-health",
+  "version": 1,
+  "description": "Memory growth, contradiction rate, and layer distribution per org",
+  "schemaVersion": 39,
+  "tags": ["timps", "memory"],
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      { "name": "org", "type": "query", "query": "label_values(timps_store_count_total, org_id)", "refresh": 1 },
+      { "name": "layer", "type": "query", "query": "label_values(timps_recall_latency_count, layer)", "refresh": 1 }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Total Memories by Layer",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum(timps_store_count_total{org_id=~\"$org\"}) by (layer)",
+        "legendFormat": "{{layer}}",
+        "interval": "60s"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "stacking": { "mode": "normal" } } }
+      }
+    },
+    {
+      "title": "Storage Growth (Bytes)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "timps_memory_storage_size_bytes{org_id=~\"$org\"}",
+        "legendFormat": "{{org_id}}",
+        "interval": "300s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "Contradiction Rate (per 100 stores)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "rate(timps_contradiction_detected_total[5m]) / rate(timps_store_count_total[5m]) * 100",
+        "legendFormat": "contradiction rate",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0 } }
+    },
+    {
+      "title": "Cache Hit Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{
+        "expr": "rate(timps_cache_hit_total[5m]) / (rate(timps_cache_hit_total[5m]) + rate(timps_cache_miss_total[5m]))",
+        "legendFormat": "hit rate",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    }
+  ]
+}

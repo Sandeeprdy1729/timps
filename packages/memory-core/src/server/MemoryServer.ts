@@ -21,6 +21,9 @@ import type { ProjectRoomEvent } from './ProjectRoom';
 import { RateLimiter } from '../rateLimiter';
 import type { RateLimiterConfig } from '../rateLimiter';
 import { createMarketplaceRoutes } from './marketplaceRoutes';
+import { TelemetryManager } from '../telemetry/TelemetryManager';
+import type { TelemetryConfig } from '../telemetry/types';
+import { createTelemetryRoutes } from './telemetryRoutes';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
@@ -49,6 +52,11 @@ export interface MemoryServerOptions {
   serverId?: string;
   /** Org-scoped rate limit config. When set, per-org rate limits are enforced. */
   rateLimiterConfig?: RateLimiterConfig;
+  /**
+   * Telemetry configuration for metrics, traces, and anonymous export.
+   * Default: off (no telemetry collected).
+   */
+  telemetry?: TelemetryConfig;
 }
 
 export class MemoryServer {
@@ -62,6 +70,16 @@ export class MemoryServer {
   private _eventBus: EventBus | null = null;
   private rateLimiter: RateLimiter;
   private projectRooms = new Map<string, ProjectRoom>();
+  private _telemetryManager: TelemetryManager | null = null;
+
+  get rateLimiterInstance(): RateLimiter {
+    return this.rateLimiter;
+  }
+
+  /** The telemetry manager, if configured. */
+  get telemetryManager(): TelemetryManager | null {
+    return this._telemetryManager;
+  }
 
   constructor(options: MemoryServerOptions) {
     this.options = {
@@ -91,6 +109,14 @@ export class MemoryServer {
     }
 
     // 2. Create the canonical MemoryEngine
+    // Inject telemetry config into engine options
+    if (options.telemetry) {
+      this._telemetryManager = new TelemetryManager(options.telemetry);
+      this.options.engineOptions = {
+        ...this.options.engineOptions,
+        telemetry: options.telemetry,
+      };
+    }
     this.engine = new MemoryEngine(this.options.projectPath, this.options.engineOptions);
 
     // 3. Create Express app
@@ -188,8 +214,11 @@ export class MemoryServer {
       next();
     };
 
+    let authMiddleware: ReturnType<typeof createAuthMiddleware> | undefined;
+
     if (this.options.auth) {
       const auth = createAuthMiddleware(this.options.auth);
+      authMiddleware = auth;
       this.app.post('/auth/token', (req, res) => {
         const { userId, orgId, teamId, projectId, secret } = req.body;
         if (!userId || secret !== this.options.auth!.secret) {
@@ -237,10 +266,16 @@ export class MemoryServer {
 
     // ── Marketplace API routes (always open for browsing, auth for submit) ──
     const marketplaceRoutes = createMarketplaceRoutes(this.engine.backend);
-    if (this.options.auth) {
-      this.app.use('/marketplace', auth.middleware, marketplaceRoutes);
+    if (this.options.auth && authMiddleware) {
+      this.app.use('/marketplace', authMiddleware.middleware, marketplaceRoutes);
     } else {
       this.app.use('/marketplace', marketplaceRoutes);
+    }
+
+    // ── Telemetry & Metrics ──
+    if (this._telemetryManager) {
+      const telemetryRoutes = createTelemetryRoutes(this._telemetryManager);
+      this.app.use('/metrics', telemetryRoutes);
     }
 
     // Health check (always open)
@@ -295,6 +330,11 @@ export class MemoryServer {
         } catch {
           checks.cache = false;
         }
+      }
+
+      // Check telemetry if configured
+      if (this._telemetryManager) {
+        checks.telemetry = this._telemetryManager.level;
       }
 
       // Determine overall health
