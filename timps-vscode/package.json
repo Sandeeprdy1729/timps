@@ -247,16 +247,14 @@
     "watch": "tsc -watch -p ./",
     "vscode:prepublish": "npm run compile",
     "package": "vsce package",
-    "test": "jest"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.115.0",
-    "@types/jest": "^29.5.0",
     "@vscode/vsce": "^2.32.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.6"
   },
   "overrides": {
     "tmp": "0.2.6"

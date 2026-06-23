@@ -1,6 +1,8 @@
+import { describe, it, expect } from 'vitest';
+
 describe('timps-mcp bootstrap', () => {
-  it('loads without crashing', () => {
-    expect(() => require('../src/index')).not.toThrow();
+  it('loads without crashing', async () => {
+    await expect(() => import('../src/index')).not.toThrow();
   });
 });
 

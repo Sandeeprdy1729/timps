@@ -198,13 +198,13 @@ Settings are stored in browser **localStorage** and can be configured via the we
 # Database
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DATABASE=sandeep_ai
+POSTGRES_DATABASE=timps
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=yourpassword
 
 # Vector Search (optional)
 QDRANT_URL=http://localhost:6333
-QDRANT_COLLECTION=sandeep_ai_memories
+QDRANT_COLLECTION=timps_memories
 
 # LLM
 OLLAMA_API_URL=http://localhost:11434

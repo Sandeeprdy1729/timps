@@ -1,6 +1,6 @@
 import * as path from 'node:path';
-import { MemoryEngine } from '@timps/memory-core';
-import type { MemoryEngineOptions } from '@timps/memory-core';
+import { MemoryEngine, MemoryClient } from '@timps/memory-core';
+import type { MemoryEngineOptions, MemoryClientOptions } from '@timps/memory-core';
 import type { MemoryEntry, WorkingMemory } from './types.js';
 import { generateId } from '../utils/utils.js';
 import { getMemoryDir } from '../config/config.js';
@@ -19,10 +19,22 @@ import { TeamMemory } from './teamMemory.js';
 import { SessionBridge } from './sessionBridge.js';
 import { SessionIngestionPipeline } from './sessionIngestion.js';
 
+export interface MemoryOptions extends MemoryEngineOptions {
+  /** Remote MemoryServer URL. When set, MemoryClient is used instead of local MemoryEngine. */
+  remoteUrl?: string;
+  /** Auth token for remote MemoryServer. */
+  remoteToken?: string;
+  /** Options for the MemoryClient when using remote mode. */
+  clientOptions?: Omit<MemoryClientOptions, 'baseUrl' | 'token'>;
+}
+
 export class Memory {
   /** The canonical memory engine — single source of truth for all storage/retrieval. */
-  readonly engine: MemoryEngine;
+  readonly engine: MemoryEngine | null;
+  /** The MemoryClient used when in remote mode. */
+  readonly client: MemoryClient | null;
   private dir: string;
+  private remoteMode: boolean;
 
   // CLI-specific sub-modules
   private _graph?: KnowledgeGraphStore;
@@ -40,9 +52,23 @@ export class Memory {
 
   private _turnCount = 0;
 
-  constructor(projectPath: string, options?: MemoryEngineOptions) {
+  constructor(projectPath: string, options?: MemoryOptions) {
     this.dir = getMemoryDir(projectPath);
-    this.engine = new MemoryEngine(projectPath, { ...options, dir: this.dir });
+    this.remoteMode = !!options?.remoteUrl;
+
+    if (this.remoteMode && options?.remoteUrl) {
+      // Remote mode: use MemoryClient, no local MemoryEngine
+      this.engine = null;
+      this.client = new MemoryClient({
+        baseUrl: options.remoteUrl,
+        token: options.remoteToken,
+        ...options.clientOptions,
+      });
+    } else {
+      // Local mode: use MemoryEngine directly
+      this.engine = new MemoryEngine(projectPath, options as MemoryEngineOptions);
+      this.client = null;
+    }
   }
 
   // ── CLI sub-module accessors (unique features not in memory-core) ──
@@ -84,61 +110,69 @@ export class Memory {
     return (this._sessionIngestion ??= new SessionIngestionPipeline(this));
   }
 
+  private get _engine(): MemoryEngine {
+    if (!this.engine) {
+      throw new Error('Local MemoryEngine not available in remote mode. Use client.* methods instead.');
+    }
+    return this.engine;
+  }
+
   // ── Intelligence tools (delegated to MemoryEngine) ──
-  get contradiction() { return this.engine.contradiction; }
-  get burnoutSeismograph() { return this.engine.burnoutSeismograph; }
-  get regretOracle() { return this.engine.regretOracle; }
-  get techDebt() { return this.engine.techDebt; }
-  get bugPattern() { return this.engine.bugPattern; }
-  get apiArchaeologist() { return this.engine.apiArchaeologist; }
-  get velocityTracker() { return this.engine.velocityTracker; }
-  get architectureDrift() { return this.engine.architectureDrift; }
-  get patternLearner() { return this.engine.patternLearner; }
-  get falseMemoryDetector() { return this.engine.falseMemoryDetector; }
-  get sourceAttributor() { return this.engine.sourceAttributor; }
-  get conflictResolver() { return this.engine.conflictResolver; }
-  get memoryAuditor() { return this.engine.memoryAuditor; }
-  get schemaInferrer() { return this.engine.schemaInferrer; }
-  get meetingGhost() { return this.engine.meetingGhost; }
-  get deadReckoning() { return this.engine.deadReckoning; }
-  get livingManifesto() { return this.engine.livingManifesto; }
-  get relationshipIntelligence() { return this.engine.relationship; }
-  get skillShadow() { return this.engine.skillShadow; }
-  get curriculumArchitect() { return this.engine.curriculum; }
-  get codebaseAnthropologist() { return this.engine.codebaseAnthropologist; }
-  get institutionalMemory() { return this.engine.institutionalMemory; }
+  get contradiction() { return this._engine.contradiction; }
+  get burnoutSeismograph() { return this._engine.burnoutSeismograph; }
+  get regretOracle() { return this._engine.regretOracle; }
+  get techDebt() { return this._engine.techDebt; }
+  get bugPattern() { return this._engine.bugPattern; }
+  get apiArchaeologist() { return this._engine.apiArchaeologist; }
+  get velocityTracker() { return this._engine.velocityTracker; }
+  get architectureDrift() { return this._engine.architectureDrift; }
+  get patternLearner() { return this._engine.patternLearner; }
+  get falseMemoryDetector() { return this._engine.falseMemoryDetector; }
+  get sourceAttributor() { return this._engine.sourceAttributor; }
+  get conflictResolver() { return this._engine.conflictResolver; }
+  get memoryAuditor() { return this._engine.memoryAuditor; }
+  get schemaInferrer() { return this._engine.schemaInferrer; }
+  get meetingGhost() { return this._engine.meetingGhost; }
+  get deadReckoning() { return this._engine.deadReckoning; }
+  get livingManifesto() { return this._engine.livingManifesto; }
+  get relationshipIntelligence() { return this._engine.relationship; }
+  get skillShadow() { return this._engine.skillShadow; }
+  get curriculumArchitect() { return this._engine.curriculum; }
+  get codebaseAnthropologist() { return this._engine.codebaseAnthropologist; }
+  get institutionalMemory() { return this._engine.institutionalMemory; }
 
   // ── Forge layers (delegated to MemoryEngine) ──
-  get chronosVeil() { return this.engine.chronosForge as any; }
-  get echoVeil() { return this.engine.echoForge; }
-  get sheafWeaver() { return this.engine.harmonicSheafWeaver; }
+  get chronosVeil() { return this._engine.chronosForge as any; }
+  get echoVeil() { return this._engine.echoForge; }
+  get sheafWeaver() { return this._engine.harmonicSheafWeaver; }
   get synapseQuench(): any { return null; }
-  get aetherForge() { return this.engine.aetherForge; }
-  get supraSheaf() { return this.engine.supraSheaf; }
-  get qptw() { return this.engine.qptw; }
-  get titanicForge() { return this.engine.titanicForge; }
-  get qerw() { return this.engine.qerw; }
-  get qisrd() { return this.engine.qisrd; }
-  get eclipseForge() { return this.engine.eclipseForge; }
-  get qitrl() { return this.engine.qitrl; }
-  get engramLog() { return this.engine.engramLog; }
-  get consolidationEngine() { return this.engine.consolidationEngine; }
-  get synapticPruner() { return this.engine.synapticPruner; }
-  get provenanceForge() { return this.engine.provenanceForge; }
-  get spacedRepetitionForge() { return this.engine.spacedRepetitionForge; }
-  get constitutionalGuard() { return this.engine.constitutionalGuard; }
-  get auditForge() { return this.engine.auditForge; }
-  get prospectiveTrigger() { return this.engine.prospectiveTrigger; }
-  get biasRevealer() { return this.engine.biasRevealer; }
-  get contextVector() { return this.engine.contextVector; }
-  get rehearsalEngine() { return this.engine.rehearsalEngine; }
-  get schemaDistorter() { return this.engine.schemaDistorter; }
-  get confidenceCalibrator() { return this.engine.confidenceCalibrator; }
+  get aetherForge() { return this._engine.aetherForge; }
+  get supraSheaf() { return this._engine.supraSheaf; }
+  get qptw() { return this._engine.qptw; }
+  get titanicForge() { return this._engine.titanicForge; }
+  get qerw() { return this._engine.qerw; }
+  get qisrd() { return this._engine.qisrd; }
+  get eclipseForge() { return this._engine.eclipseForge; }
+  get qitrl() { return this._engine.qitrl; }
+  get engramLog() { return this._engine.engramLog; }
+  get consolidationEngine() { return this._engine.consolidationEngine; }
+  get synapticPruner() { return this._engine.synapticPruner; }
+  get provenanceForge() { return this._engine.provenanceForge; }
+  get spacedRepetitionForge() { return this._engine.spacedRepetitionForge; }
+  get constitutionalGuard() { return this._engine.constitutionalGuard; }
+  get auditForge() { return this._engine.auditForge; }
+  get prospectiveTrigger() { return this._engine.prospectiveTrigger; }
+  get biasRevealer() { return this._engine.biasRevealer; }
+  get contextVector() { return this._engine.contextVector; }
+  get rehearsalEngine() { return this._engine.rehearsalEngine; }
+  get schemaDistorter() { return this._engine.schemaDistorter; }
+  get confidenceCalibrator() { return this._engine.confidenceCalibrator; }
 
-  // ── Layer 1: Working Memory (delegated to MemoryEngine) ──
+  // ── Layer 1: Working Memory (delegated to local engine or remote client) ──
 
   get workingMemory(): WorkingMemory {
-    const w = this.engine.workingMemory;
+    if (this.remoteMode) return { currentGoal: '', activeFiles: [], recentErrors: [], discoveredPatterns: [] };
+    const w = this._engine.workingMemory;
     return {
       currentGoal: w.currentGoal,
       activeFiles: [...w.activeFiles],
@@ -147,27 +181,53 @@ export class Memory {
     };
   }
 
-  setGoal(goal: string) { this.engine.setGoal(goal); }
-  trackFile(filePath: string) { this.engine.trackFile(filePath); }
-  trackError(error: string) { this.engine.trackError(error); }
-  trackPattern(pattern: string) { this.engine.trackPattern(pattern); }
-  clearWorking() { this.engine.clearWorking(); }
+  setGoal(goal: string) {
+    if (this.remoteMode && this.client) { this.client.setGoal(goal).catch(() => {}); return; }
+    this._engine.setGoal(goal);
+  }
+  trackFile(filePath: string) {
+    if (this.remoteMode && this.client) { this.client.trackFile(filePath).catch(() => {}); return; }
+    this._engine.trackFile(filePath);
+  }
+  trackError(error: string) {
+    if (this.remoteMode && this.client) { this.client.trackError(error).catch(() => {}); return; }
+    this._engine.trackError(error);
+  }
+  trackPattern(pattern: string) {
+    if (this.remoteMode) return;
+    this._engine.trackPattern(pattern);
+  }
+  clearWorking() {
+    if (this.remoteMode && this.client) { this.client.clearWorking().catch(() => {}); return; }
+    this._engine.clearWorking();
+  }
 
   trackToolUsage(tool: string): void {
     this._turnCount++;
   }
 
-  // ── Layer 2: Episodic Memory (delegated to MemoryEngine) ──
+  // ── Layer 2: Episodic Memory ──
 
   storeEpisode(episode: any): void {
-    this.engine.storeEpisode({
-      summary: episode.summary || '',
-      outcome: episode.outcome || 'unknown',
-      timestamp: episode.timestamp || Date.now(),
-      durationMs: episode.durationMs,
-      errorCount: episode.errorsEncountered,
-      tags: episode.taskType ? [episode.taskType] : undefined,
-    });
+    if (this.remoteMode && this.client) {
+      this.client.storeEpisode({
+        summary: episode.summary || '',
+        outcome: episode.outcome || 'unknown',
+        timestamp: episode.timestamp || Date.now(),
+        durationMs: episode.durationMs,
+        errorCount: episode.errorsEncountered,
+        tags: episode.taskType ? [episode.taskType] : undefined,
+      }).catch(() => {});
+    } else {
+      this._engine.storeEpisode({
+        summary: episode.summary || '',
+        outcome: episode.outcome || 'unknown',
+        timestamp: episode.timestamp || Date.now(),
+        durationMs: episode.durationMs,
+        errorCount: episode.errorsEncountered,
+        tags: episode.taskType ? [episode.taskType] : undefined,
+      });
+    }
     const files = episode.filesChanged || [];
     const taskType = episode.taskType || 'general';
     if (episode.summary) {
@@ -175,22 +235,30 @@ export class Memory {
     }
   }
 
-  loadEpisodes(count = 10) { return this.engine.loadEpisodes(count); }
-
-  get episodeCount(): number {
-    return this.engine.getStats().episodeCount;
+  loadEpisodes(count = 10) {
+    if (this.remoteMode) return [];
+    return this._engine.loadEpisodes(count);
   }
 
-  // ── Layer 3: Semantic Memory (delegated to MemoryEngine) ──
+  get episodeCount(): number {
+    return this.remoteMode ? 0 : this._engine.getStats().episodeCount;
+  }
+
+  // ── Layer 3: Semantic Memory ──
 
   storeFact(content: string, type: string = 'fact', tags: string[] = []): void {
-    this.engine.store({ content, type: type as any, tags });
+    if (this.remoteMode && this.client) {
+      this.client.store({ content, type, tags }).catch(() => {});
+    } else {
+      this._engine.store({ content, type: type as any, tags });
+    }
     this.graph.extractFromMemoryEntry({ id: '', timestamp: Date.now(), type: type as any, content, tags });
   }
 
   searchFacts(query: string, limit = 5): MemoryEntry[] {
     this._turnCount++;
-    const results = this.engine.recall(query, { limit, useIntelligence: true });
+    if (this.remoteMode) return [];
+    const results = this._engine.recall(query, { limit, useIntelligence: true });
     return results.map(r => ({
       id: r.id,
       timestamp: r.timestamp,
@@ -210,10 +278,12 @@ export class Memory {
   }
 
   getContextString(task = ''): string {
-    return this.engine.getContextString(task);
+    if (this.remoteMode) return '';
+    return this._engine.getContextString(task);
   }
 
   getContextCompressed(task = '', tokenBudget = 2000): string {
+    if (this.remoteMode) return '[Memory] Remote mode — no local context';
     this.compressor.setBudget(tokenBudget);
     const rawEpisodes = this.loadEpisodes(10);
     const episodes: any[] = rawEpisodes.map(e => ({
@@ -234,7 +304,8 @@ export class Memory {
   }
 
   getStats() {
-    const base = this.engine.getStats();
+    if (this.remoteMode) return { semanticCount: 0, episodeCount: 0, workingFiles: 0, workingPatterns: 0, proceduralCount: 0, graphNodes: 0, graphEdges: 0 };
+    const base = this._engine.getStats();
     const graphStats = this.graph.getStats();
     return {
       ...base,
@@ -246,7 +317,11 @@ export class Memory {
   get stats() { return this.getStats(); }
 
   extractFacts(userMessage: string, assistantResponse: string): void {
-    this.engine.extractFacts(userMessage, assistantResponse);
+    if (this.remoteMode && this.client) {
+      this.client.extractFacts(userMessage, assistantResponse).catch(() => {});
+      return;
+    }
+    this._engine.extractFacts(userMessage, assistantResponse);
   }
 
   extractEntities(userMessage: string, assistantResponse: string): void {
@@ -262,40 +337,45 @@ export class Memory {
     return this.graph.query(question).answer;
   }
 
-  // ── Export / Import / Consolidate (delegated to MemoryEngine) ──
+  // ── Export / Import / Consolidate ──
 
   clearAll(): void {
-    this.engine.clearWorking();
+    if (this.remoteMode && this.client) { this.client.clearWorking().catch(() => {}); return; }
+    this._engine.clearWorking();
   }
 
   exportMemory(): string {
-    return JSON.stringify({ semantic: this.loadSemanticEntries(), working: this.engine.workingMemory });
+    if (this.remoteMode) return '{}';
+    return JSON.stringify({ semantic: this.loadSemanticEntries(), working: this._engine.workingMemory });
   }
 
   importMemory(data: string): number {
     try {
       const parsed = JSON.parse(data);
+      if (this.remoteMode) return 0;
       for (const entry of (parsed.semantic || [])) {
-        this.engine.store({ content: entry.content, type: entry.type, tags: entry.tags || [] });
+        this._engine.store({ content: entry.content, type: entry.type, tags: entry.tags || [] });
       }
       return (parsed.semantic || []).length;
     } catch { return 0; }
   }
 
   consolidate(): number {
-    return this.engine.consolidate();
+    if (this.remoteMode) return 0;
+    return this._engine.consolidate();
   }
 
   loadSemanticEntries(): MemoryEntry[] {
     return this.searchFacts('', 500);
   }
 
-  // ── Decay compatibility getter (thin wrapper over engine operations) ──
+  // ── Decay compatibility getter ──
 
   get decay(): { getStats(): { activeCount: number; archivedCount: number; avgImportance: number } } {
     return {
       getStats: () => {
-        const stats = this.engine.getStats();
+        if (this.remoteMode) return { activeCount: 0, archivedCount: 0, avgImportance: 0 };
+        const stats = this._engine.getStats();
         return {
           activeCount: stats.semanticCount,
           archivedCount: 0,
@@ -312,8 +392,9 @@ export class Memory {
   }
 
   applyDecay(): void {
-    this.engine.consolidate();
-    this.engine.synapticPruner.sweep();
+    if (this.remoteMode) return;
+    this._engine.consolidate();
+    this._engine.synapticPruner.sweep();
   }
 
   getBeliefsTimeline(entryId: string): string | null {
@@ -325,7 +406,8 @@ export class Memory {
   }
 
   predictNext(goal: string) {
-    return this.prefetcher.prefetch(goal, this.engine.workingMemory.activeFiles);
+    if (this.remoteMode) return null;
+    return this.prefetcher.prefetch(goal, this._engine.workingMemory.activeFiles);
   }
 
   getAffectiveState() {
@@ -333,9 +415,10 @@ export class Memory {
   }
 
   runSelfAudit(errors?: string[], corrections?: string[]): void {
+    if (this.remoteMode) return;
     const { auditResult, newFacts } = this.reflector.sessionEndAudit(
-      this.engine.workingMemory.currentGoal || '',
-      errors || this.engine.workingMemory.recentErrors,
+      this._engine.workingMemory.currentGoal || '',
+      errors || this._engine.workingMemory.recentErrors,
       corrections || []
     );
     for (const fact of newFacts) {
@@ -352,12 +435,14 @@ export class Memory {
   }
 
   getChronosContext(domain?: string, limit = 4): string {
-    return this.engine.chronosForge.getContextString(domain as any, limit);
+    if (this.remoteMode) return '';
+    return this._engine.chronosForge.getContextString(domain as any, limit);
   }
 
   forecastRisk(domain = 'burnout'): string {
+    if (this.remoteMode) return '';
     try {
-      const events = this.engine.chronosForge.getContextString(domain as any, 30);
+      const events = this._engine.chronosForge.getContextString(domain as any, 30);
       if (!events) return `No ${domain} signals recorded yet.`;
       return `ChronosForge foresight: ${domain} risk based on recent signals.`;
     } catch {

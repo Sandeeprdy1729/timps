@@ -5,7 +5,7 @@ dotenv.config();
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
 import { z } from 'zod';
-import { MemoryEngine } from '@timps/memory-core';
+import { MemoryEngine, MemoryClient } from '@timps/memory-core';
 
 // ── Runtime mode ────────────────────────────────────────────────────────────
 // LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use
@@ -17,6 +17,11 @@ const SERVER_MODE = !!(process.env.TIMPS_URL && process.env.TIMPS_URL !== '' && 
 const TIMPS_URL = process.env.TIMPS_URL || 'http://localhost:3000';
 const TIMPS_USER_ID = parseInt(process.env.TIMPS_USER_ID || '1', 10);
 const PROJECT_PATH = process.env.TIMPS_PROJECT_PATH || process.cwd();
+
+// MemoryClient for canonical MemoryServer (used when TIMPS_MEMORY_URL is set)
+const memoryClient = SERVER_MODE && process.env.TIMPS_MEMORY_URL
+  ? new MemoryClient({ baseUrl: process.env.TIMPS_MEMORY_URL })
+  : null;
 
 // Local memory engine (used in LOCAL mode)
 const localEngine = new MemoryEngine(PROJECT_PATH);
@@ -78,6 +83,20 @@ async function main() {
       }
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
     }
+    if (memoryClient) {
+      const memFacts = await memoryClient.recall('', { limit: 10 });
+      const working = await memoryClient.getWorkingMemory();
+      if (!memFacts.length && !working.currentGoal) {
+        return { content: [{ type: 'text' as const, text: 'No memories stored yet.' }] };
+      }
+      const lines: string[] = [];
+      if (working.currentGoal) lines.push(`**Current Goal:** ${working.currentGoal}`);
+      if (memFacts.length) {
+        lines.push(`\n**Memories (${memFacts.length}):**`);
+        memFacts.forEach(f => lines.push(`- [${f.type}] ${f.content}`));
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
     const data = await timpsAPI(`/memory/${TIMPS_USER_ID}`);
     const memories: any[] = data.memories || [];
     const goals: any[] = data.goals || [];
@@ -104,6 +123,10 @@ async function main() {
       localEngine.store({ content, type: 'fact', tags: importance ? [`importance:${importance}`] : [] });
       return { content: [{ type: 'text' as const, text: `✓ Stored: ${content}` }] };
     }
+    if (memoryClient) {
+      await memoryClient.store({ content, type: 'fact', tags: importance ? [`importance:${importance}`] : [] });
+      return { content: [{ type: 'text' as const, text: `✓ Stored: ${content}` }] };
+    }
     await chat(`Remember this (importance ${importance || 3}/5): ${content}`);
     return { content: [{ type: 'text' as const, text: `✓ Stored: ${content}` }] };
   });
@@ -118,6 +141,16 @@ async function main() {
   }, async ({ text }) => {
     if (!SERVER_MODE) {
       const result = localEngine.contradiction.check(text, true);
+      if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
+        const score = Math.round((result.contradiction_score || 0) * 100);
+        const claim = result.matched_position?.extracted_claim || 'a past position';
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
+    }
+    if (memoryClient) {
+      const result = await memoryClient.checkContradiction(text, true);
       if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
         const score = Math.round((result.contradiction_score || 0) * 100);
         const claim = result.matched_position?.extracted_claim || 'a past position';
@@ -208,6 +241,15 @@ async function main() {
       return { content: [{ type: 'text' as const, text:
         `**Burnout Risk: ${r.risk_level.toUpperCase()}** (score: ${r.risk_score}/100)\n\n${r.recommendation}${r.weeks_to_burnout_estimate ? `\n\nEstimated weeks to burnout: ${r.weeks_to_burnout_estimate}` : ''}` }] };
     }
+    if (memoryClient) {
+      const r = await memoryClient.analyzeBurnout();
+      const riskLevel = (r.risk_level ?? r.riskLevel ?? 'unknown').toString().toUpperCase();
+      const riskScore = r.risk_score ?? r.riskScore ?? 0;
+      const rec = r.recommendation ?? '';
+      const wbe = r.weeks_to_burnout_estimate ?? r.weeksToBurnout;
+      return { content: [{ type: 'text' as const, text:
+        `**Burnout Risk: ${riskLevel}** (score: ${riskScore}/100)\n\n${rec}${wbe ? `\n\nEstimated weeks to burnout: ${wbe}` : ''}` }] };
+    }
     return { content: [{ type: 'text' as const, text: await chat('Burnout Seismograph: analyze my current risk vs personal baseline.') }] };
   });
 
@@ -239,6 +281,18 @@ async function main() {
           `⚠️ BUG RISK: ${r.risk_level.toUpperCase()}\n\nLikely bugs: ${r.likely_bug_types.join(', ')}\n${r.suggestion}` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ ${r.reason}` }] };
+    }
+    if (memoryClient) {
+      const r = await memoryClient.checkBugPattern(context);
+      const alert = (r as any).alert ?? false;
+      if (alert) {
+        const riskLevel = ((r as any).risk_level ?? 'high').toString().toUpperCase();
+        const bugTypes = (r as any).likely_bug_types ?? [];
+        const suggestion = (r as any).suggestion ?? '';
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ BUG RISK: ${riskLevel}\n\nLikely bugs: ${bugTypes.join(', ')}\n${suggestion}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ ${(r as any).reason || 'No bug pattern detected'}` }] };
     }
     return { content: [{ type: 'text' as const, text: await chat(`Bug Pattern Prophet: check my triggers for: ${context}`) }] };
   });
@@ -274,6 +328,16 @@ async function main() {
           `⚠️ TECH DEBT RISK: ${r.risk_level.toUpperCase()}\n\n${r.message}` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ ${r.message}` }] };
+    }
+    if (memoryClient) {
+      const r = await memoryClient.checkTechDebt(pattern, project_id);
+      const warning = (r as any).warning ?? false;
+      if (warning) {
+        const riskLevel = ((r as any).risk_level ?? 'medium').toString().toUpperCase();
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ TECH DEBT RISK: ${riskLevel}\n\n${(r as any).message || ''}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ ${(r as any).message || 'No tech debt detected'}` }] };
     }
     return { content: [{ type: 'text' as const, text: await chat(`Tech Debt Seismograph for ${project_id || 'default'}: "${pattern}"`) }] };
   });
@@ -774,6 +838,19 @@ async function main() {
       });
       return { content: [{ type: 'text' as const, text: `**Session history (last ${days_back || 7} days):**\n${lines.join('\n')}` }] };
     }
+    if (memoryClient) {
+      const limit = (days_back || 7) * 5;
+      const episodes = await memoryClient.loadEpisodes(limit);
+      if (!episodes.length) return { content: [{ type: 'text' as const, text: 'No session history yet.' }] };
+      const cutoff = Date.now() - (days_back || 7) * 86400_000;
+      const recent = episodes.filter(e => new Date(e.timestamp).getTime() >= cutoff);
+      if (!recent.length) return { content: [{ type: 'text' as const, text: `No sessions in the last ${days_back || 7} days.` }] };
+      const lines = recent.slice(0, 20).map(e => {
+        const d = new Date(e.timestamp).toLocaleDateString();
+        return `- [${d}] [${e.outcome}] ${e.summary.slice(0, 100)}`;
+      });
+      return { content: [{ type: 'text' as const, text: `**Session history (last ${days_back || 7} days):**\n${lines.join('\n')}` }] };
+    }
     return { content: [{ type: 'text' as const, text: await chat(`What was I working on in the last ${days_back || 7} days? Summarize my session history.`) }] };
   });
 
@@ -786,6 +863,13 @@ async function main() {
     if (!SERVER_MODE) {
       const query = topic ? `architecture decision ${topic}` : 'architecture decision design pattern';
       const results = localEngine.recall(query, { limit: 10 });
+      if (!results.length) return { content: [{ type: 'text' as const, text: 'No architecture decisions recorded yet. Use timps_store_memory to save decisions.' }] };
+      const lines = results.map(r => `- ${r.content}`);
+      return { content: [{ type: 'text' as const, text: `**Architecture decisions${topic ? ` (${topic})` : ''}:**\n${lines.join('\n')}` }] };
+    }
+    if (memoryClient) {
+      const query = topic ? `architecture decision ${topic}` : 'architecture decision design pattern';
+      const results = await memoryClient.recall(query, { limit: 10 });
       if (!results.length) return { content: [{ type: 'text' as const, text: 'No architecture decisions recorded yet. Use timps_store_memory to save decisions.' }] };
       const lines = results.map(r => `- ${r.content}`);
       return { content: [{ type: 'text' as const, text: `**Architecture decisions${topic ? ` (${topic})` : ''}:**\n${lines.join('\n')}` }] };
@@ -874,6 +958,17 @@ async function main() {
       }
       return { content: [{ type: 'text' as const, text: `✓ No drift. Codebase matches ${r.alignedWith.length} known patterns.` }] };
     }
+    if (memoryClient) {
+      const r = await memoryClient.detectArchitectureDrift(current_patterns, project_id);
+      const hasDrift = (r as any).hasDrift ?? false;
+      if (hasDrift) {
+        const driftedAreas = (r as any).driftedAreas ?? [];
+        const drifts = driftedAreas.map((area: string) => `  • ${area}`).join('\n');
+        return { content: [{ type: 'text' as const, text: `⚠️ ARCHITECTURE DRIFT DETECTED\n\n${drifts}\n\n${(r as any).explanation || ''}` }] };
+      }
+      const aligned = (r as any).alignedWith ?? [];
+      return { content: [{ type: 'text' as const, text: `✓ No drift. Codebase matches ${aligned.length} known patterns.` }] };
+    }
     return { content: [{ type: 'text' as const, text: await chat(`Detect architecture drift. Current patterns: ${current_patterns.join(', ')}`) }] };
   });
 
@@ -899,6 +994,25 @@ async function main() {
       if (debtCheck.warning) {
         lines.push(`\n⚠️ TECH DEBT RISK: ${debtCheck.risk_level.toUpperCase()}`);
         lines.push(debtCheck.message);
+      }
+      if (!lines.length) return { content: [{ type: 'text' as const, text: `✓ Low risk. No matching patterns in personal incident history.` }] };
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    if (memoryClient) {
+      const context = [change_description, ...(files_affected || [])].join(' ');
+      const bugWarn = await memoryClient.checkBugPattern(context);
+      const debtCheck = await memoryClient.checkTechDebt(change_description, 'default');
+      const lines: string[] = [];
+      const bugAlert = (bugWarn as any).alert ?? false;
+      if (bugAlert) {
+        lines.push(`⚠️ BUG RISK: ${((bugWarn as any).risk_level ?? 'high').toString().toUpperCase()}`);
+        lines.push(`Likely bugs: ${((bugWarn as any).likely_bug_types ?? []).join(', ')}`);
+        lines.push((bugWarn as any).suggestion ?? '');
+      }
+      const debtWarning = (debtCheck as any).warning ?? false;
+      if (debtWarning) {
+        lines.push(`\n⚠️ TECH DEBT RISK: ${((debtCheck as any).risk_level ?? 'medium').toString().toUpperCase()}`);
+        lines.push((debtCheck as any).message ?? '');
       }
       if (!lines.length) return { content: [{ type: 'text' as const, text: `✓ Low risk. No matching patterns in personal incident history.` }] };
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
@@ -937,6 +1051,14 @@ async function main() {
       const r = localEngine.techDebt.checkPattern(pattern, 'default');
       if (r.warning) {
         return { content: [{ type: 'text' as const, text: `⚠️ DEPLOYMENT RISK: ${r.risk_level.toUpperCase()}\n\n${r.message}` }] };
+      }
+      return { content: [{ type: 'text' as const, text: `✓ No past incidents with this deployment pattern.` }] };
+    }
+    if (memoryClient) {
+      const r = await memoryClient.checkTechDebt(pattern, 'default');
+      const warning = (r as any).warning ?? false;
+      if (warning) {
+        return { content: [{ type: 'text' as const, text: `⚠️ DEPLOYMENT RISK: ${((r as any).risk_level ?? 'medium').toString().toUpperCase()}\n\n${(r as any).message || ''}` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ No past incidents with this deployment pattern.` }] };
     }
@@ -1024,6 +1146,17 @@ async function main() {
         archInsights.insights.slice(0, 5).forEach(i =>
           lines.push(`- [${i.insight_type}] ${i.description.slice(0, 100)}`)
         );
+      }
+      if (!lines.length) return { content: [{ type: 'text' as const, text: 'No shared decisions yet. Use timps_store_memory with type "decision" to record team decisions.' }] };
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
+    if (memoryClient) {
+      const query = topic ? `team decision ${topic}` : 'team architecture decision';
+      const results = await memoryClient.recall(query, { limit: 10 });
+      const lines: string[] = [];
+      if (results.length) {
+        lines.push('**Decisions:**');
+        results.forEach(r => lines.push(`- ${r.content}`));
       }
       if (!lines.length) return { content: [{ type: 'text' as const, text: 'No shared decisions yet. Use timps_store_memory with type "decision" to record team decisions.' }] };
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };

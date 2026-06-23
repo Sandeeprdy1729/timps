@@ -1,20 +1,15 @@
-// ── PluginManager unit tests ──
-// Uses Jest (ts-jest) — matching timps-code's existing test setup.
-
 import { PluginManager } from './pluginManager';
 import type { Plugin } from '@timps/plugin-sdk';
-
-// ── Minimal mock Memory ───────────────────────────────────────────────────────
 
 function makeMockMemory() {
   const semanticEntries: any[] = [];
   const episodes: any[] = [];
 
   return {
-    loadSemanticEntries: jest.fn(() => [...semanticEntries]),
-    importMemory: jest.fn(),
-    loadEpisodes: jest.fn(() => [...episodes]),
-    storeEpisode: jest.fn(),
+    loadSemanticEntries: vi.fn(() => [...semanticEntries]),
+    importMemory: vi.fn(),
+    loadEpisodes: vi.fn(() => [...episodes]),
+    storeEpisode: vi.fn(),
   } as any;
 }
 
@@ -60,7 +55,7 @@ describe('PluginManager', () => {
 
   beforeEach(() => {
     memory = makeMockMemory();
-    pm = new PluginManager(memory, '/proj', jest.fn());
+    pm = new PluginManager(memory, '/proj', vi.fn());
   });
 
   // ── registerDirect / listPlugins ──────────────────────────────────────────
@@ -149,7 +144,7 @@ describe('PluginManager', () => {
 
   it('calls setup when loading a plugin via registerDirect (skipped — setup called by load())', () => {
     // setup is only called by load(), not registerDirect()
-    const setup = jest.fn();
+    const setup = vi.fn();
     const plugin: Plugin = {
       manifest: { name: 'lifecycle-plugin', version: '0.1.0', description: 'test' },
       setup: async () => { setup(); },
@@ -159,7 +154,7 @@ describe('PluginManager', () => {
   });
 
   it('calls teardown when unloading a plugin', async () => {
-    const teardown = jest.fn();
+    const teardown = vi.fn();
     const plugin: Plugin = {
       manifest: { name: 'teardown-plugin', version: '0.1.0', description: 'test' },
       teardown: async () => { teardown(); },

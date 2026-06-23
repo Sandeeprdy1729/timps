@@ -28,9 +28,9 @@ export function validate(data: Record<string, any>, schema: ValidationSchema): V
         errors.push({ field, message: rule.message || `${field} must be at least ${rule.value} characters` });
       } else if (rule.type === 'max' && typeof value === 'string' && value.length > rule.value) {
         errors.push({ field, message: rule.message || `${field} must be at most ${rule.value} characters` });
-      } else if (rule.type === 'email' && value && !isValidEmail(value)) {
+      } else if (rule.type === 'email' && value && !isValidEmailImpl(value)) {
         errors.push({ field, message: rule.message || `${field} must be a valid email` });
-      } else if (rule.type === 'url' && value && !isValidUrl(value)) {
+      } else if (rule.type === 'url' && value && !isValidUrlImpl(value)) {
         errors.push({ field, message: rule.message || `${field} must be a valid URL` });
       } else if (rule.type === 'pattern' && rule.value && !new RegExp(rule.value).test(value)) {
         errors.push({ field, message: rule.message || `${field} has invalid format` });
@@ -43,11 +43,11 @@ export function validate(data: Record<string, any>, schema: ValidationSchema): V
   return errors;
 }
 
-function isValidEmail(email: string): boolean {
+function isValidEmailImpl(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function isValidUrl(url: string): boolean {
+function isValidUrlImpl(url: string): boolean {
   try {
     new URL(url);
     return true;
@@ -57,11 +57,11 @@ function isValidUrl(url: string): boolean {
 }
 
 export function isValidEmail(email: string): boolean {
-  return isValidEmail(email);
+  return isValidEmailImpl(email);
 }
 
 export function isValidUrl(url: string): boolean {
-  return isValidUrl(url);
+  return isValidUrlImpl(url);
 }
 
 export function isValidPhone(phone: string): boolean {
@@ -738,7 +738,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)} ${sizes[i]}`;
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
 }
 
 export function formatDuration(ms: number): string {

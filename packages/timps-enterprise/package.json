@@ -9,7 +9,7 @@
     "dev": "tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "NODE_ENV=test TIMPS_JWT_SECRET=test-secret tsx test/auth.test.ts && tsx test/teamMemory.test.ts && tsx test/server.test.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -26,13 +26,11 @@
     "@types/cors": "^2.8.17",
     "@types/uuid": "^9.0.7",
     "@types/node": "^22.0.0",
-    "@types/jest": "^29.5.0",
     "@types/supertest": "^6.0.0",
-    "jest": "^29.7.0",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.2.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^3.2.6"
   },
   "engines": { "node": ">=18" },
   "author": "TIMPS Contributors",

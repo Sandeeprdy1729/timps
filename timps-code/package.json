@@ -16,7 +16,7 @@
     "build": "tsc",
     "dev": "tsx src/bin/timps.ts",
     "start": "node dist/bin/timps.js",
-    "test": "jest --config jest.config.cjs",
+    "test": "vitest run",
     "prepublishOnly": "npm run build",
     "clean": "rm -rf dist"
   },
@@ -72,12 +72,10 @@
   },
   "devDependencies": {
     "@types/diff": "^5.2.0",
-    "@types/jest": "^30.0.0",
     "@types/node": "^22.0.0",
-    "jest": "^30.3.0",
-    "ts-jest": "^29.4.11",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.6"
   },
   "engines": {
     "node": ">=18.0.0"
