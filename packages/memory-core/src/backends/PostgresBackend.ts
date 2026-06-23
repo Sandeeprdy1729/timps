@@ -1,34 +1,40 @@
 // ── @timps/memory-core — PostgresBackend ──
-// Async StorageBackend backed by PostgreSQL.
+// Async StorageBackend backed by PostgreSQL with read/write splitting.
+// Writes → primary, reads → replicas (round-robin).
 // Requires `pg` package: `npm install pg @types/pg`
 //
 // Usage:
-//   const backend = new PostgresBackend({ connectionString: 'postgresql://...' });
+//   const backend = new PostgresBackend({
+//     primary: 'postgresql://user:pass@primary:5432/memory',
+//     replicas: ['postgresql://user:pass@replica1:5432/memory',
+//                'postgresql://user:pass@replica2:5432/memory'],
+//   });
 //   const engine = new MemoryEngine('/tmp/mem', { backend });
 
 import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction } from './types.js';
 
 export interface PostgresBackendOptions {
-  connectionString: string;
+  /** Primary connection string for writes (required). */
+  primary: string;
+  /** Replica connection strings for reads (optional). Round-robin if multiple. */
+  replicas?: string[];
   schema?: string;
   tableName?: string;
 }
 
-/**
- * Postgres-backed storage.
- * Stores all values as JSONB in a single key/value table.
- * Uses SERIALIZABLE transactions for atomic multi-key writes.
- */
 export class PostgresBackend implements StorageBackend {
-  private options: PostgresBackendOptions;
-  private pool: any = null;
+  private options: { primary: string; replicas: string[]; schema: string; tableName: string };
+  private primaryPool: any = null;
+  private replicaPools: any[] = [];
+  private replicaIndex = 0;
   private ready: Promise<void>;
 
   constructor(options: PostgresBackendOptions) {
     this.options = {
-      schema: 'timps',
-      tableName: 'memory_store',
-      ...options,
+      primary: options.primary,
+      replicas: options.replicas ?? [],
+      schema: options.schema ?? 'timps',
+      tableName: options.tableName ?? 'memory_store',
     };
     this.ready = this._connect();
   }
@@ -36,7 +42,10 @@ export class PostgresBackend implements StorageBackend {
   private async _connect(): Promise<void> {
     try {
       const { Pool } = await import('pg');
-      this.pool = new Pool({ connectionString: this.options.connectionString });
+      this.primaryPool = new Pool({ connectionString: this.options.primary });
+      for (const connStr of this.options.replicas) {
+        this.replicaPools.push(new Pool({ connectionString: connStr }));
+      }
       await this._ensureSchema();
     } catch (e) {
       throw new Error(
@@ -47,7 +56,7 @@ export class PostgresBackend implements StorageBackend {
 
   private async _ensureSchema(): Promise<void> {
     const { schema, tableName } = this.options;
-    await this.pool.query(`
+    await this.primaryPool.query(`
       CREATE SCHEMA IF NOT EXISTS "${schema}";
       CREATE TABLE IF NOT EXISTS "${schema}"."${tableName}" (
         key TEXT PRIMARY KEY,
@@ -61,10 +70,18 @@ export class PostgresBackend implements StorageBackend {
     await this.ready;
   }
 
+  /** Get the pool for read operations — round-robin across replicas, fallback to primary. */
+  private _readPool(): any {
+    if (this.replicaPools.length === 0) return this.primaryPool;
+    const pool = this.replicaPools[this.replicaIndex % this.replicaPools.length];
+    this.replicaIndex++;
+    return pool;
+  }
+
   async read(key: string): Promise<any> {
     await this._assertReady();
     const { schema, tableName } = this.options;
-    const res = await this.pool.query(
+    const res = await this._readPool().query(
       `SELECT value FROM "${schema}"."${tableName}" WHERE key = $1`,
       [key]
     );
@@ -74,7 +91,7 @@ export class PostgresBackend implements StorageBackend {
   async write(key: string, value: any): Promise<void> {
     await this._assertReady();
     const { schema, tableName } = this.options;
-    await this.pool.query(
+    await this.primaryPool.query(
       `INSERT INTO "${schema}"."${tableName}" (key, value, updated_at)
        VALUES ($1, $2::jsonb, NOW())
        ON CONFLICT (key) DO UPDATE SET value = $2::jsonb, updated_at = NOW()`,
@@ -85,7 +102,7 @@ export class PostgresBackend implements StorageBackend {
   async delete(key: string): Promise<void> {
     await this._assertReady();
     const { schema, tableName } = this.options;
-    await this.pool.query(
+    await this.primaryPool.query(
       `DELETE FROM "${schema}"."${tableName}" WHERE key = $1`,
       [key]
     );
@@ -101,7 +118,7 @@ export class PostgresBackend implements StorageBackend {
       params.push(prefix);
     }
     query += ` ORDER BY key`;
-    const res = await this.pool.query(query, params);
+    const res = await this._readPool().query(query, params);
     return res.rows.map((r: any) => r.key);
   }
 
@@ -122,7 +139,7 @@ export class PostgresBackend implements StorageBackend {
     if (conditions.length > 0) query += ` WHERE ${conditions.join(' AND ')}`;
     query += ` ORDER BY key`;
 
-    const res = await this.pool.query(query, params);
+    const res = await this._readPool().query(query, params);
     let results: StorageRecord[] = res.rows.map((r: any) => ({ key: r.key, value: r.value }));
 
     if (filter.timestampMin !== undefined) {
@@ -143,7 +160,7 @@ export class PostgresBackend implements StorageBackend {
   async exists(key: string): Promise<boolean> {
     await this._assertReady();
     const { schema, tableName } = this.options;
-    const res = await this.pool.query(
+    const res = await this._readPool().query(
       `SELECT 1 FROM "${schema}"."${tableName}" WHERE key = $1 LIMIT 1`,
       [key]
     );
@@ -159,9 +176,30 @@ export class PostgresBackend implements StorageBackend {
     return new PostgresTransaction(this);
   }
 
-  /** Close the connection pool. */
+  /** Close all connection pools. */
   async close(): Promise<void> {
-    if (this.pool) await this.pool.end();
+    if (this.primaryPool) await this.primaryPool.end();
+    for (const pool of this.replicaPools) {
+      await pool.end();
+    }
+  }
+
+  /** Health check — ping primary and one replica. */
+  async health(): Promise<{ primary: boolean; replicas: boolean }> {
+    try {
+      await this.primaryPool.query('SELECT 1');
+      let replicasOk = true;
+      if (this.replicaPools.length > 0) {
+        try {
+          await this.replicaPools[0].query('SELECT 1');
+        } catch {
+          replicasOk = false;
+        }
+      }
+      return { primary: true, replicas: replicasOk };
+    } catch {
+      return { primary: false, replicas: false };
+    }
   }
 }
 

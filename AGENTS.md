@@ -155,3 +155,43 @@ To add a new migration:
 - `test-coverage.yml` matrix includes `config`, `integration-base` packages that no longer exist. Drop them from the matrix if they're removed from the workspace.
 - `supply-chain-audit.yml` uses `google/osv-scanner-action@v1.0.2` (old). Update to `v2.3.8` if the action fails.
 - `packages/server` `check` script is `tsc` but TypeScript isn't installed as a devDependency — it's hoisted from the root. CI may fail on strict isolated environments unless `typescript` is added to its devDependencies.
+
+## Phase 2c — Horizontal Scaling (June 2026)
+
+New files in `packages/memory-core/`:
+
+| File | Purpose |
+|------|---------|
+| `src/events/EventBus.ts` | Redis Pub/Sub with 10 typed channels, auto-skip own messages, async subscribe/unsubscribe |
+| `src/cache/CacheManager.ts` | Redis-backed cache with TTL, get-or-compute `wrap()`, pattern scan invalidation |
+| `src/backends/QdrantBackend.ts` | Vector store backend — `upsertVector/searchVectors` for embedding similarity search |
+| `docker-compose.yml` | Full stack: Postgres primary+2 replicas + PgBouncer + Redis + Qdrant + N MemoryServers |
+| `Dockerfile` | Minimal node:20-alpine image, ESM dist + proto files |
+| `deploy/pgbouncer/pgbouncer.ini` | PgBouncer config (transaction pooling, 200 clients, 50 pool) |
+| `deploy/k8s/timps-memory.yaml` | K8s Deployment + HPA (2-10 pods, CPU 70%) + readiness probe |
+| `deploy/k8s/kustomization.yaml` | Kustomize overlay |
+| `src/chaos.test.ts` | 7 resilience tests: stateless recovery, shared backend, concurrent writes, graceful degradation |
+
+### Public API additions
+
+- `MemoryEngineOptions.cacheManager?: CacheManager` — Redis cache for forge state (get-or-compute with TTL)
+- `MemoryEngineOptions.eventBus?: EventBus` — Redis Pub/Sub for cross-server events
+- `MemoryEngine.cacheManager` / `MemoryEngine.eventBus` — getters
+- `store()` publishes `memory:stored` event, `recall()` publishes `memory:recalled` (for queries >10 chars), `consolidate()` publishes `memory:consolidated`
+- `MemoryServerOptions.eventBus?: { url? } | false` — enables EventBus in server, auto-injects into engine
+- `MemoryServerOptions.serverId?: string` — server identity for event bus message dedup
+- `GET /health/readiness` — probes Postgres, Redis, EventBus, Cache, returns 503 if any fail
+- `PostgresBackend` now takes `primary` (writes) + optional `replicas[]` (reads, round-robin)
+- `PostgresBackend.health()` — ping primary + first replica
+- Exports: `EventBus`, `CacheManager`, `QdrantBackend` (via backends index)
+
+### Gotchas
+
+- `PostgresBackend` constructor changed: was `connectionString`, now `primary` + optional `replicas[]`.
+- EventBus requires `ioredis` at runtime (lazy `require`). CacheManager also requires `ioredis`.
+- QdrantBackend requires `@qdrant/js-client-rest` at runtime (lazy `require`).
+- MemoryServer forwards event bus messages to WebSocket clients via `wsServer.broadcast()`.
+- The `memory:stored` event payload includes `id`, `content` (truncated 200), `type`, `tags`, `confidence`, `actorId`.
+- The `memory:recalled` event only fires for queries >10 chars to reduce noise.
+- Scale out: `docker compose up -d --scale memory=3` spins 3 server instances.
+- The 6s StreamContext polling timer remains — Phase 2c replaces it with reactive forge-layer event pushes. This is marked as the gap before Phase 2d.

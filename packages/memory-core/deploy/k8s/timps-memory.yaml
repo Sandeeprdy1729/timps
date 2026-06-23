@@ -1,0 +1,139 @@
+# ── TIMPS MemoryServer — Kubernetes Deployment ──
+# Apply: kubectl apply -k deploy/k8s/
+# Scale: kubectl scale deployment timps-memory --replicas=5
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timps-memory
+  labels:
+    app: timps-memory
+    tier: memory
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: timps-memory
+  template:
+    metadata:
+      labels:
+        app: timps-memory
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: memory
+          image: timps/memory-core:latest
+          ports:
+            - containerPort: 4100
+              name: http
+            - containerPort: 4101
+              name: grpc
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: MEMORY_PROJECT_PATH
+              value: "/data"
+            - name: MEMORY_PORT
+              value: "4100"
+            - name: MEMORY_GRPC_PORT
+              value: "4101"
+            - name: POSTGRES_PRIMARY
+              valueFrom:
+                secretKeyRef:
+                  name: timps-postgres
+                  key: primary
+            - name: POSTGRES_REPLICAS
+              valueFrom:
+                secretKeyRef:
+                  name: timps-postgres
+                  key: replicas
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: timps-redis
+                  key: url
+            - name: QDRANT_URL
+              value: "http://qdrant:6333"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4100
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 4100
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timps-memory
+  labels:
+    app: timps-memory
+spec:
+  selector:
+    app: timps-memory
+  ports:
+    - name: http
+      port: 4100
+      targetPort: 4100
+    - name: grpc
+      port: 4101
+      targetPort: 4101
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timps-memory-headless
+  labels:
+    app: timps-memory
+spec:
+  clusterIP: None
+  selector:
+    app: timps-memory
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: timps-memory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: timps-memory
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

@@ -1,0 +1,174 @@
+# ── TIMPS MemoryServer — Horizontal Scale Stack ──
+# Start:       docker compose up -d
+# Scale out:   docker compose up -d --scale memory=3
+# Stop:        docker compose down
+# Wipe data:   docker compose down -v
+
+version: "3.9"
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ── Postgres Primary (writes) ──
+  postgres-primary:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timps_memory
+      POSTGRES_USER: timps
+      POSTGRES_PASSWORD: timps_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-primary-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timps -d timps_memory"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Postgres Replica 1 (reads) ──
+  postgres-replica-1:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timps_memory
+      POSTGRES_USER: timps
+      POSTGRES_PASSWORD: timps_secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg-replica1-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timps -d timps_memory"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    logging: *default-logging
+    restart: unless-stopped
+    # NOTE: In production, use streaming replication:
+    # command: "postgres -c primary_conninfo=host=postgres-primary port=5432 user=timps password=timps_secret"
+
+  # ── Postgres Replica 2 (reads) ──
+  postgres-replica-2:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timps_memory
+      POSTGRES_USER: timps
+      POSTGRES_PASSWORD: timps_secret
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg-replica2-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timps -d timps_memory"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── PgBouncer (connection pooling) ──
+  pgbouncer:
+    image: bitnami/pgbouncer:latest
+    environment:
+      PGBOUNCER_DATABASE: timps_memory
+      PGBOUNCER_PORT: 6432
+      POSTGRESQL_HOST: postgres-primary
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_USERNAME: timps
+      POSTGRESQL_PASSWORD: timps_secret
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 200
+      PGBOUNCER_DEFAULT_POOL_SIZE: 50
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Redis (cache + pub/sub) ──
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── Qdrant (vector search) ──
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    logging: *default-logging
+    restart: unless-stopped
+
+  # ── MemoryServer instances (horizontally scalable) ──
+  memory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4100"
+      - "4101"
+    environment:
+      NODE_ENV: production
+      MEMORY_PROJECT_PATH: /data
+      MEMORY_PORT: 4100
+      MEMORY_GRPC_PORT: 4101
+      # Postgres (writes via PgBouncer, reads via replicas round-robin)
+      POSTGRES_PRIMARY: postgresql://timps:timps_secret@pgbouncer:6432/timps_memory
+      POSTGRES_REPLICAS: postgresql://timps:timps_secret@postgres-replica-1:5432/timps_memory,postgresql://timps:timps_secret@postgres-replica-2:5432/timps_memory
+      # Redis
+      REDIS_URL: redis://redis:6379
+      # Qdrant
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      postgres-replica-1:
+        condition: service_healthy
+      postgres-replica-2:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    volumes:
+      - memory-data:/data
+    logging: *default-logging
+    restart: unless-stopped
+
+volumes:
+  pg-primary-data:
+  pg-replica1-data:
+  pg-replica2-data:
+  redis-data:
+  qdrant-data:
+  memory-data:

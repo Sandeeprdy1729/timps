@@ -20,6 +20,8 @@ import {
   jaccardSimilarity,
 } from './storage.js';
 import type { StorageBackend, FileBackendOptions } from './backends/index.js';
+import type { CacheManager } from './cache/CacheManager.js';
+import type { EventBus, EventBusChannel } from './events/EventBus.js';
 
 import { searchEntries } from './search.js';
 import { MigrationEngine, CURRENT_SCHEMA_VERSION, ALL_MIGRATIONS } from './migrations/index.js';
@@ -139,6 +141,18 @@ export interface MemoryEngineOptions {
   backend?: StorageBackend;
   /** FileBackend options (only used when backend is not explicitly provided). */
   fileBackendOptions?: FileBackendOptions;
+  /**
+   * Cache manager (Redis-backed) for forge state caching.
+   * When provided, expensive forge state computations are cached
+   * with TTL-based invalidation for cross-server consistency.
+   */
+  cacheManager?: CacheManager;
+  /**
+   * Event bus (Redis Pub/Sub) for cross-server event propagation.
+   * When provided, store/recall/consolidate events are published
+   * to all connected MemoryServer instances.
+   */
+  eventBus?: EventBus;
 }
 
 export class MemoryEngine {
@@ -147,6 +161,8 @@ export class MemoryEngine {
   private scope?: MemoryScope;
   private working: WorkingState;
   private _backend: StorageBackend;
+  private _cacheManager?: CacheManager;
+  private _eventBus?: EventBus;
 
   // ── Layer 5: ChronosForge (lazy-init) ──
   private _chronos?: ChronosForge;
@@ -222,6 +238,8 @@ export class MemoryEngine {
     this.dir = options?.dir ?? memoryDir(projectPath, this.scope);
     this.hash = projectHash(projectPath);
     this._backend = options?.backend ?? getBackend(this.dir);
+    this._cacheManager = options?.cacheManager;
+    this._eventBus = options?.eventBus;
     this._runMigrations();
     this.working = loadWorking(this.dir);
   }
@@ -237,6 +255,16 @@ export class MemoryEngine {
   /** The active storage backend (useful for passing to forge layers). */
   get backend(): StorageBackend {
     return this._backend;
+  }
+
+  /** The cache manager, if configured. */
+  get cacheManager(): CacheManager | undefined {
+    return this._cacheManager;
+  }
+
+  /** The event bus, if configured. */
+  get eventBus(): EventBus | undefined {
+    return this._eventBus;
   }
 
   /** The scope this engine was created with, if any. */
@@ -603,6 +631,18 @@ export class MemoryEngine {
     this.rehearsalEngine.enqueue(content, 'L3', id);
     // L21: learn schema pattern
     this.schemaDistorter.learn(content);
+
+    // Cross-server event propagation
+    if (this._eventBus) {
+      void this._eventBus.publish('memory:stored', {
+        id,
+        content: content.slice(0, 200),
+        type,
+        tags,
+        confidence,
+        actorId: actor,
+      });
+    }
   }
 
   /**
@@ -700,9 +740,20 @@ export class MemoryEngine {
       }
     }
 
-    return filtered
+    const results = filtered
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       .slice(0, options?.limit ?? 10);
+
+    // Cross-server event propagation (sampled — only for significant queries)
+    if (this._eventBus && query.length > 10) {
+      void this._eventBus.publish('memory:recalled', {
+        query: query.slice(0, 200),
+        resultCount: results.length,
+        topScore: results[0]?.score ?? 0,
+      });
+    }
+
+    return results;
   }
 
   /** Get a formatted context string for injection into agent prompts. */
@@ -752,7 +803,16 @@ export class MemoryEngine {
       if (!deduped.some(d => jaccardSimilarity(d.content, e.content) > 0.85)) deduped.push(e);
     }
     saveSemantic(this.dir, deduped);
-    return before - deduped.length;
+    const removed = before - deduped.length;
+
+    if (this._eventBus && removed > 0) {
+      void this._eventBus.publish('memory:consolidated', {
+        removed,
+        remaining: deduped.length,
+      });
+    }
+
+    return removed;
   }
 
   getStats(): MemoryStats {

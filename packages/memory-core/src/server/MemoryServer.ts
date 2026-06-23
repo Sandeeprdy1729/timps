@@ -1,21 +1,28 @@
 import * as http from 'node:http';
+import * as grpc from '@grpc/grpc-js';
 import express from 'express';
 import cors from 'cors';
 import type { Express } from 'express';
 import { MemoryEngine } from '../MemoryEngine';
 import type { MemoryEngineOptions } from '../MemoryEngine';
+import { EventBus } from '../events/EventBus';
+import type { EventBusChannel } from '../events/EventBus';
 import { createAuthMiddleware } from './auth';
 import type { AuthConfig } from './auth';
 import { createMemoryRoutes } from './routes';
 import { MemoryWsServer } from './websocket';
 import type { WsEvent } from './websocket';
+import { startGrpcServer, createGrpcServer } from './grpc';
+import type { GrpcServerOptions } from './grpc';
+import { PostgresBackend } from '../backends/PostgresBackend';
+import { RedisBackend } from '../backends/RedisBackend';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
   port?: number;
   /** Project path for MemoryEngine */
   projectPath: string;
-  /** MemoryEngine options (scope, backend, dir, etc.) */
+  /** MemoryEngine options (scope, backend, dir, cacheManager, eventBus, etc.) */
   engineOptions?: MemoryEngineOptions;
   /** Auth configuration. If not provided, auth is disabled (all requests allowed). */
   auth?: AuthConfig;
@@ -29,6 +36,12 @@ export interface MemoryServerOptions {
   rateLimitMax?: number;
   /** Rate limit window in ms (default: 60000) */
   rateLimitWindowMs?: number;
+  /** gRPC server configuration. Set to false to disable gRPC (default: enabled on port 4101) */
+  grpc?: GrpcServerOptions | false;
+  /** Event bus configuration. Set to false to disable cross-server events (default: disabled). */
+  eventBus?: { url?: string } | false;
+  /** Server ID for event bus identification (default: auto-generated). */
+  serverId?: string;
 }
 
 export class MemoryServer {
@@ -37,6 +50,9 @@ export class MemoryServer {
   readonly httpServer: http.Server;
   readonly wsServer: MemoryWsServer;
   private options: MemoryServerOptions;
+  private grpcServer: grpc.Server | null = null;
+  private grpcPort: number | null = null;
+  private _eventBus: EventBus | null = null;
 
   constructor(options: MemoryServerOptions) {
     this.options = {
@@ -49,27 +65,72 @@ export class MemoryServer {
       rateLimitWindowMs: options.rateLimitWindowMs ?? 60000,
     };
 
-    // 1. Create the canonical MemoryEngine
+    // 1. Create event bus (before engine, so engine can use it)
+    if (options.eventBus !== false) {
+      this._eventBus = new EventBus({
+        url: typeof options.eventBus === 'object' ? options.eventBus.url : undefined,
+        serverId: options.serverId,
+      });
+      // Inject event bus into engine options
+      this.options.engineOptions = {
+        ...this.options.engineOptions,
+        eventBus: this._eventBus,
+      };
+    }
+
+    // 2. Create the canonical MemoryEngine
     this.engine = new MemoryEngine(this.options.projectPath, this.options.engineOptions);
 
-    // 2. Create Express app
+    // 3. Create Express app
     this.app = express();
     this.configureApp();
 
-    // 3. Create HTTP server
+    // 4. Create HTTP server
     this.httpServer = http.createServer(this.app);
 
-    // 4. Create WebSocket server (shares HTTP server)
+    // 5. Create WebSocket server (shares HTTP server)
     this.wsServer = new MemoryWsServer(this.httpServer, this.engine, this.options.wsPath);
 
-    // 5. Mount routes with optional auth
+    // 6. Mount routes with optional auth
     this.mountRoutes();
 
-    // 6. Error handler (must be last)
+    // 7. Subscribe to event bus for cross-server event forwarding
+    if (this._eventBus) {
+      this._subscribeToEventBus();
+    }
+
+    // 8. Error handler (must be last)
     this.app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       console.error('[MemoryServer] Unhandled error:', err);
       res.status(500).json({ error: 'Internal server error' });
     });
+  }
+
+  /** Subscribe to event bus channels and forward to WebSocket clients. */
+  private _subscribeToEventBus(): void {
+    if (!this._eventBus) return;
+
+    const forwardEvent = (channel: string) => {
+      this._eventBus!.subscribe(channel as EventBusChannel, (msg) => {
+        this.wsServer.broadcast({
+          type: 'insight',
+          channel: msg.channel,
+          payload: msg.payload,
+          timestamp: msg.timestamp,
+        } as any);
+      });
+    };
+
+    forwardEvent('memory:stored');
+    forwardEvent('memory:recalled');
+    forwardEvent('insight');
+    forwardEvent('contradiction');
+    forwardEvent('forge:decay');
+    forwardEvent('forge:echo:prediction');
+    forwardEvent('forge:chronos:weave');
+    forwardEvent('forge:aether:insight');
+    forwardEvent('memory:consolidated');
+    forwardEvent('server:heartbeat');
   }
 
   private configureApp(): void {
@@ -99,7 +160,6 @@ export class MemoryServer {
     let memoryRoutes: express.Router;
 
     if (this.options.auth) {
-      // Auth-protected routes
       const auth = createAuthMiddleware(this.options.auth);
       this.app.post('/auth/token', (req, res) => {
         const { userId, secret } = req.body;
@@ -112,7 +172,6 @@ export class MemoryServer {
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
       this.app.use('/memory', auth.middleware, memoryRoutes);
     } else {
-      // No auth — open access
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
       this.app.use('/memory', memoryRoutes);
     }
@@ -121,22 +180,84 @@ export class MemoryServer {
     this.app.get('/health', (_req, res) => {
       res.json({ status: 'ok', timestamp: Date.now() });
     });
+
+    // Readiness probe — checks backend dependencies are healthy
+    this.app.get('/health/readiness', async (_req, res) => {
+      const checks: Record<string, boolean | string | number> = {
+        engine: true,
+        timestamp: Date.now(),
+      };
+
+      // Check Postgres health
+      const pgBackend = this.engine.backend;
+      if (pgBackend instanceof PostgresBackend) {
+        try {
+          const pgHealth = await pgBackend.health();
+          checks.postgres_primary = pgHealth.primary;
+          checks.postgres_replicas = pgHealth.replicas;
+        } catch {
+          checks.postgres_primary = false;
+        }
+      }
+
+      // Check Redis health
+      if (pgBackend instanceof RedisBackend) {
+        try {
+          await (pgBackend as any).exists('_health_check');
+          checks.redis = true;
+        } catch {
+          checks.redis = false;
+        }
+      }
+
+      // Check EventBus
+      if (this._eventBus) {
+        try {
+          await this._eventBus.publish('server:heartbeat', { serverId: this.options.serverId });
+          checks.eventBus = true;
+        } catch {
+          checks.eventBus = false;
+        }
+      }
+
+      // Check cache manager if present
+      if (this.engine.cacheManager) {
+        try {
+          await this.engine.cacheManager.exists('_health_check');
+          checks.cache = true;
+        } catch {
+          checks.cache = false;
+        }
+      }
+
+      // Determine overall health
+      const unhealthy = Object.entries(checks).filter(
+        ([k, v]) => k !== 'timestamp' && v === false
+      );
+      if (unhealthy.length > 0) {
+        res.status(503).json({ status: 'unhealthy', checks, unhealthy: unhealthy.map(([k]) => k) });
+      } else {
+        res.json({ status: 'ok', checks });
+      }
+    });
   }
 
   /** Start listening */
-  start(): Promise<void> {
-    return new Promise((resolve) => {
+  async start(): Promise<void> {
+    // Start HTTP server
+    await new Promise<void>((resolve) => {
       this.httpServer.listen(this.options.port, () => {
         console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║     TIMPS MemoryServer                                    ║
-║     Centralized memory — one canonical engine             ║
+║     TIMPS MemoryServer (horizontal scale)                 ║
+║     Stateless — all state externalized                    ║
 ║                                                           ║
 ║     HTTP:  http://localhost:${String(this.options.port).padEnd(36)}║
 ║     WS:    ws://localhost:${String(this.options.port)}${(this.options.wsPath ?? '/ws').padEnd(29)}║
 ║     Auth:  ${(this.options.auth ? 'JWT enabled' : 'DISABLED').padEnd(41)}║
-║     Path:  ${this.options.projectPath.padEnd(50)}║
+║     EventBus: ${(this._eventBus ? 'enabled' : 'disabled').padEnd(41)}║
+║     ServerID: ${(this.options.serverId ?? `auto_${process.pid}`).padEnd(41)}║
 ║                                                           ║
 ║     Endpoints:                                            ║
 ║     - POST /memory/store          Store memory            ║
@@ -147,6 +268,7 @@ export class MemoryServer {
 ║     - GET  /memory/export         Export all memory       ║
 ║     - POST /memory/import         Import memory pack      ║
 ║     - GET  /health                Health check            ║
+║     - GET  /health/readiness      Readiness probe         ║
 ║     - WS   ${(this.options.wsPath ?? '/ws').padEnd(49)}║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
@@ -154,19 +276,51 @@ export class MemoryServer {
         resolve();
       });
     });
+
+    // Start gRPC server (if enabled)
+    if (this.options.grpc !== false) {
+      const grpcOpts: GrpcServerOptions = {
+        port: 4101,
+        host: '0.0.0.0',
+        ...(typeof this.options.grpc === 'object' ? this.options.grpc : {}),
+      };
+      const result = await startGrpcServer(this.engine, grpcOpts);
+      this.grpcServer = result.server;
+      this.grpcPort = result.port;
+    }
   }
 
   /** Graceful shutdown */
   async stop(): Promise<void> {
     this.wsServer.close();
+
+    // Close event bus
+    if (this._eventBus) {
+      await this._eventBus.close();
+      this._eventBus = null;
+    }
+
+    // Shutdown gRPC server if running
+    if (this.grpcServer) {
+      await new Promise<void>((resolve) => {
+        this.grpcServer!.tryShutdown(() => resolve());
+      });
+      this.grpcServer = null;
+    }
+
     return new Promise((resolve) => {
       this.httpServer.close(() => resolve());
     });
   }
 
   /** Broadcast an event to all connected WebSocket clients */
-  broadcast(event: WsEvent): void {
+  broadcast(event: WsEvent & { channel?: string; payload?: Record<string, unknown> }): void {
     this.wsServer.broadcast(event);
+
+    // Also publish to event bus for cross-server propagation
+    if (this._eventBus && event.channel) {
+      void this._eventBus.publish(event.channel as EventBusChannel, event.payload ?? {});
+    }
   }
 
   /** Send an event to a specific user */
@@ -182,5 +336,15 @@ export class MemoryServer {
     }
     const auth = createAuthMiddleware(authCfg);
     return auth.sign(payload);
+  }
+
+  /** Get the gRPC port, or null if gRPC is not running */
+  getGrpcPort(): number | null {
+    return this.grpcPort;
+  }
+
+  /** Get the event bus instance */
+  getEventBus(): EventBus | null {
+    return this._eventBus;
   }
 }

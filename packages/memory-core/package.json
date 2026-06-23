@@ -29,6 +29,7 @@
   },
   "files": [
     "dist",
+    "proto",
     "README.md"
   ],
   "scripts": {
@@ -38,17 +39,19 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "minisearch": "^7.1.0",
-    "express": "^4.21.0",
+    "@grpc/grpc-js": "^1.14.4",
+    "@grpc/proto-loader": "^0.8.1",
     "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "minisearch": "^7.1.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
-    "@types/ws": "^8.5.13",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
     "@types/react-native": "^0.73.0",
+    "@types/ws": "^8.5.13",
     "tsup": "^8.5.0",
     "typescript": "^5.6.0",
     "vitest": "^3.2.6"
