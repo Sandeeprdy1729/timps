@@ -8,10 +8,15 @@ interface PluginCardData {
   category: string;
   author?: string;
   version: string;
+  avgRating?: number;
+  reviewCount?: number;
+  totalDownloads?: number;
 }
 
 export function PluginCard({ plugin }: { plugin: PluginCardData }) {
   const isNew = plugin.version.startsWith('1.');
+  const rating = plugin.avgRating ? `★ ${plugin.avgRating.toFixed(1)}` : null;
+  const downloads = plugin.totalDownloads ? `${plugin.totalDownloads.toLocaleString()} downloads` : null;
   
   return (
     <div className="card">
@@ -21,6 +26,12 @@ export function PluginCard({ plugin }: { plugin: PluginCardData }) {
       </div>
       <h3 className="card-title">{plugin.name}</h3>
       <p className="card-description">{plugin.description}</p>
+      {(rating || downloads) && (
+        <div className="card-meta text-sm text-gray-500 mt-1">
+          {rating && <span className="mr-2">{rating}</span>}
+          {downloads && <span>{downloads}</span>}
+        </div>
+      )}
       <div className="card-footer">
         <div className="card-stats">
           <span className="card-badge">{plugin.category}</span>

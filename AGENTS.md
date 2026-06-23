@@ -312,3 +312,78 @@ When `backend` is omitted, falls back to `getBackend(dir)` (legacy FileBackend).
 - **`StorageBackend.setScope()` is one-way:** Once set, all subsequent ops use that scope until changed. `multiProjectRecall` restores the original scope after each project iteration.
 - **Migration v3→v4 does NOT wrap data files:** `episodes.json`, `semantic.json`, `working.json` are raw arrays. They get a `.org-scope.json` sidecar instead of being wrapped with `_meta`. Layer state files (with `_meta`) get inline `orgScope` metadata.
 - **`CURRENT_SCHEMA_VERSION`** is now 4. Bump for any on-disk format change.
+
+## Phase 3a — Skill/Plugin Marketplace (WASM Sandbox + Registry + Static Analysis)
+
+New files in `packages/memory-core/`:
+
+| File | Purpose |
+|------|---------|
+| `src/marketplace/types.ts` | Plugin manifest, permissions, dependencies, submission, analytics types |
+| `src/marketplace/scanner.ts` | Static analysis pipeline — pattern scanning, permission validation, npm audit, checksum verification |
+| `src/marketplace/registry.ts` | `PluginRegistry` — CRUD, submit, search, rate/review, analytics tracking, all backed by `StorageBackend` |
+| `src/marketplace/resolver.ts` | Dependency resolver — semver constraint matching, version conflict detection |
+| `src/sandbox/WasmSandbox.ts` | `WasmSandbox` — install/uninstall WASM plugins, execute via `wasmtime` or JS proxy with ABI permission enforcement |
+| `src/server/marketplaceRoutes.ts` | Express router — `POST /marketplace/submit`, `GET /marketplace/plugins`, `GET /marketplace/plugins/:name`, `POST /plugins/:name/rate`, `GET /plugins/:name/reviews`, `POST /marketplace/events` |
+| `src/marketplace.test.ts` | 14 tests: scanner (clean code, eval rejection, undeclared perms, size limit, checksum), registry (submit/approve/reject, list, search, downloads, ratings), resolver (simple, conflict, empty) |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `src/index.ts` | Exports `PluginRegistry`, `runStaticAnalysis`, `verifyChecksum`, `approved`, `resolveDependencies`, `WasmSandbox`, `createMarketplaceRoutes`, all marketplace types |
+| `src/server/MemoryServer.ts` | Mounts `createMarketplaceRoutes` at `/marketplace` |
+| `packages/plugin-sdk/src/types.ts` | Added `Permission` type, `timps` field to `PluginManifest` (version, permissions, dependencies) |
+| `timps-code/src/commands/plugin.ts` | `pluginInstall` now resolves marketplace plugins (fetches from `/marketplace/plugins/:name` API, resolves dependencies), `pluginList` shows `[marketplace]`/`[npm]` tags + permissions |
+| `apps/marketplace/src/components/PluginGrid.tsx` | Fetches plugins from live `/marketplace/plugins` API (falls back to empty on error) |
+| `apps/marketplace/src/components/PluginCard.tsx` | Shows rating + download count from API data |
+
+### Architecture
+
+```
+Plugin Author                         TIMPS User
+       │                                     │
+       │  1. POST /marketplace/submit         │
+       │  ──→ PluginRegistry.submit() ──→     │
+       │     │                                │
+       │     ├─ 2. Static analysis             │
+       │     │   (scanner.ts)                 │
+       │     │   - pattern scanning            │
+       │     │   - permission validation       │
+       │     │   - npm audit                   │
+       │     │   - checksum verification       │
+       │     │   - package size check          │
+       │     │                                │
+       │     ├─ 3. Auto-approved or queued     │  4. Browse marketplace
+       │     │                                │  ←── GET /marketplace/plugins
+       │     │                                │  5. Install: timps install <name>
+       │     │                                │  ──→ Fetches plugin info, resolves deps
+       │     │                                │  6. Plugin runs in WasmSandbox
+       │     │                                │     (permission enforcement via ABI proxy)
+       │     │                                │
+       │     │  7. Usage telemetry ──→         │
+       │     │   POST /marketplace/events      │
+       │     │                                │
+       │     └─ 8. Ratings/reviews ──→         │
+       │        POST /plugins/:name/rate      │
+```
+
+### Key design decisions
+
+- **Scanner rejects on `eval`, `Function()`, `child_process`, undeclared network/fs access, oversized packages** — not just warnings
+- **Dependency resolver uses semver matching** — `^` and `~` constraints, version conflict detection
+- **WasmSandbox uses subprocess WASM execution** — `wasmtime` CLI for native WASM, JS proxy fallback for Node.js
+- **Marketplace API is a flat Express router** mounted alongside memory routes in MemoryServer
+- **PluginRegistry stores everything via `StorageBackend`** — works with InMemoryBackend (tests), PostgresBackend (production), RedisBackend (caching)
+- **CLI resolves dependencies at install time** — marketplace API returns full plugin info with dependency graph
+
+### Gotchas
+
+- **Scanner requires a base64-decoded payload** — `runStaticAnalysis(payload, manifest)` takes base64-encoded plugin content
+- **`PluginRegistry.submit()` rejects on checksum mismatch before any analysis** — saves CPU on invalid submissions
+- **`WasmSandbox.executeJS()` creates a temporary script per execution** — permissions are baked into the script via `__permissions` const
+- **Marketplace frontend uses `NEXT_PUBLIC_MARKETPLACE_API`** env var — defaults to `localhost:4100`, configure in production
+- **CLI's `pluginInstall` auto-detects marketplace plugins** — if the name has no npm scope prefix (`@`), it tries the marketplace first
+- **Dependency resolver has no package registry fallback** — it only resolves from the `available` map passed in. For production, wire to the PluginRegistry.
+- **All 14 marketplace tests must pass before push** — run `npx vitest run packages/memory-core/src/marketplace.test.ts`
+- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3a)

@@ -245,6 +245,18 @@ export type { PromptAnalysis, SandboxExecutionRecord, DetectedLanguage } from '.
 export { SandboxRouter, SubprocessSandbox, PythonSandbox, NodeSandbox, BashSandbox } from './sandbox/Sandbox.js';
 export type { SandboxHandle, SandboxOptions, ExecResult, Runtime, NetworkPolicy } from './sandbox/Sandbox.js';
 
+// ── Phase 3a: Marketplace — Plugin Registry, Scanner, WASM Sandbox ──
+export { PluginRegistry } from './marketplace/registry.js';
+export { runStaticAnalysis, verifyChecksum, approved } from './marketplace/scanner.js';
+export { resolveDependencies } from './marketplace/resolver.js';
+export { WasmSandbox } from './sandbox/WasmSandbox.js';
+export type {
+  PluginManifest, PluginPackage, PluginRelease, PluginInfo,
+  Permission, ScanResult, SubmissionResult, RatingReview, AnalyticsEvent,
+  ResolutionResult, DependencyNode,
+} from './marketplace/types.js';
+export { createMarketplaceRoutes } from './server/marketplaceRoutes.js';
+
 // ── Phase 2a: MemoryServer + MemoryClient ──
 export { MemoryServer } from './server/MemoryServer.js';
 export type { MemoryServerOptions } from './server/MemoryServer.js';

@@ -20,6 +20,7 @@ import { ProjectRoom } from './ProjectRoom';
 import type { ProjectRoomEvent } from './ProjectRoom';
 import { RateLimiter } from '../rateLimiter';
 import type { RateLimiterConfig } from '../rateLimiter';
+import { createMarketplaceRoutes } from './marketplaceRoutes';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
@@ -233,6 +234,14 @@ export class MemoryServer {
       if (!room) return res.json({ agents: [], count: 0 });
       res.json({ agents: room.connectedAgentIds, count: room.agentCount });
     });
+
+    // ── Marketplace API routes (always open for browsing, auth for submit) ──
+    const marketplaceRoutes = createMarketplaceRoutes(this.engine.backend);
+    if (this.options.auth) {
+      this.app.use('/marketplace', auth.middleware, marketplaceRoutes);
+    } else {
+      this.app.use('/marketplace', marketplaceRoutes);
+    }
 
     // Health check (always open)
     this.app.get('/health', (_req, res) => {
