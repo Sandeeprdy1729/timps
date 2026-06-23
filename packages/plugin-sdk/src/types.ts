@@ -47,6 +47,9 @@ export type HookName =
   | 'on:error'
   | 'on:session:end';
 
+/** Permissions a plugin can request */
+export type Permission = 'network' | 'memory:read' | 'memory:write' | 'fs:read' | 'fs:write' | 'env:read' | 'process:spawn';
+
 /** Static metadata declared by a plugin */
 export interface PluginManifest {
   /** Unique plugin identifier, e.g. `"@timps/plugin-echo"` */
@@ -54,9 +57,24 @@ export interface PluginManifest {
   /** Semver string, e.g. `"0.1.0"` */
   version: string;
   description: string;
+  author?: string;
+  license?: string;
   commands?: CommandSpec[];
   tools?: ToolSpec[];
   hooks?: HookName[];
+  /** TIMPS-specific metadata */
+  timps?: {
+    /** Compatible TIMPS version range */
+    version?: string;
+    /** Declared permissions */
+    permissions?: Permission[];
+    /** Plugin dependencies `{ name: version }` */
+    dependencies?: Record<string, string>;
+    /** Lifecycle hooks this plugin subscribes to */
+    hooks?: HookName[];
+    /** Tools this plugin exposes */
+    tools?: string[];
+  };
 }
 
 // ─── Runtime context passed to every handler ──────────────────────────────────
