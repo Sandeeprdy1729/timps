@@ -1,0 +1,47 @@
+{
+  "name": "long-context-retrieval",
+  "version": "1.0.0",
+  "description": "Tests recall quality and latency at scale. The system must retrieve relevant memories from a corpus of 10K+ entries without significant quality degradation or latency blowup.",
+  "examples": [
+    {
+      "query": "What is the logging configuration?",
+      "expectedMemories": ["Pino logger with structured JSON output", "Log level defaults to 'info', 'debug' in development", "Error logs include stack traces and request IDs"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are environment variables managed?",
+      "expectedMemories": ["dotenv package loads .env files", "Production secrets in 1Password vault", "Validation via zod schema on startup"],
+      "context": "long-context"
+    },
+    {
+      "query": "What test framework is configured?",
+      "expectedMemories": ["Vitest with happy-dom environment", "Playwright for E2E tests", "80% coverage threshold enforced"],
+      "context": "long-context"
+    },
+    {
+      "query": "Which package manager is used and how?",
+      "expectedMemories": ["pnpm with workspaces", "Lockfile committed to version control", "pnpm-lock.yaml updated via pre-commit hook"],
+      "context": "long-context"
+    },
+    {
+      "query": "What is the API versioning strategy?",
+      "expectedMemories": ["URL-prefix versioning with /api/v1/, /api/v2/", "Deprecated versions maintained for 6 months", "Version negotiation via Accept header"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are background jobs processed?",
+      "expectedMemories": ["BullMQ with Redis backend", "Job queues: default, email, export, cleanup", "Failed jobs retry 3 times with exponential backoff"],
+      "context": "long-context"
+    },
+    {
+      "query": "What is the search infrastructure?",
+      "expectedMemories": ["Meilisearch for full-text search", "Meilisearch index updated via webhook", "Fallback to PostgreSQL full-text search"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are secrets managed?",
+      "expectedMemories": ["1Password for team secrets", "AWS Secrets Manager for production", "Local .env files with example.env template"],
+      "context": "long-context"
+    }
+  ]
+}

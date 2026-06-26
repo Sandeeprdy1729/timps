@@ -1,0 +1,146 @@
+{
+  "title": "TIMPS Eval Quality",
+  "version": 3,
+  "uid": "timps-eval",
+  "panels": [
+    {
+      "title": "Recall@5 by Dataset (Last 30 Runs)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "timps_eval_recall_at_5{dataset=\"multi-layer-recall\"}", "legendFormat": "Multi-Layer"},
+        {"expr": "timps_eval_recall_at_5{dataset=\"adversarial-contradictions\"}", "legendFormat": "Adversarial"},
+        {"expr": "timps_eval_recall_at_5{dataset=\"long-context-retrieval\"}", "legendFormat": "Long Context"},
+        {"expr": "timps_eval_recall_at_5{dataset=\"temporal-ordering\"}", "legendFormat": "Temporal"},
+        {"expr": "timps_eval_recall_at_5{dataset=\"multi-agent-consistency\"}", "legendFormat": "Multi-Agent"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 85},
+              {"color": "green", "value": 90}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "MRR by Dataset",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "timps_eval_mrr{dataset=\"multi-layer-recall\"}", "legendFormat": "Multi-Layer"},
+        {"expr": "timps_eval_mrr{dataset=\"temporal-ordering\"}", "legendFormat": "Temporal"},
+        {"expr": "timps_eval_mrr{dataset=\"multi-agent-consistency\"}", "legendFormat": "Multi-Agent"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 0.7},
+              {"color": "green", "value": 0.85}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Recall Latency p50/p95/p99 (ms)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "timps_eval_latency_p50", "legendFormat": "p50"},
+        {"expr": "timps_eval_latency_p95", "legendFormat": "p95"},
+        {"expr": "timps_eval_latency_p99", "legendFormat": "p99"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "title": "Eval Run Frequency",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "count(timps_eval_recall_at_5)", "legendFormat": "Total Runs"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "title": "Gate Check Results",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+      "targets": [
+        {"expr": "timps_eval_gate_blocked", "legendFormat": "Blocked"},
+        {"expr": "timps_eval_gate_passed", "legendFormat": "Passed"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Per-Dataset Recall Breakdown",
+      "type": "bargauge",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "targets": [
+        {"expr": "timps_eval_recall_at_5{dataset=~\"[a-z].*\"}", "legendFormat": "{{dataset}}"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 85},
+              {"color": "green", "value": 90}
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "time": {"from": "now-30d", "to": "now"},
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "dataset",
+        "type": "query",
+        "query": "label_values(timps_eval_recall_at_5, dataset)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  }
+}

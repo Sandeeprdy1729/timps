@@ -1,0 +1,109 @@
+name: Eval Suite — Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build memory-core
+        run: npx tsc
+        working-directory: packages/memory-core
+
+      - name: Run unit tests
+        run: npx vitest run --reporter verbose
+
+      - name: Run eval suite
+        run: npx tsx packages/memory-core/src/eval/cli.ts --all --json .timps/eval-results.json
+
+      - name: Check eval gate
+        id: eval_gate
+        run: |
+          BASELINE_DIR=".timps/eval-baselines"
+          mkdir -p "$BASELINE_DIR"
+          
+          # If baseline doesn't exist for main branch, create it
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            npx tsx packages/memory-core/src/eval/cli.ts --baseline --baseline-dir "$BASELINE_DIR"
+            echo "✅ Baseline updated on main branch"
+          else
+            # Compare against main baseline
+            RESULTS=$(npx tsx packages/memory-core/src/eval/cli.ts --all --json /tmp/eval-compare.json --baseline-dir "$BASELINE_DIR" 2>&1)
+            echo "$RESULTS"
+            
+            # Check for BLOCKED status
+            if echo "$RESULTS" | grep -q "BLOCKED"; then
+              echo "❌ Eval gate FAILED"
+              echo "eval_gate=blocked" >> $GITHUB_OUTPUT
+              exit 1
+            else
+              echo "✅ Eval gate PASSED"
+              echo "eval_gate=passed" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.sha }}
+          path: .timps/eval-results.json
+          retention-days: 90
+
+      - name: Comment PR with eval results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let results = {};
+            try {
+              const data = fs.readFileSync('.timps/eval-results.json', 'utf8');
+              results = JSON.parse(data);
+            } catch { /* no results file */ }
+            
+            let body = '## 🤖 Eval Suite Results\n\n';
+            
+            if (results.results) {
+              for (const r of results.results) {
+                body += `### ${r.datasetName} (${r.variantName})\n\n`;
+                body += '| Metric | Value |\n|--------|------|\n';
+                for (const m of r.metrics) {
+                  body += `| ${m.name} | ${m.value}${m.unit} |\n`;
+                }
+                body += '\n';
+              }
+            }
+            
+            if ('${{ steps.eval_gate.outputs.eval_gate }}' === 'blocked') {
+              body += '## ❌ Eval Gate BLOCKED\nFix regressions before merging.\n';
+            } else {
+              body += '## ✅ Eval Gate Passed\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

@@ -1,0 +1,32 @@
+{
+  "name": "adversarial-contradictions",
+  "version": "1.0.0",
+  "description": "Tests whether the system detects and handles contradictory information. Memories are stored with conflicting claims, and recall must surface the contradiction rather than returning both as equally valid.",
+  "examples": [
+    {
+      "query": "What port does the server run on?",
+      "expectedMemories": ["Server configured on port 8080 in production.yml (contradicts config.json which says port 3000)"],
+      "context": "The config.json file says port 3000 but production.yml overrides to 8080 for the production environment"
+    },
+    {
+      "query": "Which database engine is in use?",
+      "expectedMemories": ["PostgreSQL is the production database (migration from SQLite completed in v2.0)", "SQLite was used historically but deprecated"],
+      "context": "The system started with SQLite, migrated to PostgreSQL in v2.0. Some documentation still references SQLite."
+    },
+    {
+      "query": "What is the current pricing model?",
+      "expectedMemories": ["Monthly subscription at $29/user (updated 2026) contradicts legacy per-seat licensing at $99/user"],
+      "context": "Pricing changed from per-seat to per-user subscription in 2026. Old pricing pages still exist."
+    },
+    {
+      "query": "Which rate limiting algorithm is active?",
+      "expectedMemories": ["Token bucket algorithm deployed (contradicts earlier sticky-window implementation in config comments)"],
+      "context": "The rate limiter was refactored from sticky-window to token bucket, but config still has sticky-window parameters."
+    },
+    {
+      "query": "What Node.js version is required?",
+      "expectedMemories": ["Node 18+ required (package.json engines field)", "Some CI runners still use Node 16"],
+      "context": "Package.json requires Node 18+, but CI runners haven't all been updated from Node 16."
+    }
+  ]
+}

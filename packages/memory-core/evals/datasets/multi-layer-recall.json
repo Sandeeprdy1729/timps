@@ -1,0 +1,47 @@
+{
+  "name": "multi-layer-recall",
+  "version": "1.0.0",
+  "description": "Tests recall across all 22 memory layer types — facts, patterns, procedures, contradictions, temporal sequences, and more. A system that only stores flat facts will fail on pattern/drift queries.",
+  "examples": [
+    {
+      "query": "What authentication method does the system use?",
+      "expectedMemories": ["JWT-based authentication with refresh tokens", "OAuth2 flow for third-party integration", "API keys for service-to-service auth"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "How are errors handled in the codebase?",
+      "expectedMemories": ["Result type pattern for error handling", "Centralized error middleware", "Structured error logging with error codes"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "What patterns emerge in user session behavior?",
+      "expectedMemories": ["Users typically authenticate within 30s of landing", "Session duration peaks at 8-12 minutes", "90% of errors occur in first 2 minutes of session"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "What is the database migration procedure?",
+      "expectedMemories": ["Create migration file with timestamp prefix", "Run migration in staging first", "Rollback uses down migration"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "How has the caching strategy evolved?",
+      "expectedMemories": ["Redis cache with 5-minute TTL", "Switched from in-memory to Redis for distributed caching", "Added cache warming for critical queries"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "What contradictions exist in the codebase?",
+      "expectedMemories": ["Config says port 3000 but Dockerfile uses 8080", "README mentions SQLite but actual DB is PostgreSQL"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "What deployment process is followed?",
+      "expectedMemories": ["Docker Compose for local deployment", "GitHub Actions for CI/CD pipeline", "Production deploys on Tuesday/Thursday"],
+      "context": "multi-layer"
+    },
+    {
+      "query": "Tell me about the monitoring setup",
+      "expectedMemories": ["Prometheus for metrics collection", "Grafana dashboards for visualization", "PagerDuty for incident alerts"],
+      "context": "multi-layer"
+    }
+  ]
+}
