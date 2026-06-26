@@ -753,3 +753,117 @@ If guardrails detect issues, the LLM is retried once with an explicit warning.
 - **ArchiveBackend stores gzipped JSON** — each batch is one `archive_{timestamp}.json.gz` file. Index is a stripped manifest list.
 - **Compression ratio for verbose content**: typically 2-7x. Embedding is always preserved.
 - **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4c).
+
+## Phase 4d — Rust-Native Compute Engine (June 2026)
+
+New files in `packages/memory-core-rs/`:
+
+| File | Purpose |
+|------|---------|
+| `src/compute.rs` | 3 `#[napi]` functions: `computeBatchSimilarity` (cosine), `kmeansClusterFlat` (k-means++), `eigenmodeWarmStart` (power iteration) |
+| `src/lsh.rs` | `RustLsh` NAPI-RS class — murmurhash-based LSH (4 tables × 8 bits, embed dim 64), methods: insert/query/delete/size/clear/getAll |
+| `index.d.ts` | Manually-maintained TypeScript declarations for all napi exports |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `src/lib.rs` | Fixed 17 pre-existing compile errors: added serde dep with derive feature, HashMap init fix, f32→f64 for napi params, partial move in `load_model()` |
+| `Cargo.toml` | Added `which = "6"` dep, `serde = { version = "1", features = ["derive"] }` |
+| `Cargo.lock` | Regenerated |
+
+New files in `packages/memory-core/src/`:
+
+| File | Purpose |
+|------|---------|
+| `native.ts` | `NativeCore` + `RustLSHNative` interfaces, `createRustLSH()`, `nativeBatchSimilarity()`, `nativeKMeans()`, `nativeEigenmodeWarmStart()` wrappers. All return `null` when native addon unavailable. |
+
+Updated files in `packages/memory-core/src/`:
+
+| File | What changed |
+|------|-------------|
+| `native.ts` | Added Phase 4d wrappers (102 new lines). Fixed typo `RustLSH` → `RustLsh` to match napi-rs naming. |
+| `compaction/ClusterEngine.ts` | `_kMeansCluster()` calls `nativeKMeans()` fast-path first, falls back to TS k-means++ with deterministic golden-ratio sin seeding |
+| `intelligence/contradiction.ts` | `_rustLsh: RustLSHNative \| null` field. Constructor tries `createRustLSH()`. `check()` queries Rust LSH first (max 16 candidates), falls back to TS `LSHIndex` |
+| `storage.ts` | Removed `getNative().jaccardSimilarity()` call (function not in Rust addon) |
+
+### Rust build
+
+```bash
+cd packages/memory-core-rs
+npx napi build --platform --release
+# Produces: memory-core-rs.{platform}.node (~800KB darwin-arm64)
+```
+
+### Gotchas
+
+- **napi-rs naming**: Exported class name `RustLsh` (capital L, lowercase sh) — napi-rs capitalizes first letter of class names. The JS name is `RustLsh`, not `RustLSH`.
+- **NAPI-RS Vec<f64> requires JS `Array<number>`** — NOT `Float64Array`. The `nativeKMeans()` and `nativeBatchSimilarity()` wrappers convert `Float64Array` to `Array<number>` before calling into Rust.
+- **Native addon is optional** — all callers check `getNative()` for null and fall back to TypeScript. No crash if `.node` file is missing.
+- **`index.d.ts` is manually maintained** — `napi build --no-dts` was used. Type declarations must be kept in sync with `src/compute.rs` and `src/lsh.rs`.
+- **k-means uses deterministic k-means++** — golden-ratio sin seeding replaces `Math.random()`. Same input always produces same clusters.
+- **RustLsh is a stateful NAPI-RS class** — maintains LSH tables on the JS heap. Each engine instance should create its own `RustLsh` instance.
+- **`jaccardSimilarity` is NOT in the Rust addon** — always uses the TypeScript implementation in `storage.ts`.
+
+## Phase 4e — Caching Strategy (June 2026)
+
+New files in `packages/memory-core/src/cache/`:
+
+| File | Purpose |
+|------|---------|
+| `L1Cache.ts` | In-process LRU cache with TTL, stale-while-revalidate (15s grace), LRU eviction at maxSize (default 1000), pattern invalidation, scoped key generation via `makeKey()` |
+| `CascadeCache.ts` | Three-tier cascade: L1 (in-process LRU, <1ms) → L2 (Redis CacheManager, <5ms) → L3 (compute, <50ms). `getOrCompute<T>()`, `invalidateProject()`, `warmup()`, `getStats()` |
+| `ForgeCache.ts` | Specialized forge state cache with per-forge TTL overrides (echo:reservoir 60s, harmonic:eigenmodes 300s, aether:eigenmodes 300s, contradiction:pairs 60s). Keyed as `forge:{org}:{proj}:{forgeName}:{stateType}` |
+| `cache.test.ts` | 29 tests covering all three cache classes |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `MemoryEngine.ts` | `_cascadeCache` field initialized in constructor. `recall()` uses `getOrCompute()` through cascade (cache key: `recall:{query}:{type}:{limit}:...`). `store()`/`consolidate()`/`runCompaction()` call `invalidateProject()`. `warmupCache()` method for startup pre-population. EngramLog-based EventBus subscriber invalidates cache when other servers store memories. |
+| `types.ts` | `SearchOptions` extended with `useCache?: boolean` and `cacheTTL?: number` |
+| `index.ts` | Exports `CascadeCache`, `ForgeCache`, `L1Cache` + option types |
+
+### Cache architecture
+
+```
+recall() request
+  │
+  ├─ L1 (in-process LRU, <1ms) ──→ HIT → return
+  │     TTL: 5s, stale grace: 15s
+  │     Eviction: LRU at 1000 entries
+  │
+  ├─ L2 (Redis CacheManager, <5ms) ──→ HIT → populate L1 → return
+  │     TTL: recall=60s, forge=300s
+  │     Backend: CacheManager (Redis SCAN+DEL)
+  │
+  └─ L3 (compute, <50ms) → populate L2 + L1 → return
+        Called only on complete miss
+```
+
+### Invalidation
+
+| Trigger | Action |
+|---------|--------|
+| `store()` | `invalidateProject()` — clears all L1+L2 keys with current scope prefix |
+| `consolidate()` | Same, when entries are actually removed |
+| `runCompaction()` | Same |
+| Remote `memory:stored` event (EventBus) | Same — cross-server cache consistency |
+
+### Cache key format
+
+```
+global:{normalizedQuery}                              (no org scope)
+{orgId}:{projectId}:{normalizedQuery}                  (with org scope)
+{orgId}:{projectId}:{normalizedQuery}:{suffix}         (with suffix)
+forge:{orgId}:{projectId}:{forgeName}:{stateType}      (forge state)
+```
+
+### Gotchas
+
+- **`CacheManager.invalidatePattern()` prepends its own keyPrefix** — `CascadeCache.invalidateProject()` passes the raw scope prefix (`org:proj:`) without a `cache:*` prefix. The CacheManager adds the prefix internally.
+- **L1 stale-while-revalidate** — stale entries within the grace period (default 15s) are returned immediately. The next request triggers a fresh compute. No background refresh is scheduled.
+- **ForgeCache TTLs are separate from recall cache TTLs** — forge state (eigenmodes, reservoir) has longer TTLs (up to 300s) since it changes less frequently.
+- **`EventBus.subscribe()` returns `Promise<void>`** — not an unsubscribe function. Store the handler reference for later cleanup via `unsubscribe()`.
+- **Cache warmup** — `MemoryEngine.warmupCache()` calls `CascadeCache.warmup()` which pre-populates both L1 and L2. Useful on MemoryServer startup to avoid cold-start latency.
+- **EngramLog-based invalidation** — the EventBus subscriber is set up in the `MemoryEngine` constructor. It filters by `projectId` to avoid invalidating irrelevant projects. Cleaned up in `dispose()`.
