@@ -1095,7 +1095,11 @@ export class MemoryEngine {
       if (useCache) {
         // Build a cache key from query + relevant options
         const optSuffix = `${options?.type ?? 'all'}:${options?.limit ?? 10}:${options?.minConfidence ?? 0}:${options?.maxFalseMemoryRisk ?? 1}`;
-        const cacheKey = `recall:${query.toLowerCase().trim()}:${optSuffix}`;
+        const currentScope = typeof (this._backend as any).getScope === 'function'
+          ? (this._backend as any).getScope()
+          : this.orgScope;
+        const projectPrefix = currentScope ? `${currentScope.orgId}:${currentScope.projectId}` : 'global';
+        const cacheKey = `${projectPrefix}:recall:${query.toLowerCase().trim()}:${optSuffix}`;
         const cacheTTL = options?.cacheTTL ?? this.recallCacheTTL;
         const results = await this._cascadeCache!.getOrCompute<ScoredMemoryEntry[]>(
           cacheKey,

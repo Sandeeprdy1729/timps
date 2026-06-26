@@ -4,7 +4,7 @@
 // drift warnings into the agent system prompt.
 
 import type { Memory } from './memory.js';
-import type { QISRDDomain } from '@timps/memory-core';
+import type { QISRDDomain } from '@timps-ai/memory-core';
 
 export interface QISRDInjectionResult {
   promptFragment: string;

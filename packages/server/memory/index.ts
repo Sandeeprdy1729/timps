@@ -41,12 +41,12 @@ export { getServerEclipseForge } from './eclipseForge.js';
 export { getServerQITRL } from './qitrl.js';
 
 // Types re-exported from @timps/memory-core
-export type { EchoDomain, EchoPrediction, EchoStatus, EchoWeaveResult, EchoQueryResult } from '@timps/memory-core';
-export type { SheafDomain, SheafPrediction, SheafStatus, SheafWeaveResult, SheafQueryResult, CohomologyResult, SheafConsolidationReport } from '@timps/memory-core';
-export type { ERLDomain, ERLPrediction, ERLStatus, ERLWeaveResult, ERLQueryResult, ERLCohomologyResult, ERLConsolidationReport, FlowForgePrediction, FlowForgeAutoConsolidationReport } from '@timps/memory-core';
-export type { QPTWDomain, QPTWWeaveResult, QPTWContradictionResult, QPTWPrediction, QPTWQueryResult, QPTWConsolidationReport } from '@timps/memory-core';
-export type { TitanicDomain, TitanicWeaveResult, TitanicSurpriseResult, TitanicQueryResult, TitanicConsolidationReport } from '@timps/memory-core';
-export type { QERWDomain, QERWWeaveResult, QERWContradictionResult, QERWPrediction, QERWQueryResult, QERWConsolidationReport } from '@timps/memory-core';
-export type { QISRDDomain, QISRDWeaveResult, QISRDContradictionResult, QISRDPrediction, QISRDQueryResult, QISRDConsolidationReport } from '@timps/memory-core';
-export type { EclipseDomain, EclipseWeaveResult, EclipseCohomologyResult, EclipsePrediction, EclipseQueryResult, EclipseConsolidationReport } from '@timps/memory-core';
-export type { QITRLDomain, QITRLWeaveResult, QITRLCohomologyResult, QITRLPrediction, QITRLQueryResult, QITRLConsolidationReport } from '@timps/memory-core';
+export type { EchoDomain, EchoPrediction, EchoStatus, EchoWeaveResult, EchoQueryResult } from '@timps-ai/memory-core';
+export type { SheafDomain, SheafPrediction, SheafStatus, SheafWeaveResult, SheafQueryResult, CohomologyResult, SheafConsolidationReport } from '@timps-ai/memory-core';
+export type { ERLDomain, ERLPrediction, ERLStatus, ERLWeaveResult, ERLQueryResult, ERLCohomologyResult, ERLConsolidationReport, FlowForgePrediction, FlowForgeAutoConsolidationReport } from '@timps-ai/memory-core';
+export type { QPTWDomain, QPTWWeaveResult, QPTWContradictionResult, QPTWPrediction, QPTWQueryResult, QPTWConsolidationReport } from '@timps-ai/memory-core';
+export type { TitanicDomain, TitanicWeaveResult, TitanicSurpriseResult, TitanicQueryResult, TitanicConsolidationReport } from '@timps-ai/memory-core';
+export type { QERWDomain, QERWWeaveResult, QERWContradictionResult, QERWPrediction, QERWQueryResult, QERWConsolidationReport } from '@timps-ai/memory-core';
+export type { QISRDDomain, QISRDWeaveResult, QISRDContradictionResult, QISRDPrediction, QISRDQueryResult, QISRDConsolidationReport } from '@timps-ai/memory-core';
+export type { EclipseDomain, EclipseWeaveResult, EclipseCohomologyResult, EclipsePrediction, EclipseQueryResult, EclipseConsolidationReport } from '@timps-ai/memory-core';
+export type { QITRLDomain, QITRLWeaveResult, QITRLCohomologyResult, QITRLPrediction, QITRLQueryResult, QITRLConsolidationReport } from '@timps-ai/memory-core';

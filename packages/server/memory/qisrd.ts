@@ -1,4 +1,4 @@
-import { MemoryEngine } from '@timps/memory-core';
+import { MemoryEngine } from '@timps-ai/memory-core';
 
 const engines = new Map<string, MemoryEngine>();
 

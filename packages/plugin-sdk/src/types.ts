@@ -125,7 +125,7 @@ export type HookHandler = (
  *
  * @example
  * ```ts
- * import type { Plugin } from '@timps/plugin-sdk';
+ * import type { Plugin } from '@timps-ai/plugin-sdk';
  *
  * const myPlugin: Plugin = {
  *   manifest: { name: '@acme/plugin-hello', version: '1.0.0', description: 'Says hello' },

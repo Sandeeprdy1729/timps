@@ -1,5 +1,5 @@
 {
-  "name": "timps-code",
+  "name": "@timps-ai/timps-code",
   "version": "2.0.1",
   "description": "Open-source CLI coding agent with 9-layer persistent memory. Free with Ollama. Drop-in Claude Code alternative. Works with any model.",
   "type": "module",
@@ -56,8 +56,8 @@
   "homepage": "https://timps.ai",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@timps/memory-core": "*",
-    "@timps/plugin-sdk": "*",
+    "@timps-ai/memory-core": "*",
+    "@timps-ai/plugin-sdk": "*",
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.11.0",
     "chalk": "^5.3.0",
@@ -76,6 +76,9 @@
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^3.2.6"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18.0.0"

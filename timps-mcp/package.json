@@ -1,5 +1,5 @@
 {
-  "name": "timps-mcp",
+  "name": "@timps-ai/timps-mcp",
   "version": "2.0.1",
   "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 17 more tools for Claude Code, Cursor, and Windsurf",
   "main": "dist/index.js",
@@ -55,7 +55,7 @@
     "url": "https://github.com/Sandeeprdy1729/timps/issues"
   },
   "dependencies": {
-    "@timps/memory-core": "*",
+    "@timps-ai/memory-core": "*",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "dotenv": "^16.4.5",
     "zod": "^3.25.0"

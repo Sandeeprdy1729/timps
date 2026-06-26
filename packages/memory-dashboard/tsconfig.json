@@ -11,7 +11,7 @@
     "noEmit": true,
     "skipLibCheck": true,
     "paths": {
-      "@timps/memory-core": ["../../packages/memory-core/src/index.ts"]
+      "@timps-ai/memory-core": ["../../packages/memory-core/src/index.ts"]
     }
   },
   "include": ["src"]

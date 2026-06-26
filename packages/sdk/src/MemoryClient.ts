@@ -3,11 +3,11 @@ import type { MemoryOptions, MemoryEntry as PublicMemoryEntry, RecallOptions, Me
 import type { ProviderConfig } from './types.js';
 import { resolveProviderConfig } from './defaults.js';
 
-type MemoryEntry = import('@timps/memory-core').MemoryEntry;
-type MemoryEngine = import('@timps/memory-core').MemoryEngine;
-type MemoryEngineOptions = import('@timps/memory-core').MemoryEngineOptions;
-type SearchOptions = import('@timps/memory-core').SearchOptions;
-type FileBackend = import('@timps/memory-core').FileBackend;
+type MemoryEntry = import('@timps-ai/memory-core').MemoryEntry;
+type MemoryEngine = import('@timps-ai/memory-core').MemoryEngine;
+type MemoryEngineOptions = import('@timps-ai/memory-core').MemoryEngineOptions;
+type SearchOptions = import('@timps-ai/memory-core').SearchOptions;
+type FileBackend = import('@timps-ai/memory-core').FileBackend;
 
 export class MemoryClient {
   private _engine: MemoryEngine | null = null;
@@ -21,7 +21,7 @@ export class MemoryClient {
   }
 
   async initialize(): Promise<void> {
-    const { MemoryEngine, FileBackend } = await import('@timps/memory-core');
+    const { MemoryEngine, FileBackend } = await import('@timps-ai/memory-core');
 
     const backend = new FileBackend({ baseDir: this._options.dir ?? this._options.projectPath ?? '.' });
 

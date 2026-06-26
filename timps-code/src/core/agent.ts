@@ -26,8 +26,8 @@ import { ContextOrchestrator } from './contextOrchestrator.js';
 import { SelfImprovingAgent } from '../agent/selfImprovingAgent.js';
 import { DurableJobEngine } from './durableJob.js';
 import { CodeGraph } from '../memory/codeGraph.js';
-import { ConstitutionalFilter, ConstitutionalSandbox } from '@timps/memory-core';
-import type { PromptAnalysis, SandboxExecutionRecord, ExecResult } from '@timps/memory-core';
+import { ConstitutionalFilter, ConstitutionalSandbox } from '@timps-ai/memory-core';
+import type { PromptAnalysis, SandboxExecutionRecord, ExecResult } from '@timps-ai/memory-core';
 import { SessionIngestionPipeline } from '../memory/sessionIngestion.js';
 import { ReActAgent } from './reactAgent.js';
 

@@ -1,5 +1,5 @@
 import { PluginManager } from './pluginManager';
-import type { Plugin } from '@timps/plugin-sdk';
+import type { Plugin } from '@timps-ai/plugin-sdk';
 
 function makeMockMemory() {
   const semanticEntries: any[] = [];
@@ -180,7 +180,7 @@ describe('PluginManager', () => {
     pm.registerDirect({
       manifest: { name: 'mem-plugin', version: '0.1.0', description: 'mem' },
       commands: {
-        async read(_args: string[], ctx: import('@timps/plugin-sdk').PluginContext) {
+        async read(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
           const entries = await ctx.memory.loadSemantic(ctx.projectPath);
           return JSON.stringify(entries[0]);
         },
@@ -198,7 +198,7 @@ describe('PluginManager', () => {
     pm.registerDirect({
       manifest: { name: 'ep-plugin', version: '0.1.0', description: 'ep' },
       commands: {
-        async store(_args: string[], ctx: import('@timps/plugin-sdk').PluginContext) {
+        async store(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
           await ctx.memory.appendEpisode(ctx.projectPath, {
             ts: new Date(9000).toISOString(),
             summary: 'did stuff',

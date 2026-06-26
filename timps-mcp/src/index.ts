@@ -5,7 +5,7 @@ dotenv.config();
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
 import { z } from 'zod';
-import { MemoryEngine, MemoryClient } from '@timps/memory-core';
+import { MemoryEngine, MemoryClient } from '@timps-ai/memory-core';
 
 // ── Runtime mode ────────────────────────────────────────────────────────────
 // LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use

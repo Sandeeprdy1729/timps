@@ -1,6 +1,6 @@
 import * as path from 'node:path';
-import { MemoryEngine, MemoryClient, MemoryBranchStore } from '@timps/memory-core';
-import type { MemoryEngineOptions, MemoryClientOptions } from '@timps/memory-core';
+import { MemoryEngine, MemoryClient, MemoryBranchStore } from '@timps-ai/memory-core';
+import type { MemoryEngineOptions, MemoryClientOptions } from '@timps-ai/memory-core';
 import type { MemoryEntry, WorkingMemory } from './types.js';
 import { generateId } from '../utils/utils.js';
 import { getMemoryDir } from '../config/config.js';

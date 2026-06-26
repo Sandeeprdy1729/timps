@@ -10,7 +10,7 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "@timps/plugin-sdk": "*"
+    "@timps-ai/plugin-sdk": "*"
   },
   "keywords": ["timps-plugin", "git"],
   "license": "MIT"
