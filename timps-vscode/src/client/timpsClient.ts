@@ -1,72 +1,145 @@
 import * as vscode from 'vscode';
-import * as http from 'http';
-import * as https from 'https';
 
 function getConfig() {
   const cfg = vscode.workspace.getConfiguration('timps');
   return {
-    serverUrl: cfg.get<string>('serverUrl', 'https://timps-api.onrender.com'),
+    serverUrl: cfg.get<string>('serverUrl', 'http://localhost:4100'),
+    memoryServerUrl: cfg.get<string>('memoryServerUrl', 'http://localhost:4100'),
     userId: cfg.get<number>('userId', 1),
+    token: cfg.get<string>('token', ''),
   };
 }
 
+interface MemoryEntry {
+  id: string;
+  content: string;
+  type: string;
+  tags: string[];
+  confidence: number;
+  timestamp: string;
+  source?: string;
+  actorId?: string;
+}
+
+interface RecallResult {
+  entries: MemoryEntry[];
+  total: number;
+}
+
+interface ContradictionResult {
+  hasContradiction: boolean;
+  confidence: number;
+  evidence?: string[];
+  entries?: MemoryEntry[];
+}
+
+function makeHeaders(): Record<string, string> {
+  const { token } = getConfig();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
+
 export class TimpsClient {
-  private request(path: string, method: string, body?: object): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const { serverUrl } = getConfig();
-      const url = new URL(serverUrl + '/api' + path);
-      const isHttps = url.protocol === 'https:';
-      const lib = isHttps ? https : http;
+  private async request(path: string, method: string, body?: object): Promise<any> {
+    const { serverUrl } = getConfig();
+    const url = new URL(serverUrl + path);
+    const data = body ? JSON.stringify(body) : undefined;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const data = body ? JSON.stringify(body) : undefined;
-      const options = {
-        hostname: url.hostname,
-        port: url.port || (isHttps ? 443 : 80),
-        path: url.pathname + url.search,
+    try {
+      const res = await fetch(url.toString(), {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}),
-        },
-        timeout: 8000,
-      };
-
-      const req = lib.request(options, (res) => {
-        let raw = '';
-        res.on('data', (chunk) => (raw += chunk));
-        res.on('end', () => {
-          try { resolve(JSON.parse(raw)); }
-          catch { resolve(null); }
-        });
+        headers: makeHeaders(),
+        body: data,
+        signal: controller.signal,
       });
-
-      req.on('error', reject);
-      req.on('timeout', () => { req.destroy(); reject(new Error('TIMPs request timed out')); });
-      if (data) req.write(data);
-      req.end();
-    });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`TIMPS ${res.status}: ${text || res.statusText}`);
+      }
+      return res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
-  async addMemory(params: {
-    projectId: string;
-    content: string;
-    memory_type: string;
-    metadata?: Record<string, any>;
-  }): Promise<any> {
-    const { userId } = getConfig();
-    return this.request('/chat', 'POST', {
-      userId,
-      message: `Store memory [${params.memory_type}]: ${params.content.slice(0, 300)}`,
-    });
+  async recall(query: string, options?: { limit?: number; type?: string; minConfidence?: number }): Promise<MemoryEntry[]> {
+    try {
+      const res = await this.request('/api/memory/recall', 'POST', {
+        query,
+        limit: options?.limit ?? 10,
+        type: options?.type,
+        minConfidence: options?.minConfidence ?? 0.3,
+        userId: getConfig().userId,
+        projectId: vscode.workspace.name || 'default',
+      });
+      return res?.entries || [];
+    } catch {
+      return [];
+    }
   }
 
-  async retrieveMemories(params: {
-    projectId: string;
-    query: string;
-    limit?: number;
-  }): Promise<any[]> {
-    const { userId } = getConfig();
-    const res = await this.request(`/memory/${userId}`, 'GET');
-    return res?.memories || [];
+  async store(params: { content: string; type?: string; tags?: string[]; source?: string }): Promise<boolean> {
+    try {
+      await this.request('/api/memory/store', 'POST', {
+        content: params.content,
+        type: params.type || 'observation',
+        tags: params.tags || [],
+        source: params.source || 'vscode-extension',
+        userId: getConfig().userId,
+        projectId: vscode.workspace.name || 'default',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async checkContradiction(statement: string): Promise<ContradictionResult | null> {
+    try {
+      return await this.request('/api/memory/contradiction', 'POST', {
+        statement,
+        projectId: vscode.workspace.name || 'default',
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async getStats(): Promise<{ total: number; layers: number; contradictions: number; velocity: number } | null> {
+    try {
+      return await this.request('/api/memory/stats', 'GET');
+    } catch {
+      return null;
+    }
+  }
+
+  async getContext(filePath?: string, cursorLine?: number): Promise<MemoryEntry[]> {
+    try {
+      const res = await this.request('/api/memory/context', 'POST', {
+        filePath: filePath || vscode.window.activeTextEditor?.document.uri.fsPath || '',
+        cursorLine: cursorLine ?? vscode.window.activeTextEditor?.selection.active.line ?? 0,
+        projectId: vscode.workspace.name || 'default',
+      });
+      return res?.entries || [];
+    } catch {
+      return [];
+    }
+  }
+
+  async recordEdit(params: { filePath: string; content: string; language: string }): Promise<boolean> {
+    try {
+      await this.request('/api/episodic/record', 'POST', {
+        filePath: params.filePath,
+        content: params.content,
+        language: params.language,
+        projectId: vscode.workspace.name || 'default',
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

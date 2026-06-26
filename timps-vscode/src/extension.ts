@@ -6,6 +6,11 @@ import * as path from 'path';
 import { NexusForgeExplorerProvider } from './nexusExplorer';
 import { SynapseMetabolonExplorerProvider } from './synapseExplorer';
 import { registerMemoryView } from './memoryView';
+import { TimpsMemoryPanelProvider } from './memory-panel';
+import { MemoryWatcher } from './memory-watcher';
+import { TimpsCompletionProvider } from './completion-provider';
+import { ContradictionChecker } from './contradiction-checker';
+import { TimpsClient } from './client/timpsClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('TIMPS AI Coding Agent activating...');
 
   chatProvider = new TIMPSChatViewProvider(context);
+  const timpsClient = new TimpsClient();
 
   const cfg = vscode.workspace.getConfiguration('timps');
   const userId = cfg.get<number>('userId', 1);
@@ -98,25 +104,65 @@ export function activate(context: vscode.ExtensionContext) {
   const nexusExplorer = new NexusForgeExplorerProvider(context.extensionUri, userId, apiBase);
   const synapseExplorer = new SynapseMetabolonExplorerProvider(context.extensionUri, userId, apiBase);
 
+  // ── Phase 5b: Memory Panel ──
+  const memoryPanelProvider = new TimpsMemoryPanelProvider(context.extensionUri);
+
+  // ── Phase 5b: Memory Watcher ──
+  const memoryWatcher = new MemoryWatcher();
+  memoryWatcher.setEnabled(cfg.get<boolean>('enableWatcher', true));
+
+  // ── Phase 5b: Autocomplete Provider ──
+  const completionProvider = new TimpsCompletionProvider();
+  completionProvider.setEnabled(cfg.get<boolean>('enableAutocomplete', true));
+
+  // ── Phase 5b: Contradiction Checker ──
+  const contradictionChecker = new ContradictionChecker();
+  contradictionChecker.setEnabled(cfg.get<boolean>('enableContradictionCheck', true));
+
+  // ── Register Webview Providers ──
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('timps.chatView', chatProvider, {
       webviewOptions: { retainContextWhenHidden: true }
-    })
-  );
-
-  context.subscriptions.push(
+    }),
+    vscode.window.registerWebviewViewProvider('timps.memoryPanel', memoryPanelProvider, {
+      webviewOptions: { retainContextWhenHidden: true }
+    }),
     vscode.window.registerWebviewViewProvider('timps.nexusForgeExplorer', nexusExplorer, {
       webviewOptions: { retainContextWhenHidden: true }
-    })
-  );
-
-  context.subscriptions.push(
+    }),
     vscode.window.registerWebviewViewProvider('timps.synapseMetabolonExplorer', synapseExplorer, {
       webviewOptions: { retainContextWhenHidden: true }
     })
   );
 
-  // Commands
+  // ── Register Completion Provider ──
+  context.subscriptions.push(
+    vscode.languages.registerCompletionItemProvider(
+      [
+        { language: 'typescript', scheme: 'file' },
+        { language: 'javascript', scheme: 'file' },
+        { language: 'python', scheme: 'file' },
+        { language: 'rust', scheme: 'file' },
+        { language: 'go', scheme: 'file' },
+        { language: 'java', scheme: 'file' },
+        { language: 'csharp', scheme: 'file' },
+        { language: 'cpp', scheme: 'file' },
+        { language: 'ruby', scheme: 'file' },
+      ],
+      completionProvider,
+      '.',
+      '(',
+      ' ',
+    )
+  );
+
+  // ── Register Contradiction Checker for disposal ──
+  context.subscriptions.push(contradictionChecker);
+
+  // ── Register Memory Watcher for disposal ──
+  context.subscriptions.push(memoryWatcher);
+
+  // ── Commands ──
   context.subscriptions.push(
     vscode.commands.registerCommand('timps.openChat', () => {
       vscode.commands.executeCommand('timps.chatView.focus');
@@ -169,6 +215,88 @@ export function activate(context: vscode.ExtensionContext) {
       const lang = editor.document.languageId;
       chatProvider?.sendMessage(`Generate comprehensive unit tests for this ${lang} code:\n\`\`\`${lang}\n${selection}\n\`\`\``);
       vscode.commands.executeCommand('timps.chatView.focus');
+    }),
+
+    // ── Phase 5b: New Commands ──
+
+    vscode.commands.registerCommand('timps.recall', async () => {
+      const query = await vscode.window.showInputBox({
+        prompt: 'Search memories (leave empty to browse all)',
+        placeHolder: 'e.g. authentication pattern, bug fix, API design',
+      });
+      if (query === undefined) return;
+      const memories = await timpsClient.recall(query || '', { limit: 20 });
+      if (memories.length === 0) {
+        vscode.window.showInformationMessage('TIMPS: No memories found');
+        return;
+      }
+      const picks = memories.slice(0, 20).map(m => ({
+        label: m.content.slice(0, 80) + (m.content.length > 80 ? '…' : ''),
+        description: `${m.type || 'memory'} · ${m.confidence ? Math.round(m.confidence * 100) + '%' : ''}`,
+        detail: (m.tags || []).join(', '),
+      }));
+      await vscode.window.showQuickPick(picks, { placeHolder: `Found ${memories.length} memories` });
+    }),
+
+    vscode.commands.registerCommand('timps.showMemoryPanel', () => {
+      vscode.commands.executeCommand('timps.memoryPanel.focus');
+    }),
+
+    vscode.commands.registerCommand('timps.checkContradictions', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage('TIMPS: Open a file to check for contradictions');
+        return;
+      }
+      const selection = editor.selection.isEmpty
+        ? editor.document.getText()
+        : editor.document.getText(editor.selection);
+      const result = await timpsClient.checkContradiction(selection.slice(0, 1000));
+      if (result?.hasContradiction) {
+        vscode.window.showWarningMessage(
+          `TIMPS: Found ${(result.entries || []).length} contradictory memories`,
+          'View',
+        ).then(btn => {
+          if (btn === 'View') vscode.commands.executeCommand('timps.memoryPanel.focus');
+        });
+      } else {
+        vscode.window.showInformationMessage('TIMPS: No contradictions found');
+      }
+    }),
+
+    vscode.commands.registerCommand('timps.toggleAutocomplete', () => {
+      const cfg = vscode.workspace.getConfiguration('timps');
+      const current = cfg.get<boolean>('enableAutocomplete', true);
+      cfg.update('enableAutocomplete', !current, vscode.ConfigurationTarget.Global);
+      completionProvider.setEnabled(!current);
+      vscode.window.showInformationMessage(`TIMPS autocomplete: ${current ? 'disabled' : 'enabled'}`);
+    }),
+
+    vscode.commands.registerCommand('timps.toggleWatcher', () => {
+      const cfg = vscode.workspace.getConfiguration('timps');
+      const current = cfg.get<boolean>('enableWatcher', true);
+      cfg.update('enableWatcher', !current, vscode.ConfigurationTarget.Global);
+      memoryWatcher.setEnabled(!current);
+      vscode.window.showInformationMessage(`TIMPS edit watcher: ${current ? 'disabled' : 'enabled'}`);
+    }),
+
+    vscode.commands.registerCommand('timps.toggleContradictionCheck', () => {
+      const cfg = vscode.workspace.getConfiguration('timps');
+      const current = cfg.get<boolean>('enableContradictionCheck', true);
+      cfg.update('enableContradictionCheck', !current, vscode.ConfigurationTarget.Global);
+      contradictionChecker.setEnabled(!current);
+      vscode.window.showInformationMessage(`TIMPS contradiction checking: ${current ? 'disabled' : 'enabled'}`);
+    }),
+
+    vscode.commands.registerCommand('timps.memoryStats', async () => {
+      const stats = await timpsClient.getStats();
+      if (!stats) {
+        vscode.window.showInformationMessage('TIMPS: Unable to retrieve memory statistics');
+        return;
+      }
+      vscode.window.showInformationMessage(
+        `TIMPS: ${stats.total} memories · ${stats.layers} layers · ${stats.contradictions} contradictions · ${stats.velocity} commits/day`
+      );
     })
   );
 
@@ -186,7 +314,18 @@ export function activate(context: vscode.ExtensionContext) {
   statusBar.show();
   context.subscriptions.push(statusBar);
 
-  console.log('TIMPS AI Coding Agent activated.');
+  // Listen for config changes to update feature toggles
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (!e.affectsConfiguration('timps')) return;
+      const cfg = vscode.workspace.getConfiguration('timps');
+      completionProvider.setEnabled(cfg.get<boolean>('enableAutocomplete', true));
+      memoryWatcher.setEnabled(cfg.get<boolean>('enableWatcher', true));
+      contradictionChecker.setEnabled(cfg.get<boolean>('enableContradictionCheck', true));
+    })
+  );
+
+  console.log('TIMPS AI Coding Agent activated (Phase 5b: Memory Panel, Autocomplete, Contradiction Checker, Edit Watcher).');
 }
 
 export function deactivate() {}
