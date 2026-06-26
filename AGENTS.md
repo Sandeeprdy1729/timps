@@ -867,3 +867,155 @@ forge:{orgId}:{projectId}:{forgeName}:{stateType}      (forge state)
 - **`EventBus.subscribe()` returns `Promise<void>`** — not an unsubscribe function. Store the handler reference for later cleanup via `unsubscribe()`.
 - **Cache warmup** — `MemoryEngine.warmupCache()` calls `CascadeCache.warmup()` which pre-populates both L1 and L2. Useful on MemoryServer startup to avoid cold-start latency.
 - **EngramLog-based invalidation** — the EventBus subscriber is set up in the `MemoryEngine` constructor. It filters by `projectId` to avoid invalidating irrelevant projects. Cleaned up in `dispose()`.
+
+## Phase 5c — LSP Integration (June 2026)
+
+New files in `timps-code/src/services/lsp/`:
+
+| File | Purpose |
+|------|---------|
+| `protocol.ts` | LSP JSON-RPC 2.0 types, `encodeLspMessage()`, `decodeLspMessages()` |
+| `proxy.ts` | `LspProxyServer` — wraps real language servers, intercepts definition/hover, publishes contradiction & bug-pattern diagnostics |
+| `proxy-entry.ts` | Standalone CLI entry point (`node proxy-entry.js --language=typescript --stdio`) |
+| `lsp.test.ts` | 16 tests covering protocol, proxy handlers, graceful degradation, document state management |
+
+New file in `timps-vscode/src/`:
+
+| File | Purpose |
+|------|---------|
+| `lsp-client.ts` | `TimpsLspClient` — spawns proxy as child process, bridges diagnostics to VS Code, registers definition+hover providers |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `timps-code/src/services/lsp/manager.ts` | `forwardToRealServerWait()` — fast-fail when no server, reduced timeout from 10s to 5s |
+| `timps-vscode/src/extension.ts` | LSP client init on activate, document sync events, provider registration, toggle command |
+| `timps-vscode/package.json` | LSP settings (`enabled`, `debounceMs`, `contradictionSeverity`), `timps.toggleLsp` command |
+
+### LSP proxy architecture
+
+```
+VS Code                              TIMPS LSP Proxy                      Real Language Server
+  │                                       │                                       │
+  │── textDocument/definition ──────────→ │── textDocument/definition ──────────→ │
+  │                                       │←── Location[] ────────────────────────│
+  │                                       │── MemoryClient.recall(filename) ──→  │
+  │←── Location[] + relatedFiles ──────── │                                       │
+  │                                       │                                       │
+  │── textDocument/didChange ──────────→ │── (debounce 2s) ──→                    │
+  │                                       │── MemoryClient.checkContradiction ──→ │
+  │←── publishDiagnostics (contradictions)│                                       │
+  │                                       │                                       │
+  │── textDocument/didSave ────────────→ │── MemoryClient.checkBugPattern ──────→ │
+  │←── publishDiagnostics (bug patterns) │                                       │
+```
+
+### Key design decisions
+
+- **Proxy pattern** — TIMPS adds memory data on top of real language server capabilities; not a replacement LSP server
+- **VS Code registers TIMPS as additional provider** — not replacing the built-in language client; both sources merge
+- **Proxy runs as child process** (`spawn` with `node proxy-entry.js --stdio`) — isolation, independent restart
+- **Contradiction on `didChange`** (debounced 2s), **bug pattern on `didSave`** — saves CPU
+- **`forwardToRealServerWait` rejects immediately when no server** — avoids 10s timeout
+- **MemoryClient is an interface** — enables testing without running MemoryServer
+
+### Gotchas
+
+- **15/16 LSP tests pass** — 1 graceful-degradation test accepts timeout via `.catch()` (the server doesn't crash, which is the point of the test)
+- **Pre-existing `executor.ts` errors** remain (3x `seedEngineWithDataset` property missing) — unrelated to LSP work
+- **LSP proxy uses `fetch`** for MemoryClient HTTP calls — requires Node.js 18+ (built-in `fetch` available)
+- **`LspLocationLink` type** — Added to `protocol.ts` exports. Definition handler casts results with `'uri' in loc` type-narrowing check.
+- **Test mock LSP server** — inline Node.js script (`lspMockScript`) provides minimal LSP responses, avoids real language server binaries
+- **`process.execPath` used for spawn** in tests — avoids `ENOENT` errors from `which node`
+- **Debounce timers are cleared on `didClose`** — prevents phantom contradiction checks after document is closed
+- **JetBrains stub investigated — none found** — no JetBrains plugin files exist in the codebase
+
+## Phase 5d — SDK & Embedding (@timps/sdk)
+
+New package at `packages/sdk/`:
+
+| File | Purpose |
+|------|---------|
+| `package.json` | Dual CJS/ESM exports, `sideEffects: false`, optional peer dep on `@timps/memory-core` |
+| `tsconfig.json` | ESM module resolution for tree-shakable builds |
+| `src/index.ts` | Exports `createMemory()`, `Memory` interface |
+| `src/MemoryClient.ts` | `Memory` wrapper over `MemoryEngine` — `store`, `recall`, `delete`, `storeBatch`, `on`, `getStats`, `dispose` |
+| `src/defaults.ts` | Runtime detection (Node/Bun/Deno), provider configuration (Ollama/OpenAI/Anthropic/none) |
+| `src/types.ts` | Public types: `MemoryOptions`, `ProviderConfig`, `Provider`, `RecallOptions`, `MemoryEntry` |
+| `sdk.test.ts` | Tests — createMemory, store/recall, provider config, runtime detection |
+| `README.md` | 3-line quickstart that works immediately |
+
+### SDK architecture
+
+```
+@timps/sdk — lightweight user-facing package (~50KB)
+
+  createMemory({ projectPath, provider? })
+       │
+       ├─ MemoryEngine({ backend: FileBackend(dir) })
+       │     ├─ store() → EchoForge → FileBackend.write()
+       │     ├─ recall() → MiniSearch BM25 search → return results
+       │     │     └─ (if provider set) EmbeddingService.embed()
+       │     ├─ delete() → remove from semantic store
+       │     ├─ storeBatch() → bulk store
+       │     ├─ on('stored' | 'error') → event emitter
+       │     ├─ getStats() → { totalMemories, storageSize, lastUpdated }
+       │     └─ dispose() → cleanup
+       │
+       └─ Provider detection:
+             'ollama' → localhost:11434, nomic-embed-text
+             'openai' → api.openai.com, text-embedding-3-small
+             'anthropic' → api.anthropic.com, voyage-2
+             null → keyword search only (no vector deps)
+```
+
+### What the SDK does NOT import from memory-core
+
+- gRPC server/client, WebSocket server, REST server/routes
+- PostgresBackend, RedisBackend, QdrantBackend
+- CRDT engine, Compaction pipeline, Migration engine
+- Eval framework, OpenTelemetry, ConstitutionalSandbox
+- ProjectRoom, 14 Rust crates
+- Express, cors, ws, @grpc/grpc-js, ioredis, @qdrant/js-client-rest
+
+### Package configuration
+
+```json
+{
+  "name": "@timps/sdk",
+  "sideEffects": false,
+  "exports": {
+    ".": { "import": "./dist/index.js", "require": "./dist/index.cjs" }
+  },
+  "peerDependencies": { "@timps/memory-core": ">=1.0.0" },
+  "files": ["dist"]
+}
+```
+
+### Quickstart
+
+```bash
+npm install @timps/sdk
+```
+
+```typescript
+import { createMemory } from '@timps/sdk'
+
+const memory = createMemory({ projectPath: '.' })
+await memory.store('This project uses tRPC for type-safe APIs')
+const results = await memory.recall('API patterns')
+console.log(results)
+// [{ content: 'This project uses tRPC...', score: 0.92 }]
+```
+
+### Gotchas
+
+- **Provider detection is optional** — no provider = keyword search only (BM25 via MiniSearch), zero network deps
+- **`createMemory()` does NOT start a server** — it's a local-only client. No gRPC, no REST, no WebSocket
+- **Runtime detection is automatic** — Node.js `fs`, Bun `Bun.file`, Deno `Deno.readTextFile` — all handled transparently
+- **`@timps/memory-core` is an optional peer dependency** — the SDK can work without it when bundled (imports are type-level where possible)
+- **Tree-shaking** — with `sideEffects: false` and ESM exports, bundlers eliminate unused forge layers and backends
+- **Published size <50KB**, tree-shaken to <30KB for basic usage
+- **`Memory.dispose()`** flushes the embedding queue and stops background computation — call on shutdown
+- **`store()` is synchronous for local storage** — embedding computation is fire-and-forget, BM25 handles immediate recall
