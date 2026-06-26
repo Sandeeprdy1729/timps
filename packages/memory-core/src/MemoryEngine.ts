@@ -21,6 +21,7 @@ import {
   jaccardSimilarity,
 } from './storage.js';
 import type { StorageBackend, FileBackendOptions } from './backends/index.js';
+import type { QdrantBackend } from './backends/QdrantBackend.js';
 import type { CacheManager } from './cache/CacheManager.js';
 import type { EventBus, EventBusChannel } from './events/EventBus.js';
 import { TelemetryManager } from './telemetry/TelemetryManager.js';
@@ -28,7 +29,11 @@ import type { TelemetryConfig } from './telemetry/types.js';
 import { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
 
 import { searchEntries } from './search.js';
+import { hybridRecall } from './search/hybridRetriever.js';
 import { MigrationEngine, CURRENT_SCHEMA_VERSION, ALL_MIGRATIONS } from './migrations/index.js';
+import type { EmbeddingConfig } from './embedding/types.js';
+import { EmbeddingQueue } from './embedding/EmbeddingQueue.js';
+import type { EmbeddingStatus } from './embedding/types.js';
 
 // ── New Layers (L10-L22) ──
 import { EngramLog } from './EngramLog.js';
@@ -170,6 +175,20 @@ export interface MemoryEngineOptions {
    * Default: undefined (telemetry off)
    */
   telemetry?: TelemetryConfig;
+  /**
+   * QdrantBackend for vector search at scale.
+   * When provided, recall() uses hybrid search (dense + sparse BM25 + KG)
+   * via RRF fusion for entries >1K. store() asynchronously computes embeddings.
+   * If not provided, falls back to MiniSearch BM25 only.
+   */
+  qdrant?: QdrantBackend;
+  /**
+   * Embedding configuration for vector search.
+   * When provided, store() asynchronously computes embeddings via Ollama or OpenAI
+   * and indexes them in Qdrant for semantic vector search.
+   * Default: undefined (no embedding computation)
+   */
+  embedding?: EmbeddingConfig;
 }
 
 export class MemoryEngine {
@@ -224,6 +243,11 @@ export class MemoryEngine {
   private _schemaDistorter?: SchemaDistorter;
   private _confidenceCalibrator?: ConfidenceCalibrator;
 
+  // ── Phase 4a: Vector Search ──
+  private _qdrant?: QdrantBackend;
+  private _embeddingConfig?: EmbeddingConfig;
+  private _embeddingQueue?: EmbeddingQueue;
+
   // ── New Intelligence Tools 18-25 (lazy-init) ──
   private _falseMemoryDetector?: FalseMemoryDetector;
   private _calibratorTool?: ConfidenceCalibratorTool;
@@ -267,6 +291,16 @@ export class MemoryEngine {
 
     this._cacheManager = options?.cacheManager;
     this._eventBus = options?.eventBus;
+    this._qdrant = options?.qdrant;
+    this._embeddingConfig = options?.embedding;
+
+    // Initialize async embedding pipeline
+    if (this._embeddingConfig && this._embeddingConfig.provider !== 'none') {
+      this._embeddingQueue = new EmbeddingQueue(this._embeddingConfig, this._backend);
+      this._embeddingQueue.start(async (results) => {
+        await this._upsertEmbeddings(results);
+      });
+    }
 
     // Initialize telemetry
     if (options?.telemetry && options.telemetry.level !== 'off') {
@@ -321,6 +355,42 @@ export class MemoryEngine {
    */
   get engineOrgScope(): Readonly<OrgScope> | undefined {
     return this.orgScope;
+  }
+
+  /** The QdrantBackend for vector search, if configured. */
+  get qdrantBackend(): QdrantBackend | undefined {
+    return this._qdrant;
+  }
+
+  /** The async embedding queue status. */
+  get embeddingStatus(): EmbeddingStatus | undefined {
+    if (!this._embeddingQueue) return undefined;
+    return this._embeddingQueue.getStatus();
+  }
+
+  /** Upsert computed embeddings into Qdrant. Called by EmbeddingQueue worker. */
+  private async _upsertEmbeddings(
+    results: Array<{ id: string; vector: number[]; text: string; type: string; tags: string[]; orgScope?: { orgId: string; teamId?: string; projectId: string } }>,
+  ): Promise<void> {
+    if (!this._qdrant) return;
+    const scope = results[0]?.orgScope ?? this.orgScope;
+    try {
+      await this._qdrant.addEmbeddings(
+        results.map(r => ({
+          id: r.id,
+          vector: r.vector,
+          text: r.text,
+          payload: {
+            __id: r.id,
+            __type: r.type,
+            __tags: r.tags,
+            __text: r.text.slice(0, 500),
+          },
+        })),
+      );
+    } catch {
+      // Non-critical — embedding is best-effort
+    }
   }
 
   // ── Lazy getters for tool instances ──
@@ -707,6 +777,17 @@ export class MemoryEngine {
     // L21: learn schema pattern
     this.schemaDistorter.learn(content);
 
+    // Phase 4a: Async embedding pipeline — fire-and-forget
+    if (this._embeddingQueue && this._embeddingConfig?.provider !== 'none') {
+      this._embeddingQueue.enqueue({
+        id,
+        text: content,
+        type,
+        tags: enrichedTags,
+        orgScope: this.orgScope,
+      });
+    }
+
     // Cross-server event propagation
     if (this._eventBus) {
       void this._eventBus.publish('memory:stored', {
@@ -735,7 +816,10 @@ export class MemoryEngine {
    * Recall entries matching a query using a multi-stage intelligence pipeline.
    *
    * Stages:
-   * 1. BM25 keyword search → top 50 candidates
+   * 1a. BM25 keyword search (MiniSearch) → top candidates
+   * 1b. Qdrant hybrid search (dense + sparse BM25) — when available and >1K entries
+   * 1c. Knowledge graph expansion (shared-tag relationships)
+   * 1d. RRF fusion of all sources
    * 2. ProvenanceForge reliability lookup (per candidate)
    * 3. ConfidenceCalibrator (similarity × reliability × evidence × freshness)
    * 4. FalseMemoryDetector risk scoring
@@ -743,12 +827,30 @@ export class MemoryEngine {
    * 6. RehearsalEngine priority boost (if item is due for review)
    * 7. Final ranking and filtering (minConfidence, maxFalseMemoryRisk)
    */
-  recall(query: string, options?: SearchOptions): ScoredMemoryEntry[] {
+  async recall(query: string, options?: SearchOptions): Promise<ScoredMemoryEntry[]> {
     const _span = this._telemetry?.tracer.startSpan('engine.recall', { 'timps.operation': 'recall', 'query.length': query.length });
     const startTime = Date.now();
     try {
     const entries = loadSemantic(this.dir, this._backend);
-    const candidates = searchEntries(entries, query, { ...options, limit: 50 });
+
+    // Stage 1: Hybrid search (BM25 + optionally Qdrant + KG, fused via RRF)
+    const useHybrid = options?.useHybrid !== false && this._qdrant !== undefined && entries.length >= 1000;
+    const useMini = options?.useMiniSearch ?? !useHybrid;
+
+    let candidates: MemoryEntry[];
+    if (useHybrid) {
+      candidates = await hybridRecall(entries, query, {
+        ...options,
+        limit: 50,
+        useQdrant: true,
+        useKnowledgeGraph: true,
+      }, this._qdrant);
+    } else if (useMini) {
+      candidates = searchEntries(entries, query, { ...options, limit: 50 });
+    } else {
+      candidates = searchEntries(entries, query, { ...options, limit: 50 });
+    }
+
     const now = Date.now();
     const useIntel = options?.useIntelligence ?? true;
 
@@ -854,9 +956,9 @@ export class MemoryEngine {
   }
 
   /** Get a formatted context string for injection into agent prompts. */
-  getContextString(task = ''): string {
+  async getContextString(task = ''): Promise<string> {
     const episodes = loadEpisodes(this.dir, 5, this._backend);
-    const facts = this.recall(task, { limit: 5, context: { domain: task, activeFiles: this.working.activeFiles } });
+    const facts = await this.recall(task, { limit: 5, context: { domain: task, activeFiles: this.working.activeFiles } });
     const parts: string[] = [];
 
     if (facts.length > 0) {
@@ -930,6 +1032,58 @@ export class MemoryEngine {
       workingFiles: this.working.activeFiles.length,
       workingPatterns: this.working.discoveredPatterns.length,
     };
+  }
+
+  /**
+   * Backfill: find all semantic entries without embeddings and queue them.
+   * Only works when Qdrant and embedding are configured.
+   * Returns the number of entries queued for embedding.
+   */
+  async backfillEmbeddings(): Promise<number> {
+    if (!this._embeddingQueue || !this._qdrant) return 0;
+
+    let qdrantIds: Set<string>;
+    try {
+      const qdrantInfo = await this._qdrant.info();
+      if (qdrantInfo.pointsCount === 0) {
+        qdrantIds = new Set();
+      } else {
+        const allPoints = await this._qdrant['list']();
+        qdrantIds = new Set(allPoints);
+      }
+    } catch {
+      qdrantIds = new Set();
+    }
+
+    const entries = loadSemantic(this.dir, this._backend);
+    let queued = 0;
+    for (const entry of entries) {
+      if (!qdrantIds.has(entry.id)) {
+        this._embeddingQueue.enqueue({
+          id: entry.id,
+          text: entry.content,
+          type: entry.type,
+          tags: entry.tags,
+          orgScope: this.orgScope,
+        });
+        queued++;
+      }
+    }
+
+    return queued;
+  }
+
+  /**
+   * Dispose of the MemoryEngine — stops the embedding queue worker.
+   * Call this when shutting down to flush pending embeddings.
+   */
+  async dispose(): Promise<void> {
+    if (this._embeddingQueue) {
+      this._embeddingQueue.stop();
+    }
+    if (this._qdrant) {
+      await this._qdrant.close();
+    }
   }
 
   // ── Snapshot & Merge ──
@@ -1177,16 +1331,15 @@ export class MemoryEngine {
    * Only available when using a PostgresBackend with shared schema.
    * This temporarily switches the backend scope to each project and merges results.
    */
-  multiProjectRecall(
+  async multiProjectRecall(
     query: string,
     projectIds: string[],
     options?: SearchOptions & { teamId?: string }
-  ): Map<string, ScoredMemoryEntry[]> {
+  ): Promise<Map<string, ScoredMemoryEntry[]>> {
     const results = new Map<string, ScoredMemoryEntry[]>();
     const currentScope = this.orgScope;
     if (!currentScope) {
-      // Fallback: single-project recall
-      results.set('default', this.recall(query, options));
+      results.set('default', await this.recall(query, options));
       return results;
     }
 
@@ -1199,9 +1352,8 @@ export class MemoryEngine {
       if (typeof (this._backend as any).setScope === 'function') {
         (this._backend as any).setScope(pidScope);
       }
-      const scored = this.recall(query, options);
+      const scored = await this.recall(query, options);
       results.set(pid, scored);
-      // Restore prior scope
       if (typeof (this._backend as any).setScope === 'function') {
         (this._backend as any).setScope(currentScope);
       }

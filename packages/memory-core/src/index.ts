@@ -325,6 +325,15 @@ export type {
   InferredSchema, SchemaInferenceResult,
 } from './intelligence/index.js';
 
+// ── Phase 4a: Vector Search at Scale ──
+export { EmbeddingService, EmbeddingQueue } from './embedding/index.js';
+export type { EmbeddingConfig, EmbeddingResult, QueueItem, EmbeddingStatus } from './embedding/index.js';
+export { DEFAULT_EMBEDDING_CONFIG } from './embedding/types.js';
+export { rrfFuse, rrfFuseWithNames } from './search/rrf.js';
+export type { RankedResult, FusableEntry } from './search/rrf.js';
+export { hybridRecall, shouldUseMiniSearch } from './search/hybridRetriever.js';
+export type { HybridSearchOptions, QdrantAvailability } from './search/hybridRetriever.js';
+
 // ── Telemetry & Observability ──
 export { TelemetryManager } from './telemetry/TelemetryManager.js';
 export type { TelemetryConfig, TelemetryLevel, Span, SpanAttributes, SpanStatusCode, MetricPoint, AnonymousMetricsPayload } from './telemetry/types.js';
@@ -333,3 +342,16 @@ export { Tracer, NoopTracer } from './telemetry/TracerProvider.js';
 export type { SpanHandle, NoopSpanHandle } from './telemetry/TracerProvider.js';
 export { RedactionPipeline } from './telemetry/RedactionPipeline.js';
 export { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
+
+// ── Phase 3c: Eval Framework — Quality Measurement & Regression Detection ──
+export { loadDataset, loadAllDatasets, evaluateDataset, createFreshEngine, runFullEvalSuite, formatEvalSummary, computeDatasetSha } from './eval/runner.js';
+export { BaselineManager } from './eval/baseline.js';
+export { RegressionDetector } from './eval/regression.js';
+export { AbTestRunner } from './eval/abtest.js';
+export { EvalStorage } from './eval/storage.js';
+export { createEvalRoutes } from './server/evalRoutes.js';
+export type {
+  EvalExample, EvalDataset, EvalMetric, EvalResult, EvalBaseline,
+  RegressionResult, VariantConfig, EvalConfig, AbTestResult, DatasetName,
+} from './eval/types.js';
+export { DATASET_NAMES, DEFAULT_EVAL_THRESHOLDS } from './eval/types.js';

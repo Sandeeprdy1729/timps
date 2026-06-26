@@ -6,12 +6,13 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import * as child_process from 'node:child_process';
 import type { ModelProvider, ProviderName, Message, ToolDefinition, StreamEvent, TokenUsage } from '../config/types.js';
-import { loadConfig, getApiKey } from '../config/config.js';
+import { loadConfig, getApiKey, getProviderLimits, getFallbackChain } from '../config/config.js';
 import { createClaudeProvider } from './claude.js';
 import { createOpenAIProvider, createOpenRouterProvider, createDeepSeekProvider, createGroqProvider } from './openai.js';
 import { createGeminiProvider } from './gemini.js';
 import { createOllamaProvider, listOllamaModels } from './ollama.js';
 import { estimateTokens, estimateCost } from '../utils/utils.js';
+import { checkRateLimit, recordUsage } from '../services/providerRateLimiter.js';
 
 export interface DiscoveredProvider {
   name: string;
@@ -523,45 +524,80 @@ export class ProviderMesh {
   ): AsyncGenerator<StreamEvent & { provider?: string; cost?: number }> {
     const policy = options?.policy || {};
     const route = this.route(options?.taskType || '', policy);
-    let usedProvider = route.provider;
-    let usedCost = 0;
+    const config = loadConfig();
+    const strategy = config.rateLimitStrategy || 'fallback';
 
-    try {
-      const provider = this.createProvider(usedProvider);
-      const startTokens = this.costTracker.sessionTokens;
-
-      for await (const event of provider.stream(messages, tools, { signal: options?.signal })) {
-        if (event.type === 'done' && event.usage) {
-          usedCost = estimateCost(usedProvider.model, event.usage.inputTokens, event.usage.outputTokens);
-          this.costTracker.sessionCost += usedCost;
-          this.costTracker.sessionTokens += event.usage.inputTokens + event.usage.outputTokens;
-          this.costTracker.turnCosts.push(usedCost);
-          yield { ...event, provider: usedProvider.name, cost: usedCost };
-        } else {
-          yield { ...event, provider: usedProvider.name };
-        }
-      }
-    } catch (err) {
-      const remaining = this.fallbackChain.filter(p => p.name !== usedProvider.name);
-      for (const fallback of remaining) {
-        try {
-          const fp = this.createProvider(fallback);
-          for await (const event of fp.stream(messages, tools, { signal: options?.signal })) {
-            if (event.type === 'done' && event.usage) {
-              usedCost = estimateCost(fallback.model, event.usage.inputTokens, event.usage.outputTokens);
-              this.costTracker.sessionCost += usedCost;
-              this.costTracker.sessionTokens += event.usage.inputTokens + event.usage.outputTokens;
-              this.costTracker.turnCosts.push(usedCost);
-              yield { ...event, provider: fallback.name, cost: usedCost };
-            } else {
-              yield { ...event, provider: fallback.name };
-            }
-          }
-          return;
-        } catch { continue; }
-      }
-      throw err;
+    // Build ordered list of providers to try (primary + fallback chain)
+    const chainSteps = getFallbackChain(config);
+    const discoveredMap = new Map<string, DiscoveredProvider>();
+    for (const dp of this.discoveredProviders.values()) {
+      discoveredMap.set(dp.provider, dp);
     }
+
+    const allSteps: DiscoveredProvider[] = [route.provider];
+    for (const step of chainSteps) {
+      const existing = discoveredMap.get(step.provider);
+      if (existing) {
+        if (!allSteps.find(s => s.provider === existing.provider)) allSteps.push(existing);
+      } else {
+        // Construct a minimal discovered provider for this step
+        const apiKey = getApiKey(config, step.provider);
+        const isLocal = step.provider === 'ollama';
+        allSteps.push({
+          name: step.provider,
+          provider: step.provider,
+          model: step.model,
+          models: [step.model],
+          url: step.provider === 'ollama' ? config.ollamaUrl : undefined,
+          apiKey,
+          isLocal,
+          isAvailable: true,
+          costPer1kInput: 0,
+          costPer1kOutput: 0,
+          maxTokens: 128000,
+          supportsFunctionCalling: step.provider !== 'gemini' && step.provider !== 'ollama',
+          latencyMs: isLocal ? 100 : 2000,
+        });
+      }
+    }
+
+    let lastError: Error | null = null;
+    for (const dp of allSteps) {
+      const providerName = dp.provider;
+      const limits = getProviderLimits(config, providerName);
+      const check = checkRateLimit(providerName, limits);
+
+      if (!check.allowed && strategy === 'block') {
+        yield { type: 'error', message: `Rate limit: ${check.reason}. Next reset in ${Math.ceil((check.nextReset - Date.now()) / 1000)}s.` };
+        return;
+      }
+
+      if (!check.allowed && strategy === 'fallback') {
+        lastError = new Error(check.reason || 'Rate limited');
+        continue;
+      }
+
+      try {
+        const provider = this.createProvider(dp);
+        recordUsage(providerName);
+        for await (const event of provider.stream(messages, tools, { signal: options?.signal })) {
+          if (event.type === 'done' && event.usage) {
+            const cost = estimateCost(dp.model, event.usage.inputTokens, event.usage.outputTokens);
+            this.costTracker.sessionCost += cost;
+            this.costTracker.sessionTokens += event.usage.inputTokens + event.usage.outputTokens;
+            this.costTracker.turnCosts.push(cost);
+            yield { ...event, provider: providerName, cost };
+          } else {
+            yield { ...event, provider: providerName };
+          }
+        }
+        return;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+      }
+    }
+
+    if (lastError) throw lastError;
   }
 
   private estimateCost(provider: DiscoveredProvider, inputTokens: number, outputTokens: number): number {

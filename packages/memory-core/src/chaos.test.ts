@@ -23,7 +23,7 @@ describe('Chaos — stateless recovery', () => {
     backend.clear();
   });
 
-  it('survives engine re-creation: stored memory persists via backend', () => {
+  it('survives engine re-creation: stored memory persists via backend', async () => {
     engine.store({ content: 'persist test', type: 'fact' });
     const statsBefore = engine.getStats();
     expect(statsBefore.semanticCount).toBeGreaterThanOrEqual(1);
@@ -37,12 +37,12 @@ describe('Chaos — stateless recovery', () => {
     expect(statsAfter.semanticCount).toBe(statsBefore.semanticCount);
 
     // Verify data is recallable from the new engine
-    const results = engine2.recall('persist test');
+    const results = await engine2.recall('persist test');
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].content).toContain('persist');
   });
 
-  it('survives multiple engine instances sharing same backend', () => {
+  it('survives multiple engine instances sharing same backend', async () => {
     const engineA = new MemoryEngine('/tmp/chaos-test', {
       backend,
       dir: '/tmp/chaos-test-mem',
@@ -55,14 +55,14 @@ describe('Chaos — stateless recovery', () => {
     engineA.store({ content: 'cross-instance test', type: 'fact' });
 
     // engineB should see the data engineA stored (shared backend)
-    const results = engineB.recall('cross-instance test');
+    const results = await engineB.recall('cross-instance test');
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].content).toContain('cross-instance');
   });
 });
 
 describe('Chaos — backend failure graceful degradation', () => {
-  it('engine still works after InMemoryBackend.clear() (resets data)', () => {
+  it('engine still works after InMemoryBackend.clear() (resets data)', async () => {
     const localBackend = new InMemoryBackend();
     const eng = new MemoryEngine('/tmp/chaos-degrade', {
       backend: localBackend,
@@ -70,7 +70,7 @@ describe('Chaos — backend failure graceful degradation', () => {
     });
 
     eng.store({ content: 'pre-clear data', type: 'fact' });
-    expect(eng.recall('pre-clear').length).toBeGreaterThan(0);
+    expect((await eng.recall('pre-clear')).length).toBeGreaterThan(0);
 
     // Simulate backend wipe (like database reset).
     // Note: semantic/episodic storage uses storage.ts helpers (getBackend/FileBackend),
@@ -80,15 +80,13 @@ describe('Chaos — backend failure graceful degradation', () => {
 
     // Engine should not crash — recall still works (FileBackend has the data),
     // store still works
-    expect(() => {
-      eng.recall('pre-clear');
-      eng.store({ content: 'post-clear data', type: 'fact' });
-      eng.getStats();
-      eng.consolidate();
-    }).not.toThrow();
+    await eng.recall('pre-clear');
+    eng.store({ content: 'post-clear data', type: 'fact' });
+    eng.getStats();
+    eng.consolidate();
   });
 
-  it('engine does not throw when backend writes fail silently', () => {
+  it('engine does not throw when backend writes fail silently', async () => {
     const failingBackend = new InMemoryBackend();
     const spy = new InMemoryBackend();
     const eng = new MemoryEngine('/tmp/chaos-fail', {
@@ -97,17 +95,15 @@ describe('Chaos — backend failure graceful degradation', () => {
     });
 
     // InMemoryBackend always succeeds, so we test the no-exception path
-    expect(() => {
-      eng.store({ content: 'should-not-throw', type: 'fact' });
-      eng.recall('anything');
-      eng.consolidate();
-      eng.getStats();
-    }).not.toThrow();
+    eng.store({ content: 'should-not-throw', type: 'fact' });
+    await eng.recall('anything');
+    eng.consolidate();
+    eng.getStats();
   });
 });
 
 describe('Chaos — concurrent access (simulated horizontal scale)', () => {
-  it('multiple engines can write concurrently without corruption', () => {
+  it('multiple engines can write concurrently without corruption', async () => {
     const sharedBackend = new InMemoryBackend();
     const engines: MemoryEngine[] = [];
 
@@ -127,7 +123,7 @@ describe('Chaos — concurrent access (simulated horizontal scale)', () => {
     expect(writes.every(w => w === undefined)).toBe(true);
 
     // Any engine can read all data written by any other engine
-    const allResults = engines[0].recall('concurrent', { limit: 100 });
+    const allResults = await engines[0].recall('concurrent', { limit: 100 });
     expect(allResults.length).toBeGreaterThanOrEqual(5);
 
     const contents = allResults.map(r => r.content);

@@ -46,6 +46,10 @@ export interface SearchOptions {
   maxFalseMemoryRisk?: number;
   useIntelligence?: boolean;
   context?: { domain: string; activeFiles?: string[]; tags?: string[] };
+  /** Use full hybrid search (Qdrant + BM25 + KG fusion). Default true when Qdrant is configured. */
+  useHybrid?: boolean;
+  /** Force MiniSearch-only mode. */
+  useMiniSearch?: boolean;
 }
 
 export interface ScoredMemoryEntry extends MemoryEntry {

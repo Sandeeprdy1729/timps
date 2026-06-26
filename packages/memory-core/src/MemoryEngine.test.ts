@@ -21,23 +21,23 @@ describe('MemoryEngine — Layer 3: semantic store/recall', () => {
 
   afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
-  it('stores a fact and recalls it by keyword', () => {
+  it('stores a fact and recalls it by keyword', async () => {
     engine.store({ content: 'prefer immutable data structures', type: 'preference', tags: ['patterns'] });
-    const results = engine.recall('immutable');
+    const results = await engine.recall('immutable');
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].content).toContain('immutable');
   });
 
-  it('deduplicates near-identical entries on store', () => {
+  it('deduplicates near-identical entries on store', async () => {
     engine.store({ content: 'prefer immutable data structures in TypeScript' });
     engine.store({ content: 'prefer immutable data structures in TypeScript' });
-    const results = engine.recall('immutable');
+    const results = await engine.recall('immutable');
     expect(results.length).toBe(1);
   });
 
-  it('recall returns empty array when no match', () => {
+  it('recall returns empty array when no match', async () => {
     engine.store({ content: 'totally unrelated fact' });
-    const results = engine.recall('xylophone spaceship');
+    const results = await engine.recall('xylophone spaceship');
     expect(results.length).toBe(0);
   });
 
@@ -130,7 +130,7 @@ describe('MemoryEngine — export/import round-trip', () => {
     const result = await target.import(pack);
     expect(result.addedSemantic).toBe(2);
 
-    const recalled = target.recall('validate');
+    const recalled = await target.recall('validate');
     expect(recalled.length).toBeGreaterThan(0);
   });
 

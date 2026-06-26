@@ -102,7 +102,7 @@ export interface PermissionResponseEvent {
 export const DEFAULT_SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 export const BRIDGE_LOGIN_INSTRUCTION =
-  'Remote Control is only available with TIMPS cloud subscriptions. Please use `/login` to sign in.';
+  'Remote Control requires local authentication. Use `/auth login` to sign in.';
 
 export const BRIDGE_LOGIN_ERROR =
   'Error: You must be logged in to use Remote Control.\n\n' +

@@ -24,6 +24,7 @@ import { createMarketplaceRoutes } from './marketplaceRoutes';
 import { TelemetryManager } from '../telemetry/TelemetryManager';
 import type { TelemetryConfig } from '../telemetry/types';
 import { createTelemetryRoutes } from './telemetryRoutes';
+import { createEvalRoutes } from './evalRoutes';
 
 export interface MemoryServerOptions {
   /** HTTP port to listen on (default: 4100) */
@@ -57,6 +58,8 @@ export interface MemoryServerOptions {
    * Default: off (no telemetry collected).
    */
   telemetry?: TelemetryConfig;
+  /** Directory for eval baselines. Default: <projectPath>/eval-baselines */
+  evalBaselineDir?: string;
 }
 
 export class MemoryServer {
@@ -277,6 +280,11 @@ export class MemoryServer {
       const telemetryRoutes = createTelemetryRoutes(this._telemetryManager);
       this.app.use('/metrics', telemetryRoutes);
     }
+
+    // ── Eval Framework — Quality Measurement & Regression Detection ──
+    const baselineDir = this.options.evalBaselineDir || `${this.options.projectPath}/eval-baselines`;
+    const evalRoutes = createEvalRoutes(this.engine, this.engine.backend, baselineDir);
+    this.app.use('/eval', evalRoutes);
 
     // Health check (always open)
     this.app.get('/health', (_req, res) => {

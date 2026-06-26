@@ -98,6 +98,23 @@ export type ProviderName =
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type TrustLevel = 'cautious' | 'normal' | 'trust' | 'yolo';
 
+export interface ProviderLimitConfig {
+  maxPerDay: number;
+  maxPerMinute: number;
+}
+
+export interface FallbackStep {
+  provider: ProviderName;
+  model: string;
+}
+
+export interface LlmProviderConfig {
+  apiKey?: string;
+  model?: string;
+  baseUrl?: string;
+  rateLimit?: ProviderLimitConfig;
+}
+
 export interface TimpsConfig {
   defaultProvider: ProviderName;
   defaultModel: string;
@@ -119,6 +136,11 @@ export interface TimpsConfig {
   disableAnalytics?: boolean;
   apiKey?: string;
   migrationVersion?: number;
+
+  // Provider configuration (Phase 3d)
+  providerLimits?: Partial<Record<ProviderName, ProviderLimitConfig>>;
+  fallbackChain?: FallbackStep[];
+  rateLimitStrategy?: 'fallback' | 'block';
 
   // Hermes-style setup fields
   terminal?: TerminalConfig;

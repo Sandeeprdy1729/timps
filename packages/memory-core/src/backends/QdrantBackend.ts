@@ -8,6 +8,14 @@ export interface QdrantBackendOptions {
   apiKey?: string;
   collectionName?: string;
   vectorSize?: number;
+  /** HNSW max connections per node (default 32 for 1M+ scale, 16 for smaller). */
+  hnswM?: number;
+  /** HNSW index build quality (default 128 for 1M+ scale, 100 for smaller). */
+  hnswEfConstruct?: number;
+  /** Start building HNSW index after this many points (default 50000). */
+  indexingThreshold?: number;
+  /** Enable on-disk vectors for memory efficiency at scale (default false). */
+  onDisk?: boolean;
 }
 
 export interface QdrantPoint {
@@ -22,6 +30,7 @@ export class QdrantBackend implements StorageBackend {
   private client: any = null;
   private ready: Promise<void>;
   private _initialized = false;
+  private _sparseReady = false;
   private _activeScope: OrgScope | null = null;
 
   constructor(options: QdrantBackendOptions = {}) {
@@ -30,6 +39,10 @@ export class QdrantBackend implements StorageBackend {
       apiKey: '',
       collectionName: 'timps_memory',
       vectorSize: 384,
+      hnswM: 32,
+      hnswEfConstruct: 128,
+      indexingThreshold: 50000,
+      onDisk: false,
       ...options,
     };
     this.ready = this._connect();
@@ -97,10 +110,44 @@ export class QdrantBackend implements StorageBackend {
         vectors: {
           size: this.options.vectorSize,
           distance: 'Cosine',
+          on_disk: this.options.onDisk,
+        },
+        sparse_vectors: {
+          bm25: {
+            index: {
+              full_scan_threshold: 10000,
+            },
+          },
+        },
+        optimizers_config: {
+          indexing_threshold: this.options.indexingThreshold,
+        },
+        hnsw_config: {
+          m: this.options.hnswM,
+          ef_construct: this.options.hnswEfConstruct,
+          full_scan_threshold: 10000,
+          on_disk: this.options.onDisk,
         },
       });
+    } else {
+      await this._updateCollectionConfig();
     }
     this._initialized = true;
+    this._sparseReady = true;
+  }
+
+  private async _updateCollectionConfig(): Promise<void> {
+    try {
+      const info = await this.client.getCollection(this.options.collectionName);
+      const config = info.config as any;
+      const hasSparse = config?.params?.sparse_vectors?.bm25 !== undefined;
+      if (!hasSparse) {
+        // Qdrant doesn't support adding sparse vectors to existing collections via API yet
+        // Users must recreate the collection for sparse support
+      }
+    } catch {
+      // Best-effort
+    }
   }
 
   private async _assertReady(): Promise<void> {
@@ -244,9 +291,156 @@ export class QdrantBackend implements StorageBackend {
     }));
   }
 
+  /**
+   * Hybrid search combining dense vector + sparse BM25 vectors.
+   * Qdrant natively scores both and returns fused results.
+   */
+  async hybridSearch(
+    queryText: string,
+    options: { topK?: number; filter?: Record<string, unknown>; scoreThreshold?: number; scope?: OrgScope; denseVector?: number[] } = {},
+  ): Promise<QdrantPoint[]> {
+    await this._assertReady();
+    const effectiveScope = this._resolveScope(options.scope);
+    const scopeFilter = this._scopeFilter(effectiveScope);
+
+    const combinedFilter = scopeFilter && options.filter
+      ? { must: [...(scopeFilter as any).must, options.filter] }
+      : scopeFilter ?? options.filter;
+
+    const sparseVector = this.textToSparseVector(queryText);
+    const denseVector = options.denseVector ?? new Array(this.options.vectorSize).fill(0);
+
+    const searchParams: Record<string, unknown> = {
+      vector: denseVector,
+      limit: options.topK ?? 10,
+      score_threshold: options.scoreThreshold,
+      filter: combinedFilter,
+      with_payload: true,
+    };
+
+    if (this._sparseReady) {
+      searchParams.sparse_vector = sparseVector;
+    }
+
+    const result = await this.client.search(this.options.collectionName, searchParams);
+    return result.map((p: any) => ({
+      id: p.id,
+      vector: p.vector ?? [],
+      payload: p.payload ?? {},
+      score: p.score,
+    }));
+  }
+
+  /**
+   * Upsert a point with both dense vector and optional sparse vector.
+   */
+  async upsertWithSparseVector(
+    id: string,
+    vector: number[],
+    text: string,
+    payload: Record<string, unknown> = {},
+    scope?: OrgScope,
+  ): Promise<void> {
+    await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
+    const enrichedPayload = this._enrichPayload(payload, effectiveScope);
+    const sparseVector = this.textToSparseVector(text);
+
+    const point: Record<string, unknown> = { id, vector, payload: enrichedPayload };
+    if (this._sparseReady) {
+      point.sparse_vector = sparseVector;
+    }
+    await this.client.upsert(this.options.collectionName, {
+      points: [point],
+    });
+  }
+
+  /**
+   * Batch upsert with sparse vectors.
+   */
+  async upsertVectorsWithSparse(
+    points: Array<{ id: string; vector: number[]; text: string; payload?: Record<string, unknown> }>,
+    scope?: OrgScope,
+  ): Promise<void> {
+    await this._assertReady();
+    const effectiveScope = this._resolveScope(scope);
+    const qdrantPoints = points.map(p => {
+      const point: Record<string, unknown> = {
+        id: p.id,
+        vector: p.vector,
+        payload: this._enrichPayload(p.payload ?? {}, effectiveScope),
+      };
+      if (this._sparseReady) {
+        point.sparse_vector = this.textToSparseVector(p.text);
+      }
+      return point;
+    });
+    await this.client.upsert(this.options.collectionName, { points: qdrantPoints });
+  }
+
+  /**
+   * Convert text to a sparse vector for BM25-style search.
+   * Uses simple TF-based term extraction with stopword filtering.
+   */
+  textToSparseVector(text: string): { indices: number[]; values: number[] } {
+    const stopwords = new Set([
+      'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and',
+      'or', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+      'could', 'should', 'may', 'might', 'shall', 'can', 'need',
+      'this', 'that', 'these', 'those', 'i', 'it', 'its', 'we',
+      'you', 'they', 'he', 'she', 'not', 'no', 'but', 'so', 'if',
+      'as', 'with', 'by', 'from', 'into', 'about', 'like', 'just',
+    ]);
+
+    const words = text.toLowerCase().split(/[\s\-_.,;:!?()[\]{}'"]+/).filter(w => w.length > 1 && !stopwords.has(w));
+    const freq = new Map<number, number>();
+    // Simple hash to indices (0-65535 range for Qdrant sparse vectors)
+    for (const word of words) {
+      let hash = 0;
+      for (let i = 0; i < word.length; i++) {
+        hash = ((hash << 5) - hash) + word.charCodeAt(i);
+        hash = hash & hash;
+      }
+      const idx = Math.abs(hash) % 65536;
+      freq.set(idx, (freq.get(idx) ?? 0) + 1);
+    }
+
+    const indices: number[] = [];
+    const values: number[] = [];
+    for (const [idx, count] of freq) {
+      indices.push(idx);
+      // Log-normalized TF
+      values.push(1 + Math.log2(count));
+    }
+
+    return { indices, values };
+  }
+
   async clear(): Promise<void> {
     await this._assertReady();
     await this.client.delete(this.options.collectionName, { filter: {} });
+  }
+
+  /**
+   * Add a single embedding vector to the index.
+   */
+  async addEmbedding(
+    id: string,
+    vector: number[],
+    text: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<void> {
+    return this.upsertWithSparseVector(id, vector, text, payload);
+  }
+
+  /**
+   * Add multiple embedding vectors in batch.
+   */
+  async addEmbeddings(
+    items: Array<{ id: string; vector: number[]; text: string; payload?: Record<string, unknown> }>,
+  ): Promise<void> {
+    return this.upsertVectorsWithSparse(items);
   }
 
   async info(): Promise<{ pointsCount: number; vectorSize: number }> {

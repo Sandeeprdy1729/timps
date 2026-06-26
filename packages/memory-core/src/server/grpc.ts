@@ -157,10 +157,10 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
       }
     },
 
-    Recall: (call: any, callback: any) => {
+    Recall: async (call: any, callback: any) => {
       try {
         const req = call.request;
-        const results = engine.recall(req.query, {
+        const results = await engine.recall(req.query, {
           limit: req.limit || 10,
           type: req.type || undefined,
           tags: req.tags?.length ? req.tags : undefined,
@@ -660,7 +660,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
       const insightTypes = ['insight', 'contradiction', 'drift', 'pattern', 'decay', 'event'];
       let idx = 0;
 
-      const timer = setInterval(() => {
+      const timer = setInterval(async () => {
         try {
           if (call.cancelled) {
             clearInterval(timer);
@@ -669,7 +669,7 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
 
           // Check for active contradictions related to project
           if (project_id && idx % 5 === 0) {
-            const recentContext = engine.getContextString(project_id);
+            const recentContext = await engine.getContextString(project_id);
             if (recentContext) {
               call.write({
                 type: 'insight',
