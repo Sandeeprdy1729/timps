@@ -14,6 +14,7 @@ import { encrypt, isEncrypted } from '../config/keyVault.js';
 import { createUser, verifyPassword, listUsers, deleteUser, setUserRole, createSession, getSession, clearSession } from '../services/userStore.js';
 import { checkRateLimit, recordUsage, getUsageStats, resetUsage, DEFAULT_PROVIDER_LIMITS } from '../services/providerRateLimiter.js';
 import { runAuditCommand, runTeamDigestCommand } from './audit.js';
+import { runImproveCommand, runImproveTrainCommand, runImprovePromptCommand } from './improve.js';
 import * as os from 'node:os';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -109,6 +110,18 @@ export async function executeCommand(command: string, args: string[]): Promise<C
 
     case 'eval:gate':
       return runEvalGateCommand();
+
+    case 'improve':
+      return runImproveHandler(rest);
+
+    case 'improve:report':
+      return runImproveReportHandler(rest);
+
+    case 'improve:train':
+      return runImproveTrainHandler(rest);
+
+    case 'improve:prompt':
+      return runImprovePromptHandler();
 
     case 'perf':
     case 'performance':
@@ -693,6 +706,47 @@ async function runEvalGateCommand(): Promise<CommandResult> {
     }
 
     return { success: true, output: lines.join('\n') };
+  } catch (err) {
+    return { success: false, output: '', error: (err as Error).message };
+  }
+}
+
+async function runImproveHandler(args: string[]): Promise<CommandResult> {
+  try {
+    const projectHash = args[0] || path.basename(process.cwd());
+    const output = await runImproveCommand(projectHash, { report: true, train: true });
+    return { success: true, output };
+  } catch (err) {
+    return { success: false, output: '', error: (err as Error).message };
+  }
+}
+
+async function runImproveReportHandler(args: string[]): Promise<CommandResult> {
+  try {
+    const projectHash = args[0] || path.basename(process.cwd());
+    const output = await runImproveCommand(projectHash, { report: true });
+    return { success: true, output };
+  } catch (err) {
+    return { success: false, output: '', error: (err as Error).message };
+  }
+}
+
+async function runImproveTrainHandler(args: string[]): Promise<CommandResult> {
+  try {
+    const projectHash = args[0] || path.basename(process.cwd());
+    const outputDir = args[1] || undefined;
+    const output = await runImproveTrainCommand(projectHash, outputDir);
+    return { success: true, output };
+  } catch (err) {
+    return { success: false, output: '', error: (err as Error).message };
+  }
+}
+
+async function runImprovePromptHandler(): Promise<CommandResult> {
+  try {
+    const projectHash = path.basename(process.cwd());
+    const output = await runImprovePromptCommand(projectHash);
+    return { success: true, output };
   } catch (err) {
     return { success: false, output: '', error: (err as Error).message };
   }

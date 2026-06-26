@@ -289,6 +289,112 @@ export class SelfImprovingAgent {
     ].join('\n');
   }
 
+  // ── Training data generation ────────────────────────────────────────────────
+
+  /**
+   * Generate GRPO-compatible training data from mistake records.
+   * Creates Trajectory-like objects that can be fed into GRPOTrainer.recordVerifyResult().
+   * Returns the number of trajectories generated.
+   */
+  generateTrainingData(options?: {
+    minOccurrences?: number;
+    outputDir?: string;
+  }): number {
+    const minOccurrences = options?.minOccurrences ?? 1;
+    let count = 0;
+
+    for (const mistake of this.mistakes.values()) {
+      if (mistake.occurrences < minOccurrences) continue;
+
+      const trajDir = options?.outputDir ?? path.join(LEARNING_DIR, this.projectHash, 'trajectories');
+      fs.mkdirSync(trajDir, { recursive: true });
+
+      const trajectory = {
+        id: `grpo_${mistake.id}`,
+        task: mistake.description,
+        attempt: mistake.correction || mistake.preventionHint,
+        verifyResult: 'fail' as const,
+        executionOutput: mistake.errorMessage,
+        errorType: this.mapCategoryToErrorType(mistake.category),
+        timestamp: mistake.timestamp,
+        model: 'self-improving-agent',
+        source: 'SelfImprovingAgent',
+        category: mistake.category,
+        preventionHint: mistake.preventionHint,
+      };
+
+      const trajFile = path.join(trajDir, `${trajectory.id}.json`);
+      fs.writeFileSync(trajFile, JSON.stringify(trajectory, null, 2));
+      count++;
+    }
+
+    return count;
+  }
+
+  /**
+   * Build concrete prompt improvement suggestions from the learning report.
+   * Returns an array of actionable prompt modification strings.
+   */
+  buildPromptImprovements(): string[] {
+    const improvements: string[] = [];
+    const categoryCounts = new Map<MistakeCategory, number>();
+
+    for (const mistake of this.mistakes.values()) {
+      categoryCounts.set(mistake.category, (categoryCounts.get(mistake.category) ?? 0) + mistake.occurrences);
+    }
+
+    const sorted = Array.from(categoryCounts.entries()).sort((a, b) => b[1] - a[1]);
+
+    for (const [category, count] of sorted) {
+      if (count < 2) continue;
+      const improvement = this.generateCategoryImprovement(category, count);
+      if (improvement) improvements.push(improvement);
+    }
+
+    improvements.push(`Learning report: ${this.mistakes.size} unique mistakes tracked, ${this.sessionMistakes.length} this session`);
+    improvements.push(`Improvement score: ${this.buildLearningReport().improvementScore}/100`);
+
+    return improvements;
+  }
+
+  private mapCategoryToErrorType(category: MistakeCategory): string {
+    const map: Record<MistakeCategory, string> = {
+      'wrong-file-assumption': 'logic',
+      'insufficient-context': 'logic',
+      'incorrect-tool-sequence': 'logic',
+      'missed-dependency': 'type',
+      'test-regression': 'logic',
+      'type-error': 'type',
+      'logic-error': 'logic',
+      'permission-violation': 'runtime',
+      'infinite-loop': 'logic',
+      'over-engineering': 'other',
+      'under-specification': 'other',
+      'tool-misuse': 'other',
+      'other': 'other',
+    };
+    return map[category];
+  }
+
+  private generateCategoryImprovement(category: MistakeCategory, count: number): string {
+    const templates: Record<MistakeCategory, string> = {
+      'wrong-file-assumption': `[HIGH PRIORITY] This agent frequently (${count}x) assumes file content without reading. Add a mandatory pre-read step before all edit operations.`,
+      'insufficient-context': `[MEDIUM PRIORITY] This agent acts with insufficient context (${count}x). Require reading 3+ related files before implementation tasks.`,
+      'incorrect-tool-sequence': `[HIGH PRIORITY] Tool ordering errors (${count}x). Enforce: think → read → plan → edit → verify sequence.`,
+      'missed-dependency': `[MEDIUM PRIORITY] Dependency misses (${count}x). After any export/interface change, grep for all importers automatically.`,
+      'test-regression': `[HIGH PRIORITY] Test regressions (${count}x). Run test suite before AND after every change.`,
+      'type-error': `[HIGH PRIORITY] TypeScript/type errors (${count}x). Run tsc --noEmit after every edit session.`,
+      'logic-error': `[MEDIUM PRIORITY] Logic errors (${count}x). Use structured reasoning before implementation.`,
+      'permission-violation': `[LOW PRIORITY] File permission violations (${count}x). Verify write permissions before any file operation.`,
+      'infinite-loop': `[MEDIUM PRIORITY] Correction loops (${count}x). If retrying >3 times, escalate to human.`,
+      'over-engineering': `[LOW PRIORITY] Over-engineering detected (${count}x). Prefer simplest solution that works.`,
+      'under-specification': `[LOW PRIORITY] Under-specification (${count}x). Clarify requirements before starting work.`,
+      'tool-misuse': `[LOW PRIORITY] Tool misuse (${count}x). Use surgical edits, not full rewrites.`,
+      'other': `[LOW PRIORITY] Uncategorized issues (${count}x). Review and categorize for better prevention.`,
+    };
+    return templates[category] || '';
+  }
+
   // ── Session summary ────────────────────────────────────────────────────────
 
   /**

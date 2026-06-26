@@ -70,7 +70,7 @@ async function main() {
     inputSchema: {},
   }, async () => {
     if (!SERVER_MODE) {
-      const facts = localEngine.recall('', { limit: 10 });
+      const facts = await localEngine.recall('', { limit: 10 });
       const working = localEngine.workingMemory;
       if (!facts.length && !working.currentGoal) {
         return { content: [{ type: 'text' as const, text: 'No memories stored yet.' }] };
@@ -79,7 +79,7 @@ async function main() {
       if (working.currentGoal) lines.push(`**Current Goal:** ${working.currentGoal}`);
       if (facts.length) {
         lines.push(`\n**Memories (${facts.length}):**`);
-        facts.forEach(f => lines.push(`- [${f.type}] ${f.content}`));
+        facts.forEach((f: any) => lines.push(`- [${f.type}] ${f.content}`));
       }
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
     }
@@ -862,9 +862,9 @@ async function main() {
   }, async ({ topic }) => {
     if (!SERVER_MODE) {
       const query = topic ? `architecture decision ${topic}` : 'architecture decision design pattern';
-      const results = localEngine.recall(query, { limit: 10 });
+      const results = await localEngine.recall(query, { limit: 10 });
       if (!results.length) return { content: [{ type: 'text' as const, text: 'No architecture decisions recorded yet. Use timps_store_memory to save decisions.' }] };
-      const lines = results.map(r => `- ${r.content}`);
+      const lines = results.map((r: any) => `- ${r.content}`);
       return { content: [{ type: 'text' as const, text: `**Architecture decisions${topic ? ` (${topic})` : ''}:**\n${lines.join('\n')}` }] };
     }
     if (memoryClient) {
@@ -918,9 +918,8 @@ async function main() {
     if (!SERVER_MODE) {
       const taskDescription = String(task_description);
       const query = [taskDescription, file_path].filter(Boolean).join(' ');
-      const results = localEngine.recall(query, { limit: 5 });
+      const results = await localEngine.recall(query, { limit: 5 });
       const patterns = localEngine.patternLearner.getAll();
-      // score patterns by jaccard similarity to task
       const taskTokens = new Set<string>(taskDescription.toLowerCase().split(/\W+/));
       const scored = patterns.map(p => {
         const pTokens = new Set<string>(p.content.toLowerCase().split(/\W+/));
@@ -935,7 +934,7 @@ async function main() {
       }
       if (results.length) {
         lines.push('\n**Related memories:**');
-        results.forEach(r => lines.push(`- ${r.content.slice(0, 120)}`));
+        results.forEach((r: any) => lines.push(`- ${r.content.slice(0, 120)}`));
       }
       if (!lines.length) return { content: [{ type: 'text' as const, text: 'No relevant patterns found for this context.' }] };
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
@@ -1134,12 +1133,12 @@ async function main() {
   }, async ({ topic }) => {
     if (!SERVER_MODE) {
       const query = topic ? `team decision ${topic}` : 'team architecture decision';
-      const results = localEngine.recall(query, { limit: 10 });
+      const results = await localEngine.recall(query, { limit: 10 });
       const archInsights = localEngine.architectureDrift.cultureReport('default');
       const lines: string[] = [];
       if (results.length) {
         lines.push('**Decisions:**');
-        results.forEach(r => lines.push(`- ${r.content}`));
+        results.forEach((r: any) => lines.push(`- ${r.content}`));
       }
       if (archInsights.insight_count > 0) {
         lines.push('\n**Architecture culture:**');
@@ -1156,7 +1155,7 @@ async function main() {
       const lines: string[] = [];
       if (results.length) {
         lines.push('**Decisions:**');
-        results.forEach(r => lines.push(`- ${r.content}`));
+        results.forEach((r: any) => lines.push(`- ${r.content}`));
       }
       if (!lines.length) return { content: [{ type: 'text' as const, text: 'No shared decisions yet. Use timps_store_memory with type "decision" to record team decisions.' }] };
       return { content: [{ type: 'text' as const, text: lines.join('\n') }] };

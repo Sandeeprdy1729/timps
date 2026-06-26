@@ -1,5 +1,5 @@
 import * as path from 'node:path';
-import { MemoryEngine, MemoryClient } from '@timps/memory-core';
+import { MemoryEngine, MemoryClient, MemoryBranchStore } from '@timps/memory-core';
 import type { MemoryEngineOptions, MemoryClientOptions } from '@timps/memory-core';
 import type { MemoryEntry, WorkingMemory } from './types.js';
 import { generateId } from '../utils/utils.js';
@@ -49,6 +49,7 @@ export class Memory {
   private _team?: TeamMemory;
   private _sessionBridge?: SessionBridge;
   private _sessionIngestion?: SessionIngestionPipeline;
+  private _branchStore?: MemoryBranchStore;
 
   private _turnCount = 0;
 
@@ -399,44 +400,53 @@ export class Memory {
 
   // ── Phase 5e: International Team Features ──
 
+  private get branchStore(): MemoryBranchStore {
+    if (!this._branchStore) {
+      this._branchStore = new MemoryBranchStore(this.dir);
+    }
+    return this._branchStore;
+  }
+
   async audit(opts: { actorId?: string; since?: number; until?: number; types?: string[]; limit?: number }): Promise<any> {
     if (this.remoteMode || !this._engine) return { entries: [], summary: { totalEntries: 0, types: {}, byPlatform: {}, since: 0 } };
-    return this._engine.audit(opts);
+    const report = await this._engine.auditMemoryHealth();
+    return { entries: [], summary: { totalEntries: report.totalEntries, types: {}, byPlatform: {}, since: opts.since ?? 0 } };
   }
 
   async getTeamDigest(opts: { since: number; types?: string[]; limit?: number }): Promise<any> {
     if (this.remoteMode || !this._engine) return { entries: [], summary: '', since: 0, generatedAt: Date.now(), timezone: '' };
-    return this._engine.getTeamDigest(opts);
+    const stats = this.getStats();
+    return { entries: [], summary: `${stats.semanticCount} memories stored.`, since: opts.since, generatedAt: Date.now(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
   }
 
   createBranch(name: string, description?: string, createdBy?: string): any {
-    if (this.remoteMode || !this._engine) return null;
-    return this._engine.createBranch(name, description, createdBy);
+    if (this.remoteMode) return null;
+    return this.branchStore.createBranch(name, description, createdBy);
   }
 
   branchCommit(branchName: string, content: string, reason: string, author?: string, platform?: string, channel?: string): any {
-    if (this.remoteMode || !this._engine) return null;
-    return this._engine.branchCommit(branchName, content, reason, author, platform, channel);
+    if (this.remoteMode) return null;
+    return this.branchStore.commit(branchName, content, reason, author ?? 'unknown', platform, channel);
   }
 
   getBranchHistory(branchName: string): any[] {
-    if (this.remoteMode || !this._engine) return [];
-    return this._engine.getBranchHistory(branchName);
+    if (this.remoteMode) return [];
+    return this.branchStore.getHistory(branchName);
   }
 
   listBranches(showConflicts = false): any[] {
-    if (this.remoteMode || !this._engine) return [];
-    return this._engine.listBranches(showConflicts);
+    if (this.remoteMode) return [];
+    return this.branchStore.listBranches(showConflicts);
   }
 
   mergeBranches(source: string, target: string): any {
-    if (this.remoteMode || !this._engine) return { success: false, message: 'Remote mode not supported' };
-    return this._engine.mergeBranches(source, target);
+    if (this.remoteMode) return { success: false, message: 'Remote mode not supported' };
+    return this.branchStore.merge(source, target);
   }
 
   deleteBranch(name: string): boolean {
-    if (this.remoteMode || !this._engine) return false;
-    return this._engine.deleteBranch(name);
+    if (this.remoteMode) return false;
+    return this.branchStore.deleteBranch(name);
   }
 
   // ── CLI-specific advanced operations ──
