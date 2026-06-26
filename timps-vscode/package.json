@@ -53,6 +53,7 @@
     "onCommand:timps.checkContradictions",
     "onCommand:timps.toggleAutocomplete",
     "onCommand:timps.toggleWatcher",
+    "onCommand:timps.toggleLsp",
     "onView:timps.memoryPanel"
   ],
   "contributes": {
@@ -184,6 +185,11 @@
         "title": "Show Memory Statistics",
         "category": "TIMPS",
         "icon": "$(graph)"
+      },
+      {
+        "command": "timps.toggleLsp",
+        "title": "Toggle LSP Integration",
+        "category": "TIMPS"
       }
     ],
     "menus": {
@@ -365,6 +371,24 @@
           "minimum": 100,
           "maximum": 5000,
           "description": "Debounce delay for memory panel context updates (ms)"
+        },
+        "timps.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable TIMPS LSP integration (definition enrichment, hover memories, contradiction diagnostics, bug pattern detection)"
+        },
+        "timps.lsp.debounceMs": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 500,
+          "maximum": 10000,
+          "description": "Debounce delay for LSP contradiction checking (ms)"
+        },
+        "timps.lsp.contradictionSeverity": {
+          "type": "string",
+          "enum": ["error", "warning", "information"],
+          "default": "warning",
+          "description": "Severity level for contradiction diagnostics"
         }
       }
     }
