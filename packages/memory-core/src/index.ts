@@ -332,6 +332,12 @@ export { DEFAULT_EMBEDDING_CONFIG } from './embedding/types.js';
 export { rrfFuse, rrfFuseWithNames } from './search/rrf.js';
 export type { RankedResult, FusableEntry } from './search/rrf.js';
 export { hybridRecall, shouldUseMiniSearch } from './search/hybridRetriever.js';
+
+// Phase 4b: incremental computation
+export { ComputationQueue } from './computation/ComputationQueue.js';
+export { MaterializedViews, CONTRADICTION_VIEW, WORKING_MEMORY_VIEW, VELOCITY_VIEW, DRIFT_VIEW } from './computation/MaterializedViews.js';
+export type { ComputationTask, ComputationConfig, ComputationStatus, MaterializedView, ViewEntry, ComputationHandlers } from './computation/types.js';
+export { LSHIndex } from './computation/LSHIndex.js';
 export type { HybridSearchOptions, QdrantAvailability } from './search/hybridRetriever.js';
 
 // ── Telemetry & Observability ──

@@ -14,6 +14,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
 import type { HarmonicSheafWeaver, CohomologyResult } from '../HarmonicSheafWeaver.js';
+import { LSHIndex } from '../computation/LSHIndex.js';
 
 export interface Position {
   id: string;
@@ -91,12 +92,19 @@ export class ContradictionDetector {
   private _backend?: StorageBackend;
   /** Optional HarmonicSheafWeaver for algebraic contradiction detection */
   private sheaf?: HarmonicSheafWeaver;
+  /** Phase 4b: LSH index for O(1) candidate lookup instead of O(n) scan */
+  private _lsh: LSHIndex;
 
   constructor(dir: string, backend?: StorageBackend, sheaf?: HarmonicSheafWeaver) {
     this._backend = backend;
     this.file = path.join(dir, 'contradiction_positions.json');
     this.sheaf = sheaf;
+    this._lsh = new LSHIndex();
     this.load();
+    // Rebuild LSH from existing positions
+    for (const pos of this.positions) {
+      this._lsh.insert(pos.id, pos.extracted_claim);
+    }
   }
 
   private load(): void {
@@ -130,9 +138,23 @@ export class ContradictionDetector {
     let best: Position | undefined;
     let bestScore = 0;
     let bestSimilarity = 0;
+    let positionsChecked = 0;
+    const seenIds = new Set<string>();
 
     for (const claim of claims) {
-      for (const pos of this.positions) {
+      // Phase 4b: use LSH to find candidate positions instead of scanning all
+      const candidateIds = this._lsh.query(claim, 16);
+      const candidates: Position[] = [];
+      for (const id of candidateIds) {
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        const pos = this.positions.find(p => p.id === id);
+        if (pos) candidates.push(pos);
+      }
+
+      for (const pos of candidates) {
+        seenIds.add(pos.id);
+        positionsChecked++;
         const sim = jaccard(claim, pos.extracted_claim);
         if (sim < 0.15) continue;
         const flip = sentimentFlip(claim, pos.extracted_claim);
@@ -141,6 +163,24 @@ export class ContradictionDetector {
           bestScore = score;
           bestSimilarity = sim;
           best = pos;
+        }
+      }
+    }
+
+    // Fallback: if LSH produced no candidates, scan all positions (cold start)
+    if (positionsChecked === 0 && this.positions.length > 0) {
+      for (const claim of claims) {
+        for (const pos of this.positions) {
+          positionsChecked++;
+          const sim = jaccard(claim, pos.extracted_claim);
+          if (sim < 0.15) continue;
+          const flip = sentimentFlip(claim, pos.extracted_claim);
+          const score = sim * (flip ? 1.4 : 0.6);
+          if (score > bestScore) {
+            bestScore = score;
+            bestSimilarity = sim;
+            best = pos;
+          }
         }
       }
     }
@@ -169,7 +209,7 @@ export class ContradictionDetector {
         matched_position: best,
         explanation: `Matches stored position: "${best.extracted_claim.slice(0, 100)}"`,
         extracted_claims: claims,
-        positions_checked: this.positions.length,
+        positions_checked: positionsChecked || this.positions.length,
         sheafCohomology,
       };
     }
@@ -180,7 +220,7 @@ export class ContradictionDetector {
       semantic_similarity: 0,
       explanation: 'No contradictions detected.',
       extracted_claims: claims,
-      positions_checked: this.positions.length,
+      positions_checked: positionsChecked || this.positions.length,
       sheafCohomology,
     };
   }
@@ -238,7 +278,11 @@ export class ContradictionDetector {
       created_at: new Date().toISOString(),
     };
     this.positions.push(pos);
-    if (this.positions.length > 200) this.positions.shift();
+    this._lsh.insert(pos.id, extracted_claim);
+    if (this.positions.length > 200) {
+      const removed = this.positions.shift()!;
+      this._lsh.delete(removed.id);
+    }
     this.save();
 
     // Weave claim into HarmonicSheafWeaver for algebraic tracking

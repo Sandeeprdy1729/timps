@@ -35,6 +35,11 @@ import type { EmbeddingConfig } from './embedding/types.js';
 import { EmbeddingQueue } from './embedding/EmbeddingQueue.js';
 import type { EmbeddingStatus } from './embedding/types.js';
 
+// Phase 4b: incremental computation
+import { ComputationQueue } from './computation/ComputationQueue.js';
+import { MaterializedViews, CONTRADICTION_VIEW, WORKING_MEMORY_VIEW, VELOCITY_VIEW, DRIFT_VIEW } from './computation/MaterializedViews.js';
+import type { ComputationTask, ComputationHandlers } from './computation/types.js';
+
 // ── New Layers (L10-L22) ──
 import { EngramLog } from './EngramLog.js';
 import { ConsolidationEngine } from './ConsolidationEngine.js';
@@ -248,6 +253,10 @@ export class MemoryEngine {
   private _embeddingConfig?: EmbeddingConfig;
   private _embeddingQueue?: EmbeddingQueue;
 
+  // ── Phase 4b: Incremental Computation ──
+  private _computationQueue?: ComputationQueue;
+  private _materializedViews: MaterializedViews;
+
   // ── New Intelligence Tools 18-25 (lazy-init) ──
   private _falseMemoryDetector?: FalseMemoryDetector;
   private _calibratorTool?: ConfidenceCalibratorTool;
@@ -302,6 +311,10 @@ export class MemoryEngine {
       });
     }
 
+    // Phase 4b: materialized views and computation queue
+    this._materializedViews = new MaterializedViews(this._backend);
+    this._computationQueue = new ComputationQueue(this._computationHandlers(), this._backend);
+
     // Initialize telemetry
     if (options?.telemetry && options.telemetry.level !== 'off') {
       this._telemetry = new TelemetryManager(options.telemetry);
@@ -347,6 +360,47 @@ export class MemoryEngine {
   /** The scope this engine was created with, if any. */
   get engineScope(): Readonly<MemoryScope> | undefined {
     return this.scope;
+  }
+
+  /** The computation queue (Phase 4b incremental computation). */
+  get computationQueue(): ComputationQueue | undefined {
+    return this._computationQueue;
+  }
+
+  /** The materialized views cache (Phase 4b). */
+  get materializedViews(): MaterializedViews {
+    return this._materializedViews;
+  }
+
+  /** Phase 4b: register computation handlers for each forge's incremental updates. */
+  private _computationHandlers(): ComputationHandlers {
+    return {
+      eigenmode: async (task: ComputationTask) => {
+        const { nodeId, forge } = task.payload ?? {};
+        if (forge === 'harmonic' && this._harmonicSheaf?.isEigenmodeDirty) {
+          this._harmonicSheaf.refreshEigenmodes();
+        }
+        if (forge === 'aether' && this._aether?.isEigenmodeDirty) {
+          this._aether.refreshEigenmodes();
+        }
+      },
+      contradiction: async (task: ComputationTask) => {
+        if (this._contradiction) {
+          this._contradiction.check(String(task.payload?.content ?? ''), false);
+        }
+      },
+      decay_scores: async (_task: ComputationTask) => {
+        if (this._echo) {
+          this._echo.refreshDecayScores();
+        }
+      },
+      materialized_view: async (task: ComputationTask) => {
+        const viewName = task.payload?.viewName as string | undefined;
+        if (viewName) {
+          this._materializedViews.refresh(viewName, async () => []);
+        }
+      },
+    };
   }
 
   /**
@@ -802,6 +856,30 @@ export class MemoryEngine {
         teamId: this.orgScope?.teamId,
       });
     }
+
+    // Phase 4b: enqueue incremental computation tasks (fire-and-forget)
+    if (this._computationQueue) {
+      // Eigenmode update for HarmonicSheafWeaver
+      this._computationQueue.enqueue({
+        type: 'eigenmode',
+        payload: { nodeId: id, content, forge: 'harmonic' },
+      });
+      // Eigenmode update for AetherForgeERL
+      this._computationQueue.enqueue({
+        type: 'eigenmode',
+        payload: { nodeId: id, content, forge: 'aether' },
+      });
+      // Contradiction check
+      this._computationQueue.enqueue({
+        type: 'contradiction',
+        payload: { content, id },
+      });
+      // Refresh contradiction materialized view
+      this._computationQueue.enqueue({
+        type: 'materialized_view',
+        payload: { viewName: CONTRADICTION_VIEW },
+      });
+    }
     } finally {
       const duration = Date.now() - startTime;
       if (this._telemetry) {
@@ -1080,6 +1158,9 @@ export class MemoryEngine {
   async dispose(): Promise<void> {
     if (this._embeddingQueue) {
       this._embeddingQueue.stop();
+    }
+    if (this._computationQueue) {
+      this._computationQueue.stop();
     }
     if (this._qdrant) {
       await this._qdrant.close();

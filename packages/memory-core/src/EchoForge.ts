@@ -414,6 +414,9 @@ export class EchoForge implements IMemoryLayer {
   /** Running reservoir state (domain-scoped) */
   private reservoirStates: Partial<Record<EchoDomain, Record<number, number>>> = {};
 
+  /** Phase 4b: cached effectiveEcho scores keyed by nodeId */
+  private _decayScoreCache: Map<string, number> = new Map();
+
   constructor(baseDir: string, backend?: StorageBackend) {
     const echoDir = path.join(baseDir, "echo");
     this._backend = backend;
@@ -471,6 +474,47 @@ export class EchoForge implements IMemoryLayer {
       if (!this.adjIn.has(edge.toId)) this.adjIn.set(edge.toId, []);
       this.adjIn.get(edge.toId)!.push(edge);
     }
+  }
+
+  /** Phase 4b: get or compute cached effectiveEcho score */
+  private _cachedEcho(nodeId: string, atMs: number): number {
+    const cached = this._decayScoreCache.get(nodeId);
+    if (cached !== undefined) return cached;
+    const node = this.storeData.nodes[nodeId];
+    if (!node) return 0;
+    const score = effectiveEcho(node, atMs);
+    this._decayScoreCache.set(nodeId, score);
+    return score;
+  }
+
+  /** Phase 4b: invalidate decay score cache for a node (called on retrieve/update) */
+  private _invalidateDecayScore(nodeId: string): void {
+    this._decayScoreCache.delete(nodeId);
+  }
+
+  /** Phase 4b: bulk invalidate decay score cache */
+  private _invalidateAllDecayScores(): void {
+    this._decayScoreCache.clear();
+  }
+
+  /**
+   * Phase 4b: recompute decay scores for stale entries.
+   * Called periodically by the ComputationQueue worker.
+   */
+  refreshDecayScores(atMs?: number): number {
+    const now = atMs ?? Date.now();
+    let updated = 0;
+    for (const nodeId of Object.keys(this.storeData.nodes)) {
+      const cached = this._decayScoreCache.get(nodeId);
+      const node = this.storeData.nodes[nodeId];
+      if (!node) continue;
+      const fresh = effectiveEcho(node, now);
+      if (cached === undefined || Math.abs(cached - fresh) > 0.01) {
+        this._decayScoreCache.set(nodeId, fresh);
+        updated++;
+      }
+    }
+    return updated;
   }
 
   private _addEdge(edge: EchoEdge): void {
@@ -725,7 +769,7 @@ export class EchoForge implements IMemoryLayer {
     const scored = activeNodes
       .map((n) => ({
         node: n,
-        score: sparseDot(queryEmb, n.embedding) * effectiveEcho(n, now) * Math.max(0.1, n.echoAmp),
+        score: sparseDot(queryEmb, n.embedding) * this._cachedEcho(n.id, now) * Math.max(0.1, n.echoAmp),
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
@@ -733,9 +777,10 @@ export class EchoForge implements IMemoryLayer {
     const nodes = scored.map((s) => s.node);
     const scores = scored.map((s) => s.score);
 
-    // Increment retrieval counts
+    // Increment retrieval counts and invalidate decay cache
     for (const n of nodes) {
       this.storeData.nodes[n.id]!.retrievalCount += 1;
+      this._invalidateDecayScore(n.id);
     }
 
     let predictions: EchoPrediction[] | undefined;
@@ -816,13 +861,14 @@ export class EchoForge implements IMemoryLayer {
     for (const node of Object.values(this.storeData.nodes)) {
       if (node.invalidAt !== null) continue;
 
-      const amp = effectiveEcho(node, now);
+      const amp = this._cachedEcho(node.id, now);
       const outbound = this.adjOut.get(node.id)?.length ?? 0;
 
       if (amp < quenchThreshold && outbound === 0) {
         // Quench
         this.storeData.nodes[node.id]!.invalidAt = now;
         this.storeData.nodes[node.id]!.validTo = now;
+        this._invalidateDecayScore(node.id);
         quenched++;
       } else {
         retained++;
@@ -830,6 +876,7 @@ export class EchoForge implements IMemoryLayer {
         const age = now - node.createdAt;
         if (age >= CRYSTALLISATION_AGE_MS && amp >= 0.5 && node.retrievalCount >= 3) {
           this.storeData.nodes[node.id]!.salience = Math.min(1, node.salience * 1.25);
+          this._invalidateDecayScore(node.id);
           crystallised++;
         }
       }
@@ -879,7 +926,7 @@ export class EchoForge implements IMemoryLayer {
           (n.invalidAt === null || n.invalidAt > atTime) &&
           (opts.domain === undefined || n.domain === opts.domain)
       )
-      .sort((a, b) => effectiveEcho(b, atTime) - effectiveEcho(a, atTime))
+      .sort((a, b) => this._cachedEcho(b.id, atTime) - this._cachedEcho(a.id, atTime))
       .slice(0, limit);
 
     // Trace causal chain from top node
@@ -915,7 +962,7 @@ export class EchoForge implements IMemoryLayer {
 
     const lines = nodes.map(
       (n, i) =>
-        `${i + 1}. [echo=${(n.echoAmp ?? 0).toFixed(2)}, amp=${effectiveEcho(n, now).toFixed(2)}] ${n.content}`
+        `${i + 1}. [echo=${(n.echoAmp ?? 0).toFixed(2)}, amp=${this._cachedEcho(n.id, now).toFixed(2)}] ${n.content}`
     );
     return `[EchoForge:${domain}]\n${lines.join("\n")}`;
   }
@@ -930,7 +977,7 @@ export class EchoForge implements IMemoryLayer {
 
     for (const n of activeNodes) {
       domainCounts[n.domain] = (domainCounts[n.domain] ?? 0) + 1;
-      totalAmp += effectiveEcho(n, now);
+      totalAmp += this._cachedEcho(n.id, now);
     }
 
     return {
@@ -967,7 +1014,7 @@ export class EchoForge implements IMemoryLayer {
     let totalWeight = 0;
 
     for (const node of nodes) {
-      const weight = effectiveEcho(node, now) * Math.max(0.1, node.echoAmp);
+      const weight = this._cachedEcho(node.id, now) * Math.max(0.1, node.echoAmp);
       totalWeight += weight;
       for (const [dimStr, val] of Object.entries(node.reservoirState)) {
         const dim = Number(dimStr);
@@ -999,7 +1046,7 @@ export class EchoForge implements IMemoryLayer {
 
     // Interference signal: sum of contradicting edge amplitudes on driving nodes
     const drivingNodeIds = nodes
-      .sort((a, b) => effectiveEcho(b, now) - effectiveEcho(a, now))
+      .sort((a, b) => this._cachedEcho(b.id, now) - this._cachedEcho(a.id, now))
       .slice(0, 3)
       .map((n) => n.id);
 
@@ -1089,6 +1136,7 @@ export class EchoForge implements IMemoryLayer {
       this.storeData.nodes[entryId]!.salience = evidence.outcome === 'confirmed'
         ? Math.min(1, (this.storeData.nodes[entryId]!.salience ?? 0.5) * 1.1)
         : Math.max(0, (this.storeData.nodes[entryId]!.salience ?? 0.5) * 0.9);
+      this._invalidateDecayScore(entryId);
       this._save();
     }
   }
@@ -1102,6 +1150,8 @@ export class EchoForge implements IMemoryLayer {
         edgeType: 'contradicts',
         createdAt: Date.now(),
       });
+      this._invalidateDecayScore(entryId);
+      this._invalidateDecayScore(counterEntryId);
       this._save();
     }
   }
@@ -1110,6 +1160,7 @@ export class EchoForge implements IMemoryLayer {
     if (this.storeData.nodes[entryId]) {
       this.storeData.nodes[entryId]!.invalidAt = Date.now();
       this.storeData.nodes[entryId]!.validTo = Date.now();
+      this._invalidateDecayScore(entryId);
       this._save();
     }
   }
