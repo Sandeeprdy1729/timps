@@ -464,3 +464,134 @@ The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys p
 - **Histogram buckets** are fixed: `[1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms. Tune these for your latency range.
 - **CRDT metrics** are only collected when `instrumentCRDT()` is called with an active telemetry manager. The CRDT module itself is not modified.
 - **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3b).
+
+## Phase 3d+3e — Secure Config, Rate Limits, Auth, Billing Removal (June 2026)
+
+### Phase 3d — Secure LLM Key Vault + Rate Limiter + User Store
+
+New files in `timps-code/`:
+
+| File | Purpose |
+|------|---------|
+| `src/config/keyVault.ts` | AES-256-GCM encrypt/decrypt for LLM API keys at rest. Output format: `hexIV:hexTag:hexCiphertext`. `isEncrypted()` regex `/^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$/` |
+| `src/services/providerRateLimiter.ts` | Per-provider sliding-window rate limiter: daily cap + min delay between requests. Persists usage to `.timps/rate-limits/`. Resets at midnight UTC. |
+| `src/services/userStore.ts` | Local user store with scrypt password hashing, session tokens (24h expiry), stored in `~/.timps/users.json`. Tokens validated via `crypto.timingSafeEqual`. |
+
+Updated files in `timps-code/`:
+
+| File | What changed |
+|------|-------------|
+| `src/config/types.ts` | Added `TimpsConfig` fields: `providerLimits`, `rateLimitStrategy`, `fallbackChain` |
+| `src/config/config.ts` | Auto-encrypts API keys on save, auto-decrypts on load; avoids double-encryption with `isEncrypted()` check |
+| `src/models/providerMesh.ts` | `streamWithFallback()` enhanced with rate limit checks before each provider call; reads `providerLimits` from config |
+
+CLI commands (all in `src/commands/executor.ts`):
+
+| Command | Action |
+|---------|--------|
+| `/config:encrypt-key <key>` | Encrypt an API key and store in config |
+| `/config:set` | Set config values (provider, model, etc.) |
+| `/config:show` | Display current config (keys masked) |
+| `/config:set-provider` | Set provider, model, and API key |
+| `/config:provider-config` | List/configure provider configs |
+| `/config:delete-key` | Remove a key from config |
+| `/auth:login <username> <password>` | Login with password, get session token |
+| `/auth:status` | Show current login status |
+| `/auth:register <username> <password>` | Register new user |
+| `/auth:logout` | Clear session token |
+| `/auth:reset-password <username> <old> <new>` | Change password |
+| `/limits:show` | Show provider usage limits |
+
+### Phase 3e — Eval Bug Fixes + Bridge Stub Deletion
+
+**Bug fixes:**
+- `packages/memory-core/src/eval/storage.ts` — `InMemoryBackend.read()` returns already-parsed object; removed extraneous `JSON.parse()` on the return value that caused double-parse errors.
+- `packages/memory-core/src/eval/regression.ts` — `RegressionDetector.check()` when `baselineValue === undefined` must still compare `metric.value` against `threshold`. Previously a missing baseline file made the gate pass everything.
+- `timps-code/src/commands/executor.ts` — `eval:run` handler: await async `evaluateDataset()` call (was returning Promise to CLI instead of EvalResult). Regression summary formatting: `seenBaselines` Map type narrowed from `Map<string, any>` to `Map<string, MetricInfo>`.
+
+**Bridge stub deletion:**
+- Deleted `timps-code/src/services/bridge.ts` (85 lines) — empty stubs for `bridge.cloud.sync()`, `bridge.monitor.getStatus()`, `bridge.plugins.getAnalytics()`, `bridge.billing.getSavedAmount()`.
+- Deleted `timps-code/src/services/__tests__/bridge.test.ts` — tests for deleted stubs.
+
+### Key design decisions
+
+- All billing/SaaS stubs removed — TIMPS is always 100% free, self-hosted.
+- API keys encrypted at rest with AES-256-GCM; IV+tag+ciphertext concatenated with `:` delimiters.
+- Rate limits protect user's own LLM budget, not a tiered-pricing structure.
+- Fallback chain in `providerMesh` handles 429/5xx by trying next provider in chain.
+- Auth is simple local username/password — no enterprise SSO, no OAuth.
+- Session tokens expire after 24h with no refresh mechanism (re-login required).
+
+### Gotchas
+
+- `keyVault.encrypt()` output format is `hexIV:hexTag:hexCiphertext`. `isEncrypted()` tests with regex `/^[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+$/`.
+- `providerRateLimiter` stores usage in `.timps/rate-limits/` as JSON files, one per day per provider.
+- User sessions expire after 24 hours; tokens stored in `~/.timps/auth-token.json`.
+- Rate limits are checked before each provider call in `streamWithFallback()` — a blocked provider triggers fallback to next in chain.
+- The `/config:encrypt-key` handler changes the old plaintext key to the encrypted version in-memory, then saves; it does NOT add a separate encryption step on load since `config.ts` auto-decrypts.
+
+## Phase 4a — Vector Search at Scale (June 2026)
+
+`recall()` is now **async** — all callers must `await` it.
+
+### Architecture
+
+```
+store() ──→ sync write (BM25 index) ──→ async EmbeddingQueue ──→ Qdrant (dense + sparse vectors)
+                                                                       │
+recall() ──→ Stage 1a: BM25 MiniSearch (always, fast-path for <1K) ────┤
+             Stage 1b: Qdrant hybridSearch (dense + sparse, >1K) ──────┤
+             Stage 1c: KG expansion (shared-tag overlap) ──────────────┤
+             Stage 1d: RRF fusion (k=60) ←─────────────────────────────┘
+             Stages 2-7: ProvenanceForge, ConfidenceCalibrator, FalseMemoryDetector, ContextVector, RehearsalEngine
+```
+
+New files in `packages/memory-core/src/`:
+
+| File | Purpose |
+|------|---------|
+| `embedding/types.ts` | `EmbeddingConfig`, `EmbeddingResult`, `QueueItem`, `EmbeddingStatus` types |
+| `embedding/EmbeddingService.ts` | Provider-agnostic embedding via Ollama (`nomic-embed-text`, 384d) or OpenAI (`text-embedding-3-small`, 768d). Batched API calls, graceful fallback to zero-vectors. |
+| `embedding/EmbeddingQueue.ts` | Async queue with configurable batch size (16) and flush interval (500ms). In-memory queue + StorageBackend crash recovery. Background worker auto-drains on flush. |
+| `embedding/index.ts` | Re-exports |
+| `search/rrf.ts` | Reciprocal Rank Fusion: `rrfFuse(lists, k=60)`, `rrfFuseWithNames(namedLists, k=60)`. Scores computed as sum(1/(k + rank)). Results deduplicated by content. |
+| `search/hybridRetriever.ts` | `hybridRecall(entries, query, options?, qdrantBackend?)` — orchestrates BM25 + Qdrant + KG → RRF fusion. Returns top-50 candidates. Graceful degradation on Qdrant failure. |
+
+Updated files in `packages/memory-core/src/`:
+
+| File | What changed |
+|------|-------------|
+| `backends/QdrantBackend.ts` | HNSW config: `m:32`, `ef_construct:128`, `indexing_threshold:50000`, `on_disk`. Sparse vector support (`bm25` named sparse). New methods: `hybridSearch()`, `textToSparseVector()` (TF-based with stopword filtering, hash to 0-65535), `upsertWithSparseVector()`, `upsertVectorsWithSparse()`, `addEmbedding()`, `addEmbeddings()` |
+| `types.ts` | `SearchOptions` extended: `useHybrid`, `useMiniSearch` flags |
+| `MemoryEngine.ts` | `recall()` → **async** (breaking change). Adds `qdrantBackend?: QdrantBackend` + `embedding?: EmbeddingConfig` to `MemoryEngineOptions`. `store()` fires async embedding queue (fire-and-forget). `recall()` uses hybrid search when Qdrant configured & entries >1K. New methods: `backfillEmbeddings()`, `dispose()`, `embeddingStatus` getter. |
+| `index.ts` | Exports `EmbeddingService`, `EmbeddingQueue`, `rrfFuse`, `rrfFuseWithNames`, `hybridRecall`, `QdrantBackend` hybrid methods |
+| `server/routes.ts` | New endpoints: `POST /embedding/backfill`, `GET /embedding/status` |
+
+Updated files in `timps-code/`:
+
+| File | What changed |
+|------|-------------|
+| `src/memory/memory.ts` | Added `backfillEmbeddings()`, `embeddingStatus`, async `searchFacts()`. `getContextString()` → async |
+| `src/commands/executor.ts` | New handlers: `/memory:embed-backfill`, `/memory:embed-status` |
+
+### Key design decisions
+
+- **MiniSearch kept for <1K entries** — Qdrant only delegated when entry count exceeds 1K, avoiding network overhead for small projects.
+- **RRF with k=60** — standard hybrid search parameter; lists with different lengths weighted fairly by rank position.
+- **Embedding queue backed by in-memory array + StorageBackend crash recovery** — not Redis-only, so single-process deployments don't require Redis running.
+- **Sparse vectors computed client-side** — simple TF-based extraction with stopword filtering and hash-to-index mapping (0-65535), avoids external tokenizer dependency.
+- **Knowledge graph expansion via shared-tag overlap** — 2+ shared tags between a top-BM25 result and another memory creates a KG edge. No external graph DB needed.
+- **Graceful degradation** — if Qdrant returns error or embedding provider down, search falls back to BM25-only with zero data loss.
+- **Async embedding is fire-and-forget** — store() returns immediately without waiting for embedding. BM25 handles immediate recall queries. Embedding computed in background batch.
+- **Embedding config per engine instance** — passed via `MemoryEngineOptions`, not ambient from config file. Different engines can use different providers.
+
+### Gotchas
+
+- **`recall()` is now async.** All callers must use `await`. This includes `MemoryEngine.getContextString()`, `multiProjectRecall()`, `Memory.searchFacts()`, and all REST/gRPC handlers and tests.
+- **Hybrid search pipeline:** Stage 1a BM25 (always) → Stage 1b Qdrant hybrid (dense + sparse BM25 vectors) → Stage 1c KG expansion (shared-tag overlap) → Stage 1d RRF fusion. Stages 2-7 (ProvenanceForge, ConfidenceCalibrator, FalseMemoryDetector, ContextVector, RehearsalEngine) run on the fused results.
+- **Qdrant HNSW params:** `m: 32`, `ef_construct: 128`, `indexing_threshold: 50000`. Collection includes named sparse vector `bm25` for native BM25-vector search.
+- **Sparse vector format:** `{ indices: number[], values: number[] }` where indices are hash values (0-65535) and values are `1 + log2(TF)`.
+- **Embedding queue:** accumulates items for max 500ms, then sends batch of up to 16 to embedding provider. Returns zero-vectors on failure (graceful degradation).
+- **Store-then-immediately-recall** finds the memory via BM25 (sync) before embedding completes (async). The embedding arrives eventually in Qdrant.
+- **Pre-existing eval import errors** in `timps-code/src/commands/executor.ts` (`seedEngineWithDataset`, `loadAllDatasets`, etc. not exported from `@timps/memory-core`) are unrelated to Phase 4a.
+- **`MemoryEngine.test.ts` and `memory-unified.test.ts`** both test `recall()` synchronously with `await`. If a new test file calls `recall()` without `await`, the result will be a Promise, not an array — the test will silently pass with wrong assertions.

@@ -18,7 +18,7 @@ export const memoryCompress: RegisteredTool = {
     try {
       const { Memory } = await import('../../memory/memory.js');
       const mem = new Memory(cwd);
-      const compressed = mem.getContextCompressed(String(args.query), Number(args.budget) || 2000);
+      const compressed = await mem.getContextCompressed(String(args.query), Number(args.budget) || 2000);
       return { content: compressed, isError: false };
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true };

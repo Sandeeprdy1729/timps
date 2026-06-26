@@ -83,7 +83,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   });
 
   // ── Recall memories matching a query ────────────────────────────────────
-  router.post('/recall', (req: AuthenticatedRequest, res: Response) => {
+  router.post('/recall', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { query, limit, type, tags, minConfidence, maxFalseMemoryRisk } = req.body;
       const userId = req.auth?.userId ?? 'anonymous';
@@ -92,7 +92,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
         return res.status(400).json({ error: 'query is required' });
       }
 
-      const results = engine.recall(query, {
+      const results = await engine.recall(query, {
         limit: limit ?? 10,
         type,
         tags,
@@ -156,7 +156,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   });
 
   // ── Query with extended options ─────────────────────────────────────────
-  router.post('/query', (req: AuthenticatedRequest, res: Response) => {
+  router.post('/query', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { query, options } = req.body;
       const userId = req.auth?.userId ?? 'anonymous';
@@ -165,7 +165,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
         return res.status(400).json({ error: 'query is required' });
       }
 
-      const results = engine.recall(query, {
+      const results = await engine.recall(query, {
         limit: options?.limit ?? 10,
         type: options?.type,
         tags: options?.tags,
@@ -566,6 +566,28 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
     try {
       const result = engine.revealBias();
       res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Phase 4a: Embedding backfill ──────────────────────────────────────────
+  router.post('/embedding/backfill', async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const queued = await engine.backfillEmbeddings();
+      res.json({ status: 'ok', queued });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/embedding/status', (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const status = engine.embeddingStatus;
+      if (!status) {
+        return res.json({ status: 'not_configured' });
+      }
+      res.json({ status: 'ok', embedding: status });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

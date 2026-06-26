@@ -3,8 +3,9 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import * as readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import type { TimpsConfig, ProviderName, TrustLevel, TerminalBackend, TerminalConfig, ToolConfig, PlatformType, PlatformConfig, SetupResult } from './types.js';
+import type { TimpsConfig, ProviderName, TrustLevel, TerminalBackend, TerminalConfig, ToolConfig, PlatformType, PlatformConfig, SetupResult, ProviderLimitConfig, FallbackStep } from './types.js';
 import { t, icons, LOGO } from './theme.js';
+import { encrypt, decrypt, isEncrypted, reEncryptAll } from './keyVault.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.timps');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -22,22 +23,41 @@ const DEFAULT_CONFIG: TimpsConfig = {
   thinkingEnabled: true,
   fastMode: false,
   verbose: false,
-  migrationVersion: 2,
+  migrationVersion: 3,
+  rateLimitStrategy: 'fallback',
 };
 
 export function loadConfig(): TimpsConfig {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const raw = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-      return { ...DEFAULT_CONFIG, ...raw };
+      const config = { ...DEFAULT_CONFIG, ...raw };
+      // Decrypt any encrypted keys
+      if (config.keys) {
+        for (const [provider, value] of Object.entries(config.keys)) {
+          if (typeof value === 'string' && isEncrypted(value)) {
+            try {
+              (config.keys as Record<string, string>)[provider] = decrypt(value);
+            } catch {
+              // If decryption fails, keep as-is (might be plaintext from old config)
+            }
+          }
+        }
+      }
+      return config;
     }
   } catch { /* ignore */ }
   return { ...DEFAULT_CONFIG };
 }
 
 export function saveConfig(config: TimpsConfig): void {
+  const configToSave = { ...config };
+  // Encrypt keys that aren't already encrypted
+  if (configToSave.keys) {
+    configToSave.keys = reEncryptAll(configToSave.keys as Record<string, string>) as any;
+  }
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(configToSave, null, 2), 'utf-8');
 }
 
 export function getApiKey(config: TimpsConfig, provider: ProviderName): string | undefined {
@@ -80,6 +100,45 @@ const DEFAULT_MODELS: Record<ProviderName, string> = {
 
 export function getDefaultModel(provider: ProviderName): string {
   return DEFAULT_MODELS[provider] || 'unknown';
+}
+
+export function getProviderLimits(config: TimpsConfig, provider: ProviderName): { maxPerDay: number; maxPerMinute: number } {
+  const custom = config.providerLimits?.[provider];
+  if (custom) return custom;
+  const { DEFAULT_PROVIDER_LIMITS } = require('../services/providerRateLimiter.js');
+  return DEFAULT_PROVIDER_LIMITS[provider] || { maxPerDay: 1000, maxPerMinute: 60 };
+}
+
+export function getFallbackChain(config: TimpsConfig): FallbackStep[] {
+  if (config.fallbackChain && config.fallbackChain.length > 0) return config.fallbackChain;
+  const allProviders: ProviderName[] = ['claude', 'openai', 'gemini', 'ollama', 'openrouter', 'deepseek', 'groq'];
+  const primary = config.defaultProvider;
+  const chain: FallbackStep[] = [];
+  for (const p of allProviders) {
+    if (p !== primary && getApiKey(config, p)) {
+      chain.push({ provider: p, model: getDefaultModel(p) });
+    }
+  }
+  // Always add ollama as last resort if it has no key requirement
+  if (!chain.find(s => s.provider === 'ollama')) {
+    chain.push({ provider: 'ollama', model: getDefaultModel('ollama') });
+  }
+  return chain;
+}
+
+export function getProviderStatus(config: TimpsConfig, provider: ProviderName): { configured: boolean; keySet: boolean; keySource: string; limit: { maxPerDay: number; maxPerMinute: number }; usage: { dayCount: number; minuteCount: number } } {
+  const key = getApiKey(config, provider);
+  const keySource = config.keys?.[provider] ? 'config' : (process.env[getEnvVarForProvider(provider)] ? 'env' : 'none');
+  const limit = getProviderLimits(config, provider);
+  const { getUsageStats } = require('../services/providerRateLimiter.js');
+  const usage = getUsageStats(provider);
+  return {
+    configured: !!key || provider === 'ollama' || provider === 'hybrid',
+    keySet: !!key,
+    keySource,
+    limit,
+    usage,
+  };
 }
 
 function envLabel(key: string): string {

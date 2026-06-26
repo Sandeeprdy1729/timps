@@ -28,12 +28,12 @@ describe('Tenant isolation', () => {
     engineB = createEngine(ORG_B);
   });
 
-  it('should isolate stores between different orgs', () => {
+  it('should isolate stores between different orgs', async () => {
     engineA.store({ content: 'Secret from Org A', type: 'fact' });
     engineB.store({ content: 'Secret from Org B', type: 'fact' });
 
-    const recallA = engineA.recall('Secret');
-    const recallB = engineB.recall('Secret');
+    const recallA = await engineA.recall('Secret');
+    const recallB = await engineB.recall('Secret');
 
     // Each org should only see its own data
     const contentsA = recallA.map(e => e.content);
@@ -91,7 +91,7 @@ describe('Tenant isolation', () => {
     expect(statsB.semanticCount).toBe(1);
   });
 
-  it('should isolate different projects within the same org', () => {
+  it('should isolate different projects within the same org', async () => {
     const proj1: OrgScope = { orgId: 'org_a', projectId: 'project_1' };
     const proj2: OrgScope = { orgId: 'org_a', projectId: 'project_2' };
     const engineP1 = createEngine(proj1);
@@ -100,8 +100,8 @@ describe('Tenant isolation', () => {
     engineP1.store({ content: 'Project 1 data', type: 'fact' });
     engineP2.store({ content: 'Project 2 data', type: 'fact' });
 
-    const recall1 = engineP1.recall('Project');
-    const recall2 = engineP2.recall('Project');
+    const recall1 = await engineP1.recall('Project');
+    const recall2 = await engineP2.recall('Project');
 
     expect(recall1.some(e => e.content.includes('Project 1'))).toBe(true);
     expect(recall1.some(e => e.content.includes('Project 2'))).toBe(false);
@@ -109,7 +109,7 @@ describe('Tenant isolation', () => {
     expect(recall2.some(e => e.content.includes('Project 1'))).toBe(false);
   });
 
-  it('should isolate org A team X from org A team Y', () => {
+  it('should isolate org A team X from org A team Y', async () => {
     const teamX: OrgScope = { orgId: 'org_a', teamId: 'team_x', projectId: 'proj_a' };
     const teamY: OrgScope = { orgId: 'org_a', teamId: 'team_y', projectId: 'proj_a' };
     const engineX = createEngine(teamX);
@@ -118,8 +118,8 @@ describe('Tenant isolation', () => {
     engineX.store({ content: 'Team X workflow', type: 'pattern' });
     engineY.store({ content: 'Team Y workflow', type: 'pattern' });
 
-    const recallX = engineX.recall('workflow');
-    const recallY = engineY.recall('workflow');
+    const recallX = await engineX.recall('workflow');
+    const recallY = await engineY.recall('workflow');
 
     expect(recallX.some(e => e.content.includes('Team X'))).toBe(true);
     expect(recallX.some(e => e.content.includes('Team Y'))).toBe(false);
@@ -164,7 +164,7 @@ describe('Tenant isolation', () => {
     expect(packB.semantic.some(e => e.content.includes('A'))).toBe(false);
   });
 
-  it('should fail closed: without scope, engine works in unscoped mode', () => {
+  it('should fail closed: without scope, engine works in unscoped mode', async () => {
     // Backward compat: engines without orgScope still work
     const unscoped = new MemoryEngine('/tmp/unscoped', {
       backend: new InMemoryBackend(),
@@ -172,7 +172,7 @@ describe('Tenant isolation', () => {
     });
 
     unscoped.store({ content: 'Legacy data', type: 'fact' });
-    const results = unscoped.recall('Legacy');
+    const results = await unscoped.recall('Legacy');
     expect(results.some(e => e.content.includes('Legacy'))).toBe(true);
   });
 
@@ -193,7 +193,7 @@ describe('Tenant isolation', () => {
     expect(pid1).toMatch(/^[0-9a-f]{12}$/);
   });
 
-  it('should support multi-project recall across projects', () => {
+  it('should support multi-project recall across projects', async () => {
     // Use a single backend shared across project scopes
     const sharedBackend = new InMemoryBackend();
 
@@ -217,7 +217,7 @@ describe('Tenant isolation', () => {
 
     // Reset scope for frontend and recall across both projects
     sharedBackend.setScope(frontendScope);
-    const multiResults = frontendEngine.multiProjectRecall('convention', ['frontend', 'backend']);
+    const multiResults = await frontendEngine.multiProjectRecall('convention', ['frontend', 'backend']);
 
     expect(multiResults.has('frontend')).toBe(true);
     expect(multiResults.has('backend')).toBe(true);

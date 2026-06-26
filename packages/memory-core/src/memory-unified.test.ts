@@ -23,26 +23,26 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     engine.store({ content: 'Use React Query for data fetching', tags: ['react', 'pattern'] });
 
     // Recall it
-    const results = engine.recall('data fetching pattern');
+    const results = await engine.recall('data fetching pattern');
 
     // Verify the full pipeline ran correctly
     expect(results.length).toBe(1);
     expect(results[0].content).toContain('React Query');
   });
 
-  test('MemoryEngine.store() runs full pipeline with deduplication and engram chain', () => {
+  test('MemoryEngine.store() runs full pipeline with deduplication and engram chain', async () => {
     const engine = new MemoryEngine(TEST_DIR);
     const baseText = 'Always prefer composition over inheritance for better software code reuse patterns';
     engine.store({ content: baseText, tags: ['react', 'pattern'] });
 
     // 1. Dedup: storing identical content should be skipped
     engine.store({ content: baseText, tags: ['react', 'pattern'] });
-    let results = engine.recall('composition inheritance', { limit: 10 });
+    let results = await engine.recall('composition inheritance', { limit: 10 });
     expect(results.length).toBe(1);
 
     // 2. Jaccard dedup: >80% similar content should be skipped (1 word diff in long sentence)
     engine.store({ content: 'Always prefer composition over inheritances for better software code reuse patterns', tags: ['react', 'pattern'] });
-    results = engine.recall('composition inheritance', { limit: 10 });
+    results = await engine.recall('composition inheritance', { limit: 10 });
     expect(results.length).toBe(1);
 
     // Verify EngramLog recorded the store operation
@@ -63,15 +63,15 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     expect(['very_low', 'low', 'medium', 'high', 'very_high']).toContain(calibration.level);
   });
 
-  test('Scope isolation — different users get different storage', () => {
+  test('Scope isolation — different users get different storage', async () => {
     const engineA = new MemoryEngine(TEST_DIR, { scope: { userId: 'user-a' } });
     const engineB = new MemoryEngine(TEST_DIR, { scope: { userId: 'user-b' } });
 
     engineA.store({ content: 'User A secret', tags: ['secret'] });
     engineB.store({ content: 'User B secret', tags: ['secret'] });
 
-    const aResults = engineA.recall('secret');
-    const bResults = engineB.recall('secret');
+    const aResults = await engineA.recall('secret');
+    const bResults = await engineB.recall('secret');
 
     // Each user only sees their own data
     expect(aResults.length).toBe(1);
@@ -104,7 +104,7 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     fs.rmSync(customDir, { recursive: true, force: true });
   });
 
-  test('getContextString returns formatted memory for prompt injection', () => {
+  test('getContextString returns formatted memory for prompt injection', async () => {
     const engine = new MemoryEngine(TEST_DIR);
     engine.setGoal('Implement user authentication');
     engine.trackFile('src/auth/login.ts');
@@ -117,7 +117,7 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
       tags: ['auth'],
     });
 
-    const ctx = engine.getContextString('authentication');
+    const ctx = await engine.getContextString('authentication');
     expect(ctx).toBeTruthy();
     expect(ctx.length).toBeGreaterThan(0);
   });
@@ -138,12 +138,12 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     expect(result.addedSemantic).toBeGreaterThanOrEqual(1);
 
     // Verify data
-    const imported = engine2.recall('export test');
+    const imported = await engine2.recall('export test');
     expect(imported.length).toBeGreaterThanOrEqual(1);
     expect(imported.some(e => e.content === 'Data for export test')).toBe(true);
   });
 
-  test('Consolidation deduplicates near-duplicate entries', () => {
+  test('Consolidation deduplicates near-duplicate entries', async () => {
     const engine = new MemoryEngine(TEST_DIR);
     const base = 'Always use TypeScript strict mode for better type safety in projects';
     engine.store({ content: base, tags: ['ts'] });
@@ -151,11 +151,11 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     engine.store({ content: 'Always enable TypeScript strict mode for better type safety in projects', tags: ['ts'] }); // 1/11 word diff → Jaccard 10/12 ≈ 0.833
 
     // All near-duplicates should be deduped at store time
-    const results = engine.recall('TypeScript strict', { limit: 10 });
+    const results = await engine.recall('TypeScript strict', { limit: 10 });
     expect(results.length).toBe(1);
   });
 
-  test('Recall with intelligence pipeline produces scored results', () => {
+  test('Recall with intelligence pipeline produces scored results', async () => {
     const engine = new MemoryEngine(TEST_DIR);
 
     // Store multiple facts
@@ -164,7 +164,7 @@ describe('MemoryEngine — Unified Single Source of Truth', () => {
     engine.store({ content: 'Node.js event loop enables non-blocking I/O', tags: ['node', 'architecture'] });
 
     // Recall with a specific query
-    const results = engine.recall('React state management', { limit: 5, useIntelligence: true });
+    const results = await engine.recall('React state management', { limit: 5, useIntelligence: true });
 
     // Results should be returned and include intelligence metadata
     expect(results.length).toBeGreaterThan(0);

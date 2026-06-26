@@ -11,7 +11,7 @@ export const memoryBenchmark: RegisteredTool = {
     try {
       const { Memory } = await import('../../memory/memory.js');
       const mem = new Memory(cwd);
-      const report = mem.runBenchmark();
+      const report = await mem.runBenchmark();
       return { content: report, isError: false };
     } catch (e) {
       return { content: `Error: ${(e as Error).message}`, isError: true };

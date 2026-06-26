@@ -90,14 +90,14 @@ export class AutoDream {
     }
 
     try {
-      const entries = this.memory.loadSemanticEntries();
+      const entries = await this.memory.loadSemanticEntries();
       
       if (entries.length >= this.config.consolidationThreshold) {
         const mergeCount = this.memory.consolidate();
         consolidated = mergeCount;
       }
 
-      const decayCount = this.applyDecay();
+      const decayCount = await this.applyDecay();
       pruned = decayCount;
 
       if (this.provider) {
@@ -111,10 +111,10 @@ export class AutoDream {
     return { consolidated, pruned, improved, duration: Date.now() - startTime };
   }
 
-  private applyDecay(): number {
+  private async applyDecay(): Promise<number> {
     if (!this.memory) return 0;
 
-    const entries = this.memory.loadSemanticEntries();
+    const entries = await this.memory.loadSemanticEntries();
     let decayed = 0;
 
     for (const entry of entries) {
@@ -132,7 +132,7 @@ export class AutoDream {
   private async enhanceWithLLM(): Promise<number> {
     if (!this.memory || !this.provider) return 0;
 
-    const entries = this.memory.loadSemanticEntries();
+    const entries = await this.memory.loadSemanticEntries();
     let enhanced = 0;
 
     const staleEntries = entries.filter(e => {

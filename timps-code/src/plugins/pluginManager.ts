@@ -26,7 +26,7 @@ import type { Memory } from '../memory/memory.js';
 function buildMemoryAPI(memory: Memory): MemoryAPI {
   return {
     async loadSemantic(_projectPath: string): Promise<SemanticEntry[]> {
-      return memory.loadSemanticEntries().map((e) => ({
+      return (await memory.loadSemanticEntries()).map((e) => ({
         key: e.id,
         value: e.content,
         type: e.type,

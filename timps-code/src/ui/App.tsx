@@ -273,18 +273,18 @@ export const App = ({ agent, memory, todos, snapshots, permissions, provider, cw
         setMessages(prev => [...prev, { role: 'user', content: query }]);
         const args = query.replace(/^\/(?:memory|mem)\s*/i, '').trim();
         if (!args) {
-          const entries = memory.loadSemanticEntries();
+          const entries = await memory.loadSemanticEntries();
           const working = memory.workingMemory;
           renderMemoryPanel(entries, working, memory.episodeCount);
         } else if (args.startsWith('query') || args.startsWith('q')) {
           const searchText = args.replace(/^(query|q)\s*/i, '').trim();
-          const results = memory.query(searchText, 20);
+          const results = await memory.query(searchText, 20);
           renderMemoryPanel(results, memory.workingMemory, memory.episodeCount, searchText);
         } else if (args === 'forget' || args === 'clear') {
           memory.clearAll();
           toast.success('Memory cleared');
         } else {
-          const results = memory.query(args, 20);
+          const results = await memory.query(args, 20);
           renderMemoryPanel(results, memory.workingMemory, memory.episodeCount, args);
         }
         return;

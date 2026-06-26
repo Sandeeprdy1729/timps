@@ -248,7 +248,7 @@ program
       let totalTime = 0, hits = 0;
       for (const q of queries) {
         const start = Date.now();
-        const results = mem.searchFacts(q, 5);
+        const results = await mem.searchFacts(q, 5);
         totalTime += Date.now() - start;
         if (results.length > 0) hits++;
       }

@@ -255,10 +255,10 @@ export class Memory {
     this.graph.extractFromMemoryEntry({ id: '', timestamp: Date.now(), type: type as any, content, tags });
   }
 
-  searchFacts(query: string, limit = 5): MemoryEntry[] {
+  async searchFacts(query: string, limit = 5): Promise<MemoryEntry[]> {
     this._turnCount++;
     if (this.remoteMode) return [];
-    const results = this._engine.recall(query, { limit, useIntelligence: true });
+    const results = await this._engine.recall(query, { limit, useIntelligence: true });
     return results.map(r => ({
       id: r.id,
       timestamp: r.timestamp,
@@ -273,16 +273,16 @@ export class Memory {
     })) as unknown as MemoryEntry[];
   }
 
-  query(q: string, limit = 10): MemoryEntry[] {
+  async query(q: string, limit = 10): Promise<MemoryEntry[]> {
     return q.trim() ? this.searchFacts(q, limit) : [];
   }
 
-  getContextString(task = ''): string {
+  async getContextString(task = ''): Promise<string> {
     if (this.remoteMode) return '';
-    return this._engine.getContextString(task);
+    return await this._engine.getContextString(task);
   }
 
-  getContextCompressed(task = '', tokenBudget = 2000): string {
+  async getContextCompressed(task = '', tokenBudget = 2000): Promise<string> {
     if (this.remoteMode) return '[Memory] Remote mode — no local context';
     this.compressor.setBudget(tokenBudget);
     const rawEpisodes = this.loadEpisodes(10);
@@ -293,7 +293,7 @@ export class Memory {
       toolsUsed: [] as string[],
     }));
     const proceduralTraces = this.procedural.retrieve(task, 3);
-    const semantic = this.searchFacts(task, 20);
+    const semantic = await this.searchFacts(task, 20);
     const compressed = this.compressor.compress(semantic, episodes, proceduralTraces, task);
     const parts: string[] = [];
     parts.push(`[Memory] ${compressed.tokens}/${tokenBudget} tokens`);
@@ -344,9 +344,9 @@ export class Memory {
     this._engine.clearWorking();
   }
 
-  exportMemory(): string {
+  async exportMemory(): Promise<string> {
     if (this.remoteMode) return '{}';
-    return JSON.stringify({ semantic: this.loadSemanticEntries(), working: this._engine.workingMemory });
+    return JSON.stringify({ semantic: await this.loadSemanticEntries(), working: this._engine.workingMemory });
   }
 
   importMemory(data: string): number {
@@ -365,7 +365,7 @@ export class Memory {
     return this._engine.consolidate();
   }
 
-  loadSemanticEntries(): MemoryEntry[] {
+  async loadSemanticEntries(): Promise<MemoryEntry[]> {
     return this.searchFacts('', 500);
   }
 
@@ -385,9 +385,21 @@ export class Memory {
     };
   }
 
+  // ── Phase 4a: Embedding backfill ──
+
+  async backfillEmbeddings(): Promise<number> {
+    if (this.remoteMode || !this._engine) return 0;
+    return this._engine.backfillEmbeddings();
+  }
+
+  get embeddingStatus(): any {
+    if (this.remoteMode || !this._engine) return null;
+    return this._engine.embeddingStatus ?? null;
+  }
+
   // ── CLI-specific advanced operations ──
 
-  runBenchmark(): string {
+  async runBenchmark(): Promise<string> {
     return this.benchmark.compare();
   }
 

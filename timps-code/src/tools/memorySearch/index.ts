@@ -18,7 +18,7 @@ export const memorySearch: RegisteredTool = {
     try {
       const { Memory } = await import('../../memory/memory.js');
       const mem = new Memory(cwd);
-      const results = mem.searchFacts(String(args.query), Number(args.limit) || 5);
+      const results = await mem.searchFacts(String(args.query), Number(args.limit) || 5);
       if (results.length === 0) return { content: 'No relevant memories found.', isError: false };
       return {
         content: results.map(r => `[${r.type}] ${r.content}`).join('\n\n'),

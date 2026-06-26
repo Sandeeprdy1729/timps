@@ -495,7 +495,7 @@ export async function handleSlashCommand(
     case 'memory':
     case 'mem': {
       if (!args) {
-        const entries = memory.loadSemanticEntries();
+        const entries = await memory.loadSemanticEntries();
         const working = memory.workingMemory;
         renderMemoryPanel(entries, working, memory.episodeCount);
         break;
@@ -508,7 +508,7 @@ export async function handleSlashCommand(
         case 'query':
         case 'q': {
           if (!subArg) { console.log(`\n  ${t.dim('Usage: /memory query <text>')}\n`); break; }
-          const results = memory.query(subArg, 20);
+          const results = await memory.query(subArg, 20);
           const working = memory.workingMemory;
           renderMemoryPanel(results, working, memory.episodeCount, subArg);
           break;
@@ -522,7 +522,7 @@ export async function handleSlashCommand(
         }
 
         case 'export': {
-          const data = memory.exportMemory();
+          const data = await memory.exportMemory();
           const outFile = path.join(cwd, 'timps-memory-export.json');
           fs.writeFileSync(outFile, data, 'utf-8');
           console.log(`\n  ${t.success(icons.success)} Memory exported to ${t.file('timps-memory-export.json')}\n`);
@@ -548,7 +548,7 @@ export async function handleSlashCommand(
         }
 
         default: {
-          const entries = memory.loadSemanticEntries();
+          const entries = await memory.loadSemanticEntries();
           const working = memory.workingMemory;
           renderMemoryPanel(entries, working, memory.episodeCount, args);
           break;

@@ -86,13 +86,13 @@ export class MemoryBenchmark {
     return 0;
   }
 
-  run(count = 50): BenchmarkReport {
+  async run(count = 50): Promise<BenchmarkReport> {
     const queries = this.generateSyntheticBenchmark(count);
     const results: BenchmarkResult[] = [];
     let totalTokens = 0;
 
     for (const q of queries) {
-      const retrieved = this.engine.recall(q.query, { limit: 5 }).map(r => r.content);
+      const retrieved = (await this.engine.recall(q.query, { limit: 5 })).map(r => r.content);
 
       const recall = this.computeRecall(retrieved, q.expectedKeywords);
       const mrr = this.computeMRR(retrieved, q.expectedKeywords);
@@ -132,13 +132,13 @@ export class MemoryBenchmark {
     return report;
   }
 
-  runLegacy(count = 50): BenchmarkReport {
+  async runLegacy(count = 50): Promise<BenchmarkReport> {
     const queries = this.generateSyntheticBenchmark(count);
     const results: BenchmarkResult[] = [];
     let totalTokens = 0;
 
     for (const q of queries) {
-      const retrieved = this.engine.recall(q.query, { limit: 5 }).map(r => r.content);
+      const retrieved = (await this.engine.recall(q.query, { limit: 5 })).map(r => r.content);
       const recall = this.computeRecall(retrieved, q.expectedKeywords);
       const mrr = this.computeMRR(retrieved, q.expectedKeywords);
 
@@ -167,8 +167,8 @@ export class MemoryBenchmark {
     };
   }
 
-  compare(): string {
-    const results = this.run(50);
+  async compare(): Promise<string> {
+    const results = await this.run(50);
     return `
 Memory Benchmark Report
   Generated: ${new Date().toLocaleString()}
