@@ -4,15 +4,20 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 use std::collections::VecDeque;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Read, Write};
+use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
+use serde_json;
+
+// Phase 4d: Rust-native compute engine modules
+mod compute;
+mod lsh;
 
 mod tokenizer {
     // Simple BPE tokenizer (simplified - in production use proper implementation)
@@ -101,12 +106,12 @@ impl LocalModel {
 pub struct InferenceConfig {
     pub model_path: String,
     pub max_tokens: u32,
-    pub temperature: f32,
-    pub top_p: f32,
+    pub temperature: f64,
+    pub top_p: f64,
     pub top_k: u32,
-    pub repeat_penalty: f32,
-    pub frequency_penalty: f32,
-    pub presence_penalty: f32,
+    pub repeat_penalty: f64,
+    pub frequency_penalty: f64,
+    pub presence_penalty: f64,
     pub context_window: u32,
     pub threads: u32,
     pub use_gpu: bool,
@@ -143,7 +148,7 @@ pub struct InferenceResult {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
     pub duration_ms: u64,
-    pub tokens_per_second: f32,
+    pub tokens_per_second: f64,
     pub finish_reason: String,
     pub model: String,
     pub logprobs: Option<Vec<f32>>,
@@ -153,7 +158,7 @@ impl InferenceResult {
     pub fn new(text: String, duration_ms: u64, model: &str) -> Self {
         let tokens = text.split_whitespace().count() as u32;
         let tps = if duration_ms > 0 {
-            (tokens as f32 / (duration_ms as f32 / 1000.0)) * 1000.0
+            (tokens as f64 / (duration_ms as f64 / 1000.0)) * 1000.0
         } else {
             0.0
         };
@@ -327,10 +332,9 @@ impl ModelLoader {
         let model = LocalModel::from_path(path)
             .ok_or_else(|| format!("Failed to load model from {}", path))?;
 
-        self.loaded_model = Some(LocalModel {
-            is_loaded: true,
-            ..model
-        });
+        let mut loaded = model.clone();
+        loaded.is_loaded = true;
+        self.loaded_model = Some(loaded);
 
         Ok(model)
     }
@@ -354,12 +358,12 @@ impl ModelLoader {
     pub fn infer_sync(&mut self, prompt: &str) -> InferenceResult {
         let model = match &self.loaded_model {
             Some(m) => m,
-            None => return InferenceResult::error("No model loaded", ""),
+            None => return InferenceResult::error("No model loaded".to_string(), ""),
         };
 
-        let is_busy = self.is_inferencing.lock().unwrap();
+        let mut is_busy = self.is_inferencing.lock().unwrap();
         if *is_busy {
-            return InferenceResult::error("Already inferencing", &model.name);
+            return InferenceResult::error("Already inferencing".to_string(), &model.name);
         }
         *is_busy = true;
         drop(is_busy);
@@ -401,10 +405,10 @@ impl ModelLoader {
                     InferenceResult::new(text, duration_ms, &model.name)
                 } else {
                     let err = String::from_utf8_lossy(&out.stderr).to_string();
-                    InferenceResult::error(&err, &model.name)
+                    InferenceResult::error(err, &model.name)
                 }
             }
-            Err(e) => InferenceResult::error(&e.to_string(), &model.name),
+            Err(e) => InferenceResult::error(e.to_string(), &model.name),
         }
     }
 
@@ -666,8 +670,8 @@ pub fn run_inference(
     model_path: String,
     prompt: String,
     max_tokens: u32,
-    temperature: f32,
-    top_p: f32,
+    temperature: f64,
+    top_p: f64,
 ) -> String {
     let config = InferenceConfig {
         model_path: model_path.clone(),
@@ -678,8 +682,9 @@ pub fn run_inference(
     };
 
     let mut loader = ModelLoader::new();
+    loader.config = config;
     if let Err(e) = loader.load_model(&model_path) {
-        return serde_json::to_string(&InferenceResult::error(&e, &model_path)).unwrap();
+        return serde_json::to_string(&InferenceResult::error(e, &model_path)).unwrap();
     }
 
     let result = loader.infer_sync(&prompt);
@@ -691,7 +696,7 @@ pub fn stream_inference(
     model_path: String,
     prompt: String,
     max_tokens: u32,
-    temperature: f32,
+    temperature: f64,
 ) -> String {
     run_inference(model_path, prompt, max_tokens, temperature, 0.9)
 }
@@ -706,13 +711,12 @@ pub fn get_model_info(model_path: String) -> String {
 }
 
 #[napi]
-pub fn download_model(model_id: String, target_dir: String) -> String {
-    let models: std::collections::HashMap<String, &str> = [
-        ("llama-3.2-1b", "TheBloke/Llama-3.2-1B-Instruct-GGUF"),
-        ("phi-3.2", "microsoft/Phi-3.2-mini-instruct-4k"),
-        ("qwen-2", "Qwen/Qwen2-0.5B-Instruct-GGUF"),
-        ("gemma-2", "google/gemma-2-2b"),
-    ].iter().cloned().collect();
+pub fn download_model(model_id: String, _target_dir: String) -> String {
+    let mut models: std::collections::HashMap<String, &str> = std::collections::HashMap::new();
+    models.insert("llama-3.2-1b".to_string(), "TheBloke/Llama-3.2-1B-Instruct-GGUF");
+    models.insert("phi-3.2".to_string(), "microsoft/Phi-3.2-mini-instruct-4k");
+    models.insert("qwen-2".to_string(), "Qwen/Qwen2-0.5B-Instruct-GGUF");
+    models.insert("gemma-2".to_string(), "google/gemma-2-2b");
 
     match models.get(&model_id) {
         Some(repo) => {
@@ -876,10 +880,10 @@ pub fn get_text_embedding(text: String) -> String {
 }
 
 #[napi]
-pub fn cosine_similarity_scores(a: String, b: String) -> f32 {
+pub fn cosine_similarity_scores(a: String, b: String) -> f64 {
     let emb_a = get_embedding(&a);
     let emb_b = get_embedding(&b);
-    cosine_similarity(&emb_a.embeddings, &emb_b.embeddings)
+    cosine_similarity(&emb_a.embeddings, &emb_b.embeddings) as f64
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
