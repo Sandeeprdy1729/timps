@@ -6,6 +6,13 @@ export { MemoryEngine } from './MemoryEngine.js';
 // CacheManager — Redis-backed forge state cache for horizontal scaling
 export { CacheManager } from './cache/CacheManager.js';
 export type { CacheManagerOptions } from './cache/CacheManager.js';
+// Phase 4e: Forge state cache + cascade cache
+export { CascadeCache } from './cache/CascadeCache.js';
+export type { CascadeCacheOptions, CacheComputeFn } from './cache/CascadeCache.js';
+export { ForgeCache } from './cache/ForgeCache.js';
+export type { ForgeCacheOptions, ForgeName, ForgeStateType } from './cache/ForgeCache.js';
+export { L1Cache } from './cache/L1Cache.js';
+export type { L1CacheEntry, L1CacheOptions } from './cache/L1Cache.js';
 
 // EventBus — Redis Pub/Sub cross-server event propagation
 export { EventBus } from './events/EventBus.js';
@@ -190,7 +197,8 @@ export type { MemoryEngineOptions } from './MemoryEngine.js';
 export { projectHash, memoryDir, generateId, jaccardSimilarity, deriveProjectId, scopePrefix } from './storage.js';
 
 // Native Rust addon status
-export { isNativeAvailable } from './native.js';
+export { isNativeAvailable, getNative, createRustLSH, nativeBatchSimilarity, nativeKMeans, nativeEigenmodeWarmStart } from './native.js';
+export type { NativeCore, RustLSHNative } from './native.js';
 
 // ── IMemoryLayer interface ──
 export type { IMemoryLayer, LayerId, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, MemoryEntry as IMemoryEntry } from './IMemoryLayer.js';

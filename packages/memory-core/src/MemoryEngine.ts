@@ -23,6 +23,7 @@ import {
 import type { StorageBackend, FileBackendOptions } from './backends/index.js';
 import type { QdrantBackend } from './backends/QdrantBackend.js';
 import type { CacheManager } from './cache/CacheManager.js';
+import { CascadeCache } from './cache/CascadeCache.js';
 import type { EventBus, EventBusChannel } from './events/EventBus.js';
 import { TelemetryManager } from './telemetry/TelemetryManager.js';
 import type { TelemetryConfig } from './telemetry/types.js';
@@ -218,6 +219,7 @@ export class MemoryEngine {
   private working: WorkingState;
   private _backend: StorageBackend;
   private _cacheManager?: CacheManager;
+  private _cascadeCache?: CascadeCache;
   private _eventBus?: EventBus;
   private _telemetry?: TelemetryManager;
   private _crdtMetrics: { recordConflict: (r: string) => void; recordMerge: (d: number) => void; recordCheck: () => void };
@@ -318,6 +320,10 @@ export class MemoryEngine {
 
     this._cacheManager = options?.cacheManager;
     this._eventBus = options?.eventBus;
+    // Phase 4e: cascade cache (L1 + optional L2 Redis)
+    this._cascadeCache = new CascadeCache(this._cacheManager, {
+      orgScope: this.orgScope,
+    });
     this._qdrant = options?.qdrant;
     this._embeddingConfig = options?.embedding;
 
@@ -369,6 +375,11 @@ export class MemoryEngine {
   /** The cache manager, if configured. */
   get cacheManager(): CacheManager | undefined {
     return this._cacheManager;
+  }
+
+  /** Phase 4e: The cascade cache (L1 in-process + optional L2 Redis). */
+  get cascadeCache(): CascadeCache | undefined {
+    return this._cascadeCache;
   }
 
   /** The event bus, if configured. */
@@ -881,6 +892,12 @@ export class MemoryEngine {
       });
     }
 
+    // Phase 4e: Invalidate cascade cache — new memory may affect recall results
+    if (this._cascadeCache) {
+      const projId = this.orgScope?.projectId ?? this.hash;
+      void this._cascadeCache.invalidateProject(projId);
+    }
+
     // Phase 4b: enqueue incremental computation tasks (fire-and-forget)
     if (this._computationQueue) {
       // Eigenmode update for HarmonicSheafWeaver
@@ -929,10 +946,11 @@ export class MemoryEngine {
    * 6. RehearsalEngine priority boost (if item is due for review)
    * 7. Final ranking and filtering (minConfidence, maxFalseMemoryRisk)
    */
-  async recall(query: string, options?: SearchOptions): Promise<ScoredMemoryEntry[]> {
-    const _span = this._telemetry?.tracer.startSpan('engine.recall', { 'timps.operation': 'recall', 'query.length': query.length });
-    const startTime = Date.now();
-    try {
+  /**
+   * Full recall pipeline used as the L3 compute function for the cascade cache.
+   * Separated so cascade.getOrCompute() can call it on cache miss.
+   */
+  private async _recallCompute(query: string, options?: SearchOptions): Promise<ScoredMemoryEntry[]> {
     const entries = loadSemantic(this.dir, this._backend);
 
     // Stage 1: Hybrid search (BM25 + optionally Qdrant + KG, fused via RRF)
@@ -1033,20 +1051,35 @@ export class MemoryEngine {
       }
     }
 
-    const results = filtered
+    return filtered
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       .slice(0, options?.limit ?? 10);
+  }
 
-    // Cross-server event propagation (sampled — only for significant queries)
-    if (this._eventBus && query.length > 10) {
-      void this._eventBus.publish('memory:recalled', {
-        query: query.slice(0, 200),
-        resultCount: results.length,
-        topScore: results[0]?.score ?? 0,
-      });
-    }
+  /** Cache TTL for recall results (ms). Shorter than forge state — changes every store. */
+  private recallCacheTTL = 60_000;
 
-    return results;
+  async recall(query: string, options?: SearchOptions): Promise<ScoredMemoryEntry[]> {
+    const _span = this._telemetry?.tracer.startSpan('engine.recall', { 'timps.operation': 'recall', 'query.length': query.length });
+    const startTime = Date.now();
+    try {
+      // Stage 0: Cascade cache — L1 (in-process) → L2 (Redis) → L3 (compute)
+      const useCache = options?.useCache !== false && this._cascadeCache !== undefined;
+      if (useCache) {
+        // Build a cache key from query + relevant options
+        const optSuffix = `${options?.type ?? 'all'}:${options?.limit ?? 10}:${options?.minConfidence ?? 0}:${options?.maxFalseMemoryRisk ?? 1}`;
+        const cacheKey = `recall:${query.toLowerCase().trim()}:${optSuffix}`;
+        const cacheTTL = options?.cacheTTL ?? this.recallCacheTTL;
+        const results = await this._cascadeCache!.getOrCompute<ScoredMemoryEntry[]>(
+          cacheKey,
+          () => this._recallCompute(query, options),
+          cacheTTL,
+        );
+        return results;
+      }
+
+      // Fallback: no cache configured
+      return await this._recallCompute(query, options);
     } finally {
       const duration = Date.now() - startTime;
       if (this._telemetry) {
@@ -1116,6 +1149,12 @@ export class MemoryEngine {
       });
     }
 
+    // Phase 4e: Invalidate cascade cache after dedup
+    if (removed > 0 && this._cascadeCache) {
+      const projId = this.orgScope?.projectId ?? this.hash;
+      void this._cascadeCache.invalidateProject(projId);
+    }
+
     return removed;
     } finally {
       const duration = Date.now() - startTime;
@@ -1173,6 +1212,29 @@ export class MemoryEngine {
     }
 
     return queued;
+  }
+
+  /**
+   * Phase 4e: Warm up the cache with pre-computed recall results.
+   * Called on startup to avoid cold-start latency for common queries.
+   * Queries are computed once and stored in L1+L2 for fast reuse.
+   */
+  async warmupCache(commonQueries: string[] = ['context', 'current', 'active', 'pattern', 'recent']): Promise<void> {
+    if (!this._cascadeCache) return;
+    const entries = loadSemantic(this.dir, this._backend);
+    if (entries.length < 10) return; // Not enough data to warm up
+
+    for (const q of commonQueries) {
+      try {
+        const results = await this._recallCompute(q, { limit: 5, useCache: false });
+        if (results.length > 0) {
+          const cacheKey = `recall:${q.toLowerCase().trim()}:fact:5:0:1`;
+          await this._cascadeCache.warmup([{ key: cacheKey, value: results, ttl: this.recallCacheTTL }]);
+        }
+      } catch {
+        // Best-effort warming — non-critical
+      }
+    }
   }
 
   /**
@@ -1244,6 +1306,12 @@ export class MemoryEngine {
       }
 
       saveSemantic(this.dir, kept, this._backend);
+    }
+
+    // Phase 4e: Invalidate cascade cache after compaction changes
+    if (this._cascadeCache) {
+      const projId = this.orgScope?.projectId ?? this.hash;
+      void this._cascadeCache.invalidateProject(projId);
     }
 
     // Enqueue index refresh after compaction

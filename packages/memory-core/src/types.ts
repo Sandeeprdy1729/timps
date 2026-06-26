@@ -50,6 +50,10 @@ export interface SearchOptions {
   useHybrid?: boolean;
   /** Force MiniSearch-only mode. */
   useMiniSearch?: boolean;
+  /** Use cascade cache (L1 → L2 → L3). Default true. Set false for fresh results. */
+  useCache?: boolean;
+  /** Cache TTL override (ms). Default 60_000 (1 min) for recall, 300_000 (5 min) for forge state. */
+  cacheTTL?: number;
 }
 
 export interface ScoredMemoryEntry extends MemoryEntry {

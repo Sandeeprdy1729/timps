@@ -14,7 +14,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
 import type { HarmonicSheafWeaver, CohomologyResult } from '../HarmonicSheafWeaver.js';
+import type { RustLSHNative } from '../native.js';
 import { LSHIndex } from '../computation/LSHIndex.js';
+import { createRustLSH } from '../native.js';
 
 export interface Position {
   id: string;
@@ -93,17 +95,24 @@ export class ContradictionDetector {
   /** Optional HarmonicSheafWeaver for algebraic contradiction detection */
   private sheaf?: HarmonicSheafWeaver;
   /** Phase 4b: LSH index for O(1) candidate lookup instead of O(n) scan */
-  private _lsh: LSHIndex;
+  private _lsh: LSHIndex | null;
+  /** Phase 4d: Rust-native LSH (10-100× faster) */
+  private _rustLsh: RustLSHNative | null;
 
   constructor(dir: string, backend?: StorageBackend, sheaf?: HarmonicSheafWeaver) {
     this._backend = backend;
     this.file = path.join(dir, 'contradiction_positions.json');
     this.sheaf = sheaf;
-    this._lsh = new LSHIndex();
+    this._rustLsh = createRustLSH();
+    this._lsh = this._rustLsh ? null : new LSHIndex();
     this.load();
     // Rebuild LSH from existing positions
     for (const pos of this.positions) {
-      this._lsh.insert(pos.id, pos.extracted_claim);
+      if (this._rustLsh) {
+        this._rustLsh.insert(pos.id, pos.extracted_claim);
+      } else {
+        this._lsh!.insert(pos.id, pos.extracted_claim);
+      }
     }
   }
 
@@ -142,8 +151,10 @@ export class ContradictionDetector {
     const seenIds = new Set<string>();
 
     for (const claim of claims) {
-      // Phase 4b: use LSH to find candidate positions instead of scanning all
-      const candidateIds = this._lsh.query(claim, 16);
+      // Phase 4b/4d: use LSH (Rust native or TS) to find candidates instead of O(n) scan
+      const candidateIds = this._rustLsh
+        ? this._rustLsh.query(claim, 16)
+        : this._lsh!.query(claim, 16);
       const candidates: Position[] = [];
       for (const id of candidateIds) {
         if (seenIds.has(id)) continue;
@@ -278,10 +289,18 @@ export class ContradictionDetector {
       created_at: new Date().toISOString(),
     };
     this.positions.push(pos);
-    this._lsh.insert(pos.id, extracted_claim);
+    if (this._rustLsh) {
+      this._rustLsh.insert(pos.id, extracted_claim);
+    } else {
+      this._lsh!.insert(pos.id, extracted_claim);
+    }
     if (this.positions.length > 200) {
       const removed = this.positions.shift()!;
-      this._lsh.delete(removed.id);
+      if (this._rustLsh) {
+        this._rustLsh.delete(removed.id);
+      } else {
+        this._lsh!.delete(removed.id);
+      }
     }
     this.save();
 

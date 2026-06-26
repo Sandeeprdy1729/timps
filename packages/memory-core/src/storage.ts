@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
 import type { MemoryEntry, EpisodicEntry, WorkingState, MemoryScope } from './types.js';
-import { getNative } from './native.js';
+
 import { FileBackend, type StorageBackend } from './backends/index.js';
 
 const TIMPS_DIR = path.join(os.homedir(), '.timps');
@@ -166,8 +166,7 @@ export function trackPattern(state: WorkingState, pattern: string): WorkingState
 
 /** Jaccard similarity on word sets (0–1) */
 export function jaccardSimilarity(a: string, b: string): number {
-  const n = getNative();
-  if (n) return n.jaccardSimilarity(a, b);
+  // Note: native addon doesn't expose jaccardSimilarity — always use TS
   const setA = new Set(a.toLowerCase().split(/\s+/).filter(w => w.length > 2));
   const setB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 2));
   if (setA.size === 0 && setB.size === 0) return 1;
