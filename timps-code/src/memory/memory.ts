@@ -397,6 +397,48 @@ export class Memory {
     return this._engine.embeddingStatus ?? null;
   }
 
+  // ── Phase 5e: International Team Features ──
+
+  async audit(opts: { actorId?: string; since?: number; until?: number; types?: string[]; limit?: number }): Promise<any> {
+    if (this.remoteMode || !this._engine) return { entries: [], summary: { totalEntries: 0, types: {}, byPlatform: {}, since: 0 } };
+    return this._engine.audit(opts);
+  }
+
+  async getTeamDigest(opts: { since: number; types?: string[]; limit?: number }): Promise<any> {
+    if (this.remoteMode || !this._engine) return { entries: [], summary: '', since: 0, generatedAt: Date.now(), timezone: '' };
+    return this._engine.getTeamDigest(opts);
+  }
+
+  createBranch(name: string, description?: string, createdBy?: string): any {
+    if (this.remoteMode || !this._engine) return null;
+    return this._engine.createBranch(name, description, createdBy);
+  }
+
+  branchCommit(branchName: string, content: string, reason: string, author?: string, platform?: string, channel?: string): any {
+    if (this.remoteMode || !this._engine) return null;
+    return this._engine.branchCommit(branchName, content, reason, author, platform, channel);
+  }
+
+  getBranchHistory(branchName: string): any[] {
+    if (this.remoteMode || !this._engine) return [];
+    return this._engine.getBranchHistory(branchName);
+  }
+
+  listBranches(showConflicts = false): any[] {
+    if (this.remoteMode || !this._engine) return [];
+    return this._engine.listBranches(showConflicts);
+  }
+
+  mergeBranches(source: string, target: string): any {
+    if (this.remoteMode || !this._engine) return { success: false, message: 'Remote mode not supported' };
+    return this._engine.mergeBranches(source, target);
+  }
+
+  deleteBranch(name: string): boolean {
+    if (this.remoteMode || !this._engine) return false;
+    return this._engine.deleteBranch(name);
+  }
+
   // ── CLI-specific advanced operations ──
 
   async runBenchmark(): Promise<string> {

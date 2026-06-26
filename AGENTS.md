@@ -1019,3 +1019,111 @@ console.log(results)
 - **Published size <50KB**, tree-shaken to <30KB for basic usage
 - **`Memory.dispose()`** flushes the embedding queue and stops background computation — call on shutdown
 - **`store()` is synchronous for local storage** — embedding computation is fire-and-forget, BM25 handles immediate recall
+
+## Phase 5e — International Team Features (June 2026)
+
+New files in `packages/memory-core/src/`:
+
+| File | Purpose |
+|------|---------|
+| `MemoryBranch.ts` | Git-style decision branches: `MemoryBranchStore` with `createBranch`, `commit`, `getHistory`, `merge`, `listBranches`, `deleteBranch` |
+
+Updated files in `packages/memory-core/`:
+
+| File | What changed |
+|------|-------------|
+| `types.ts` | Added `BranchCommit`, `BranchMetadata`, `AuditQuery`, `AuditResult`, `TeamDigest`, `TeamDigestEntry`, `PlatformMetadata` types. Extended `MemoryEntryType` with `'decision'`. Extended `SearchOptions` with `actorIds?`, `platform?`, `importance?`. |
+| `MemoryEngine.ts` | Added `audit()`, `getTeamDigest()`, `createBranch()`, `branchCommit()`, `getBranchHistory()`, `listBranches()`, `mergeBranches()`, `deleteBranch()` methods. `store()` now accepts `platform` and `channel` in extended entry. |
+| `index.ts` | Exports `MemoryBranchStore`, `BranchCommit`, `BranchMetadata`, `AuditQuery`, `AuditResult`, `TeamDigest`, `TeamDigestEntry`, `PlatformMetadata` |
+
+New file in `timps-code/src/commands/`:
+
+| File | Purpose |
+|------|---------|
+| `audit.ts` | `runAuditCommand()` — CLI handler for `timps audit --member <name> --since <date>` with table-formatted output |
+
+Updated files in `timps-code/`:
+
+| File | What changed |
+|------|-------------|
+| `src/commands/executor.ts` | Added `/audit` command route to `runAuditCommand`. Added `/team:digest` command route. |
+| `src/memory/memory.ts` | Added `audit()`, `getTeamDigest()` methods bridging to MemoryEngine |
+
+### Phase 5e architecture
+
+```
+store(content, { platform: 'wechat', channel: 'team-backend' })
+  │
+  ├─ Platform stored as metadata on MemoryEntry (not a scope boundary)
+  ├─ EngramLog records actorId + platform + channel
+  ├─ Recall() ignores platform — cross-platform results
+  └─ Timeline: entry stored with timestamp for digest purposes
+
+audit({ actorId: 'alice', since: Date })
+  │
+  ├─ Queries EngramLog JSONL for matching actorId
+  ├─ Groups by type (decision, bug_fix, pattern, code_change)
+  ├─ Returns sorted by timestamp descending
+  └─ CLI format: table with timestamp, type, content, project columns
+
+getTeamDigest({ since: lastSession, types: ['decision','bug_fix','pattern'] })
+  │
+  ├─ Queries semantic entries matching type filter since timestamp
+  ├─ Filters by importance (high-confidence decisions, recent bug fixes)
+  ├─ Formats as human-readable markdown digest
+  └─ Returns: { entries, summary, generatedAt }
+
+MemoryBranchStore
+  │
+  ├─ createBranch(name, description, creator) → branch metadata
+  ├─ commit(branch, content, reason, author) → BranchCommit with parent ref
+  ├─ getHistory(branch) → sorted commits, oldest first
+  ├─ merge(source, target, strategy) → merge commit or conflict
+  ├─ listBranches() → all branches with head info
+  └─ Stored under `branches:{name}:meta`, `branches:{name}:commits` keys
+```
+
+### Branch-aware recall
+
+When `recall()` finds a decision-type entry that has a matching branch:
+```
+recall("database choice") → [{
+  branch: "database-choice",
+  history: [
+    { content: "Use MongoDB", author: "alice", date: "Jan 15" },
+    { content: "Switch to PostgreSQL", author: "bob", date: "Mar 3" },
+    { content: "Add Redis for sessions", author: "alice", date: "Jun 20" },
+  ],
+  currentHead: "Add Redis for sessions",
+  mergedFrom: ["bob"]  // if merge was involved
+}]
+```
+
+### Branch conflict detection
+
+When two commits are made to the same branch with conflicting directions:
+```
+Alice commits: "Migrate Redis to KeyDB for multi-threading"
+Bob commits:   "Migrate Redis to Dragonfly for memory efficiency"
+
+→ Branch conflict (two concurrent heads on same branch)
+→ TIMPS surfaces at next recall: "This branch has a conflict"
+→ Team resolves: choose one, or create merge commit
+```
+
+### Cross-timezone timestamps
+
+- All timestamps stored as UTC ms since epoch (`Date.now()`)
+- Display formatting: `Intl.DateTimeFormat` with detected or configured timezone
+- CLI format: `Jun 25 7:15pm IST` (timezone abbreviation from Intl API)
+- Digest header: shows user's timezone vs stored UTC offsets
+
+### Gotchas
+
+- **Platform is metadata, not scope** — `OrgScope` defines the isolation boundary (org + team + project). Platform (`wechat`, `slack`, `discord`) is stored on `MemoryEntry.tags` and the EngramLog payload, but does NOT affect isolation. A user on Slack can see WeChat memories.
+- **Branch commits are stored as JSON array** under `branches:{name}:commits` — not in the semantic store. This keeps branches separate from the main recall pipeline. Branch-aware recall enriches results by cross-referencing decision entries.
+- **`audit()` reads from EngramLog**, not from the semantic store. The EngramLog already records `actorId`, `op`, `entryId`, and `payload` for every store operation. Audit just queries this log.
+- **Team digest filters by `type` and `actorId`** — not by full-text search. A digest is a summary of recent team activity, not a recall query. Use `recall()` for full-text search and `getTeamDigest()` for daily summaries.
+- **Branch merge uses last-writer-wins by default** — the most recent commit's content becomes the new head, with the older commit recorded as `mergedFrom`. This matches git's merge commit pattern.
+- **Branch conflict detection is synchronous** — `commit()` checks the current head against the new commit's sentiment direction. If they appear conflicting, the commit is still stored but `crdtStatus: 'conflict_pending'` is set on the branch metadata. Call `listBranches()` with `showConflicts: true` to surface pending conflicts.
+
