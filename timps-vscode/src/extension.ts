@@ -11,6 +11,7 @@ import { MemoryWatcher } from './memory-watcher';
 import { TimpsCompletionProvider } from './completion-provider';
 import { ContradictionChecker } from './contradiction-checker';
 import { TimpsClient } from './client/timpsClient';
+import { TimpsLspClient } from './lsp-client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -325,7 +326,45 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  console.log('TIMPS AI Coding Agent activated (Phase 5b: Memory Panel, Autocomplete, Contradiction Checker, Edit Watcher).');
+  // ── Phase 5c: LSP Integration ──
+  let lspClient: TimpsLspClient | undefined;
+  if (cfg.get<boolean>('lsp.enabled', true)) {
+    lspClient = new TimpsLspClient();
+    void lspClient.start().then(() => {
+      // Register definition and hover providers for supported languages
+      const lspLanguages = [
+        { language: 'typescript', scheme: 'file' },
+        { language: 'javascript', scheme: 'file' },
+        { language: 'python', scheme: 'file' },
+        { language: 'rust', scheme: 'file' },
+        { language: 'go', scheme: 'file' },
+      ];
+
+      if (lspClient) {
+        context.subscriptions.push(lspClient.registerDefinitionProvider(lspLanguages));
+        context.subscriptions.push(lspClient.registerHoverProvider(lspLanguages));
+      }
+    });
+
+    // Wire document sync events
+    context.subscriptions.push(
+      vscode.workspace.onDidOpenTextDocument(doc => lspClient?.openDocument(doc)),
+      vscode.workspace.onDidChangeTextDocument(e => lspClient?.changeDocument(e.document, e.contentChanges)),
+      vscode.workspace.onDidCloseTextDocument(doc => lspClient?.closeDocument(doc.uri.toString())),
+      vscode.workspace.onDidSaveTextDocument(doc => lspClient?.saveDocument(doc)),
+    );
+
+    context.subscriptions.push(lspClient);
+  }
+
+  // ── Phase 5c: LSP Toggle Command ──
+  context.subscriptions.push(
+    vscode.commands.registerCommand('timps.toggleLsp', () => {
+      lspClient?.toggle();
+    })
+  );
+
+  console.log('TIMPS AI Coding Agent activated (Phase 5b: Memory Panel, Autocomplete, Contradiction Checker, Edit Watcher; Phase 5c: LSP Proxy).');
 }
 
 export function deactivate() {}
