@@ -639,3 +639,117 @@ Updated files:
 - **MemoryEngine `_computationHandlers()` register per-task-type handlers** — `eigenmode`, `contradiction`, `decay_scores`, `materialized_view`. Worker routes task.type to the matching handler via `this.handlers[task.type]`.
 - **`MaterializedViews.refresh(name, computeFn)` requires a compute function** — the materialized_view handler passes `async () => []` as fallback. Override in production by registering a real compute handler at engine level.
 - **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4b). Time/day matching triggers on captures within the same second.
+
+## Phase 4c — Memory Compaction (June 2026)
+
+3-tier compaction (classify → cluster → consolidate → compress → archive → delete) that reduces active storage by ~79% at scale while improving recall quality.
+
+### Architecture
+
+```
+Scheduler (6h / manual `timps compact`)
+  │
+  └─→ CompactionPipeline.run(entries)
+        │
+        ├─ Step 1: MemoryClassifier.classifyAll()
+        │   └─ Assigns each entry → hot / warm / cold / deleted
+        │      Based on age, recall frequency, importance, contradiction status, pin status
+        │
+        ├─ Step 2: ClusterEngine.cluster()
+        │   ├─ With embeddings: k-means++ (cosine distance, sqrt(N/2) clusters)
+        │   └─ Without embeddings: layer + first-tag fallback grouping
+        │
+        ├─ Step 3: LLMConsolidationEngine.consolidate()
+        │   ├─ Sends cluster to user's LLM (BYOK — OpenAI/Ollama/Anthropic compatible)
+        │   ├─ Constitutional system prompt with 10 guardrail rules
+        │   ├─ ConstitutionalGuardrails post-processing:
+        │   │   ├─ Fabrication check (keyword verification against source)
+        │   │   ├─ Instruction leakage strip
+        │   │   ├─ Contradiction preservation check
+        │   │   └─ Confidence scoring (high/medium/low)
+        │   └─ Falls back to rule-based concatenation when no LLM configured
+        │
+        ├─ Step 4: ContentCompressor.compress()
+        │   ├─ Lossy: shorten verbose content, preserve first sentence + key entities
+        │   └─ Lossless: embedding always kept, error messages preserved
+        │
+        ├─ Step 5: ArchiveBackend.archiveBatch()
+        │   ├─ Cold memories → gzipped JSON files (archive_{ts}.json.gz)
+        │   ├─ Index maintained for quick listing/restore
+        │   └─ Not indexed in Qdrant — archive is cold storage
+        │
+        ├─ Step 6: Purge deleted originals
+        │   └─ Entries marked 'deleted' (consolidated >30 days ago) removed from active store
+        │
+        └─ Step 7: Enqueue materialized view refresh + eigenmode recompute
+```
+
+### New files in `packages/memory-core/src/compaction/`
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | `CompactionConfig`, `ClassifiedMemory`, `ConsolidatedFact`, `CompressionResult`, `ArchiveManifest`, `CompactionReport`, `LLMConsolidationRequest/Response`, `GuardrailCheckResult` |
+| `MemoryClassifier.ts` | Tier assignment: hot/warm/cold/deleted based on age, importance, recall count, contradiction status, pin status |
+| `ClusterEngine.ts` | k-means++ clustering on embedding vectors (cosine distance, random projection). Falls back to layer + tag grouping |
+| `LLMConsolidationEngine.ts` | OpenAI-compatible LLM summarization with constitutional guardrail prompt. BYOK — falls back to rule-based |
+| `ConstitutionalGuardrails.ts` | Post-processing: fabrication check, instruction leakage detection/strip, contradiction preservation, confidence scoring |
+| `ContentCompressor.ts` | Lossy compression: shortens verbose content while keeping embeddings. Preserves errors, extracts first sentence + key entities |
+| `ArchiveBackend.ts` | Cold storage: gzipped JSON archive files, index for listing/restore, batch operations |
+| `CompactionPipeline.ts` | Orchestrator: classify → cluster → consolidate → compress → archive → delete. Individual steps callable via `classifyOnly()`, `archiveOnly()`, `consolidateOnly()` |
+| `index.ts` | Re-exports |
+
+### Updated files
+
+| File | What changed |
+|------|-------------|
+| `MemoryEngine.ts` | `compaction` getter (lazy `CompactionPipeline`), `archiveBackend` getter, `compactionConfig` getter, `runCompaction()` method, `_buildCompactionMetadata()`, `_buildProtectedIds()`. `MemoryEngineOptions.compaction` accepts `Partial<CompactionConfig>`. |
+| `index.ts` | Exports all Phase 4c modules and types |
+
+### Compaction config defaults
+
+```ts
+{
+  archiveAfterDays: 90,              // Memories older than this with no recall → cold
+  warmImportanceThreshold: 0.4,      // Importance below this with few recalls → warm
+  coldImportanceThreshold: 0.2,      // Importance below this + old → cold
+  warmRecallThreshold: 3,            // Recalls below this → consolidation candidate
+  clusterMinSize: 50,               // Minimum cluster size for LLM consolidation
+  clusterMaxSize: 200,              // Maximum cluster size for LLM consolidation
+  deleteAfterConsolidationDays: 30,  // Originals deleted 30 days after consolidation
+  clusterEmbedDim: 64,               // Embedding dimension for clustering
+  constitutionalGuardrails: true,    // Enable post-processing guardrails
+}
+```
+
+### 3 Tiers
+
+| Tier | What | Storage | Recall |
+|------|------|---------|--------|
+| Hot | <90 days, high importance, frequent recall, pinned, in contradiction | Full fidelity in Postgres + Qdrant | Full vector search |
+| Warm | Medium age/importance, few recalls | LLM-consolidated facts in Qdrant, originals archived | Consolidated summary via vector search |
+| Cold | >90 days, never recalled, low importance | Gzipped JSON archive files, not in Qdrant | Not searchable via recall; restorable |
+| Deleted | Consolidated >30 days ago, originals purged | Only the consolidated fact remains | Consolidated summary only |
+
+### Constitutional guardrails
+
+The LLM summarization is protected by 4 post-processing checks:
+
+1. **Fabrication check** — verifies key terms in the summary appear in source episodes
+2. **Instruction leakage detection** — strips any text matching the system prompt structure
+3. **Contradiction preservation** — ensures source contradictions are noted in the summary
+4. **Confidence scoring** — assigns high/medium/low based on source count, pattern density, summary length
+
+If guardrails detect issues, the LLM is retried once with an explicit warning.
+
+### Gotchas
+
+- **LLM is BYOK** — the user's API key is used; no TIMPS-hosted LLM. Falls back to rule-based concatenation when no LLM configured.
+- **Archive is cold storage** — archived entries are NOT in Qdrant and not vector-searchable. They can be restored via `ArchiveBackend.restoreAll()`.
+- **Protected IDs** — memories involved in contradictions are protected from archival/deletion. The `_buildProtectedIds()` method checks all entries via ContradictionDetector.
+- **`CompactionPipeline` can run individual steps** — `classifyOnly()`, `archiveOnly()`, `consolidateOnly()` for targeted operations.
+- **`MemoryEngine.runCompaction()`** applies changes (delete, compress) after the pipeline report is generated, then enqueues materialized view refresh.
+- **Cluster count formula**: `max(1, round(sqrt(N/2)))` — for 100 warm memories → 7 clusters, for 1000 → 22 clusters.
+- **k-means++ initialization** uses weighted random selection for the first centroid, then distance-squared weighting for remaining centroids.
+- **ArchiveBackend stores gzipped JSON** — each batch is one `archive_{timestamp}.json.gz` file. Index is a stripped manifest list.
+- **Compression ratio for verbose content**: typically 2-7x. Embedding is always preserved.
+- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4c).

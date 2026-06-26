@@ -40,6 +40,13 @@ import { ComputationQueue } from './computation/ComputationQueue.js';
 import { MaterializedViews, CONTRADICTION_VIEW, WORKING_MEMORY_VIEW, VELOCITY_VIEW, DRIFT_VIEW } from './computation/MaterializedViews.js';
 import type { ComputationTask, ComputationHandlers } from './computation/types.js';
 
+// Phase 4c: Memory Compaction
+import { CompactionPipeline } from './compaction/CompactionPipeline.js';
+import type { CompactionConfig, CompactionReport } from './compaction/types.js';
+import { DEFAULT_COMPACTION_CONFIG } from './compaction/types.js';
+import { ArchiveBackend } from './compaction/ArchiveBackend.js';
+import { ContentCompressor } from './compaction/ContentCompressor.js';
+
 // ── New Layers (L10-L22) ──
 import { EngramLog } from './EngramLog.js';
 import { ConsolidationEngine } from './ConsolidationEngine.js';
@@ -194,6 +201,13 @@ export interface MemoryEngineOptions {
    * Default: undefined (no embedding computation)
    */
   embedding?: EmbeddingConfig;
+  /**
+   * Compaction configuration for memory compaction.
+   * When provided, compaction pipeline is available via the compaction getter
+   * and scheduled compaction runs via the computation queue.
+   * Default: undefined (compaction disabled)
+   */
+  compaction?: Partial<CompactionConfig>;
 }
 
 export class MemoryEngine {
@@ -257,6 +271,10 @@ export class MemoryEngine {
   private _computationQueue?: ComputationQueue;
   private _materializedViews: MaterializedViews;
 
+  // ── Phase 4c: Memory Compaction ──
+  private _compactionConfig?: CompactionConfig;
+  private _archiveBackend?: ArchiveBackend;
+
   // ── New Intelligence Tools 18-25 (lazy-init) ──
   private _falseMemoryDetector?: FalseMemoryDetector;
   private _calibratorTool?: ConfidenceCalibratorTool;
@@ -314,6 +332,12 @@ export class MemoryEngine {
     // Phase 4b: materialized views and computation queue
     this._materializedViews = new MaterializedViews(this._backend);
     this._computationQueue = new ComputationQueue(this._computationHandlers(), this._backend);
+
+    // Phase 4c: compaction
+    if (options?.compaction) {
+      this._compactionConfig = { ...DEFAULT_COMPACTION_CONFIG, ...options.compaction };
+      this._archiveBackend = new ArchiveBackend(this.dir);
+    }
 
     // Initialize telemetry
     if (options?.telemetry && options.telemetry.level !== 'off') {
@@ -1165,6 +1189,117 @@ export class MemoryEngine {
     if (this._qdrant) {
       await this._qdrant.close();
     }
+  }
+
+  // ── Phase 4c: Memory Compaction ──
+
+  /** Compaction pipeline — lazily initialized. Only available when compaction config is set. */
+  get compaction(): CompactionPipeline | undefined {
+    if (!this._compactionConfig) return undefined;
+    return new CompactionPipeline(this.dir, {
+      config: this._compactionConfig,
+      metadataMap: this._buildCompactionMetadata(),
+      protectedIds: this._buildProtectedIds(),
+    });
+  }
+
+  /** Archive backend for cold storage. */
+  get archiveBackend(): ArchiveBackend | undefined {
+    return this._archiveBackend;
+  }
+
+  /** Compaction config, if configured. */
+  get compactionConfig(): CompactionConfig | undefined {
+    return this._compactionConfig;
+  }
+
+  /**
+   * Run the full compaction pipeline.
+   * Returns a detailed report or null if compaction is not configured.
+   */
+  async runCompaction(): Promise<CompactionReport | null> {
+    if (!this._compactionConfig) return null;
+    const pipeline = this.compaction!;
+    const entries = loadSemantic(this.dir, this._backend);
+    const report = await pipeline.run(entries);
+
+    // Apply changes based on report
+    const classified = pipeline.classifyOnly(entries);
+    const toDelete = classified.filter(c => c.tier === 'deleted');
+    const compressed = classified.filter(c => c.tier === 'hot' && c.content.length > 200);
+
+    if (toDelete.length > 0 || compressed.length > 0) {
+      const toDeleteIds = new Set(toDelete.map(c => c.id));
+      const kept = entries.filter(e => !toDeleteIds.has(e.id));
+
+      // Apply compression
+      if (compressed.length > 0) {
+        const compressor = new ContentCompressor();
+        for (const entry of kept) {
+          if (compressed.some(c => c.id === entry.id && c.content.length > 200)) {
+            const result = compressor.compress(entry.content);
+            entry.content = result.compressedContent;
+          }
+        }
+      }
+
+      saveSemantic(this.dir, kept, this._backend);
+    }
+
+    // Enqueue index refresh after compaction
+    if (this._computationQueue) {
+      this._computationQueue.enqueue({
+        type: 'materialized_view',
+        payload: { viewName: CONTRADICTION_VIEW },
+      });
+      this._computationQueue.enqueue({
+        type: 'eigenmode',
+        payload: { forge: 'harmonic' },
+      });
+      this._computationQueue.enqueue({
+        type: 'eigenmode',
+        payload: { forge: 'aether' },
+      });
+    }
+
+    return report;
+  }
+
+  /** Build metadata map for compaction classifier from all available sources. */
+  private _buildCompactionMetadata(): Map<string, {
+    recallCount: number; lastAccess: number; importance: number;
+    layer: string; inContradiction: boolean;
+    partOfConsolidated: boolean; pinnedByUser: boolean;
+  }> {
+    const map = new Map();
+    const entries = loadSemantic(this.dir, this._backend);
+    for (const entry of entries) {
+      map.set(entry.id, {
+        recallCount: 0,
+        lastAccess: entry.timestamp,
+        importance: 0.5,
+        layer: 'L3',
+        inContradiction: false,
+        partOfConsolidated: false,
+        pinnedByUser: false,
+      });
+    }
+    return map;
+  }
+
+  /** Build set of protected IDs (memories involved in contradictions). */
+  private _buildProtectedIds(): Set<string> {
+    const ids = new Set<string>();
+    try {
+      const entries = loadSemantic(this.dir, this._backend);
+      for (const entry of entries) {
+        const check = this.contradiction.check(entry.content, false);
+        if (check.verdict === 'CONTRADICTION' && check.matched_position) {
+          ids.add(entry.id);
+        }
+      }
+    } catch { /* best-effort */ }
+    return ids;
   }
 
   // ── Snapshot & Merge ──
