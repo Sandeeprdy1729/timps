@@ -166,7 +166,7 @@ export function pluginCreate(name: string, outDir?: string): string {
     main: 'dist/index.js',
     types: 'dist/index.d.ts',
     scripts: { build: 'tsup src/index.ts --format cjs --dts', prepublishOnly: 'npm run build' },
-    peerDependencies: { '@timps/plugin-sdk': '*' },
+    peerDependencies: { '@timps-ai/plugin-sdk': '*' },
     keywords: ['timps-plugin'],
     license: 'MIT',
   }, null, 2));
@@ -179,7 +179,7 @@ export function pluginCreate(name: string, outDir?: string): string {
     include: ['src'],
   }, null, 2));
 
-  writeFileSync(join(dir, 'src', 'index.ts'), `import type { Plugin } from '@timps/plugin-sdk';
+  writeFileSync(join(dir, 'src', 'index.ts'), `import type { Plugin } from '@timps-ai/plugin-sdk';
 
 const plugin: Plugin = {
   manifest: {

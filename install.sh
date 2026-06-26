@@ -150,7 +150,7 @@ hr
 info "Building TIMPS (TypeScript → JavaScript)…"
 
 npm run build --workspace=timps-code 2>&1 | tail -8 || \
-  npm run build --workspace=@timps/memory-core --workspace=@timps/plugin-sdk --workspace=timps-code 2>&1 | tail -8 || \
+  npm run build --workspace=@timps-ai/memory-core --workspace=@timps-ai/plugin-sdk --workspace=timps-code 2>&1 | tail -8 || \
   warn "Build had warnings — timps may still work. Run manually: cd $INSTALL_DIR && npm run build"
 success "Build complete ✓"
 

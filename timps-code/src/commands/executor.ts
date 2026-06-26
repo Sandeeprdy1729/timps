@@ -594,7 +594,7 @@ async function runEmbedStatusCommand(): Promise<CommandResult> {
 
 async function runEvalCommand(args: string[]): Promise<CommandResult> {
   try {
-    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, formatEvalSummary } = await import('@timps/memory-core');
+    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, formatEvalSummary } = await import('@timps-ai/memory-core');
     const datasets = loadAllDatasets();
     const datasetName = args[0] || 'all';
 
@@ -623,7 +623,7 @@ async function runEvalCommand(args: string[]): Promise<CommandResult> {
 
 async function runEvalAbTestCommand(args: string[]): Promise<CommandResult> {
   try {
-    const { AbTestRunner, loadDataset, createFreshEngine, seedEngineWithDataset, evaluateDataset, DATASET_NAMES } = await import('@timps/memory-core');
+    const { AbTestRunner, loadDataset, createFreshEngine, seedEngineWithDataset, evaluateDataset, DATASET_NAMES } = await import('@timps-ai/memory-core');
     const runner = new AbTestRunner();
     const variantA = { name: args[0] || 'baseline', overrides: {} };
     const variantB = { name: args[1] || 'experiment', overrides: {} };
@@ -639,7 +639,7 @@ async function runEvalAbTestCommand(args: string[]): Promise<CommandResult> {
 
 async function runEvalBaselineCommand(args: string[]): Promise<CommandResult> {
   try {
-    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, BaselineManager } = await import('@timps/memory-core');
+    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, BaselineManager } = await import('@timps-ai/memory-core');
     const baselineDir = args[1] || `${process.cwd()}/.timps/eval-baselines`;
     const manager = new BaselineManager(baselineDir);
     const datasetName = args[0] || 'all';
@@ -666,7 +666,7 @@ async function runEvalBaselineCommand(args: string[]): Promise<CommandResult> {
 
 async function runEvalGateCommand(): Promise<CommandResult> {
   try {
-    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, BaselineManager, RegressionDetector } = await import('@timps/memory-core');
+    const { loadAllDatasets, createFreshEngine, seedEngineWithDataset, evaluateDataset, BaselineManager, RegressionDetector } = await import('@timps-ai/memory-core');
     const baselineDir = `${process.cwd()}/.timps/eval-baselines`;
     const manager = new BaselineManager(baselineDir);
     const detector = new RegressionDetector();
@@ -1111,7 +1111,7 @@ async function runSheafCommand(args: string): Promise<CommandResult> {
       }
 
       case 'predict': {
-        const targetDomain = (domain as import('@timps/memory-core').SheafDomain | undefined) ?? 'burnout';
+        const targetDomain = (domain as import('@timps-ai/memory-core').SheafDomain | undefined) ?? 'burnout';
         const pred = weaver.predict(targetDomain, { lookbackDays: 30 });
         const traj = pred.trajectory.slice(0, 6).map(v => `${Math.round(v * 100)}%`).join(' → ');
         const lines = [
@@ -1126,7 +1126,7 @@ async function runSheafCommand(args: string): Promise<CommandResult> {
       }
 
       case 'contradict': {
-        const targetDomain = domain as import('@timps/memory-core').SheafDomain | undefined;
+        const targetDomain = domain as import('@timps-ai/memory-core').SheafDomain | undefined;
         const coh = weaver.detectContradictions(targetDomain ? { domain: targetDomain } : {});
         const domainStr = Object.entries(coh.domainContradictions)
           .map(([d, n]) => `  ${d}: ${n} contradiction(s)`)
@@ -1159,7 +1159,7 @@ async function runSheafCommand(args: string): Promise<CommandResult> {
       }
 
       case 'context': {
-        const targetDomain = (domain as import('@timps/memory-core').SheafDomain | undefined) ?? 'burnout';
+        const targetDomain = (domain as import('@timps-ai/memory-core').SheafDomain | undefined) ?? 'burnout';
         const ctx = weaver.getContextString(targetDomain, 5);
         return { success: true, output: ctx };
       }
@@ -1221,7 +1221,7 @@ async function runAetherCommand(args: string): Promise<CommandResult> {
       }
 
       case 'predict': {
-        const targetDomain = (domain as import('@timps/memory-core').ERLDomain) ?? 'burnout' as import('@timps/memory-core').ERLDomain;
+        const targetDomain = (domain as import('@timps-ai/memory-core').ERLDomain) ?? 'burnout' as import('@timps-ai/memory-core').ERLDomain;
         const pred = forge.predict(targetDomain, { lookbackDays: 30 });
         const traj = pred.trajectory.slice(0, 6).map(v => `${Math.round(v * 100)}%`).join(' → ');
         const lines = [
@@ -1270,7 +1270,7 @@ async function runAetherCommand(args: string): Promise<CommandResult> {
       }
 
       case 'context': {
-        const targetDomain = (domain as import('@timps/memory-core').ERLDomain) ?? 'burnout' as import('@timps/memory-core').ERLDomain;
+        const targetDomain = (domain as import('@timps-ai/memory-core').ERLDomain) ?? 'burnout' as import('@timps-ai/memory-core').ERLDomain;
         const ctx = forge.getContextString(targetDomain, 5);
         return { success: true, output: ctx };
       }
@@ -1322,7 +1322,7 @@ async function runQISRDCommand(args: string): Promise<CommandResult> {
       }
 
       case 'predict': {
-        const targetDomain = (domain ?? 'burnout') as import('@timps/memory-core').QISRDDomain;
+        const targetDomain = (domain ?? 'burnout') as import('@timps-ai/memory-core').QISRDDomain;
         const pred = q.predict(targetDomain);
         const traj = pred.trajectory.slice(0, 8).map(v => `${(v * 100).toFixed(0)}%`).join(' → ');
         const lines = [
@@ -1337,7 +1337,7 @@ async function runQISRDCommand(args: string): Promise<CommandResult> {
       }
 
       case 'contradict': {
-        const contra = q.detectContradictions(domain ? { domain: domain as import('@timps/memory-core').QISRDDomain } : {});
+        const contra = q.detectContradictions(domain ? { domain: domain as import('@timps-ai/memory-core').QISRDDomain } : {});
         const lines = [
           'QISRD Sheaf Cohomology — Contradiction Detection',
           `  H¹ (Betti-1)     : ${contra.betti1}`,
@@ -1366,7 +1366,7 @@ async function runQISRDCommand(args: string): Promise<CommandResult> {
       }
 
       case 'context': {
-        const ctx = injectQISRDContext(mem, domain ? [domain as import('@timps/memory-core').QISRDDomain] : undefined);
+        const ctx = injectQISRDContext(mem, domain ? [domain as import('@timps-ai/memory-core').QISRDDomain] : undefined);
         return {
           success: true,
           output: ctx.promptFragment

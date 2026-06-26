@@ -1,4 +1,4 @@
-import type { Plugin } from '@timps/plugin-sdk';
+import type { Plugin } from '@timps-ai/plugin-sdk';
 import { execSync, exec } from 'child_process';
 import { promisify } from 'util';
 

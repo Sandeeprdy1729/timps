@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { MemoryEngine } from '@timps/memory-core';
+import { MemoryEngine } from '@timps-ai/memory-core';
 
 interface BenchmarkQuery {
   id: string;

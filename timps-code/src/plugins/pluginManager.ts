@@ -3,7 +3,7 @@
 // Plugins can add new tools, slash commands, and lifecycle hooks
 // that are automatically available in every agent session.
 
-import { PluginRegistry, loadPlugin } from '@timps/plugin-sdk';
+import { PluginRegistry, loadPlugin } from '@timps-ai/plugin-sdk';
 import type {
   Plugin,
   PluginContext,
@@ -11,7 +11,7 @@ import type {
   MemoryAPI,
   SemanticEntry,
   EpisodicEntry,
-} from '@timps/plugin-sdk';
+} from '@timps-ai/plugin-sdk';
 import type { RegisteredTool, ToolExecResult } from '../tools/tools.js';
 import type { ToolDefinition } from '../config/types.js';
 import type { Memory } from '../memory/memory.js';

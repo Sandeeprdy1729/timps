@@ -1,4 +1,4 @@
-import type { Plugin } from '@timps/plugin-sdk';
+import type { Plugin } from '@timps-ai/plugin-sdk';
 import { execSync } from 'child_process';
 
 function git(args: string, cwd?: string): string {
