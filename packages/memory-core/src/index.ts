@@ -340,6 +340,11 @@ export type { ComputationTask, ComputationConfig, ComputationStatus, Materialize
 export { LSHIndex } from './computation/LSHIndex.js';
 export type { HybridSearchOptions, QdrantAvailability } from './search/hybridRetriever.js';
 
+// Phase 4c: Memory Compaction
+export { CompactionPipeline, MemoryClassifier, ClusterEngine, LLMConsolidationEngine, ConstitutionalGuardrails, ContentCompressor, ArchiveBackend, DEFAULT_COMPACTION_CONFIG } from './compaction/index.js';
+export type { PipelineOptions, ClassifierOptions, MemoryCluster, ClusterOptions, GuardrailOptions } from './compaction/index.js';
+export type { CompactionTier, ConsolidationConfidence, ClassifiedMemory, CompactionConfig, ConsolidatedFact, CompressionResult, ArchiveManifest, ArchiveEntry, CompactionReport, LLMConsolidationRequest, LLMConsolidationResponse, GuardrailCheckResult } from './compaction/types.js';
+
 // ── Telemetry & Observability ──
 export { TelemetryManager } from './telemetry/TelemetryManager.js';
 export type { TelemetryConfig, TelemetryLevel, Span, SpanAttributes, SpanStatusCode, MetricPoint, AnonymousMetricsPayload } from './telemetry/types.js';
