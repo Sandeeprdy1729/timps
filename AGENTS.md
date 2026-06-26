@@ -595,3 +595,47 @@ Updated files in `timps-code/`:
 - **Store-then-immediately-recall** finds the memory via BM25 (sync) before embedding completes (async). The embedding arrives eventually in Qdrant.
 - **Pre-existing eval import errors** in `timps-code/src/commands/executor.ts` (`seedEngineWithDataset`, `loadAllDatasets`, etc. not exported from `@timps/memory-core`) are unrelated to Phase 4a.
 - **`MemoryEngine.test.ts` and `memory-unified.test.ts`** both test `recall()` synchronously with `await`. If a new test file calls `recall()` without `await`, the result will be a Promise, not an array — the test will silently pass with wrong assertions.
+
+## Phase 4b — Incremental Layer Computation (June 2026)
+
+New files in `packages/memory-core/src/computation/`:
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | Task types (`eigenmode`, `contradiction`, `decay_scores`, `materialized_view`, `full_recompute`), `ComputationTask`, `MaterializedView<T>`, view entry types, `ComputationHandlers` |
+| `ComputationQueue.ts` | Background batch queue — in-memory + StorageBackend crash recovery (16-item batch, 500ms interval), generic string-dispatch to registered handlers |
+| `MaterializedViews.ts` | View get/set/isStale/refresh/delete by name. Pre-defined: `contradictions` (60s TTL), `working_memory` (30s TTL), `velocity` (120s TTL), `drift` (120s TTL). Backed by `StorageBackend` under `views:` prefix. |
+| `LSHIndex.ts` | Locality-sensitive hashing index — random projection (4 tables × 8 bits, embed dim 64). `insert(id, content)`, `delete(id)`, `query(content, maxResults?)` returns candidate IDs. No generic type parameter — stores `string` IDs keyed by `string` content. |
+
+Updated files:
+
+| File | What changed |
+|------|-------------|
+| `HarmonicSheafWeaver.ts` | `weave()` sets `_dirtyEigenmodes` flag + tracks `_pendingNodeIds` instead of clearing spectral cache. `detectContradictions()` and `predict()` use `computeEigenpairsWarm()` (8 iterations, seeded from cached eigenvectors) instead of `computeSmallestEigenpairs()` (40 iterations). Added `computeEigenpairsWarm()` function. Added `isEigenmodeDirty` getter and `refreshEigenmodes()`. |
+| `AetherForgeERL.ts` | Same pattern as HSW: `_dirtyEigenmodes`, `_pendingNodeIds`, warm-started eigenpair computation, `isEigenmodeDirty` getter, `refreshEigenmodes()` |
+| `EchoForge.ts` | `_decayScoreCache: Map<string, number>` — cached `effectiveEcho()` results. `_cachedEcho(nodeId, atMs)` returns cached score or computes + caches. `_invalidateDecayScore()`/`_invalidateAllDecayScores()`. All `effectiveEcho()` call sites replaced with `_cachedEcho()`. Cache invalidated on `verify()`, `contradict()`, `archive()`, `store()` retrieval increment, and `consolidate()` changes. `refreshDecayScores()` for ComputationQueue worker. |
+| `intelligence/contradiction.ts` | `LSHIndex` field. Constructor rebuilds LSH from existing positions. `check()` queries LSH buckets for candidates (max 16 per claim) instead of O(N) scan. Falls back to full scan when LSH returns empty (cold start). `store()` inserts into LSH; `delete()` removes from LSH; 200-position cap also removes from LSH. |
+| `MemoryEngine.ts` | New fields: `_computationQueue`, `_materializedViews`. Constructor initializes both. `_computationHandlers()` registers `eigenmode`, `contradiction`, `decay_scores`, `materialized_view` handlers. `store()` enqueues 4 fire-and-forget tasks per write. `dispose()` calls `_computationQueue.stop()`. Exports `computationQueue` and `materializedViews` getters. |
+| `computation/types.ts` | Exports `ViewEntry` union type. `ComputationHandlers` changed to `Record<string, (task) => Promise<void>>`. |
+| `computation/MaterializedViews.ts` | Exports constant names `CONTRADICTION_VIEW`, `WORKING_MEMORY_VIEW`, `VELOCITY_VIEW`, `DRIFT_VIEW`. All internal method references use constant names. |
+| `computation/LSHIndex.ts` | Changed from generic `LSHIndex<T extends { id: string; content: string }>` to non-generic `LSHIndex`. `insert(item: T)` → `insert(id: string, content: string)`. `query` returns `string[]` of IDs. `getAll()` returns `string[]`. |
+
+### Key design decisions
+
+- **ComputationQueue follows EmbeddingQueue pattern** — in-memory array + StorageBackend crash recovery, not Redis-dependent.
+- **All forge incremental updates are fire-and-forget** — `store()` enqueues tasks but returns immediately; BM25 handles immediate recall queries; incremental compute arrives eventually.
+- **Warm-started eigenmode computation** — cached eigenvectors seeded as initial guesses for power iteration (2-5 iterations vs 40 from scratch). Uses `computeEigenpairsWarm()` in both HSW and AetherForgeERL.
+- **LSHIndex is non-generic** — stores string IDs keyed by content. Simpler interface for contradiction detector integration.
+- **Materialized views have per-view TTL** — stale views trigger fresh computation on read. Views stored under `views:` prefix in the same StorageBackend.
+- **Decay score cache is in-memory only** — not persisted. Invalidated on any mutation (verify, contradict, archive, retrieval increment). `refreshDecayScores()` recomputes all scores on a periodic cycle.
+
+### Gotchas
+
+- **ComputationQueue constructor arg order:** `new ComputationQueue(handlers, backend?, config?)` — handlers first, then optional backend and config.
+- **`computeEigenpairsWarm()` signature:** `(n, triples, k, cachedValues?, cachedVectors?, cachedN?, maxIter?)`. Uses `cachedVectors[i * prevK + vec]` interpolation for warm-start seeding. Falls back to deterministic seeding (`Math.sin`) when cache doesn't match dimension.
+- **EchoForge `_cachedEcho()` returns 0 for unknown node IDs** — not `undefined`. Consumers get a valid number.
+- **LSH query candidates are limited to 16 per claim** — tunable by `maxResults` parameter on `query()`. Falls back to full O(N) scan when LSH returns 0 candidates.
+- **ContradictionDetector `check()` calls `this._lsh.query(claim, 16)`** — returns `string[]` IDs. The `autoStore=true` default still stores each claim after checking.
+- **MemoryEngine `_computationHandlers()` register per-task-type handlers** — `eigenmode`, `contradiction`, `decay_scores`, `materialized_view`. Worker routes task.type to the matching handler via `this.handlers[task.type]`.
+- **`MaterializedViews.refresh(name, computeFn)` requires a compute function** — the materialized_view handler passes `async () => []` as fallback. Override in production by registering a real compute handler at engine level.
+- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4b). Time/day matching triggers on captures within the same second.
