@@ -379,9 +379,9 @@
   "devDependencies": {
     "@types/node": "^20.19.39",
     "@types/vscode": "^1.115.0",
-    "@vscode/vsce": "^2.32.0",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.6"
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "tmp": "0.2.6"
