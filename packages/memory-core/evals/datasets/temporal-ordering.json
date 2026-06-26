@@ -1,0 +1,37 @@
+{
+  "name": "temporal-ordering",
+  "version": "1.0.0",
+  "description": "Tests time-dependent relevance. Memories have timestamps, and recall must prefer recent information for time-sensitive queries. Tests decay algorithms and temporal ranking.",
+  "examples": [
+    {
+      "query": "What is the current deployment process?",
+      "expectedMemories": ["GitHub Actions with auto-deploy on main merge (2026-06-01)", "Docker build and push to ECR (2026-05-15)", "Kubernetes rolling update (2026-06-01)"],
+      "context": "temporal"
+    },
+    {
+      "query": "Which rate limiting approach is active?",
+      "expectedMemories": ["Token bucket rate limiter deployed (2026-05-20)", "Sticky-window rate limiter deprecated (2026-05-19)"],
+      "context": "temporal"
+    },
+    {
+      "query": "What changed in the caching layer recently?",
+      "expectedMemories": ["Cache warming added for critical queries (2026-06-10)", "TTL increased from 5min to 15min for user data (2026-06-05)", "Redis cluster migration completed (2026-05-28)"],
+      "context": "temporal"
+    },
+    {
+      "query": "Who is the current team lead?",
+      "expectedMemories": ["Alice Chen is the team lead (since 2026-04-01)", "Bob Smith was team lead (2025-01-01 to 2026-03-31)"],
+      "context": "temporal"
+    },
+    {
+      "query": "What API version is currently active?",
+      "expectedMemories": ["API v2 is current stable (released 2026-03-15)", "API v1 is deprecated, EOL 2026-09-15"],
+      "context": "temporal"
+    },
+    {
+      "query": "What is the current Node.js version requirement?",
+      "expectedMemories": ["Node 22 required (upgraded 2026-05-01)", "Node 18 required previously (2025-01-01 to 2026-04-30)"],
+      "context": "temporal"
+    }
+  ]
+}

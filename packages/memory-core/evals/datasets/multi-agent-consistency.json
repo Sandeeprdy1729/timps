@@ -1,0 +1,32 @@
+{
+  "name": "multi-agent-consistency",
+  "version": "1.0.0",
+  "description": "Tests CRDT merge correctness and cross-agent consistency. Two agents write overlapping memories, and a third agent must recall a consistent view. Tests conflict resolution and merge semantics.",
+  "examples": [
+    {
+      "query": "What is the project's database strategy?",
+      "expectedMemories": ["PostgreSQL as primary database (agreed by both agents)", "Read replicas for reporting queries (Agent A)", "Connection pooling via PgBouncer (Agent B)"],
+      "context": "Agent A wrote: 'Use PostgreSQL with read replicas for reporting'. Agent B wrote: 'PostgreSQL is the database, with PgBouncer connection pooling'. Both agree on PostgreSQL."
+    },
+    {
+      "query": "What is the CI/CD pipeline?",
+      "expectedMemories": ["GitHub Actions for CI (agreed)", "Deploy to staging on PR, production on main merge (Agent A)", "Slack notifications on failure (Agent B)"],
+      "context": "Agent A documented CI pipeline stages. Agent B added notification integration. No contradictions."
+    },
+    {
+      "query": "How is monitoring configured?",
+      "expectedMemories": ["Prometheus + Grafana stack (agreed by both)", "PagerDuty integration for critical alerts (Agent A)", "Dashboard auto-updated on deploy (Agent B)"],
+      "context": "Two agents independently documented monitoring. Shared understanding of Prometheus/Grafana, different additional details."
+    },
+    {
+      "query": "What is the error handling strategy?",
+      "expectedMemories": ["Result type pattern with typed errors (agreed)", "Centralized error middleware in Express (Agent A)", "Error tracking via Sentry (Agent B)"],
+      "context": "Agents documented different aspects of error handling — middleware vs external tracking — both consistent."
+    },
+    {
+      "query": "What authentication methods are supported?",
+      "expectedMemories": ["JWT-based auth for web clients (agreed)", "API keys for service-to-service (Agent A)", "OAuth2 for third-party integrations (Agent B)"],
+      "context": "Both agents agree on JWT auth. Agent A added API keys, Agent B added OAuth2."
+    }
+  ]
+}
