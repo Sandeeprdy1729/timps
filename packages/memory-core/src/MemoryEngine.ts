@@ -24,7 +24,7 @@ import type { StorageBackend, FileBackendOptions } from './backends/index.js';
 import type { QdrantBackend } from './backends/QdrantBackend.js';
 import type { CacheManager } from './cache/CacheManager.js';
 import { CascadeCache } from './cache/CascadeCache.js';
-import type { EventBus, EventBusChannel } from './events/EventBus.js';
+import type { EventBus, EventBusChannel, EventHandler } from './events/EventBus.js';
 import { TelemetryManager } from './telemetry/TelemetryManager.js';
 import type { TelemetryConfig } from './telemetry/types.js';
 import { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
@@ -221,6 +221,7 @@ export class MemoryEngine {
   private _cacheManager?: CacheManager;
   private _cascadeCache?: CascadeCache;
   private _eventBus?: EventBus;
+  private _eventBusInvalidationHandler?: EventHandler;
   private _telemetry?: TelemetryManager;
   private _crdtMetrics: { recordConflict: (r: string) => void; recordMerge: (d: number) => void; recordCheck: () => void };
 
@@ -324,6 +325,19 @@ export class MemoryEngine {
     this._cascadeCache = new CascadeCache(this._cacheManager, {
       orgScope: this.orgScope,
     });
+
+    // Phase 4e: EngramLog-based cache invalidation subscriber
+    // When another server in the cluster stores a memory, invalidate local cache
+    if (this._eventBus) {
+      this._eventBusInvalidationHandler = (msg) => {
+        const evProjectId = msg.payload.projectId as string | undefined;
+        const localProjectId = this.orgScope?.projectId ?? this.hash;
+        if (evProjectId && evProjectId !== localProjectId) return;
+        void this._cascadeCache?.invalidateProject();
+      };
+      void this._eventBus.subscribe('memory:stored', this._eventBusInvalidationHandler);
+    }
+
     this._qdrant = options?.qdrant;
     this._embeddingConfig = options?.embedding;
 
@@ -1250,6 +1264,10 @@ export class MemoryEngine {
     }
     if (this._qdrant) {
       await this._qdrant.close();
+    }
+    if (this._eventBus && this._eventBusInvalidationHandler) {
+      void this._eventBus.unsubscribe('memory:stored', this._eventBusInvalidationHandler);
+      this._eventBusInvalidationHandler = undefined;
     }
   }
 
