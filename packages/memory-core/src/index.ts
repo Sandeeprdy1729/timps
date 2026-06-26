@@ -348,6 +348,9 @@ export type { ComputationTask, ComputationConfig, ComputationStatus, Materialize
 export { LSHIndex } from './computation/LSHIndex.js';
 export type { HybridSearchOptions, QdrantAvailability } from './search/hybridRetriever.js';
 
+// ── Backends ──
+export { FileBackend, InMemoryBackend } from './backends/index.js';
+
 // Phase 4c: Memory Compaction
 export { CompactionPipeline, MemoryClassifier, ClusterEngine, LLMConsolidationEngine, ConstitutionalGuardrails, ContentCompressor, ArchiveBackend, DEFAULT_COMPACTION_CONFIG } from './compaction/index.js';
 export type { PipelineOptions, ClassifierOptions, MemoryCluster, ClusterOptions, GuardrailOptions } from './compaction/index.js';
@@ -369,7 +372,7 @@ export { RedactionPipeline } from './telemetry/RedactionPipeline.js';
 export { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
 
 // ── Phase 3c: Eval Framework — Quality Measurement & Regression Detection ──
-export { loadDataset, loadAllDatasets, evaluateDataset, createFreshEngine, runFullEvalSuite, formatEvalSummary, computeDatasetSha } from './eval/runner.js';
+export { loadDataset, loadAllDatasets, evaluateDataset, createFreshEngine, seedEngineWithDataset, runFullEvalSuite, formatEvalSummary, computeDatasetSha } from './eval/runner.js';
 export { BaselineManager } from './eval/baseline.js';
 export { RegressionDetector } from './eval/regression.js';
 export { AbTestRunner } from './eval/abtest.js';

@@ -19,6 +19,10 @@ export interface MultimodalEntry {
     duration?: number;
     width?: number;
     height?: number;
+    command?: string;
+    exitCode?: number;
+    outputLength?: number;
+    diagramType?: string;
   };
   crossModalLinks: string[];
   accessCount: number;
@@ -497,6 +501,188 @@ export class MultimodalMemory {
       embeddingModel: 'nomic-embed-text',
       visionModel: 'gemma3:1b',
     };
+  }
+
+  // ── Storage budget ──────────────────────────────────────────────────────────
+
+  private storageBudgetBytes: number = 100 * 1024 * 1024; // 100MB default
+  private storageUsedBytes: number = 0;
+
+  setStorageBudget(maxBytes: number): void {
+    this.storageBudgetBytes = maxBytes;
+  }
+
+  getStorageBudget(): { maxBytes: number; usedBytes: number; percentUsed: number } {
+    this.recalculateStorageUsed();
+    return {
+      maxBytes: this.storageBudgetBytes,
+      usedBytes: this.storageUsedBytes,
+      percentUsed: Math.round((this.storageUsedBytes / this.storageBudgetBytes) * 100),
+    };
+  }
+
+  private recalculateStorageUsed(): void {
+    const entries = Array.from((this.store as any).entries.values()) as MultimodalEntry[];
+    let total = 0;
+    for (const entry of entries) {
+      total += entry.content.length * 2; // rough UTF-16 estimate
+      total += entry.embedding.length * 8; // float64
+      if (entry.metadata.source && fs.existsSync(entry.metadata.source)) {
+        try { total += fs.statSync(entry.metadata.source).size; } catch {}
+      }
+    }
+    this.storageUsedBytes = total;
+  }
+
+  /** Prune least-accessed entries when over budget. Returns number pruned. */
+  async enforceStorageBudget(): Promise<number> {
+    this.recalculateStorageUsed();
+    if (this.storageUsedBytes <= this.storageBudgetBytes) return 0;
+
+    const entries = Array.from((this.store as any).entries.values()) as MultimodalEntry[];
+    entries.sort((a, b) => a.accessCount - b.accessCount);
+
+    let pruned = 0;
+    while (this.storageUsedBytes > this.storageBudgetBytes && pruned < entries.length) {
+      const entry = entries[pruned];
+      const entrySize = entry.content.length * 2 + entry.embedding.length * 8;
+      await this.store.delete(entry.id);
+      this.storageUsedBytes = Math.max(0, this.storageUsedBytes - entrySize);
+      pruned++;
+    }
+
+    return pruned;
+  }
+
+  // ── Diagram storage ─────────────────────────────────────────────────────────
+
+  async storeDiagram(
+    imagePath: string,
+    diagramType: string = 'unknown',
+    tags: string[] = []
+  ): Promise<string> {
+    let embedding: number[];
+    let description = '';
+
+    if (this.useGemma) {
+      embedding = await this.embedder.encodeImage(imagePath);
+      description = await this.extractDiagramText(imagePath);
+    } else {
+      embedding = await this.embedder.encodeImage(imagePath);
+    }
+
+    return this.storeEntry({
+      type: 'image',
+      content: description || imagePath,
+      embedding,
+      metadata: {
+        source: imagePath,
+        timestamp: Date.now(),
+        tags: [...tags, 'diagram', diagramType],
+        mimeType: 'image/png',
+        diagramType,
+      },
+    });
+  }
+
+  private async extractDiagramText(imagePath: string): Promise<string> {
+    try {
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64 = imageBuffer.toString('base64');
+      const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: (this.embedder as any).visionModel || 'gemma3:1b',
+          prompt: 'Describe this diagram or chart in detail. List all text labels, data points, relationships, and the overall structure.',
+          images: [base64],
+          options: { num_predict: 200 },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json() as { response: string };
+        return data.response;
+      }
+    } catch {}
+    return `[Diagram: ${path.basename(imagePath)}]`;
+  }
+
+  // ── Terminal capture ────────────────────────────────────────────────────────
+
+  async captureTerminal(
+    command: string,
+    output: string,
+    exitCode: number,
+    tags: string[] = []
+  ): Promise<string> {
+    const text = `$ ${command}\n${output}`;
+    const content = `Command: ${command}\nExit code: ${exitCode}\nOutput: ${output.slice(0, 1000)}`;
+    const embedding = await this.embedder.encodeText(text);
+
+    return this.storeEntry({
+      type: 'text',
+      content,
+      embedding,
+      metadata: {
+        timestamp: Date.now(),
+        tags: [...tags, 'terminal', `exit:${exitCode}`],
+        source: 'terminal',
+        command,
+        exitCode,
+        outputLength: output.length,
+      },
+    });
+  }
+
+  // ── Cross-modal recall ──────────────────────────────────────────────────────
+
+  async crossModalRecall(
+    query: string,
+    options?: {
+      limit?: number;
+      threshold?: number;
+      type?: 'image' | 'audio' | 'text';
+      tags?: string[];
+      includeLinked?: boolean;
+    }
+  ): Promise<SearchResult[]> {
+    const queryEmbedding = await this.embedder.encodeText(query);
+
+    let results = await this.store.search(
+      queryEmbedding,
+      options?.limit ?? 20,
+      options?.threshold ?? 0.4
+    );
+
+    if (options?.type) {
+      results = results.filter(r => r.entry.type === options.type);
+    }
+
+    if (options?.tags && options.tags.length > 0) {
+      results = results.filter(r =>
+        options.tags!.some(tag => r.entry.metadata.tags.includes(tag))
+      );
+    }
+
+    if (options?.includeLinked) {
+      const linked: SearchResult[] = [];
+      for (const r of results) {
+        const linkedEntries = await this.getLinkedEntries(r.entry.id);
+        for (const le of linkedEntries) {
+          const exists = results.some(e => e.entry.id === le.id) || linked.some(e => e.entry.id === le.id);
+          if (!exists) {
+            const sim = this.store.cosineSimilarity(queryEmbedding, le.embedding);
+            linked.push({ entry: le, similarity: sim });
+          }
+        }
+      }
+      results = [...results, ...linked];
+    }
+
+    return results
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, options?.limit ?? 10);
   }
 
   getContextString(query?: string, maxResults: number = 5): string {

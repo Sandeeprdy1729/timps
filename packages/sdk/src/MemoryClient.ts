@@ -21,10 +21,9 @@ export class MemoryClient {
   }
 
   async initialize(): Promise<void> {
-    const { MemoryEngine } = await import('@timps/memory-core');
-    const { FileBackend } = await import('@timps/memory-core');
+    const { MemoryEngine, FileBackend } = await import('@timps/memory-core');
 
-    const backend = new FileBackend({ baseDir: this._options.dir ?? this._options.projectPath });
+    const backend = new FileBackend({ baseDir: this._options.dir ?? this._options.projectPath ?? '.' });
 
     const engineOptions: MemoryEngineOptions = {
       backend,
@@ -32,13 +31,16 @@ export class MemoryClient {
     };
 
     if (this._provider) {
+      const embeddingProvider = this._provider.name === 'anthropic' ? 'none' : this._provider.name as 'ollama' | 'openai' | 'none';
+      const embeddingModel = embeddingProvider === 'none' ? '' : (this._provider.model ?? 'nomic-embed-text');
       engineOptions.embedding = {
-        provider: this._provider.name,
+        provider: embeddingProvider,
         apiKey: this._provider.apiKey,
-        model: this._provider.model,
+        model: embeddingModel,
         baseUrl: this._provider.baseUrl,
-        dims: this._provider.name === 'openai' ? 768 : 384,
-        enabled: true,
+        dimensions: embeddingProvider === 'openai' ? 768 : 384,
+        batchSize: 16,
+        queueIntervalMs: 500,
       };
     }
 
@@ -60,8 +62,9 @@ export class MemoryClient {
       this.engine.storeEpisode({
         summary: metadata.episodeSummary ?? content.slice(0, 200),
         outcome: metadata.outcome ?? 'success',
-        durationMs: metadata.durationMs,
-        tags: metadata.tags,
+        durationMs: metadata.durationMs ?? 0,
+        tags: metadata.tags ?? [],
+        timestamp: Date.now(),
       });
     }
   }

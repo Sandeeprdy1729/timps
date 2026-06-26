@@ -156,7 +156,7 @@ export class PluginManager {
    * or `undefined` if no plugin has registered a tool with that name.
    */
   getPluginTool(name: string): RegisteredTool | undefined {
-    const found = this.registry.allTools().find((t) => t.spec.name === name);
+    const found = this.registry.allTools().find((t: any) => t.spec.name === name);
     if (!found) return undefined;
 
     const ctx = this.makeContext();

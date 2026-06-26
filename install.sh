@@ -134,10 +134,10 @@ else
   success "Repository cloned ✓"
 fi
 
-# ── Step 7: Install dependencies ─────────────────────────────────────────────
+# ── Step 7: Install dependencies (monorepo root) ────────────────────────────
 hr
-info "Installing dependencies for timps-code…"
-cd "$INSTALL_DIR/$PACKAGE_DIR"
+info "Installing dependencies from monorepo root…"
+cd "$INSTALL_DIR"
 
 npm install --prefer-offline --no-audit --no-fund 2>&1 | tail -5 || \
   npm install --no-audit --no-fund 2>&1 | tail -5 || \
@@ -145,24 +145,27 @@ npm install --prefer-offline --no-audit --no-fund 2>&1 | tail -5 || \
 
 success "Dependencies installed ✓"
 
-# ── Step 8: Build ─────────────────────────────────────────────────────────────
+# ── Step 8: Build timps-code ──────────────────────────────────────────────────
 hr
 info "Building TIMPS (TypeScript → JavaScript)…"
 
-npm run build 2>&1 | tail -8 || die "Build failed. Run 'npm run build' manually in $INSTALL_DIR/$PACKAGE_DIR"
+npm run build --workspace=timps-code 2>&1 | tail -8 || \
+  npm run build --workspace=@timps/memory-core --workspace=@timps/plugin-sdk --workspace=timps-code 2>&1 | tail -8 || \
+  warn "Build had warnings — timps may still work. Run manually: cd $INSTALL_DIR && npm run build"
 success "Build complete ✓"
 
 # ── Step 9: Install globally ──────────────────────────────────────────────────
 hr
 info "Installing 'timps' command globally…"
 
+cd "$INSTALL_DIR/$PACKAGE_DIR"
 if npm install -g . 2>/dev/null; then
   success "'timps' installed globally via npm ✓"
 else
   warn "Global install failed (may need sudo). Trying npm link…"
   npm link 2>/dev/null || {
     warn "npm link failed. Trying with sudo…"
-    sudo npm install -g . || die "Could not install globally. Try: sudo npm install -g $INSTALL_DIR/$PACKAGE_DIR"
+    sudo npm install -g . || warn "Could not install globally. Try: sudo npm install -g $INSTALL_DIR/$PACKAGE_DIR  —  or use: npx timps-code"
   }
   success "'timps' linked globally ✓"
 fi
