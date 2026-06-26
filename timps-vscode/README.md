@@ -1,193 +1,122 @@
-# TIMPS VSCode — AI Coding Agent
+# TIMPS — AI Coding Agent with Persistent Memory
 
-A powerful AI coding agent for VS Code, powered by TIMPS Code CLI.
-
-[![Install](https://img.shields.io/badge/VS%20Code-Install-blue)](https://marketplace.visualstudio.com/items?itemName=sandeeprdy1729.timps-vscode)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-blue)](https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent)
+[![Open VSX](https://img.shields.io/badge/Open%20VSX-Install-purple)](https://open-vsx.org/extension/TIMPs/timps-ai-coding-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub](https://img.shields.io/badge/GitHub-timps-181717?logo=github)](https://github.com/Sandeeprdy1729/timps)
+
+**22-layer persistent memory for your AI coding agent.** TIMPS remembers what you worked on, the bugs you fixed, the patterns you established, and the decisions you made — across sessions, branches, and projects.
 
 ---
 
-## What is TIMPS?
+## ✨ Features
 
-TIMPS is an AI-powered coding agent ecosystem:
-- **TIMPS Code** — CLI agent (`npm install -g timps-code`)
-- **TIMPS VSCode** — VS Code extension (this)
-- **TIMPS MCP** — Model Context Protocol server
+### 🧠 Persistent Memory That Spans Sessions
+Your AI coding agent remembers everything — past bugs, architecture decisions, API quirks, and coding patterns — across VS Code sessions. Close the editor, come back tomorrow, and your agent picks up where it left off.
+
+### 🪟 Inline Memory Panel
+See relevant memories for the file you're editing — function signatures, bug patterns, and related code — updated in real-time as you navigate your project.
+
+### 🔍 Memory-Aware Autocomplete
+Suggestions informed by your project's history. Type a function name and TIMPS surfaces similar patterns from the codebase — not generic LLM output, but actual existing code you or your team wrote.
+
+### ⚠️ Contradiction Detection
+TIMPS warns you when your current edit contradicts stored memories — preventing regression of previously fixed bugs, catching inconsistent patterns, and flagging architecture drift as it happens.
+
+### 💬 AI Chat with Full Context
+Chat with your AI coding agent using local models (Ollama) or cloud models (OpenAI, Gemini). Every message is enriched with project context — file tree, active document, and relevant memories.
+
+### 📊 Project Intelligence
+Track velocity trends, detect architecture drift, predict bug risk, and surface tech debt — all powered by TIMPS's 22 forge layers.
+
+---
+
+## 🖼️ Features in Detail
+
+### Inline Memory Panel
+The Memory Panel (accessible from the sidebar or `Cmd+Shift+M`) shows memory context for your current file:
+
+- **File-specific memories** — relevant entries from Echo Forge (frequency), Chronos Forge (episodic), and Codebase Anthropologist
+- **Contradiction warnings** — highlighted when current code conflicts with stored memories
+- **Live updates** — panel refreshes when you switch files or cursor position changes
+
+### Memory-Aware Autocomplete
+The completion provider (enabled by default for TypeScript, JavaScript, Python, Rust, Go, Java, C#, C++, and Ruby) surfaces project-specific completions:
+
+- Function names and patterns from your codebase
+- Recently edited or frequently used symbols
+- Bug-fix patterns and API quirks
+
+### Edit Watcher
+File saves and significant edits are automatically recorded as episodic memories. This builds a timeline of your work that the agent can reference in future sessions.
+
+---
+
+## 🚀 Getting Started
+
+### Installation
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent)
+2. Press `Cmd+Shift+T` to open the TIMPS Chat
+3. Choose your provider (Ollama local, OpenAI, or Gemini) in settings
+
+### Connecting to TIMPS MemoryServer (Recommended)
+For full memory features, run the TIMPS MemoryServer:
+
+```bash
+# Install and start the MemoryServer
+npx @timps/memory-core start
+```
+
+Then set `timps.serverUrl` in VS Code settings to `http://localhost:4100`.
+
+### Using Local Memory (Standalone)
+TIMPS works with a built-in local memory store — no server required for basic chat features. Memory panel, autocomplete, and contradiction detection work best with the MemoryServer running.
 
 ---
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+Esc` | Open TIMPs terminal |
-| `Cmd+Shift+Esc` | New TIMPs session |
-| `Cmd+Shift+C` | Open TIMPs chat |
-| `Cmd+Option+K` | Insert file reference |
-| `Cmd+Option+E` | Explain selected code |
-| `Cmd+Option+R` | Refactor selected code |
-| `Cmd+Option+T` | Write tests |
-| `Cmd+Option+F` | Fix bugs |
+| Key | Action |
+|-----|--------|
+| `Cmd+Shift+T` | Open TIMPS Chat |
+| `Cmd+Shift+M` | Show Memory Panel |
+| `Cmd+Shift+R` | Search Memories |
+| `Cmd+Shift+A` | Ask about selection |
+| `Cmd+Shift+E` | Explain code |
+| `Cmd+Shift+F` | Fix code |
+| `Cmd+Shift+G` | Generate tests |
 
 ---
 
-## 🚀 Features
-
-### Terminal Agent (like OpenCode)
-- Press **Cmd+Esc** to open TIMPs in a terminal
-- Natural language commands: `/explain`, `/refactor`, `/test`, `/fix`
-- Full project context awareness
-- Terminal integration - works like you're using CLI
-
-### Chat Interface (like Claude Code)
-- Press **Cmd+Shift+C** to open chat panel
-- Conversation-style AI assistance
-- Side-by-side view while coding
-- Code snippets and explanations
-
-### Context Awareness
-- Automatically shares current file/selection with TIMPs
-- Right-click context menu for selected code
-- File reference shortcuts: `@file.ts#L42`
-
-### AI-Powered Actions
-- **Explain**: Understand any code selection
-- **Refactor**: Improve code structure
-- **Test**: Generate test cases
-- **Fix**: Debug and fix issues
-
-### Memory That Learns
-TIMPs remembers your coding patterns, past bugs, and decisions to provide smarter assistance over time.
-
----
-
-## 📦 Installation
-
-### Automatic Setup (Recommended)
-1. Install the extension
-2. TIMPs auto-detects Ollama and downloads your model
-3. Press **Cmd+Esc** to start!
-
-### Manual Setup
-
-**Install Ollama:**
-```bash
-# macOS
-brew install ollama
-
-# Linux
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Windows
-# Download from https://ollama.com
-```
-
-**Pull your model:**
-```bash
-ollama pull qwen2.5-coder:7b
-```
-
----
-
-## ⚙️ Configuration
+## ⚙️ Extension Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `timps.agentMode` | `terminal` | `terminal`, `chat`, or `inline` |
-| `timps.useLocalAgent` | `true` | Use local Ollama AI |
-| `timps.localModel` | `qwen2.5-coder:7b` | Ollama model |
-| `timps.ollamaUrl` | `http://localhost:11434` | Ollama URL |
-| `timps.autoInstall` | `true` | Auto-install dependencies |
-| `timps.enableDiagnostics` | `true` | Show inline hints |
+| `timps.provider` | `ollama` | AI provider (ollama, openai, gemini) |
+| `timps.model` | `sandeeprdy1729/timps-coder` | Model name/ID |
+| `timps.serverUrl` | `http://localhost:4100` | TIMPS MemoryServer URL |
+| `timps.token` | `""` | API token for MemoryServer |
+| `timps.enableAutocomplete` | `true` | Memory-aware autocomplete |
+| `timps.enableWatcher` | `true` | Auto-record edits as memories |
+| `timps.enableContradictionCheck` | `true` | Inline contradiction warnings |
+| `timps.ollamaUrl` | `http://localhost:11434` | Ollama server URL |
 
 ---
 
-## 🎯 Usage
+## 📋 Requirements
 
-### From Terminal
-1. Press **Cmd+Esc**
-2. Type natural language commands:
-```
-/explain this function
-/refactor to use async/await
-/test write unit tests for this
-/fix handle the error case
-```
-
-### From Chat
-1. Press **Cmd+Shift+C**
-2. Ask questions about your code
-
-### From Context Menu
-1. Select code in editor
-2. Right-click → TIMPs
-3. Choose action (Explain, Refactor, Test, Fix)
-
-### File References
-1. Press **Cmd+Option+K**
-2. Inserts `@filename#Lline`
+- **VS Code** 1.85.0 or higher
+- **Optional**: [Ollama](https://ollama.ai) for local AI models
+- **Optional**: TIMPS MemoryServer for persistent memory across sessions
 
 ---
 
-## 💡 Tips
+## 🤝 Contributing
 
-- Use `/help` in terminal for all commands
-- TIMPs has memory - it learns from your patterns
-- Combine with git for best results
-- Works with any Ollama model
-
----
-
-## 🤖 Supported Models
-
-- `qwen2.5-coder:7b` — recommended (fast, great for code)
-- `qwen2.5-coder:14b` — higher quality, needs ~10 GB RAM
-- `deepseek-r1:7b` — strong reasoning
-- `codellama:13b` — Meta's coding model
-- Any OpenAI / Anthropic / Gemini model via API key
-
----
-
-## 🏗️ Architecture
-
-```
-┌──────────────┐     Terminal     ┌─────────────┐
-│ VS Code      │ ────────────────→│ TIMPs CLI    │
-│ Extension    │                  │ (Node.js)    │
-└──────────────┘                  └──────┬──────┘
-       │                                  │
-       │ Chat                             ▼
-       ▼                          ┌─────────────┐
-┌──────────────┐                  │ Ollama      │
-│ Webview     │                  │ (Local AI) │
-│ Panel       │                  └─────────────┘
-└──────────────┘
-```
-
----
-
-## 🛠️ Development
-
-```bash
-# Clone and setup
-git clone https://github.com/Sandeeprdy1729/timps.git
-cd timps/timps-vscode
-
-# Install
-npm install
-
-# Test (F5 to launch debug)
-npm run watch
-
-# Build
-npm run compile
-
-# Package
-npx vsce package
-```
+TIMPS is open source. [GitHub repository](https://github.com/Sandeeprdy1729/timps)
 
 ---
 
 ## 📄 License
 
-MIT - [github.com/Sandeeprdy1729/timps](https://github.com/Sandeeprdy1729/timps)
+MIT

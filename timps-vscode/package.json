@@ -1,8 +1,8 @@
 {
   "name": "timps-ai-coding-agent",
-  "displayName": "TIMPS \u2014 AI Coding Agent",
-  "description": "AI coding assistant with persistent memory — understands your codebase across sessions. Supports local Ollama and cloud models.",
-  "version": "1.2.0",
+  "displayName": "TIMPS — AI Coding Agent with Persistent Memory",
+  "description": "22-layer persistent memory system that gives your AI coding agent perfect recall. Inline memory panel, memory-aware autocomplete, contradiction detection, and project-wide context across sessions.",
+  "version": "1.3.0",
   "publisher": "TIMPs",
   "repository": {
     "type": "git",
@@ -15,7 +15,9 @@
   "categories": [
     "AI",
     "Chat",
-    "Programming Languages"
+    "Programming Languages",
+    "Machine Learning",
+    "Visualization"
   ],
   "keywords": [
     "ai",
@@ -24,13 +26,35 @@
     "timps",
     "ollama",
     "llm",
+    "memory",
     "persistent-memory",
     "claude-code-alternative",
     "local-llm",
     "ai-agent",
-    "mcp"
+    "mcp",
+    "autocomplete",
+    "code-memory",
+    "developer-tools"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:csharp",
+    "onLanguage:cpp",
+    "onLanguage:ruby",
+    "onCommand:timps.openChat",
+    "onCommand:timps.recall",
+    "onCommand:timps.showMemoryPanel",
+    "onCommand:timps.checkContradictions",
+    "onCommand:timps.toggleAutocomplete",
+    "onCommand:timps.toggleWatcher",
+    "onView:timps.memoryPanel"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -49,6 +73,13 @@
           "name": "TIMPS Chat",
           "icon": "resources/timps-icon.svg",
           "contextualTitle": "TIMPS AI Coding Agent"
+        },
+        {
+          "type": "webview",
+          "id": "timps.memoryPanel",
+          "name": "Memory Context",
+          "icon": "resources/memory-icon.svg",
+          "contextualTitle": "TIMPS Memory Context"
         },
         {
           "type": "webview",
@@ -114,6 +145,45 @@
         "command": "timps.generateTests",
         "title": "Generate Tests with TIMPS",
         "category": "TIMPS"
+      },
+      {
+        "command": "timps.recall",
+        "title": "Recall Memories…",
+        "category": "TIMPS",
+        "icon": "$(search)"
+      },
+      {
+        "command": "timps.showMemoryPanel",
+        "title": "Show Memory Panel",
+        "category": "TIMPS",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "timps.checkContradictions",
+        "title": "Check for Contradictions",
+        "category": "TIMPS",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "timps.toggleAutocomplete",
+        "title": "Toggle Memory Autocomplete",
+        "category": "TIMPS"
+      },
+      {
+        "command": "timps.toggleWatcher",
+        "title": "Toggle Edit Watcher",
+        "category": "TIMPS"
+      },
+      {
+        "command": "timps.toggleContradictionCheck",
+        "title": "Toggle Contradiction Checking",
+        "category": "TIMPS"
+      },
+      {
+        "command": "timps.memoryStats",
+        "title": "Show Memory Statistics",
+        "category": "TIMPS",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -137,6 +207,11 @@
           "command": "timps.generateTests",
           "when": "editorHasSelection",
           "group": "timps@4"
+        },
+        {
+          "command": "timps.recall",
+          "when": "editorHasSelection",
+          "group": "timps@5"
         }
       ],
       "view/title": [
@@ -159,6 +234,16 @@
           "command": "timps.refreshMemory",
           "when": "view == timps.memoryView",
           "group": "navigation@1"
+        },
+        {
+          "command": "timps.recall",
+          "when": "view == timps.memoryPanel",
+          "group": "navigation@1"
+        },
+        {
+          "command": "timps.memoryStats",
+          "when": "view == timps.memoryPanel",
+          "group": "navigation@2"
         }
       ]
     },
@@ -173,6 +258,16 @@
         "key": "ctrl+shift+a",
         "mac": "cmd+shift+a",
         "when": "editorHasSelection"
+      },
+      {
+        "command": "timps.recall",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      },
+      {
+        "command": "timps.showMemoryPanel",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
       }
     ],
     "configuration": {
@@ -180,11 +275,7 @@
       "properties": {
         "timps.provider": {
           "type": "string",
-          "enum": [
-            "ollama",
-            "openai",
-            "gemini"
-          ],
+          "enum": ["ollama", "openai", "gemini"],
           "default": "ollama",
           "description": "AI provider to use"
         },
@@ -232,12 +323,48 @@
         },
         "timps.theme": {
           "type": "string",
-          "enum": [
-            "timps-dark",
-            "timps-light"
-          ],
+          "enum": ["timps-dark", "timps-light"],
           "default": "timps-dark",
           "description": "Chat panel theme"
+        },
+        "timps.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:4100",
+          "description": "TIMPS server URL (the MemoryServer)"
+        },
+        "timps.token": {
+          "type": "string",
+          "default": "",
+          "description": "API token for TIMPS MemoryServer (leave empty for local development)"
+        },
+        "timps.enableAutocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable memory-aware autocomplete suggestions"
+        },
+        "timps.enableWatcher": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically record file edits as memory episodes"
+        },
+        "timps.enableContradictionCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check code changes for contradictions against stored memories"
+        },
+        "timps.autocompleteDebounceMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 100,
+          "maximum": 2000,
+          "description": "Debounce delay for autocomplete (ms)"
+        },
+        "timps.contextUpdateDebounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "Debounce delay for memory panel context updates (ms)"
         }
       }
     }

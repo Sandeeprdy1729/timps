@@ -37,9 +37,7 @@ export class MemoryPanelProvider implements vscode.WebviewViewProvider {
         const fileContext = activeEditor.document.fileName;
         
         try {
-          const memories = await this.client.retrieveMemories({
-            projectId,
-            query: fileContext,
+          const memories = await this.client.recall(fileContext, {
             limit: 5,
           });
 
