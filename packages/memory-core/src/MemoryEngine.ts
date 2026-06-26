@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import type {
   MemoryEntry, MemoryEntryType, EpisodicEntry, WorkingState,
   SearchOptions, ScoredMemoryEntry, MemoryPack, MemorySnapshot, MergeResult, MemoryStats, MemoryScope,
-  OrgScope,
+  OrgScope, AuditQuery, AuditResult, AuditResultEntry, TeamDigest, TeamDigestEntry, BranchCommit,
 } from './types.js';
 
 import {
@@ -28,6 +28,10 @@ import type { EventBus, EventBusChannel, EventHandler } from './events/EventBus.
 import { TelemetryManager } from './telemetry/TelemetryManager.js';
 import type { TelemetryConfig } from './telemetry/types.js';
 import { instrumentLayer, instrumentBackend, instrumentCRDT } from './telemetry/instrumentation.js';
+import { MemoryBranchStore } from './MemoryBranch.js';
+import type { BranchMergeResult } from './MemoryBranch.js';
+import type { BranchMetadata } from './types.js';
+import type { EngramEntry } from './EngramLog.js';
 
 import { searchEntries } from './search.js';
 import { hybridRecall } from './search/hybridRetriever.js';
@@ -277,6 +281,9 @@ export class MemoryEngine {
   // ── Phase 4c: Memory Compaction ──
   private _compactionConfig?: CompactionConfig;
   private _archiveBackend?: ArchiveBackend;
+
+  // ── Phase 5e: Memory Branch Store ──
+  private _branchStore?: MemoryBranchStore;
 
   // ── New Intelligence Tools 18-25 (lazy-init) ──
   private _falseMemoryDetector?: FalseMemoryDetector;
@@ -813,12 +820,12 @@ export class MemoryEngine {
   }
 
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
-  store(entry: { content: string; type?: MemoryEntryType; tags?: string[] }, opts?: { skipGuard?: boolean }): void {
+  store(entry: { content: string; type?: MemoryEntryType; tags?: string[]; platform?: string; channel?: string }, opts?: { skipGuard?: boolean }): void {
     const _span = this._telemetry?.tracer.startSpan('engine.store', { 'timps.operation': 'store' });
     const startTime = Date.now();
     try {
     const facts = loadSemantic(this.dir, this._backend);
-    const { content, type = 'fact', tags = [] } = entry;
+    const { content, type = 'fact', tags = [], platform, channel } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     const id = generateId('mem');
     const timestamp = Date.now();
@@ -835,9 +842,13 @@ export class MemoryEngine {
     }
 
     // Include org/project scope in stored entry tags for traceability
-    const enrichedTags = this.orgScope
+    let enrichedTags = this.orgScope
       ? [...new Set([...tags, `org:${this.orgScope.orgId}`, `project:${this.orgScope.projectId}`, ...(this.orgScope.teamId ? [`team:${this.orgScope.teamId}`] : [])])]
       : tags;
+
+    // Phase 5e: Include platform/channel as tags for cross-platform querying
+    if (platform) enrichedTags = [...new Set([...enrichedTags, `platform:${platform}`])];
+    if (channel) enrichedTags = [...new Set([...enrichedTags, `channel:${channel}`])];
 
     facts.push({ id, timestamp, type, content, tags: enrichedTags });
     saveSemantic(this.dir, facts, this._backend);
@@ -853,7 +864,7 @@ export class MemoryEngine {
       layerId: 'L3',
       entryId: id,
       actorId: actor,
-      payload: { content, type, tags },
+      payload: { content, type, tags: enrichedTags, platform, channel },
       justification: `Stored ${type}: ${content.slice(0, 80)}`,
     });
     // L13: record provenance with guard-adjusted confidence
@@ -903,6 +914,8 @@ export class MemoryEngine {
         orgId: this.orgScope?.orgId,
         projectId: this.orgScope?.projectId,
         teamId: this.orgScope?.teamId,
+        platform: platform,
+        channel: channel,
       });
     }
 
@@ -1681,5 +1694,164 @@ export class MemoryEngine {
     const teamId = req.headers['x-team-id'] as string ?? req.user?.teamId ?? undefined;
     if (!orgId || !projectId) return null;
     return { orgId, projectId, teamId };
+  }
+
+  // ── Phase 5e: International Team Features ──
+
+  /** Lazy init MemoryBranchStore for decision branches. */
+  private get _branch(): MemoryBranchStore {
+    return (this._branchStore ??= new MemoryBranchStore(this.dir, this._backend));
+  }
+
+  /**
+   * Create a decision branch (git-style).
+   * Branches track the history of a team decision over time.
+   */
+  createBranch(name: string, description?: string, createdBy?: string): BranchMetadata {
+    return this._branch.createBranch(name, description, createdBy ?? this.actorId);
+  }
+
+  /**
+   * Commit a new decision to a branch.
+   * Returns the created commit with parent reference.
+   */
+  branchCommit(
+    branchName: string,
+    content: string,
+    reason: string,
+    author?: string,
+    platform?: string,
+    channel?: string,
+  ): BranchCommit {
+    const commit = this._branch.commit(branchName, content, reason, author ?? this.actorId, platform, channel);
+    // Also store the decision in semantic memory
+    this.store({ content, type: 'decision', tags: [`branch:${branchName}`], platform, channel });
+    return commit;
+  }
+
+  /** Get the full commit history for a branch (oldest first). */
+  getBranchHistory(branchName: string): BranchCommit[] {
+    return this._branch.getHistory(branchName);
+  }
+
+  /** List all branches, optionally including conflict metadata. */
+  listBranches(showConflicts = false): BranchMetadata[] {
+    return this._branch.listBranches(showConflicts);
+  }
+
+  /** Merge a source branch into a target branch. Returns merge result with optional conflict. */
+  mergeBranches(sourceBranch: string, targetBranch: string): BranchMergeResult {
+    return this._branch.merge(sourceBranch, targetBranch);
+  }
+
+  /** Delete a branch and all its commits. */
+  deleteBranch(name: string): boolean {
+    return this._branch.deleteBranch(name);
+  }
+
+  /**
+   * Query team member activity from the EngramLog.
+   * Returns a structured audit result grouped by type.
+   */
+  audit(query: AuditQuery): AuditResult {
+    const { actorId, since, until, types, project, limit = 100 } = query;
+    const filter: Partial<EngramEntry> = {};
+    if (actorId) filter.actorId = actorId;
+    if (since) filter.timestamp = since;
+
+    const rawEntries = this.engramLog.query(filter, limit * 2);
+    const entries: AuditResultEntry[] = [];
+    const typeCounts: Record<string, number> = {};
+
+    for (const eng of rawEntries) {
+      if (since && eng.timestamp < since) continue;
+      if (until && eng.timestamp > until) continue;
+      if (eng.op !== 'store') continue;
+
+      const payload = eng.payload as Record<string, any> | undefined;
+      const entryType = (payload?.type as string) ?? 'fact';
+      if (types && types.length > 0 && !types.includes(entryType)) continue;
+
+      typeCounts[entryType] = (typeCounts[entryType] ?? 0) + 1;
+      entries.push({
+        timestamp: eng.timestamp,
+        type: entryType,
+        content: (payload?.content as string) ?? '',
+        project: project ?? (payload?.tags as string[])?.find((t: string) => t.startsWith('project:'))?.slice(8),
+        platform: (payload?.platform as string) ?? undefined,
+        channel: (payload?.channel as string) ?? undefined,
+      });
+    }
+
+    const sorted = entries.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
+    return {
+      entries: sorted,
+      summary: {
+        totalEntries: sorted.length,
+        types: typeCounts,
+        byPlatform: this._countByPlatform(sorted),
+        since: since ?? sorted[sorted.length - 1]?.timestamp ?? 0,
+      },
+    };
+  }
+
+  /**
+   * Generate a team activity digest — "overnight activity" summary.
+   * Returns significant memories (decisions, bug fixes, pattern changes) since the given timestamp.
+   */
+  getTeamDigest(opts: { since: number; types?: string[]; limit?: number }): TeamDigest {
+    const { since, types = ['decision', 'bug', 'pattern', 'architecture', 'error'], limit = 10 } = opts;
+    const allEntries = loadSemantic(this.dir, this._backend);
+    const recent = allEntries.filter(e => e.timestamp >= since);
+    const filtered = recent.filter(e => types.includes(e.type));
+    const sorted = filtered.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
+
+    const entries: TeamDigestEntry[] = sorted.map(e => ({
+      timestamp: e.timestamp,
+      author: e.actorId ?? 'unknown',
+      type: e.type,
+      content: e.content,
+      platform: e.tags.find(t => t.startsWith('platform:'))?.slice(9),
+    }));
+
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const summary = this._formatDigestSummary(entries, since, tz);
+
+    return { entries, summary, since, generatedAt: Date.now(), timezone: tz };
+  }
+
+  private _countByPlatform(entries: AuditResultEntry[]): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const e of entries) {
+      const p = e.platform ?? 'unknown';
+      counts[p] = (counts[p] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  private _formatDigestSummary(entries: TeamDigestEntry[], since: number, tz: string): string {
+    if (entries.length === 0) return 'No significant team activity since last session.';
+
+    const sinceDate = new Date(since);
+    const lines: string[] = [];
+    lines.push(`Team Activity Since ${sinceDate.toLocaleString(undefined, { timeZone: tz })} (${tz})`);
+    lines.push('');
+
+    const byType: Record<string, TeamDigestEntry[]> = {};
+    for (const e of entries) {
+      (byType[e.type] ??= []).push(e);
+    }
+
+    for (const [type, group] of Object.entries(byType)) {
+      lines.push(`  ${type.charAt(0).toUpperCase() + type.slice(1)} (${group.length}):`);
+      for (const e of group.slice(0, 5)) {
+        const time = new Date(e.timestamp).toLocaleTimeString(undefined, { timeZone: tz, hour: 'numeric', minute: '2-digit' });
+        const platformTag = e.platform ? ` [${e.platform}]` : '';
+        lines.push(`    ${e.author}  ${time}${platformTag}  ${e.content.slice(0, 80)}`);
+      }
+      lines.push('');
+    }
+
+    return lines.join('\n');
   }
 }

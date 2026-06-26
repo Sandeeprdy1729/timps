@@ -1,6 +1,6 @@
 // ── @timps/memory-core — Types ──
 
-export type MemoryEntryType = 'fact' | 'pattern' | 'preference' | 'error' | 'convention' | 'bug' | 'incident' | 'architecture';
+export type MemoryEntryType = 'fact' | 'pattern' | 'preference' | 'error' | 'convention' | 'bug' | 'incident' | 'architecture' | 'decision';
 
 export type VectorClock = Record<string, number>;
 
@@ -54,6 +54,12 @@ export interface SearchOptions {
   useCache?: boolean;
   /** Cache TTL override (ms). Default 60_000 (1 min) for recall, 300_000 (5 min) for forge state. */
   cacheTTL?: number;
+  /** Phase 5e: filter by specific actorIds (team members). */
+  actorIds?: string[];
+  /** Phase 5e: filter by platform (wechat, slack, discord, etc.). */
+  platform?: string;
+  /** Phase 5e: minimum importance threshold (0-1). Used for digest filtering. */
+  importance?: number;
 }
 
 export interface ScoredMemoryEntry extends MemoryEntry {
@@ -276,4 +282,88 @@ export interface LayerIdString {
   layerId: 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6' | 'L7' | 'L8' | 'L9'
     | 'L10' | 'L11' | 'L12' | 'L13' | 'L14' | 'L15' | 'L16' | 'L17'
     | 'L18' | 'L19' | 'L20' | 'L21' | 'L22';
+}
+
+// ── Phase 5e: International Team Features ──
+
+/** Platform metadata — where a memory was stored from */
+export interface PlatformMetadata {
+  platform: string;
+  channel?: string;
+}
+
+/** A commit in a decision branch (git-style) */
+export interface BranchCommit {
+  id: string;
+  branchName: string;
+  author: string;
+  timestamp: number;
+  content: string;
+  reason: string;
+  parentCommitId: string | null;
+  tags: string[];
+  platform?: string;
+  channel?: string;
+}
+
+/** Metadata for a decision branch */
+export interface BranchMetadata {
+  branchName: string;
+  description?: string;
+  createdBy: string;
+  createdAt: number;
+  headCommitId: string | null;
+  commitCount: number;
+  crdtStatus?: CrdtStatus;
+  conflicts?: string[];
+  mergedFrom?: string[];
+}
+
+/** Query parameters for team activity audit */
+export interface AuditQuery {
+  actorId?: string;
+  since?: number;
+  until?: number;
+  types?: string[];
+  project?: string;
+  limit?: number;
+}
+
+/** Single entry in an audit result */
+export interface AuditResultEntry {
+  timestamp: number;
+  type: string;
+  content: string;
+  project?: string;
+  platform?: string;
+  channel?: string;
+}
+
+/** Audit result with summary */
+export interface AuditResult {
+  entries: AuditResultEntry[];
+  summary: {
+    totalEntries: number;
+    types: Record<string, number>;
+    byPlatform?: Record<string, number>;
+    since: number;
+  };
+}
+
+/** Entry in a team digest */
+export interface TeamDigestEntry {
+  timestamp: number;
+  author: string;
+  type: string;
+  content: string;
+  platform?: string;
+}
+
+/** Team activity digest — "overnight activity" summary */
+export interface TeamDigest {
+  entries: TeamDigestEntry[];
+  summary: string;
+  generatedAt: number;
+  since: number;
+  timezone?: string;
 }

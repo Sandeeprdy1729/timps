@@ -353,6 +353,12 @@ export { CompactionPipeline, MemoryClassifier, ClusterEngine, LLMConsolidationEn
 export type { PipelineOptions, ClassifierOptions, MemoryCluster, ClusterOptions, GuardrailOptions } from './compaction/index.js';
 export type { CompactionTier, ConsolidationConfidence, ClassifiedMemory, CompactionConfig, ConsolidatedFact, CompressionResult, ArchiveManifest, ArchiveEntry, CompactionReport, LLMConsolidationRequest, LLMConsolidationResponse, GuardrailCheckResult } from './compaction/types.js';
 
+// ── Phase 5e: International Team Features ──
+export type { BranchCommit, BranchMetadata } from './types.js';
+export { MemoryBranchStore } from './MemoryBranch.js';
+export type { BranchMergeResult } from './MemoryBranch.js';
+export type { AuditQuery, AuditResult, AuditResultEntry, TeamDigest, TeamDigestEntry, PlatformMetadata } from './types.js';
+
 // ── Telemetry & Observability ──
 export { TelemetryManager } from './telemetry/TelemetryManager.js';
 export type { TelemetryConfig, TelemetryLevel, Span, SpanAttributes, SpanStatusCode, MetricPoint, AnonymousMetricsPayload } from './telemetry/types.js';

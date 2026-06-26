@@ -13,6 +13,7 @@ import type { ProviderName, ProviderLimitConfig } from '../config/types.js';
 import { encrypt, isEncrypted } from '../config/keyVault.js';
 import { createUser, verifyPassword, listUsers, deleteUser, setUserRole, createSession, getSession, clearSession } from '../services/userStore.js';
 import { checkRateLimit, recordUsage, getUsageStats, resetUsage, DEFAULT_PROVIDER_LIMITS } from '../services/providerRateLimiter.js';
+import { runAuditCommand, runTeamDigestCommand } from './audit.js';
 import * as os from 'node:os';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -153,6 +154,12 @@ export async function executeCommand(command: string, args: string[]): Promise<C
 
     case 'team':
       return runTeamCommand(argString);
+
+    case 'team:digest':
+      return runTeamDigestHandler(argString);
+
+    case 'audit':
+      return runAuditCommandHandler(argString);
 
     case 'mcp':
       return runMcpCommand(argString);
@@ -1379,6 +1386,47 @@ async function runBranchCommand(args: string): Promise<CommandResult> {
     return { success: true, output: 'Branch: Use /branch <name> to create a branch' };
   }
   return { success: true, output: `Creating branch: ${args}` };
+}
+
+async function runAuditCommandHandler(args: string): Promise<CommandResult> {
+  const mem = new Memory(process.cwd());
+  const parts = args.split(' ');
+  const options: Record<string, string> = {};
+  let typeFilter: string | undefined;
+  let limit: number | undefined;
+  let format: 'table' | 'json' = 'table';
+
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === '--member' || parts[i] === '-m') options.member = parts[++i];
+    else if (parts[i] === '--since' || parts[i] === '-s') options.since = parts[++i];
+    else if (parts[i] === '--type' || parts[i] === '-t') typeFilter = parts[++i];
+    else if (parts[i] === '--limit' || parts[i] === '-l') limit = parseInt(parts[++i], 10);
+    else if (parts[i] === '--json' || parts[i] === '-j') format = 'json';
+  }
+
+  try {
+    const output = await runAuditCommand(mem, {
+      member: options.member,
+      since: options.since,
+      type: typeFilter,
+      limit,
+      format,
+    });
+    return { success: true, output };
+  } catch (err) {
+    return { success: false, output: '', error: `Audit error: ${(err as Error).message}` };
+  }
+}
+
+async function runTeamDigestHandler(args: string): Promise<CommandResult> {
+  const mem = new Memory(process.cwd());
+  const since = args || undefined;
+  try {
+    const output = await runTeamDigestCommand(mem, since);
+    return { success: true, output };
+  } catch (err) {
+    return { success: false, output: '', error: `Digest error: ${(err as Error).message}` };
+  }
 }
 
 // ── Config Commands ──
