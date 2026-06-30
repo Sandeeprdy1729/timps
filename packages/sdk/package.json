@@ -1,6 +1,6 @@
 {
   "name": "@timps-ai/timps-sdk",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "TIMPS SDK — lightweight memory for AI agents. Store and recall semantic memories with zero config.",
   "type": "module",
   "main": "./dist/index.cjs",

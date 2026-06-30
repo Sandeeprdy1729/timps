@@ -1,6 +1,6 @@
 {
   "name": "@timps-ai/plugin-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TIMPS plugin SDK — formal interface for extending TIMPS agents with custom commands, tools, and lifecycle hooks. Build plugins for AI coding workflows.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -79,13 +79,15 @@ export class FileBackend implements StorageBackend {
     });
   }
 
-  private _walkDir(dir: string, cb: (filePath: string) => void): void {
+  private _walkDir(dir: string, cb: (filePath: string) => void, depth = 0): void {
+    // Skip node_modules at any depth — prevents migration corruption of deps
+    if (path.basename(dir) === 'node_modules') return;
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          this._walkDir(fullPath, cb);
+          this._walkDir(fullPath, cb, depth + 1);
         } else {
           cb(fullPath);
         }

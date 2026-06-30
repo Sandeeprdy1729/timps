@@ -84,12 +84,15 @@ export const v2_to_v3: Migration = {
       if (SKIP_KEYS.has(key)) continue;
       if (key.endsWith('.wal')) continue;
 
+      // Only process files matching a known layer prefix
+      const layerName = inferLayerName(key);
+      if (layerName === 'unknown') continue;
+
       const raw = backend.read(key) as Record<string, unknown> | null;
       if (!raw || typeof raw !== 'object') continue;
       // Skip if _meta already exists
       if (raw._meta && typeof raw._meta === 'object') continue;
 
-      const layerName = inferLayerName(key);
       const meta = {
         schemaVersion: 3,
         layerName,
