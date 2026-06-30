@@ -12,6 +12,7 @@ import { TimpsCompletionProvider } from './completion-provider';
 import { ContradictionChecker } from './contradiction-checker';
 import { TimpsClient } from './client/timpsClient';
 import { TimpsLspClient } from './lsp-client';
+import { TIMPS_THEME, TIMPS_ANIMATIONS, TIMPS_GLOBAL_RESET } from './design-tokens';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

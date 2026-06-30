@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import type { MemoryEngine } from '../MemoryEngine';
+import type { EventBus, EventBusChannel, EventHandler, EventBusMessage } from '../events/EventBus';
 import type {
   MemoryEntry as MEMemoryEntry,
   ScoredMemoryEntry as MEScoredMemoryEntry,
@@ -92,7 +93,7 @@ function memoryEntryToProto(e: MEMemoryEntry): any {
   };
 }
 
-export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOptions = {}) {
+export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOptions = {}, eventBus?: EventBus | null) {
   const port = options.port ?? 4101;
   const host = options.host ?? '0.0.0.0';
 
@@ -657,51 +658,95 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
     StreamContext: (call: any) => {
       const { project_id, user_id, layers, min_confidence } = call.request;
 
-      const insightTypes = ['insight', 'contradiction', 'drift', 'pattern', 'decay', 'event'];
-      let idx = 0;
+      // ── Reactive event subscriptions ──
+      const cleanupFns: Array<() => void> = [];
 
-      const timer = setInterval(async () => {
+      // Subscribe to memory:stored events for real-time context pushes
+      if (eventBus && project_id) {
+        const handleMemoryStored: EventHandler = (msg) => {
+          try {
+            if (call.cancelled) return;
+            if (msg.payload.projectId !== project_id) return;
+            call.write({
+              type: 'insight',
+              layer: 'semantic',
+              title: 'Context Update',
+              description: String(msg.payload.content ?? '').substring(0, 500),
+              confidence: 0.8,
+              timestamp: Date.now(),
+              metadata: { project_id, user_id: user_id ?? '' },
+            });
+          } catch { /* write error */ }
+        };
+        eventBus.subscribe('memory:stored' as EventBusChannel, handleMemoryStored).catch(() => {});
+        cleanupFns.push(() => { eventBus.unsubscribe('memory:stored' as EventBusChannel, handleMemoryStored).catch(() => {}); });
+
+        // Subscribe to forge insights (contradiction, insight channels)
+        const handleInsight: EventHandler = (msg) => {
+          try {
+            if (call.cancelled) return;
+            call.write({
+              type: msg.payload.type ?? 'insight',
+              layer: msg.payload.layer ?? 'semantic',
+              title: (msg.payload.title ?? 'Forge Insight') as string,
+              description: (msg.payload.description ?? '') as string,
+              confidence: (msg.payload.confidence ?? 0.7) as number,
+              timestamp: Date.now(),
+              metadata: { project_id, user_id: user_id ?? '' },
+            });
+          } catch { /* write error */ }
+        };
+        eventBus.subscribe('insight' as EventBusChannel, handleInsight).catch(() => {});
+        cleanupFns.push(() => { eventBus.unsubscribe('insight' as EventBusChannel, handleInsight).catch(() => {}); });
+
+        // Subscribe to contradiction events
+        const handleContradiction: EventHandler = (msg) => {
+          try {
+            if (call.cancelled) return;
+            call.write({
+              type: 'contradiction',
+              layer: 'semantic',
+              title: 'Contradiction Detected',
+              description: (msg.payload.description ?? 'Memory contradiction found') as string,
+              confidence: 0.9,
+              timestamp: Date.now(),
+              metadata: { project_id, user_id: user_id ?? '', ...msg.payload },
+            });
+          } catch { /* write error */ }
+        };
+        eventBus.subscribe('contradiction' as EventBusChannel, handleContradiction).catch(() => {});
+        cleanupFns.push(() => { eventBus.unsubscribe('contradiction' as EventBusChannel, handleContradiction).catch(() => {}); });
+      }
+
+      // ── Lightweight periodic health check (30s, no data polling) ──
+      let healthCheckIdx = 0;
+      const healthTimer = setInterval(async () => {
         try {
           if (call.cancelled) {
-            clearInterval(timer);
+            clearInterval(healthTimer);
             return;
           }
 
-          // Check for active contradictions related to project
-          if (project_id && idx % 5 === 0) {
-            const recentContext = await engine.getContextString(project_id);
-            if (recentContext) {
+          healthCheckIdx++;
+
+          // Burnout check every 30s
+          try {
+            const burnout = engine.analyzeBurnout() as any;
+            if (burnout && burnout.riskLevel && burnout.riskLevel !== 'low') {
               call.write({
                 type: 'insight',
                 layer: 'semantic',
-                title: 'Context Update',
-                description: recentContext.substring(0, 500),
-                confidence: 0.8,
+                title: `Burnout Risk: ${burnout.riskLevel}`,
+                description: burnout.suggestion ?? '',
+                confidence: 0.7,
                 timestamp: Date.now(),
-                metadata: { project_id, user_id: user_id ?? '' },
+                metadata: { project_id: project_id ?? '', risk_level: burnout.riskLevel },
               });
             }
-          }
+          } catch { /* skip burnout if not available */ }
 
-          // Push intelligence insights periodically (every ~30s simulated)
-          if (idx === 5) {
-            try {
-              const burnout = engine.analyzeBurnout() as any;
-              if (burnout && burnout.riskLevel && burnout.riskLevel !== 'low') {
-                call.write({
-                  type: 'insight',
-                  layer: 'semantic',
-                  title: `Burnout Risk: ${burnout.riskLevel}`,
-                  description: burnout.suggestion ?? '',
-                  confidence: 0.7,
-                  timestamp: Date.now(),
-                  metadata: { project_id: project_id ?? '', risk_level: burnout.riskLevel },
-                });
-              }
-            } catch { /* skip burnout if not available */ }
-          }
-
-          if (idx === 10) {
+          // Memory health check every 60s
+          if (healthCheckIdx % 2 === 0) {
             try {
               const audit = engine.runAudit() as any;
               if (audit && audit.healthScore !== undefined && audit.healthScore < 0.5) {
@@ -718,13 +763,34 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
             } catch { /* skip audit if not available */ }
           }
 
-          idx++;
-          if (idx > 50) clearInterval(timer);
-        } catch { /* ignore streaming errors */ }
-      }, 6000);
+          if (healthCheckIdx > 19) clearInterval(healthTimer); // ~10min max
+        } catch { /* ignore health check errors */ }
+      }, 30000);
+
+      // Fallback: if no event bus, do a single context load on connect
+      if (!eventBus && project_id) {
+        engine.getContextString(project_id).then((recentContext: string) => {
+          try {
+            if (!call.cancelled && recentContext) {
+              call.write({
+                type: 'insight',
+                layer: 'semantic',
+                title: 'Context Snapshot',
+                description: recentContext.substring(0, 500),
+                confidence: 0.8,
+                timestamp: Date.now(),
+                metadata: { project_id, user_id: user_id ?? '' },
+              });
+            }
+          } catch { /* write error */ }
+        }).catch(() => {});
+      }
 
       call.on('cancelled', () => {
-        clearInterval(timer);
+        clearInterval(healthTimer);
+        for (const cleanup of cleanupFns) {
+          try { cleanup(); } catch { /* ignore */ }
+        }
       });
     },
 
@@ -881,9 +947,9 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
   return server;
 }
 
-export function startGrpcServer(engine: MemoryEngine, options: GrpcServerOptions = {}): Promise<{ server: grpc.Server; port: number }> {
+export function startGrpcServer(engine: MemoryEngine, options: GrpcServerOptions = {}, eventBus?: EventBus | null): Promise<{ server: grpc.Server; port: number }> {
   return new Promise((resolve, reject) => {
-    const server = createGrpcServer(engine, options);
+    const server = createGrpcServer(engine, options, eventBus);
     const port = options.port ?? 4101;
     const host = options.host ?? '0.0.0.0';
     const credentials = options.credentials ?? grpc.ServerCredentials.createInsecure();

@@ -205,6 +205,16 @@ export class FileBackend implements StorageBackend {
     return new FileTransaction(this);
   }
 
+  private _activeScope: import('./types.js').OrgScope | null = null;
+
+  setScope(scope: import('./types.js').OrgScope | null): void {
+    this._activeScope = scope;
+  }
+
+  getScope(): import('./types.js').OrgScope | null {
+    return this._activeScope;
+  }
+
   /** Get the base directory (useful for inspection). */
   getBaseDir(): string {
     return this.baseDir;

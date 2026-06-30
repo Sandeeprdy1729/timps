@@ -66,10 +66,9 @@ export class ContextVector {
     return profile;
   }
 
-  match(context: { domain: string; activeFiles?: string[]; tags?: string[] }): ContextMatch[] {
-    const now = new Date();
-    const currentTimeOfDay = now.getHours() * 60 + now.getMinutes();
-    const currentDayOfWeek = now.getDay();
+  match(context: { domain: string; activeFiles?: string[]; tags?: string[]; timeOfDay?: number; dayOfWeek?: number }): ContextMatch[] {
+    const currentTimeOfDay = context.timeOfDay ?? (new Date().getHours() * 60 + new Date().getMinutes());
+    const currentDayOfWeek = context.dayOfWeek ?? new Date().getDay();
 
     const scored: ContextMatch[] = [];
 
