@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import * as path from 'node:path';
 import type { MemoryOptions, MemoryEntry as PublicMemoryEntry, RecallOptions, MemoryStats, MemoryEventType, MemoryEventHandler } from './types.js';
 import type { ProviderConfig } from './types.js';
 import { resolveProviderConfig } from './defaults.js';
@@ -23,7 +24,9 @@ export class MemoryClient {
   async initialize(): Promise<void> {
     const { MemoryEngine, FileBackend } = await import('@timps-ai/memory-core');
 
-    const backend = new FileBackend({ baseDir: this._options.dir ?? this._options.projectPath ?? '.' });
+    const projectDir = this._options.dir ?? this._options.projectPath ?? '.';
+    const backendDir = path.join(projectDir, '.timps', 'memory');
+    const backend = new FileBackend({ baseDir: backendDir });
 
     const engineOptions: MemoryEngineOptions = {
       backend,
