@@ -1,91 +1,27 @@
-# TIMPS Enterprise
+# @timps/enterprise — Team Memory Server
 
-Enterprise team memory server for TIMPS — adds shared memory, multi-user access, JWT auth, and billing.
+[!WARNING]
+> **Status: Experimental — not production-ready.**
+> - All data is stored **in-memory** — everything resets on restart (no database)
+> - Stripe billing is a **stub** — `console.warn` only, no real charges
+> - Depends on `@timps-ai/memory-core` but never uses it
 
-## Features
-
-- **Shared semantic memory** — team-wide key/value memory store with tags and importance scores
-- **Episodic feed** — shared activity log of all memory and agent actions
-- **JWT authentication** — secure login with role-based access (admin/member/viewer)
-- **Billing stubs** — Stripe checkout integration ready to wire in
-- **Admin panel** — web dashboard at `/admin`
-
-## Setup
+Multi-user team memory server with JWT auth, role-based access, shared memory store, episodic feed, and billing stubs.
 
 ```bash
 cd packages/timps-enterprise
-
-# Install deps
 npm install
-
-# Run in dev mode
-npm run dev
+npm run dev   # port 4000
 ```
 
-Server starts on port 4000 (or `PORT` env var).
+## API
 
-## Environment variables
+`POST /auth/register`, `POST /auth/login`, `GET /team/memory`, `POST /team/memory`, `DELETE /team/memory/:key`, `GET /team/feed`, `GET /team/members`, `GET /billing/plan`, `POST /billing/checkout`
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `PORT` | `4000` | HTTP port |
-| `TIMPS_JWT_SECRET` | `timps-dev-secret-change-in-prod` | JWT signing key — **change in production** |
-| `TIMPS_JWT_EXPIRY` | `7d` | Token expiry duration |
-| `STRIPE_SECRET_KEY` | — | Stripe secret key (billing) |
+## Env
 
-## REST API
+`PORT` (4000), `TIMPS_JWT_SECRET`, `TIMPS_JWT_EXPIRY` (7d), `STRIPE_SECRET_KEY`
 
-All `/team/*` and `/billing/*` routes require `Authorization: Bearer <token>`.
+## Plans (stub)
 
-### Auth
-
-```
-POST /auth/register  { email, password, teamId, role? }
-POST /auth/login     { email, password }
-```
-
-### Team memory
-
-```
-GET    /team/memory         ?tags=comma,separated
-POST   /team/memory         { key, value, importance?, tags? }
-DELETE /team/memory/:key
-```
-
-### Episodic feed
-
-```
-GET /team/feed   ?limit=50
-```
-
-### Members
-
-```
-GET /team/members
-```
-
-### Billing
-
-```
-GET  /billing/plan
-POST /billing/checkout  { planId }  (admin only)
-POST /billing/webhook               (Stripe webhook)
-```
-
-## Admin panel
-
-Open `http://localhost:4000/admin` in your browser.
-
-## Plans
-
-| Plan | Price | Members | Memory Entries |
-| --- | --- | --- | --- |
-| Free | $0/mo | 1 | 1,000 |
-| Team | $29/mo | 10 | 50,000 |
-| Enterprise | Contact sales | Unlimited | Unlimited |
-
-## Security notes
-
-- Always set `TIMPS_JWT_SECRET` to a strong random value in production
-- The in-memory store does not persist across restarts — replace with PostgreSQL for production
-- Stripe webhook handling requires signature verification in production (use `stripe.webhooks.constructEvent`)
+Free ($0, 1 member, 1K entries), Team ($29, 10 members, 50K), Enterprise (contact)

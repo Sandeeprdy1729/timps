@@ -1,32 +1,15 @@
-# TIMPS MCP — Persistent Intelligence for Claude, Cursor, and Windsurf
+# @timps-ai/timps-mcp — Persistent Memory for Claude, Cursor, and Windsurf
 
-[![npm](https://img.shields.io/npm/v/timps-mcp?color=blue)](https://www.npmjs.com/package/timps-mcp)
+[![npm](https://img.shields.io/npm/v/@timps-ai/timps-mcp?color=blue)](https://www.npmjs.com/package/@timps-ai/timps-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 
-Give your AI coding assistant a memory that persists across sessions, catches contradictions, remembers your bug patterns, tracks API quirks, and monitors your burnout — all as native MCP tools.
-
-**The problem:** Claude Code, Cursor, and Windsurf forget everything between sessions. Every conversation starts from zero.
-
-**What TIMPS MCP solves:** 61 MCP tools that give your AI assistant long-term intelligence — stored on your own infrastructure, private by default.
-
-## Quick Start
-
-**Step 1:** Start the TIMPS server (one command with Docker):
+45 MCP tools that give your AI coding assistant persistent memory across sessions — contradiction detection, bug patterns, burnout monitoring, architecture drift, and 22-layer memory forge.
 
 ```bash
-# From the timps repo root
-docker compose up -d
+npm install -g @timps-ai/timps-mcp
 ```
 
-Or manually: `cd packages/server && npm install && npm run server`
-
-**Step 2:** Install the MCP package:
-
-```bash
-npm install -g timps-mcp
-```
-
-**Step 3:** Add to your AI tool's config and restart:
+## Add to your AI tool
 
 ### Claude Code (`~/.claude.json`)
 
@@ -35,10 +18,7 @@ npm install -g timps-mcp
   "mcpServers": {
     "timps": {
       "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
+      "env": { "TIMPS_URL": "http://localhost:3000", "TIMPS_USER_ID": "1" }
     }
   }
 }
@@ -51,10 +31,7 @@ npm install -g timps-mcp
   "mcpServers": {
     "timps": {
       "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
+      "env": { "TIMPS_URL": "http://localhost:3000", "TIMPS_USER_ID": "1" }
     }
   }
 }
@@ -67,201 +44,85 @@ npm install -g timps-mcp
   "mcpServers": {
     "timps": {
       "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
+      "env": { "TIMPS_URL": "http://localhost:3000", "TIMPS_USER_ID": "1" }
     }
   }
 }
 ```
 
-### Remote TIMPS server (Railway, Render, etc.)
+## Two modes
 
-```json
-{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "https://your-timps-instance.railway.app",
-        "TIMPS_USER_ID": "1"
-      }
-    }
-  }
-}
-```
+| Mode | Config | Backend |
+|------|--------|---------|
+| **SERVER** (default) | `TIMPS_URL` set | Proxies to TIMPS HTTP server |
+| **LOCAL** | No `TIMPS_URL` | Uses `@timps-ai/memory-core` MemoryEngine directly |
 
-## Configuration
-
-### Claude Code (`~/.claude.json` or `claude_desktop_config.json`)
-
-```json
-{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
-    }
-  }
-}
-```
-
-### Cursor (`~/.cursor/mcp.json`)
-
-```json
-{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
-    }
-  }
-}
-```
-
-### Windsurf (`~/.codeium/windsurf/mcp_config.json`)
-
-```json
-{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "http://localhost:3000",
-        "TIMPS_USER_ID": "1"
-      }
-    }
-  }
-}
-```
-
-### Remote TIMPS server (Railway, Render, etc.)
-
-```json
-{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp",
-      "env": {
-        "TIMPS_URL": "https://your-timps-instance.railway.app",
-        "TIMPS_USER_ID": "1"
-      }
-    }
-  }
-}
-```
-
----
-
-## All 61 MCP Tools
-
-(20 listed below; 41 more registered via the server at runtime)
+## 45 MCP Tools
 
 ### Core Memory
-
-| Tool | What it does |
-|---|---|
-| `timps_chat` | Full conversation with all intelligence tools active |
-| `timps_get_memories` | Recall stored facts, goals, and preferences |
-| `timps_store_memory` | Permanently store a fact (importance 1-5) |
+`timps_chat`, `timps_get_memories`, `timps_store_memory`
 
 ### Contradiction Detection
+`timps_check_contradiction`, `timps_get_positions`
 
-| Tool | What it does |
-|---|---|
-| `timps_check_contradiction` | Detects if a statement contradicts a past position |
-| `timps_get_positions` | Lists all tracked positions with conflict counts |
-
-### Decision Memory
-
-| Tool | What it does |
-|---|---|
-| `timps_check_regret` | Warns before you repeat a decision you previously regretted |
-| `timps_log_decision` | Records a decision and its outcome for future warnings |
-| `timps_simulate_decision` | Simulates future outcomes before you commit |
+### Decision Intelligence
+`timps_check_regret`, `timps_log_decision`, `timps_simulate_decision`, `timps_log_past_decision`
 
 ### Burnout Monitoring
+`timps_burnout_analyze`, `timps_record_signal`
 
-| Tool | What it does |
-|---|---|
-| `timps_burnout_analyze` | Current burnout risk score based on behavioral baseline |
-| `timps_record_signal` | Log a behavioral signal (overwork, skip meetings, late commits) |
+### Bug & Code Patterns
+`timps_warn_bug_pattern`, `timps_record_bug`, `timps_check_tech_debt`, `timps_record_incident`
 
-### Bug & Code Pattern Intelligence
+### API Knowledge
+`timps_lookup_api`, `timps_record_api_quirk`
 
-| Tool | What it does |
-|---|---|
-| `timps_warn_bug_pattern` | Warns if current coding context matches your personal bug triggers |
-| `timps_record_bug` | Record a bug to build your personal bug profile |
-| `timps_check_tech_debt` | Warns if a code pattern matches a past production incident |
-| `timps_record_incident` | Record a production incident for future pattern matching |
+### Meetings & Commitments
+`timps_extract_commitments`, `timps_get_pending_commitments`, `timps_complete_commitment`
 
-### API Knowledge Base
+### Relationships
+`timps_record_mention`, `timps_relationship_check`
 
-| Tool | What it does |
-|---|---|
-| `timps_lookup_api` | Retrieve known quirks for an API (auth, rate limits, gotchas) |
-| `timps_record_api_quirk` | Save a discovered API gotcha to never rediscover it |
+### Living Manifesto
+`timps_ingest_manifesto_signal`, `timps_get_manifesto`
 
-### Commitments & Meetings
+### Chronos Veil (Causal Graph)
+`timps_chronos_ingest`, `timps_chronos_query`, `timps_chronos_stats`
 
-| Tool | What it does |
-|---|---|
-| `timps_extract_commitments` | Extract action items from meeting notes or Slack messages |
-| `timps_get_pending_commitments` | List all open commitments with due dates |
+### NexusForge (Knowledge Graph)
+`timps_nexus_ingest`, `timps_nexus_query`, `timps_nexus_stats`, `timps_nexus_graph`
 
-### Relationships & Values
+### SynapseMetabolon
+`timps_synapse_ingest`, `timps_synapse_query`, `timps_synapse_stats`, `timps_synapse_graph`, `timps_synapse_consolidate`
 
-| Tool | What it does |
-|---|---|
-| `timps_relationship_check` | Check relationship health and drift alerts |
-| `timps_get_manifesto` | Your living manifesto — actual values derived from behavior |
+### Architecture & Risk
+`timps_detect_architecture_drift`, `timps_predict_bug_risk`, `timps_get_incident_timeline`, `timps_check_deployment_risk`
 
----
+### Developer Intelligence
+`timps_get_velocity_trend`, `timps_get_context_switches`, `timps_record_learning`, `timps_get_shared_decisions`, `timps_record_review_pattern`
 
-## Real examples
+### ChronosForge
+`timps_temporal_query`, `timps_chrono_foresight`, `timps_chrono_consolidate`
 
-```
-You: "I'm going to use setTimeout for synchronization here"
-Claude: [calls timps_warn_bug_pattern]
-⚠️  Bug pattern match: "setTimeout for async sync → race condition"
-    You hit this before in src/queue.ts — took 12h to debug (March 2025)
-```
+### L7+ Intelligence
+`timps_skill_shadow`, `timps_log_question`, `timps_curriculum_plan`, `timps_observe_culture`, `timps_codebase_culture`, `timps_record_contribution`, `timps_mark_contributor_active`, `timps_institutional_memory`
 
-```
-You: "Remote teams don't work. Everyone should be in the office."
-Claude: [calls timps_check_contradiction]
-⚠️  CONTRADICTION (82%) — 47 days ago you stated:
-    "Remote work increases productivity and should be the default"
-    Have you changed your mind?
-```
+### 22-Layer Tools
+`timps_verify_engram_chain`, `timps_false_memory_check`, `timps_explain_provenance`, `timps_resolve_conflict`, `timps_audit_memory`, `timps_register_trigger`, `timps_reveal_bias`, `timps_infer_schemas`
 
-```
-You: "Let me use the same auth pattern we used for the payments API"
-Claude: [calls timps_lookup_api]
-📋  Known quirk for payments-api:
-    - Rate limit is 60 req/min per IP, not per API key (undocumented)
-    - Token refresh must happen before expiry, not on 401 (causes cascade)
-```
-
----
-
-## Environment Variables
+## Env Variables
 
 | Variable | Default | Description |
-|---|---|---|
-| `TIMPS_URL` | `http://localhost:3000` | URL of your TIMPS server |
-| `TIMPS_USER_ID` | `1` | Your TIMPS user ID |
+|----------|---------|-------------|
+| `TIMPS_URL` | — | TIMPS server URL (SERVER mode) |
+| `TIMPS_USER_ID` | `1` | User ID |
 
----
+## Examples
 
-## License
+```
+You: "I'm going to use setTimeout for sync here"
+→ timps_warn_bug_pattern → ⚠️ Bug pattern match (race condition, hit before in src/queue.ts)
 
-MIT — [github.com/Sandeeprdy1729/timps](https://github.com/Sandeeprdy1729/timps)
+You: "Remote teams don't work"
+→ timps_check_contradiction → ⚠️ CONTRADICTION 82% — 47 days ago you said "Remote works best"
+```

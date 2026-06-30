@@ -54,6 +54,9 @@
     "url": "https://github.com/Sandeeprdy1729/timps"
   },
   "homepage": "https://timps.ai",
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@timps-ai/memory-core": "*",

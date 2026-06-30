@@ -1,11 +1,11 @@
 # TIMPS Mobile
 
-> **Status: 🟡 Experimental — not published yet.**
+> **Status: 🟡 Experimental — UI shell with mocked data.** HomeScreen generates hardcoded activity items and fake session data. No real backend connectivity to TIMPS server. Missing dependency: `@react-native-async-storage/async-storage` is imported but not in `package.json`.
 
-TIMPS mobile app built with Expo and React Native. Access persistent memory from your phone.
+Expo/React Native app with 10 screens: Home, Chat, Memory, Integrations, Settings, Voice Assistant, Workflows, Analytics, Activity, Team.
 
 ```bash
 cd apps/mobile
 npm install
-npm run dev
+npx expo start
 ```

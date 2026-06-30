@@ -16,7 +16,8 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --out-dir dist",
@@ -24,13 +25,8 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "peerDependencies": {
-    "@timps-ai/memory-core": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@timps-ai/memory-core": {
-      "optional": true
-    }
+  "dependencies": {
+    "@timps-ai/memory-core": "^1.0.0"
   },
   "devDependencies": {
     "@timps-ai/memory-core": "*",

@@ -30,7 +30,8 @@
   "files": [
     "dist",
     "proto",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/server/index.ts src/client/index.ts --format cjs --dts --out-dir dist",
