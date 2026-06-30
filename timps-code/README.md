@@ -1,219 +1,54 @@
-# TIMPS Code — Open-Source CLI Coding Agent
+# @timps-ai/timps-code
 
-[![npm](https://img.shields.io/npm/v/timps-code?color=brightgreen)](https://www.npmjs.com/package/timps-code)
+[![npm](https://img.shields.io/npm/v/@timps-ai/timps-code?color=brightgreen)](https://www.npmjs.com/package/@timps-ai/timps-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
 
-**A CLI coding agent like Claude Code — runs on Ollama (free, local), has persistent memory across sessions, and is fully open source.**
+**CLI coding agent with persistent memory across sessions.** 47 tools, 6 LLM providers, 22-layer memory, swarm mode, multimodal vision, and a self-improving agent loop.
 
 ```bash
-npm install -g timps-code
+npm install -g @timps-ai/timps-code
 timps
 ```
 
----
+## What it does
 
-## What makes TIMPS different
+- **22-layer memory** — working, episodic, semantic, procedural + 18 forge layers (Chronos, Echo, HarmonicSheaf, Aether, EngramLog, Consolidation, SynapticPruner, Provenance, SpacedRepetition, ConstitutionalGuard, Audit, ProspectiveTrigger, BiasRevealer, ContextVector, Rehearsal, SchemaDistorter, ConfidenceCalibrator)
+- **47 agent tools** — file ops (read/write/edit/patch/multi-edit/search/list), git (status/diff/log/commit/stash), shell (bash), web (search/fetch), reasoning (think/plan), MCP, todo, project info, diagnostics, browser automation, workflow pipeline, remote trigger, cron scheduling, team management
+- **6 providers** — Ollama, OpenAI, Gemini, Claude, OpenRouter, hybrid fallback chain
+- **Swarm** — 10 agent roles for multi-agent DAG execution
+- **Self-improving agent** — tracks mistakes, builds prevention instructions, GRPO training data
+- **Multimodal memory** — image embedding (Gemma 3 via Ollama), audio reference, diagram storage, terminal capture, cross-modal recall
+- **LSP proxy** — wraps real language servers, injects contradiction + bug-pattern diagnostics
+- **MCP client** — auto-discovers 15+ MCP servers (postgres, sqlite, redis, github, slack, sentry, puppeteer, etc.)
+- **WASM sandbox** — install/uninstall plugins with permission enforcement
+- **LLM key vault** — AES-256-GCM encrypted API key storage
+- **Provider rate limiter** — per-provider sliding window, daily cap, automatic fallback
+- **Keybinding-powered TUI** — Ink/React 19 terminal UI with streaming
 
-**Persistent memory.** TIMPS remembers your project across sessions using a 22-layer memory system:
-
-- **L1 Working** — current goal, active files, recent errors (this session)
-- **L2 Episodic** — summaries of past conversations stored to disk (append-only)
-- **L3 Semantic** — facts, patterns, and conventions your project uses (permanent)
-- **L4 Procedural** — reusable workflows and recipes learned from past sessions
-- **L5 ChronosForge** — causal graph tracking decisions and their consequences
-- **L6 ResonanceForge** — harmonic oscillator model for pattern resonance detection
-- **L7 EchoForge** — reservoir computing with BFS context propagation
-- **L8 SynapseQuench** — cross-layer coherence optimizer
-- **L9 HarmonicSheafWeaver** — sheaf-cohomology engine for algebraic contradiction detection
-- **L10 EngramLog** — immutable hash-chained audit trail of all memory operations
-- **L11 ConsolidationEngine** — episodic → semantic memory promotion on demand
-- **L12 SynapticPruner** — active forgetting by importance scoring
-- **L13 ProvenanceForge** — source tracking and chain of custody for every fact
-- **L14 SpacedRepetitionForge** — SM-2 scheduling algorithm for review timing
-- **L15 ConstitutionalGuard** — prevents low-confidence writes to memory
-- **L16 AuditForge** — weekly memory health reports and drift detection
-- **L17 ProspectiveTrigger** — "when X happens, surface Y" conditional recall
-- **L18 BiasRevealer** — over/under-representation analysis across saved facts
-- **L19 ContextVector** — state-dependent recall encoding and retrieval
-- **L20 RehearsalEngine** — spaced retrieval practice scheduling
-- **L21 SchemaDistorter** — Bartlett schema-driven distortion detection
-- **L22 ConfidenceCalibrator** — multi-signal confidence scoring
-
-When you start a new session and say "use the same pattern we always use for API routes", TIMPS knows what you mean.
-
-**Runs 100% locally.** The default provider is Ollama. No API keys, no data leaving your machine, no monthly bill.
-
-**Self-correcting.** When a command fails, the agent analyzes the error, fixes its approach, and retries — up to 3 times by default.
-
----
-
-## Install
+## Install & Run
 
 ```bash
-npm install -g timps-code
+npm install -g @timps-ai/timps-code
+timps                           # Interactive session
+timps "add validation to api"   # One-shot
+timps --provider ollama         # Specify provider
+timps --config                  # Setup wizard
 ```
 
-Requirements: Node.js 18+ | For local AI: [Ollama](https://ollama.com)
+## Flags
 
-### How the agent loop works
+`--provider`, `--model`, `--dir`, `--config`, `--branch`, `--merge`, `--tui`, `--war-room`, `--binary-synth`
 
-```mermaid
-flowchart LR
-    Input["User input"] --> App["app.ts\nAgentLoop.run()"]
-    App --> Agent["agent.ts\n(plan + execute)"]
-    Agent --> Tools["25+ Tools\nfile · git · shell · web"]
-    Agent --> Memory["22-Layer Memory\nworking · episodic · semantic"]
-    Memory -->|"recalled context"| Agent
-    Tools -->|"observation"| Agent
-    Agent -->|"stream"| TUI["Ink/React TUI\n(src/ui/App.tsx)"]
-    Agent -->|"retry × 3 on error"| Agent
+## Slash Commands
 
-    style Memory fill:#dcfce7,stroke:#16a34a
-    style Tools fill:#dbeafe,stroke:#2563eb
-```
+`/help`, `/memory`, `/todo`, `/branch`, `/merge`, `/skills`, `/mcp`, `/git`, `/models`, `/doctor`, `/clear`, `/vision`, `/audio`, `/screenshot`, `/diagram`, `/terminal`, `/crossmodal`, `/audit`, `/improve`, `/config:encrypt-key`, `/auth:login`, `/limits:show`, and more.
 
----
-
-## Usage
-
-```bash
-# Interactive session (persistent memory, full agent loop)
-timps
-
-# One-shot mode
-timps "add input validation to src/api.ts"
-timps "write tests for the payment module"
-timps "explain why src/queue.ts uses a semaphore"
-
-# Specify provider
-timps --provider ollama "refactor this"
-timps --provider claude "review this PR diff"
-timps --provider gemini "suggest architecture improvements"
-
-# Setup wizard (first time)
-timps --config
-```
-
----
-
-## Providers
-
-| Provider | Setup | Cost |
-|---|---|---|
-| **Ollama** (default) | `ollama serve` | Free |
-| **Claude** | `ANTHROPIC_API_KEY=...` | Paid |
-| **OpenAI** | `OPENAI_API_KEY=...` | Paid |
-| **Gemini** | `GEMINI_API_KEY=...` | Free tier available |
-| **OpenRouter** | `OPENROUTER_API_KEY=...` | Pay per use |
-| **Hybrid** | Ollama + API fallback | Mixed |
-
-TIMPS auto-detects Ollama on startup. If Ollama is running, it uses it without any config.
-
----
-
-## CLI Flags
-
-```bash
-timps --provider <name>   # claude | openai | gemini | ollama | openrouter | hybrid
-timps --model <model>     # e.g. gpt-4o, claude-sonnet-4-5, llama3.1:8b
-timps --dir <path>        # set working directory (default: cwd)
-timps --config            # run setup wizard
-timps --branch <name>     # start from a named memory branch
-timps --merge <name>      # merge a memory branch into current context
-```
-
----
-
-## Slash commands (inside interactive session)
+## Architecture
 
 ```
-/help           — list all commands
-/memory         — show what TIMPS remembers about this project
-/todo           — manage task list with the agent
-/branch <name>  — snapshot current memory into a named branch
-/merge <name>   — merge a memory branch back
-/skills         — list and install skills
-/mcp            — list connected MCP servers
-/git            — git status and diff
-/models         — list available Ollama models
-/doctor         — diagnose config and connection issues
-/clear          — clear session working memory
+User input → AgentLoop.run() → Agent (plan + execute)
+  ├─ 47 tools (file, git, shell, web, MCP, memory, etc.)
+  ├─ 22-layer memory (working → episodic → semantic → forged)
+  ├─ 6 model providers with fallback
+  └─ self-improving loop (mistake tracking → prevention injection)
 ```
-
----
-
-## Tools available to the agent
-
-TIMPS ships with 25 tools. The agent picks them automatically:
-
-| Category | Tools |
-|---|---|
-| File ops | `read_file`, `write_file`, `edit_file`, `multi_edit`, `patch_file` |
-| Search | `find_files`, `search_code`, `grep` |
-| Git | `get_git_status`, `git_diff`, `git_log`, `git_commit` |
-| Shell | `run_bash` |
-| Code quality | `run_tests`, `lint`, `type_check` |
-| Reasoning | `think`, `plan` |
-| Web | `web_search`, `web_fetch` |
-| Task management | `todo_create`, `todo_list`, `todo_update` |
-
----
-
-## Memory system in practice
-
-TIMPS stores memory per-project in `~/.timps/memory/<project-hash>/`:
-
-```
-semantic.json     — long-term facts and patterns
-episodes.json     — past session summaries (rolling 100)
-working.json      — current session state
-```
-
-You can view it with `/memory` inside a session, or inspect the files directly.
-
-**Branching:** `timps --branch feature-x` snapshots the current memory state before you start a risky refactor. `timps --merge main` merges it back.
-
----
-
-## Skills system
-
-TIMPS can install reusable skills — small prompt packages that add domain expertise:
-
-```bash
-# Inside a session:
-/skills list       — browse available skills
-/skills install react-patterns
-/skills install test-driven-development
-```
-
-Skills are stored in `~/.timps/skills/` and injected into the system prompt when relevant.
-
----
-
-## Connect to TIMPS MCP (optional)
-
-If you're running the full TIMPS server (`docker compose up -d` from the repo root), you can connect it to Claude Code, Cursor, or Windsurf for persistent memory inside those tools too. See [timps-mcp](../timps-mcp/README.md).
-
----
-
-## Configuration
-
-On first run, TIMPS creates `~/.timps/config.json`. You can also set via environment:
-
-```bash
-ANTHROPIC_API_KEY=sk-...
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=...
-OPENROUTER_API_KEY=sk-...
-OLLAMA_BASE_URL=http://localhost:11434   # default
-OLLAMA_DEFAULT_MODEL=qwen2.5-coder:7b   # default
-```
-
-Only set the keys for providers you actually use. Ollama needs no key.
-
----
-
-## License
-
-MIT — [github.com/Sandeeprdy1729/timps](https://github.com/Sandeeprdy1729/timps)

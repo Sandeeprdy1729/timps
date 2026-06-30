@@ -2,8 +2,19 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
+import { createRequire } from 'module';
+import { resolve, dirname } from 'path';
+
+// @modelcontextprotocol/sdk v1.29.0 exports field wildcard (./{path} → ./dist/cjs/{path})
+// doesn't resolve .js extensions in CJS require(). Use createRequire to access files directly.
+const _mcpSdkRoot = resolve(
+  dirname(require.resolve('@modelcontextprotocol/sdk/package.json')),
+  '..', '..'
+);
+const _mcpRequire = createRequire(resolve(_mcpSdkRoot, 'package.json'));
+const { McpServer } = _mcpRequire('./dist/cjs/server/mcp.js');
+const { StdioServerTransport } = _mcpRequire('./dist/cjs/server/stdio.js');
+
 import { z } from 'zod';
 import { MemoryEngine, MemoryClient } from '@timps-ai/memory-core';
 

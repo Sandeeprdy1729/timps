@@ -1,62 +1,39 @@
-# TIMPS - Utilities Package
+# @timps/utils
 
-Common utilities for TIMPS.
-
-## Utilities
-
-### Retry
+Retry, circuit breaker, rate limiter, queue, debounce, throttle, and LRU cache utilities.
 
 ```typescript
-import { retry } from '@timps/utils';
+import { retry, CircuitBreaker, RateLimiter, Queue, Debouncer, Throttler, LRU, MultiLimiter } from '@timps/utils'
 
-const result = await retry(() => fetchData(), {
-  maxAttempts: 3,
-  initialDelay: 1000,
-});
+// Retry with exponential backoff
+await retry(() => fetchData(), { maxAttempts: 3, initialDelay: 1000 })
+
+// Circuit breaker with states: CLOSED → OPEN → HALF_OPEN
+const breaker = new CircuitBreaker()
+await breaker.execute(() => fetchData())
+
+// Sliding window rate limiter
+const limiter = new RateLimiter({ maxRequests: 60, windowMs: 60000 })
+await limiter.acquire()
+
+// Multi-key rate limiter
+const multi = new MultiLimiter({ maxRequests: 60, windowMs: 60000 })
+await multi.acquire('user-1')
+
+// Concurrency-limited queue
+const queue = new Queue<string>({ concurrency: 5 })
+await queue.enqueue('task')
+
+// Debounce / throttle
+const debouncer = new Debouncer<string>(300)
+const throttler = new Throttler(500)
+
+// LRU cache
+const cache = new LRU<string, number>({ maxSize: 100 })
+cache.set('key', 42)
+cache.get('key')
 ```
 
-### Circuit Breaker
+## Exports
 
-```typescript
-import { CircuitBreaker } from '@timps/utils';
-
-const breaker = new CircuitBreaker();
-const result = await breaker.execute(() => fetchData());
-```
-
-### Rate Limiter
-
-```typescript
-import { RateLimiter } from '@timps/utils';
-
-const limiter = new RateLimiter({ maxRequests: 60, windowMs: 60000 });
-await limiter.acquire();
-```
-
-### Queue
-
-```typescript
-import { Queue } from '@timps/utils';
-
-const queue = new Queue<Task>(concurrency: 5);
-await queue.enqueue(task);
-```
-
-### Debouncer
-
-```typescript
-import { Debouncer } from '@timps/utils';
-
-const debouncer = new Debouncer(300);
-const debouncedFn = debouncer.debounce(fn);
-```
-
-### LRU Cache
-
-```typescript
-import { LRU } from '@timps/utils';
-
-const cache = new LRU<string, number>(maxSize: 100);
-cache.set('key', value);
-const value = cache.get('key');
-```
+`retry()`, `withRetry()`, `RetryOptions`, `RetryableError`, `CircuitBreaker`, `RateLimiter`, `MultiLimiter`, `Queue`, `Debouncer`, `Throttler`, `LRU`

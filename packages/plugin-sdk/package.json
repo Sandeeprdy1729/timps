@@ -13,7 +13,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs --dts --out-dir dist",
@@ -39,6 +40,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Sandeeprdy1729/timps"
+  },
+  "homepage": "https://github.com/Sandeeprdy1729/timps/tree/main/packages/plugin-sdk",
+  "bugs": {
+    "url": "https://github.com/Sandeeprdy1729/timps/issues"
   },
   "publishConfig": {
     "access": "public"

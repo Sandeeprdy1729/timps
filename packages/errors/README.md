@@ -1,42 +1,31 @@
-# TIMPS - Error Package
+# @timps/errors
 
-Error handling utilities and error codes.
-
-## Usage
+Structured error types with 20 error codes, retryable detection, and factory methods.
 
 ```typescript
-import { errors, ErrorCodes, TIMPSError } from '@timps/errors';
+import { errors, TIMPSError, isRetryableError, formatError } from '@timps/errors'
 
-// Create specific errors
-throw errors.notFound('integration', 'github');
-throw errors.unauthorized('Invalid token');
-throw errors.rateLimited(60);
+throw errors.notFound('integration', 'github')
+throw errors.rateLimited(60)
 
-// Check if error is retryable
-import { isRetryableError } from '@timps/errors';
-
-if (isRetryableError(error)) {
-  await retryOperation();
-}
+if (isRetryableError(error)) await retry()
 ```
 
 ## Error Codes
 
-| Code | Status | Description |
-|------|--------|--------------|
-| UNKNOWN | 500 | Unknown error |
-| NOT_FOUND | 404 | Resource not found |
-| UNAUTHORIZED | 401 | Authentication required |
-| FORBIDDEN | 403 | Access denied |
-| BAD_REQUEST | 400 | Invalid request |
-| VALIDATION_ERROR | 422 | Validation failed |
-| CONFLICT | 409 | Resource conflict |
-| RATE_LIMITED | 429 | Too many requests |
-| NETWORK_ERROR | 0 | Network issue |
-| TIMEOUT | 408 | Request timed out |
-| SERVER_ERROR | 500 | Server error |
-| SERVICE_UNAVAILABLE | 503 | Service down |
+| Factory | Code | HTTP Status |
+|---------|------|-------------|
+| `notFound()` | `NOT_FOUND` | 404 |
+| `unauthorized()` | `UNAUTHORIZED` | 401 |
+| `forbidden()` | `FORBIDDEN` | 403 |
+| `badRequest()` | `BAD_REQUEST` | 400 |
+| `validation()` | `VALIDATION_ERROR` | 422 |
+| `rateLimited()` | `RATE_LIMITED` | 429 |
+| `timeout()` | `TIMEOUT` | 408 |
+| `internal()` | `INTERNAL_ERROR` | 500 |
 
-## Retry Logic
+Plus: `NETWORK_ERROR`, `SERVICE_UNAVAILABLE`, `CONFLICT`, `PARSE_ERROR`, `ENCODING_ERROR`, `CERTIFICATE_ERROR`, `SSL_ERROR`, `HANDSHAKE_ERROR`, `ABORTED`, `REQUEST_SIZE_EXCEEDED`, `RESPONSE_SIZE_EXCEEDED`
 
-Errors with `retryable: true` should be retried with exponential backoff.
+## Exports
+
+`TIMPSError`, `TIMPSErrorOptions`, `ErrorCodes`, `ErrorCode`, `errors` (factory object), `isTIMPSError()`, `getErrorCode()`, `isRetryableError()`, `formatError()`, `createError()`

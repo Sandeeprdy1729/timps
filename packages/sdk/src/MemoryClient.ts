@@ -89,7 +89,8 @@ export class MemoryClient {
   }
 
   async delete(id: string): Promise<void> {
-    this.engine.consolidate();
+    const entries = this.engine.getSemanticEntries();
+    this.engine.saveSemanticEntries(entries.filter((e: any) => e.id !== id));
   }
 
   async storeBatch(entries: Array<{ content: string; metadata?: Record<string, any> }>): Promise<void> {

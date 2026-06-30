@@ -1,15 +1,15 @@
-# @timps/sdk
+# @timps-ai/timps-sdk
 
 Lightweight, zero-config memory SDK for AI agents. Store and recall semantic memories with a single import.
 
 ```bash
-npm install @timps/sdk
+npm install @timps-ai/timps-sdk
 ```
 
 ```typescript
-import { createMemory } from '@timps/sdk'
+import { createMemory } from '@timps-ai/timps-sdk'
 
-const memory = createMemory({ projectPath: '.' })
+const memory = await createMemory({ projectPath: '.' })
 
 await memory.store('This project uses tRPC for type-safe APIs')
 const results = await memory.recall('API patterns')
@@ -20,9 +20,9 @@ console.log(results)
 ## Quickstart
 
 ```typescript
-import { createMemory } from '@timps/sdk'
+import { createMemory } from '@timps-ai/timps-sdk'
 
-const memory = createMemory({ projectPath: './my-project' })
+const memory = await createMemory({ projectPath: './my-project' })
 
 // Store facts
 await memory.store('The auth system uses JWT with 1h expiry')
@@ -40,7 +40,7 @@ console.log(results[0].content)
 ### Ollama (free, local)
 
 ```typescript
-const memory = createMemory({
+const memory = await createMemory({
   projectPath: '.',
   provider: 'ollama'  // uses localhost:11434, nomic-embed-text
 })
@@ -49,7 +49,7 @@ const memory = createMemory({
 ### OpenAI (your API key)
 
 ```typescript
-const memory = createMemory({
+const memory = await createMemory({
   projectPath: '.',
   provider: {
     name: 'openai',
@@ -61,7 +61,7 @@ const memory = createMemory({
 ### Keyword-only (no LLM dependency)
 
 ```typescript
-const memory = createMemory({ projectPath: '.' })
+const memory = await createMemory({ projectPath: '.' })
 // No provider → BM25 keyword search only, zero network dependencies
 ```
 
