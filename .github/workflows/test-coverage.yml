@@ -14,8 +14,6 @@ jobs:
         package:
           - event-bus
           - connection-manager
-          - event-bus
-          - connection-manager
           - timps-desktop
           - plugin-sdk
     steps:

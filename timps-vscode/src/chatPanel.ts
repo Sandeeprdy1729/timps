@@ -14,6 +14,7 @@ import { chat } from './ollama';
 import { getSystemPrompt } from './systemPrompt';
 import { TIMPsMemory, MemoryEntry } from './memory';
 import { ChatMessage } from './types';
+import { TIMPS_THEME, TIMPS_ANIMATIONS, TIMPS_GLOBAL_RESET } from './design-tokens';
 
 let currentPanel: TIMPsChatPanel | undefined;
 
@@ -228,42 +229,37 @@ export class TIMPsChatPanel {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* ── TIMPS Retro OS — System 7 pixel aesthetic ── */
+/* ── TIMPS Desktop Theme — Teal/Cream Robot Palette ── */
+${TIMPS_THEME}
+${TIMPS_ANIMATIONS}
+${TIMPS_GLOBAL_RESET}
+
+/* Map desktop tokens to compact aliases for this webview */
 :root {
-  --bg:       #111310;
-  --bg2:      #181B16;
-  --bg3:      #1F231D;
-  --panel-bg: #1A1D18;
-  --text:     #E8E0B0;   /* cream */
-  --muted:    #64747A;
-  --teal:     #2D5A4F;   /* robot screen */
-  --tealMid:  #4A8C7A;
-  --tealLt:   #7EC8B8;
-  --tan:      #C8BF8C;   /* robot body */
-  --cream:    #F5F0E1;
-  --border:   #2D5A4F;
-  --success:  #28A070;
-  --error:    #C83838;
-  --warning:  #E8C94A;
-  --dotR:     #FF5F57;
-  --dotY:     #FEBC2E;
-  --dotG:     #28C840;
-  --code-bg:  #0C0E0A;
-  --user-bg:  #162018;
-}
-@keyframes robotFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-@keyframes robotBlink { 0%,85%,100%{transform:scaleY(1)} 92%{transform:scaleY(0.08)} }
-@keyframes bounce { 0%,80%,100%{transform:scale(0.5);opacity:0.3} 40%{transform:scale(1);opacity:1} }
-@keyframes fadeSlide { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-@keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100%)} }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-@media (prefers-reduced-motion: reduce) {
-  .logo-robot, .welcome-robot, [class*="robot"] { animation: none !important; }
-  .dot-blink { animation: none !important; }
+  --bg:       var(--timps-bg);
+  --bg2:      var(--timps-bg2);
+  --bg3:      var(--timps-bg3);
+  --panel-bg: var(--timps-surface);
+  --text:     var(--timps-text);
+  --muted:    var(--timps-text-muted);
+  --teal:     var(--timps-border);
+  --tealMid:  var(--timps-accent);
+  --tealLt:   var(--timps-accent-hover);
+  --tan:      var(--timps-text2);
+  --cream:    var(--timps-text);
+  --border:   var(--timps-border);
+  --success:  var(--timps-success);
+  --error:    var(--timps-error);
+  --warning:  var(--timps-warning);
+  --dotR:     var(--timps-dot-red);
+  --dotY:     var(--timps-dot-yellow);
+  --dotG:     var(--timps-dot-green);
+  --code-bg:  var(--timps-code-bg);
+  --user-bg:  var(--timps-user-bg);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-family: var(--timps-font);
   background: var(--bg);
   color: var(--text);
   height: 100vh;
@@ -271,6 +267,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   font-size: 13px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── Menubar ── */
@@ -328,7 +325,7 @@ body {
   border-radius: 2px;
   color: var(--tan);
   border: 1px solid rgba(200,191,140,0.25);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--timps-font-mono);
   font-weight: 600;
   cursor: pointer;
 }
@@ -371,7 +368,7 @@ body {
 .win-dot.r { background: var(--dotR); }
 .win-dot.y { background: var(--dotY); }
 .win-dot.g { background: var(--dotG); }
-.win-title { font-size: 11px; font-weight: 700; color: var(--muted); flex: 1; text-align: center; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; }
+.win-title { font-size: 11px; font-weight: 700; color: var(--muted); flex: 1; text-align: center; font-family: var(--timps-font-mono); letter-spacing: 0.06em; }
 
 /* Skills pills */
 .skills-bar {
@@ -458,7 +455,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--timps-font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -474,7 +471,7 @@ body {
 .cbtn:hover { border-color: var(--tealLt); color: var(--tealLt); }
 .cbtn.apply { border-color: var(--tealMid); color: var(--tealMid); }
 .cbtn.apply:hover { background: rgba(74,140,122,0.15); }
-.code-body { background: var(--code-bg); padding: 10px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre; color: #d4cfa8; }
+.code-body { background: var(--code-bg); padding: 10px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre; color: var(--text); }
 .icode { background: var(--bg3); padding: 1px 4px; border-radius: 2px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tealLt); border: 1px solid var(--border); }
 
 /* Memory cards */
@@ -544,12 +541,13 @@ body {
   flex-shrink: 0;
 }
 .cmd-hint {
-  font-size: 10px;
-  color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-  padding: 0 4px;
+  font-size: 14px;
+  color: var(--tealMid);
+  font-family: var(--timps-font-mono);
+  padding: 0 2px 0 0;
   align-self: center;
   flex-shrink: 0;
+  line-height: 1;
 }
 .input-area textarea {
   flex: 1;
@@ -605,7 +603,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--timps-font-mono);
   font-size: 10px;
   scrollbar-width: none;
   display: flex;
@@ -631,7 +629,7 @@ body {
 .stats-bar {
   padding: 6px 8px;
   border-top: 1px solid var(--border);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--timps-font-mono);
   font-size: 10px;
   display: flex;
   flex-direction: column;
@@ -767,7 +765,7 @@ body {
 
     <!-- Input -->
     <div class="input-area">
-      <span class="cmd-hint">/</span>
+      <span class="cmd-hint">❯</span>
       <textarea id="inp" placeholder="Ask TIMPS anything… (!audit, !blame &lt;kw&gt;, !forget &lt;kw&gt;)" rows="1" onkeydown="onKey(event)"></textarea>
       <button class="send-btn" id="sendBtn" onclick="send()" title="Send (Enter)">↑</button>
       <button class="stop-btn hidden" id="stopBtn" onclick="stop()" title="Stop generation">■</button>

@@ -1127,3 +1127,121 @@ Bob commits:   "Migrate Redis to Dragonfly for memory efficiency"
 - **Branch merge uses last-writer-wins by default** — the most recent commit's content becomes the new head, with the older commit recorded as `mergedFrom`. This matches git's merge commit pattern.
 - **Branch conflict detection is synchronous** — `commit()` checks the current head against the new commit's sentiment direction. If they appear conflicting, the commit is still stored but `crdtStatus: 'conflict_pending'` is set on the branch metadata. Call `listBranches()` with `showConflicts: true` to surface pending conflicts.
 
+## Phase 6c — Self-Improving Agent Loop
+
+The `SelfImprovingAgent` (`timps-code/src/agent/selfImprovingAgent.ts`) is an autonomous feedback loop that tracks mistakes, learns from them, and injects prevention instructions into the agent's system prompt to avoid repeating errors.
+
+### Classes and types
+
+| Symbol | File | Purpose |
+|--------|------|---------|
+| `MistakeCategory` | `selfImprovingAgent.ts` | Union: `wrong-file-assumption`, `insufficient-context`, `incorrect-tool-sequence`, `missed-dependency`, `test-regression`, `type-error`, `logic-error`, `permission-violation`, `infinite-loop`, `over-engineering`, `under-specification`, `tool-misuse`, `other` |
+| `MistakeRecord` | `selfImprovingAgent.ts` | Full mistake record: id, timestamp, category, taskType, description, errorMessage, correction, preventionHint, occurrences, filePatterns, toolSequence |
+| `LearningReport` | `selfImprovingAgent.ts` | `totalMistakes`, `topCategories`, `recentMistakes`, `preventionInstructions`, `improvementScore` |
+| `PreflightCheck` | `selfImprovingAgent.ts` | `passed`, `warnings`, `blockers`, `suggestedActions` |
+| `SelfImprovingAgent` | `selfImprovingAgent.ts` | Main class: `recordMistake()`, `recordCorrection()`, `preflightCheck()`, `buildLearningReport()`, `buildPreventionInstructions()`, `formatForSystemPrompt()`, `generateTrainingData()`, `buildPromptImprovements()`, `getSessionSummary()` |
+
+### Integration points
+
+In `timps-code/src/core/agent.ts`:
+- `formatForSystemPrompt()` called during system prompt construction
+- `preflightCheck()` called before each user message execution
+- `recordMistake()` called on tool execution failure (`isError=true`)
+
+### Persistence
+
+Mistakes stored as individual JSON files (`m_<timestamp>_<random>.json`) in `~/.timps/learning/<projectHash>/`.
+
+### CLI commands (timps-code)
+
+| Command | Handler | Description |
+|---------|---------|-------------|
+| `improve` | `runImproveCommand()` | Full learning report + training data |
+| `improve:report` | `runImproveCommand()` | Report only |
+| `improve:train` | `runImproveTrainCommand()` | GRPO training data generation |
+| `improve:prompt` | `runImprovePromptCommand()` | System prompt additions |
+
+### Gotchas
+- **File-based persistence** — mistakes are individual JSON files, not stored via MemoryEngine. Each file is atomic (write + rename).
+- **Similar mistake dedup** — `recordMistake()` increments `occurrences` when `jaccardSimilarity(desc, existing) > 0.8` instead of creating a new record.
+- **Preflight warnings have a limit** — `preflightCheck()` caps warnings at 5 and blockers at 3 to avoid overwhelming the agent.
+- **`formatForSystemPrompt()` returns empty string when no patterns** — the agent prompt is not bloated until sufficient learning data exists.
+- **Training data is GRPO-compatible** — `generateTrainingData()` produces OpenAI-style messages format for fine-tuning pipelines.
+
+## Phase 6d — Multimodal Memory
+
+Sovereign multimodal memory layer (`timps-code/src/memory/multimodalMemory.ts`) supporting image, audio, and text embeddings via Ollama (Gemma 3 + Nomic-embed-text), with cross-modal recall, diagram storage, terminal capture, and storage budget enforcement.
+
+### Architecture
+
+```
+storeImage(path) ──→ GemmaEmbedder.encodeImage() ──→ LocalVectorStore.insert()
+storeText(text)  ──→ GemmaEmbedder.encodeText()  ──→ LocalVectorStore.insert()
+search(query)    ──→ GemmaEmbedder.encodeText()  ──→ LocalVectorStore.search() ──→ cosine similarity
+crossModalRecall ──→ search each modality ──→ expand linked entries ──→ rank & return
+```
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `src/memory/multimodalMemory.ts` | `MultimodalMemory`, `GemmaEmbedder`, `LocalVectorStore` |
+| `src/commands/multimodalCommands.ts` | Slash command handlers for `/vision`, `/audio`, `/recall`, `/screenshot`, `/diagram`, `/terminal`, `/crossmodal`, `/mmbudget`, `/visionstats` |
+| `src/services/objectStorage.ts` | `ObjectStorage` — local-first object storage with optional S3 fallback |
+| `src/core/agent.ts` | Integration point for multimodal commands at `app.ts` ~line 1391 |
+
+### MultimodalMemory methods
+
+| Method | Description |
+|--------|-------------|
+| `storeImage(path, tags?)` | Store image with Gemma vision embedding |
+| `storeImageBase64(base64, mimeType, tags?)` | Store base64-encoded image |
+| `storeAudio(path, duration, tags?)` | Store audio file reference |
+| `storeText(text, tags?)` | Store text entry |
+| `search(query)` | Multi-modal search (text/image/audio query + tag filter) |
+| `findSimilarImages(path, limit?)` | Image-to-image similarity |
+| `findRelatedText(text, limit?)` | Text-to-all search |
+| `storeDiagram(path, diagramType, tags?)` | Store diagram with type classification |
+| `captureTerminal(command, output, exitCode, tags?)` | Store terminal output as text memory |
+| `crossModalRecall(query, opts?)` | Search all modalities + linked entry expansion |
+| `linkEntries(idA, idB)` | Create cross-modal links |
+| `setStorageBudget(maxBytes)` | Set storage budget (default 100MB) |
+| `enforceStorageBudget()` | Prune least-accessed entries when over budget |
+
+### CLI commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `/vision` | `/vis` | Store or search images |
+| `/audio` | `/sound`, `/voice` | Store or search audio |
+| `/recall` | `/remember` | Recall multimodal memories by text query |
+| `/screenshot` | `/ss`, `/screen` | Capture macOS/Linux screenshot |
+| `/diagram` | `/chart`, `/plot` | Store diagram with type classification |
+| `/terminal` | `/cmd`, `/command` | Capture terminal command output |
+| `/crossmodal` | `/cm`, `/query-all` | Cross-modal recall |
+| `/mmbudget` | `/storage`, `/budget` | Show storage budget usage |
+| `/visionstats` | `/vstats` | Show multimodal memory statistics |
+
+### Gotchas
+- **Ollama is optional** — `GemmaEmbedder` gracefully degrades to deterministic `Math.sin`/`Math.cos` fallback embeddings when Ollama is unavailable.
+- **`LocalVectorStore` uses JSONL** — stored at `<memoryDir>/multimodal.jsonl`, no external vector DB required.
+- **Cross-modal search** — `crossModalRecall()` searches all modalities separately, then expands results via `getLinkedEntries()`. Linking is manual (`linkEntries()`).
+- **Storage budget** — default 100MB. `enforceStorageBudget()` prunes least-accessed entries when over budget.
+- **S3 integration** — `ObjectStorage` supports opt-in S3 via `@aws-sdk/client-s3` (lazy-loaded). Default is local `~/.timps/objects/` with `index.json` tracking.
+- **Screenshot capture** — uses `screencapture` (macOS) or `import` (Linux, ImageMagick). Requires ImageMagick on Linux.
+
+## Phase 6c+6d — Bug fixes included
+
+Latest commit (`acf3383`) fixed these issues alongside the new features:
+1. `timps-mcp/src/index.ts` — Added `await` to 5+ async `recall()` calls
+2. `timps-code/src/memory/memory.ts` — Delegated branch ops to `MemoryBranchStore` instead of nonexistent `MemoryEngine` methods
+3. `packages/memory-core/src/index.ts` — Added `FileBackend`, `InMemoryBackend`, `seedEngineWithDataset` exports
+4. `packages/sdk/src/MemoryClient.ts` — Fixed `FileBackend` import, `EmbeddingConfig` fields, null-safety
+5. `timps-code/src/plugins/pluginManager.ts` — Fixed implicit `any` type error
+6. `install.sh` — Switched from `cd + npm run build` to `npm run build --workspace=timps-code`
+
+### Updated gotchas
+
+- **Server deps already fixed** — `packages/server/package.json` already has `@timps-ai/memory-core` in `dependencies` and `typescript` in `devDependencies`. The AGENTS.md notes about missing deps and eval import errors in `executor.ts` are stale — all exports resolve correctly.
+- **`supply-chain-audit.yml`** — already uses `google/osv-scanner-action@v2.3.8` (upgraded from v1.0.2).
+

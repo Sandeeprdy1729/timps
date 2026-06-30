@@ -399,7 +399,7 @@ export class MemoryServer {
         host: '0.0.0.0',
         ...(typeof this.options.grpc === 'object' ? this.options.grpc : {}),
       };
-      const result = await startGrpcServer(this.engine, grpcOpts);
+      const result = await startGrpcServer(this.engine, grpcOpts, this._eventBus);
       this.grpcServer = result.server;
       this.grpcPort = result.port;
     }

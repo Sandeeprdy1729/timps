@@ -639,7 +639,7 @@ describe('ContextVector — L19: encoding context matching', () => {
 
   it('match returns empty when no similar contexts', () => {
     cv.capture({ domain: 'coding', activeFiles: ['src/a.ts'], tags: ['typescript'], timeOfDay: 600, dayOfWeek: 2 });
-    const matches = cv.match({ domain: 'design', activeFiles: ['figma'], tags: [] });
+    const matches = cv.match({ domain: 'design', activeFiles: ['figma'], tags: [], timeOfDay: 300, dayOfWeek: 4 });
     expect(matches.length).toBe(0);
   });
 
