@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 32    | 57        |
+| High     | 89    | 33    | 56        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **43** | **345** |
+| **Total**| **388** | **44** | **344** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 32 High
+## ✅ Fixed — 11 Critical + 33 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 345 Issues
+## 📋 Remaining — 344 Issues
 
-### High (57)
+### High (56)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -67,6 +67,7 @@
 | H30 | `packages/memory-core/src/ProvenanceForge.ts`, `MemoryEngine.ts` | ProvenanceForge.record() generates content-hash ID (sha256) and saves as {hash}.json, but _recallCompute/provenanceForge.explain(entry.id) looks up by memory entry ID (mem_xxx) — file never exists; entire intelligence pipeline operates on defaults | record() accepts optional overrideId; store() passes the memory entry ID so provenance is keyed by the same ID used in lookups |
 | H31 | `packages/memory-core/src/sandbox/Sandbox.ts` | 3 sub-issues: (1) BashSandbox has no network block when network:none, (2) NodeSandbox only shadows require() leaving fetch/ESM import/process.binding open, (3) memoryMb/cpuShares never enforced | (1) Bash function overrides + PATH no-op wrappers for 13 network tools, (2) globalThis.fetch/XMLHttpRequest/Request/WebSocket blocked, process.binding deleted, (3) ulimit -v for bash, V8 --max-old-space-size/--max-semi-space-size for Node, (4) buildEnv drops credentials/SSH/proxy vars |
 | H32 | `packages/memory-core/src/sandbox/WasmSandbox.ts` | 3 sub-issues: (1) runNode passes ...process.env leaking all secrets, (2) dead ternary (both branches 'null') makes permission check a no-op, (3) createAbiProxy returns 'stub_' strings instead of real results or denial errors | (1) Stripped env to PATH:/usr/bin:/bin + NODE_OPTIONS + TIMPS_SANDBOXED, (2) require() shadowed for 13 dangerous modules; _timsOrigRequire deleted before main(), (3) ABI proxy checks perms.includes(m), denies or emits JSON-lines marker, (4) dead ternary removed |
+| H33 | `packages/memory-core/src/server/auth.ts:50` | timingSafeEqual called outside try/catch; RangeError on mismatched-length signature propagates 500 instead of 401 | Moved timingSafeEqual inside try block — catch returns null, middleware sends 401 |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
