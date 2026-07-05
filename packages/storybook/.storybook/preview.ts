@@ -1,5 +1,4 @@
 import type { Preview } from '@storybook/react';
-import { setGlobalConfig } from '@storybook/test';
 
 import '../src/index.css';
 
