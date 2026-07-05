@@ -1,7 +1,16 @@
+export interface EvalEntrySeed {
+  content: string;
+  timestamp?: number;
+  actorId?: string;
+  tags?: string[];
+}
+
 export interface EvalExample {
   query: string;
   expectedMemories: string[];
   context?: string;
+  /** Optional per-entry seed data (timestamps, actorIds) — when present, seedEngineWithDataset uses these instead of flat expectedMemories */
+  seeds?: EvalEntrySeed[];
 }
 
 export interface EvalDataset {
@@ -9,6 +18,8 @@ export interface EvalDataset {
   version: string;
   description: string;
   examples: EvalExample[];
+  /** Optional distractor entries that are seeded alongside examples to simulate a larger corpus */
+  distractors?: string[];
 }
 
 export interface EvalMetric {

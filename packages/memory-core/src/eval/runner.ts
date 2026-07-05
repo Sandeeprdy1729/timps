@@ -46,11 +46,31 @@ export function computeDatasetSha(): string {
 
 export function seedEngineWithDataset(engine: MemoryEngine, dataset: EvalDataset): void {
   for (const example of dataset.examples) {
-    for (const memory of example.expectedMemories) {
+    if (example.seeds) {
+      for (const seed of example.seeds) {
+        engine.store({
+          content: seed.content,
+          type: 'fact',
+          tags: seed.tags ?? [dataset.name, example.context || 'general'],
+          timestamp: seed.timestamp,
+        });
+      }
+    } else {
+      for (const memory of example.expectedMemories) {
+        engine.store({
+          content: memory,
+          type: 'fact',
+          tags: [dataset.name, example.context || 'general'],
+        });
+      }
+    }
+  }
+  if (dataset.distractors) {
+    for (const d of dataset.distractors) {
       engine.store({
-        content: memory,
+        content: d,
         type: 'fact',
-        tags: [dataset.name, example.context || 'general'],
+        tags: [dataset.name, 'distractor'],
       });
     }
   }

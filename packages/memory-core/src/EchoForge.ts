@@ -383,21 +383,55 @@ function reservoirStep(
   return sparse;
 }
 
-/** Linear readout from reservoir state → risk score for a given domain */
+/** Linear readout from reservoir state → risk score for a given domain.
+ *  Score depends on actual graph properties (node density, conflict edges,
+ *  recency-weighted echo amplitude) rather than hash-seeded random weights. */
 function reservoirReadout(
   state: Record<number, number>,
   domain: EchoDomain,
-  seedOffset: number
+  nodes: EchoNode[],
+  edges: EchoEdge[],
+  adjOut: Map<string, EchoEdge[]>,
+  now: number,
 ): number {
-  // Deterministic readout weights seeded per domain
-  const rng = lcgRng(murmurhash(domain) + seedOffset);
-  const readoutW = Array.from({ length: RESERVOIR_SIZE }, () => rng() * 0.1);
-  let score = 0.5; // bias
-  for (const [dimStr, val] of Object.entries(state)) {
-    const dim = Number(dimStr);
-    score += (readoutW[dim] ?? 0) * val;
+  // 1. Reservoir activation energy — how much the stored memories drive the state
+  let energy = 0;
+  for (const val of Object.values(state)) energy += val * val;
+  const reservoirFactor = Math.min(1, Math.sqrt(energy) * 0.6);
+
+  // 2. Active node count — more nodes in the domain = more attention needed
+  const activeNodes = nodes.filter(n => n.invalidAt === null).length;
+  const nodeFactor = Math.min(1, activeNodes / 15);
+
+  // 3. Conflict edges involving domain nodes — contradictions amplify risk
+  let conflictWeight = 0;
+  const domainNodeIds = new Set(nodes.map(n => n.id));
+  for (const edge of edges) {
+    if (edge.edgeType === 'contradicts' && (domainNodeIds.has(edge.fromId) || domainNodeIds.has(edge.toId))) {
+      conflictWeight += Math.abs(edge.weight);
+    }
   }
-  return Math.max(0, Math.min(1, score));
+  const conflictFactor = Math.min(1, conflictWeight);
+
+  // 4. Recency-weighted echo amplitude — recent strong signals = ongoing situation
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  let weightedAmp = 0;
+  let totalWeight = 0;
+  for (const n of nodes) {
+    if (n.invalidAt !== null) continue;
+    const age = Math.max(0, now - n.createdAt);
+    const recencyWeight = Math.exp(-age / weekMs);
+    weightedAmp += n.echoAmp * recencyWeight;
+    totalWeight += recencyWeight;
+  }
+  const ampFactor = totalWeight > 0 ? Math.min(1, weightedAmp / totalWeight) : 0;
+
+  return Math.max(0, Math.min(1,
+    0.35 * reservoirFactor +
+    0.30 * nodeFactor +
+    0.20 * conflictFactor +
+    0.15 * ampFactor
+  ));
 }
 
 // ── EchoForge class ───────────────────────────────────────────────────────
@@ -614,7 +648,7 @@ export class EchoForge implements IMemoryLayer {
 
     // Compute base salience from reservoir readout
     const baseSalience = opts.salience ??
-      Math.max(0.3, Math.min(1, reservoirReadout(newReservoirState, domain, 0)));
+      Math.max(0.3, Math.min(1, reservoirReadout(newReservoirState, domain, candidates, this.storeData.edges, this.adjOut, now)));
 
     // ── Step 3: Insert node ───────────────────────────────────────────
     const node: EchoNode = {
@@ -1035,9 +1069,8 @@ export class EchoForge implements IMemoryLayer {
     const zeroInput: Record<number, number> = {};
 
     for (let step = 0; step < steps; step++) {
-      // Step reservoir forward with zero input (free-run for foresight)
       const nextState = reservoirStep(trajectoryState, zeroInput);
-      const risk = reservoirReadout(nextState, domain, step);
+      const risk = reservoirReadout(nextState, domain, nodes, this.storeData.edges, this.adjOut, now);
       trajectory.push(risk);
       Object.assign(trajectoryState, nextState);
     }
@@ -1061,13 +1094,13 @@ export class EchoForge implements IMemoryLayer {
     const confidence = Math.min(0.95, 0.4 + nodes.length * 0.06 + Math.abs(interferenceSignal) * 0.1);
 
     const explanations: Record<EchoDomain, string> = {
-      burnout: `Echo propagation from ${nodes.length} burnout signals; velocity + regret patterns detected.`,
+      burnout: `${nodes.length} burnout signals in graph; risk from node density, recency-weighted amplitude, and ${interferenceSignal.toFixed(2)} interference.`,
       relationship: `${nodes.length} relationship echoes with interference score ${interferenceSignal.toFixed(2)}.`,
-      decision: `${nodes.length} decision nodes; reversal risk via contradicting edges.`,
-      code_pattern: `${nodes.length} code pattern echoes; tech-debt resonance detected.`,
-      contradiction: `${nodes.length} contradiction nodes; destructive interference at ${drivingNodeIds.length} driving nodes.`,
+      decision: `${nodes.length} decision nodes; reversal risk from reservoir energy and graph structure.`,
+      code_pattern: `${nodes.length} code pattern echoes; tech-debt risk from graph state.`,
+      contradiction: `${nodes.length} contradiction nodes; destructive interference across ${drivingNodeIds.length} driving nodes.`,
       goal: `${nodes.length} goal echoes; drift trajectory over ${steps} steps.`,
-      general: `${nodes.length} general echoes; composite risk via reservoir readout.`,
+      general: `${nodes.length} general echoes; composite risk from activation energy and graph density.`,
     };
 
     return {
