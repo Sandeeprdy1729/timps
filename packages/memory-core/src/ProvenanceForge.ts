@@ -43,8 +43,8 @@ export class ProvenanceForge {
     fs.mkdirSync(this.dir, { recursive: true });
   }
 
-  record(input: ProvenanceInput): Provenance {
-    const hash = crypto
+  record(input: ProvenanceInput, overrideId?: string): Provenance {
+    const hash = overrideId ?? crypto
       .createHash('sha256')
       .update(JSON.stringify({ ...input, recordedAt: Date.now() }))
       .digest('hex');
