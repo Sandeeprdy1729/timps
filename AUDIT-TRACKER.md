@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 10    | 79        |
+| High     | 89    | 11    | 78        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **21** | **367** |
+| **Total**| **388** | **22** | **366** |
 
 ---
 
@@ -45,6 +45,7 @@
 | H8 | `crates/timps-providers/src/claude.rs` | Tool call stub is empty (never emits `ToolCall`), `Role::Tool` mapped to `"assistant"`, no HTTP status check, `resp.text()` buffers entire response | Added `PendingTool` state machine + `input_json_delta` accumulation; `Role::Tool` → `tool_result` content block; status check before body; chunked SSE streaming |
 | H9 | `download_cli.sh` | Always dies with 'Could not determine latest version' because repo has zero releases | Falls back to `git clone` + `cargo build --release` when no GitHub release is found |
 | H10 | `evals/suites/chronos-forge.ts` | Baseline metrics fabricated with `Math.random()` dice-rolls, fake improvement deltas | Replaced with real computations: trigram Jaccard for temporal recall + contradiction detection, count-based heuristic for foresight, measured latency |
+| H11 | `Formula/timps.rb` | Homebrew formula has all-zero sha256 placeholders and points to non-existent release assets | Rewritten as head-only formula that builds from source via `cargo install` |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
