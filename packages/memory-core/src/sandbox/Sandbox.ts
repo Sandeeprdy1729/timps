@@ -179,33 +179,58 @@ export class SubprocessSandbox implements SandboxHandle {
   }
 
   private buildEnv(): NodeJS.ProcessEnv {
+    if (this.options.network === 'none') {
+      return this.netBlockEnv();
+    }
+
     const env: NodeJS.ProcessEnv = {
-      PATH: this.safePath(),
+      PATH: '/usr/bin:/bin:' + this.workspaceDir,
       HOME: this.workspaceDir,
       TMPDIR: this.workspaceDir,
       TIMPS_SANDBOXED: '1',
       TIMPS_SANDBOX_ID: this.id,
       ...this.options.env,
     };
-
-    if (this.options.network === 'none') {
-      env.HTTP_PROXY = '';
-      env.HTTPS_PROXY = '';
+    if (this.options.network === 'allow-list') {
       env.NO_PROXY = '*';
-      delete env.DOCKER_HOST;
-      delete env.KUBECONFIG;
     }
-
     return env;
   }
 
-  private safePath(): string {
-    return [
-      '/usr/local/bin',
-      '/usr/bin',
-      '/bin',
-      this.workspaceDir,
-    ].join(path.delimiter);
+  /** Write executable wrappers that reject network access to the sandbox bin dir. */
+  private createNetBlockWrappers(): string {
+    const sandboxBin = path.join(this.workspaceDir, '.timps-sbx-bin');
+    fs.mkdirSync(sandboxBin, { recursive: true });
+    const wrappers = ['curl', 'wget', 'nc', 'ncat', 'telnet', 'ssh', 'scp', 'sftp', 'rsync', 'ftp', 'aria2c', 'axel', 'httpie'];
+    for (const tool of wrappers) {
+      const p = path.join(sandboxBin, tool);
+      fs.writeFileSync(p, `#!/bin/sh\necho "TIMPS Constitution: network is disabled in this sandbox." >&2\nexit 1\n`, 'utf-8');
+      fs.chmodSync(p, 0o755);
+    }
+    return sandboxBin;
+  }
+
+  /** Build an env that strips all credential/network state and prepends no-op wrappers. */
+  private netBlockEnv(): NodeJS.ProcessEnv {
+    const sandboxBin = this.createNetBlockWrappers();
+    const env: NodeJS.ProcessEnv = {
+      PATH: [sandboxBin, '/usr/bin', '/bin'].join(path.delimiter),
+      HOME: this.workspaceDir,
+      TMPDIR: this.workspaceDir,
+      HTTP_PROXY: '',
+      HTTPS_PROXY: '',
+      NO_PROXY: '*',
+      ALL_PROXY: '',
+      TIMPS_SANDBOXED: '1',
+      TIMPS_SANDBOX_ID: this.id,
+      ...this.options.env,
+    };
+    delete env.DOCKER_HOST;
+    delete env.KUBECONFIG;
+    delete env.AWS_ACCESS_KEY_ID;
+    delete env.AWS_SECRET_ACCESS_KEY;
+    delete env.SSH_AUTH_SOCK;
+    return env;
   }
 }
 
@@ -284,7 +309,9 @@ export class NodeSandbox extends SubprocessSandbox {
 
   async exec(jsCode: string, args: string[] = [], opts?: { stdin?: string; timeoutMs?: number }): Promise<ExecResult> {
     const code = this.options.network === 'none' ? this.injectNodeNetBlock(jsCode) : jsCode;
-    return super.exec(process.execPath, ['-e', code, ...args], opts);
+    const memMb = this.options.memoryMb;
+    const v8Args = [`--max-old-space-size=${memMb}`, `--max-semi-space-size=${Math.max(4, Math.floor(memMb / 16))}`];
+    return super.exec(process.execPath, [...v8Args, '-e', code, ...args], opts);
   }
 
   private injectNodeNetBlock(code: string): string {
@@ -301,6 +328,12 @@ export class NodeSandbox extends SubprocessSandbox {
       "    return _timsOrigRequire(id);",
       "  };",
       "})();",
+      "globalThis.fetch = function(){ throw new Error('TIMPS Constitution: fetch is disabled in this sandbox.'); };",
+      "globalThis.XMLHttpRequest = function(){ throw new Error('TIMPS Constitution: XMLHttpRequest is disabled in this sandbox.'); };",
+      "globalThis.Request = function(){ throw new Error('TIMPS Constitution: Request is disabled in this sandbox.'); };",
+      "globalThis.WebSocket = function(){ throw new Error('TIMPS Constitution: WebSocket is disabled in this sandbox.'); };",
+      "delete process.binding;",
+      "delete process._linkedBinding;",
       code,
     ].join('\n');
   }
@@ -314,7 +347,33 @@ export class BashSandbox extends SubprocessSandbox {
   }
 
   async exec(shellCode: string, args: string[] = [], opts?: { stdin?: string; timeoutMs?: number }): Promise<ExecResult> {
-    return super.exec('bash', ['-c', shellCode, ...args], opts);
+    let code = shellCode;
+    if (this.options.network === 'none') {
+      code = this.injectBashNetBlock(shellCode);
+    }
+    const memKb = this.options.memoryMb * 1024;
+    const preamble = `ulimit -v ${memKb} 2>/dev/null; `;
+    return super.exec('bash', ['-c', preamble + code, ...args], opts);
+  }
+
+  private injectBashNetBlock(code: string): string {
+    return [
+      '# TIMPS Constitutional network block',
+      '# Override common network commands with no-ops',
+      'curl()    { echo "TIMPS Constitution: curl disabled in this sandbox." >&2; return 1; }',
+      'wget()    { echo "TIMPS Constitution: wget disabled in this sandbox." >&2; return 1; }',
+      'nc()      { echo "TIMPS Constitution: nc disabled in this sandbox." >&2; return 1; }',
+      'ncat()    { echo "TIMPS Constitution: ncat disabled in this sandbox." >&2; return 1; }',
+      'telnet()  { echo "TIMPS Constitution: telnet disabled in this sandbox." >&2; return 1; }',
+      'ssh()     { echo "TIMPS Constitution: ssh disabled in this sandbox." >&2; return 1; }',
+      'scp()     { echo "TIMPS Constitution: scp disabled in this sandbox." >&2; return 1; }',
+      'ftp()     { echo "TIMPS Constitution: ftp disabled in this sandbox." >&2; return 1; }',
+      'rsync()   { echo "TIMPS Constitution: rsync disabled in this sandbox." >&2; return 1; }',
+      '# Note: /dev/tcp and /dev/udp are bash builtins not blockable via functions;',
+      '# env-based PATH wrappers in buildEnv() cover the binary equivalents.',
+      '',
+      code,
+    ].join('\n');
   }
 }
 
