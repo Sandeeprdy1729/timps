@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 15    | 74        |
+| High     | 89    | 16    | 73        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **26** | **362** |
+| **Total**| **388** | **27** | **361** |
 
 ---
 
@@ -50,6 +50,7 @@
 | H13 | `packages/cache/src/index.ts` | Extra stray `};` after `cacheWithTTL` arrow function makes the file a SyntaxError | Removed the unmatched closing brace |
 | H14 | `packages/connection-manager/src/index.ts` | API keys/OAuth tokens stored in plaintext in localStorage | Added AES-256-GCM encryption via Web Crypto API; key in sessionStorage (ephemeral); credentials encrypted before serialization, decrypted on load |
 | H15 | `packages/date-utils/src/index.ts` | Two missing closing parentheses (`endOfWeek` line 96, `min` line 236) cause SyntaxError | Added the missing `)` on both lines |
+| H16 | `packages/event-bus/src/index.ts`, `packages/connection-manager/src/index.ts`, `packages/timps-desktop/src/components/IntegrationSettings.tsx` | Triple-dead activity feed: wildcard filter never matches (strict equality), no publisher bridges to EventBus, subscription leaks on remount | Added `matchWildcard()` to EventBus (supports `*`-suffix patterns); bridged `ConnectionManager.emit()` → `eventBus.publish()`; stored sub ID and unsub on cleanup |
 
 ⏸️ Paused — awaiting user instruction to proceed
 

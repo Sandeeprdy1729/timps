@@ -6,6 +6,7 @@ import {
   ReauthTrigger,
   IntegrationCredentialUpdate,
 } from './types.js';
+import { eventBus } from '../../event-bus/src/index.js';
 
 export type ConnectionEventType = 
   | 'connection:connected'
@@ -147,6 +148,10 @@ export class ConnectionManager {
         Promise.resolve(callback(event)).catch(console.error);
       }
     }
+    eventBus.publish('connection-manager', event.type, event, {
+      connectionId: event.connectionId,
+      integrationId: event.integrationId,
+    });
   }
 
   on(eventType: ConnectionEventType, callback: EventCallback): void {
