@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import { c } from 'picocolors';
+import pc from 'picocolors';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'verbose' | 'silly';
 
@@ -11,12 +11,12 @@ interface LogContext {
 }
 
 const colorScheme = {
-  error: c.red,
-  warn: c.yellow,
-  info: c.blue,
-  debug: c.cyan,
-  verbose: c.gray,
-  silly: c.white,
+  error: pc.red,
+  warn: pc.yellow,
+  info: pc.blue,
+  debug: pc.cyan,
+  verbose: pc.gray,
+  silly: pc.white,
 };
 
 const createTimpsLogger = (options?: {
@@ -35,23 +35,23 @@ const createTimpsLogger = (options?: {
       return info;
     })(),
     json ? format.json() : format.printf(({ timestamp, level, message, sessionId, tool, duration, stack, ...meta }) => {
-      const color = colorScheme[level as LogLevel] || c.white;
-      const timestampStr = c.dim(timestamp as string);
+      const color = colorScheme[level as LogLevel] || pc.white;
+      const timestampStr = pc.dim(timestamp as string);
       const levelStr = color(level.toUpperCase().padEnd(7));
-      const sessionStr = sessionId ? c.dim(`[${sessionId.slice(0, 8)}]`) : '';
-      const toolStr = tool ? c.green(`[${tool}]`) : '';
-      const durationStr = duration !== undefined ? c.yellow(`+${duration}ms`) : '';
+      const sessionStr = sessionId ? pc.dim(`[${sessionId.slice(0, 8)}]`) : '';
+      const toolStr = tool ? pc.green(`[${tool}]`) : '';
+      const durationStr = duration !== undefined ? pc.yellow(`+${duration}ms`) : '';
 
       let log = `${timestampStr} ${levelStr} ${sessionStr}${toolStr} ${color(message as string)}${durationStr ? ` ${durationStr}` : ''}`;
 
       const metaKeys = Object.keys(meta).filter((k) => meta[k] !== undefined);
       if (metaKeys.length > 0) {
-        const metaStr = c.dim(JSON.stringify(meta, null, 0));
+        const metaStr = pc.dim(JSON.stringify(meta, null, 0));
         log += ` ${metaStr}`;
       }
 
       if (stack) {
-        log += c.red(`\n${stack}`);
+        log += pc.red(`\n${stack}`);
       }
 
       return log;
