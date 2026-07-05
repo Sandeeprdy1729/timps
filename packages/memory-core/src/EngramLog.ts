@@ -52,9 +52,17 @@ export class EngramLog {
     const trimmed = content.trim();
     if (!trimmed) return;
     const lines = trimmed.split('\n');
-    const last = JSON.parse(lines[lines.length - 1]) as EngramEntry;
-    this.lastHash = last.hash;
-    this.index = last.index + 1;
+    // Walk backwards from last line to handle torn writes (crash mid-append)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const entry = JSON.parse(lines[i]) as EngramEntry;
+        this.lastHash = entry.hash;
+        this.index = entry.index + 1;
+        return;
+      } catch {
+        continue;
+      }
+    }
   }
 
   append(input: Omit<EngramEntry, 'hash' | 'index' | 'prevHash'>): EngramEntry {
@@ -92,7 +100,8 @@ export class EngramLog {
     const lines = trimmed.split('\n');
     let prev = '0'.repeat(64);
     for (const line of lines) {
-      const e = JSON.parse(line) as EngramEntry;
+      let e: EngramEntry;
+      try { e = JSON.parse(line) as EngramEntry; } catch { continue; }
       if (e.prevHash !== prev) return { valid: false, brokenAt: e.index };
       const { hash: _h, ...rest } = e;
       const recomputed = crypto
@@ -113,7 +122,8 @@ export class EngramLog {
     if (!trimmed) return out;
     const lines = trimmed.split('\n');
     for (let i = lines.length - 1; i >= 0 && out.length < limit; i--) {
-      const e = JSON.parse(lines[i]) as EngramEntry;
+      let e: EngramEntry;
+      try { e = JSON.parse(lines[i]) as EngramEntry; } catch { continue; }
       if (Object.entries(filter).every(([k, v]) => e[k as keyof EngramEntry] === v)) {
         out.push(e);
       }
