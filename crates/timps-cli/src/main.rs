@@ -232,11 +232,14 @@ async fn run_one_shot(
     memory: Arc<MemoryStore>,
     tools: Arc<ToolRegistry>,
 ) -> Result<()> {
-    let agent = AgentBuilder::new()
+    let mut agent = AgentBuilder::new()
         .provider(provider)
         .memory(memory)
-        .opts(AgentOptions::default())
-        .build()?;
+        .opts(AgentOptions::default());
+    for t in tools.all() {
+        agent = agent.tool(t);
+    }
+    let agent = agent.build()?;
 
     let (tx, mut rx) = mpsc::channel(64);
     let prompt = prompt.to_string();
@@ -283,11 +286,14 @@ async fn run_interactive(
         if line.is_empty() { continue; }
         if line == "/exit" || line == "/quit" { break; }
 
-        let agent = AgentBuilder::new()
+        let mut agent = AgentBuilder::new()
             .provider(provider.clone())
             .memory(memory.clone())
-            .opts(AgentOptions::default())
-            .build()?;
+            .opts(AgentOptions::default());
+        for t in tools.all() {
+            agent = agent.tool(t);
+        }
+        let agent = agent.build()?;
 
         let (tx, mut rx) = mpsc::channel(64);
         let prompt = line.to_string();
