@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 7     | 82        |
+| High     | 89    | 8     | 81        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **18** | **370** |
+| **Total**| **388** | **19** | **369** |
 
 ---
 
@@ -42,6 +42,7 @@
 | H5 | `crates/timps-agent/src/lib.rs` | Retry `continue` resumes dead stream instead of re-calling provider | Changed to labeled `continue 'turn` to restart the outer provider loop |
 | H6 | `crates/timps-cli/src/main.rs` | Tools constructed but never registered with AgentBuilder | Added `.tool(t)` loop in `run_one_shot` and `run_interactive` from `tools.all()` |
 | H7 | `crates/timps-providers/src/azure.rs`, `compat.rs` | Azure URL has `?api-version` before `/chat/completions`; uses Bearer auth instead of `api-key` header | Added `with_query()` and `with_auth_header()` builders to `OpenAICompat`; Azure now uses `api-key` header and `api-version` as query param |
+| H8 | `crates/timps-providers/src/claude.rs` | Tool call stub is empty (never emits `ToolCall`), `Role::Tool` mapped to `"assistant"`, no HTTP status check, `resp.text()` buffers entire response | Added `PendingTool` state machine + `input_json_delta` accumulation; `Role::Tool` → `tool_result` content block; status check before body; chunked SSE streaming |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
