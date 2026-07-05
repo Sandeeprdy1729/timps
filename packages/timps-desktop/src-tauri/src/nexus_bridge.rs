@@ -43,8 +43,7 @@ pub struct UnifiedGraph {
 
 fn memory_dir(project_path: &str) -> String {
     let hash = project_hash_inner(project_path);
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    format!("{}/.timps/memory/{}", home, hash)
+    format!("{}/.timps/memory/{}", crate::commands::home_dir(), hash)
 }
 
 fn to_base36(mut n: u32) -> String {
