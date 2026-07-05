@@ -1702,13 +1702,16 @@ export class MemoryEngine {
         teamId: options?.teamId ?? currentScope.teamId,
         projectId: pid,
       };
-      if (typeof (this._backend as any).setScope === 'function') {
-        (this._backend as any).setScope(pidScope);
-      }
-      const scored = await this.recall(query, options);
-      results.set(pid, scored);
-      if (typeof (this._backend as any).setScope === 'function') {
-        (this._backend as any).setScope(currentScope);
+      try {
+        if (typeof (this._backend as any).setScope === 'function') {
+          (this._backend as any).setScope(pidScope);
+        }
+        const scored = await this.recall(query, options);
+        results.set(pid, scored);
+      } finally {
+        if (typeof (this._backend as any).setScope === 'function') {
+          (this._backend as any).setScope(currentScope);
+        }
       }
     }
 
