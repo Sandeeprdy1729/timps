@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 17    | 72        |
+| High     | 89    | 18    | 71        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **28** | **360** |
+| **Total**| **388** | **29** | **359** |
 
 ---
 
@@ -52,6 +52,7 @@
 | H15 | `packages/date-utils/src/index.ts` | Two missing closing parentheses (`endOfWeek` line 96, `min` line 236) cause SyntaxError | Added the missing `)` on both lines |
 | H16 | `packages/event-bus/src/index.ts`, `packages/connection-manager/src/index.ts`, `packages/timps-desktop/src/components/IntegrationSettings.tsx` | Triple-dead activity feed: wildcard filter never matches (strict equality), no publisher bridges to EventBus, subscription leaks on remount | Added `matchWildcard()` to EventBus (supports `*`-suffix patterns); bridged `ConnectionManager.emit()` → `eventBus.publish()`; stored sub ID and unsub on cleanup |
 | H17 | `packages/logger/src/index.ts` + `package.json` | Two issues: `picocolors` has no named export `c` (TypeError on load), and neither `winston` nor `picocolors` declared as dependencies — module resolution fails | Changed import to `import pc from 'picocolors'` + `pc.` throughout; added `winston` and `picocolors` to package.json dependencies; ran `npm install` |
+| H18 | `packages/memory-core/src/native.ts`, `packages/memory-core/src/search.ts`, `packages/memory-core-rs/bench/bench.ts` | NativeCore interface, search.ts, and benchmark declare 9 storage/search/hashing functions that Rust addon doesn't export (only computeBatchSimilarity, kmeansClusterFlat, eigenmodeWarmStart, RustLsh exist) | Removed phantom function declarations from NativeCore interface; removed dead `n.searchEntries()` call + `getNative` import from search.ts; stripped native benchmark section that would crash at runtime |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
