@@ -11,6 +11,10 @@ pub struct OpenAICompat {
     pub base_url: String,
     pub api_key: String,
     pub model: String,
+    /// Optional query parameters appended to the URL (e.g. api-version for Azure)
+    pub query_params: Vec<(String, String)>,
+    /// Custom auth header value instead of `Authorization: Bearer <key>` (e.g. "api-key" for Azure)
+    pub auth_header: Option<String>,
 }
 
 impl OpenAICompat {
@@ -20,7 +24,21 @@ impl OpenAICompat {
             base_url: base_url.into(),
             api_key: api_key.into(),
             model: model.into(),
+            query_params: vec![],
+            auth_header: None,
         }
+    }
+
+    /// Builder-style: set query parameters.
+    pub fn with_query(mut self, params: Vec<(String, String)>) -> Self {
+        self.query_params = params;
+        self
+    }
+
+    /// Builder-style: use a custom auth header name instead of `Authorization: Bearer`.
+    pub fn with_auth_header(mut self, header: impl Into<String>) -> Self {
+        self.auth_header = Some(header.into());
+        self
     }
 
     fn messages_to_json(system: &str, messages: &[Message]) -> Vec<Value> {
@@ -54,12 +72,20 @@ impl OpenAICompat {
             body["tools"] = json!(tools);
         }
 
-        let resp = self.client
-            .post(format!("{}/chat/completions", self.base_url))
-            .bearer_auth(&self.api_key)
-            .json(&body)
-            .send()
-            .await?;
+        let mut req = self.client
+            .post(format!("{}/chat/completions", self.base_url));
+
+        if let Some(header) = &self.auth_header {
+            req = req.header(header, &self.api_key);
+        } else {
+            req = req.bearer_auth(&self.api_key);
+        }
+
+        if !self.query_params.is_empty() {
+            req = req.query(&self.query_params);
+        }
+
+        let resp = req.json(&body).send().await?;
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
