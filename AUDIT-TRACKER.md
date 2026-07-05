@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 35    | 54        |
+| High     | 89    | 36    | 53        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **46** | **342** |
+| **Total**| **388** | **47** | **341** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 35 High
+## ✅ Fixed — 11 Critical + 36 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 342 Issues
+## 📋 Remaining — 341 Issues
 
-### High (54)
+### High (53)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -70,6 +70,7 @@
 | H33 | `packages/memory-core/src/server/auth.ts:50` | timingSafeEqual called outside try/catch; RangeError on mismatched-length signature propagates 500 instead of 401 | Moved timingSafeEqual inside try block — catch returns null, middleware sends 401 |
 | H34 | `packages/memory-core/src/telemetry/MetricsRegistry.ts:252` | prometheusExport() emits dots in metric names and two adjacent label blocks — Prometheus rejects the scrape payload | Sanitize dots → underscores at output; merge labels into single block (e.g. `{layer="echo",le="5"}`); fix test assertions |
 | H35 | `packages/plugin-git/src/index.ts:21`, `packages/plugin-shell/src/index.ts:14` | Both plugins define tools as Array with `{content}` returns, but SDK requires `manifest.tools: ToolSpec[]` + `tools: Record<string, ToolHandler>` returning `{output, error}` — `allTools()` skips them, contributing zero tools | Added `manifest.tools` (5 specs for git, 3 for shell); rewrote `tools` as Record; handlers now return `{output, error}` and accept `_ctx` param. All 8 tools now resolve via registry. |
+| H36 | `packages/server/tools/toolsDb.ts:787` | `CREATE INDEX USING GIN(gist)` on plain `TEXT` column — stock Postgres has no default GIN opclass for text; migration aborts mid-way, dropping all downstream tables | Changed to `(gist)` — default b-tree index works correctly on TEXT |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
