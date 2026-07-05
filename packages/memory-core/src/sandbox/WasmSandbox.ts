@@ -78,54 +78,70 @@ export class WasmSandbox {
     const start = Date.now();
     const scriptPath = path.join(path.dirname(plugin.wasmPath), 'exec.js');
 
-    const sandboxCode = `
-const __permissions = ${JSON.stringify(plugin.permissions)};
-const __abi = ${JSON.stringify(Object.keys(abi))};
-const __pluginName = ${JSON.stringify(pluginName)};
-const __toolName = ${JSON.stringify(toolName)};
-const __args = ${JSON.stringify(args)};
-
-const timps = {};
-for (const fn of __abi) {
-  timps[fn] = (...a) => {
-    console.log(JSON.stringify({ type: 'abi_call', fn, args: a }));
-    return null;
-  };
-}
-
-const handler = ${plugin.permissions.includes('network') ? 'null' : 'null'};
-
-async function main() {
-  const module = { exports: {} };
-  const wasmCode = require('fs').readFileSync(${JSON.stringify(plugin.wasmPath)});
-  // WASM execution via WebAssembly global if available
-  try {
-    if (typeof WebAssembly !== 'undefined' && WebAssembly.instantiate) {
-      const wasmModule = new WebAssembly.Module(wasmCode);
-      const imports = { timps: createAbiProxy(__permissions) };
-      const instance = new WebAssembly.Instance(wasmModule, imports);
-      if (typeof instance.exports[__toolName] === 'function') {
-        return instance.exports[__toolName](JSON.stringify(__args));
-      }
-    }
-  } catch (e) {
-    // WASM not available, return error
-    return JSON.stringify({ error: String(e) });
-  }
-  return JSON.stringify({ error: 'WASM runtime not available in this environment' });
-}
-
-function createAbiProxy(perms) {
-  const proxy = {};
-  const methods = ['memory.recall', 'memory.store', 'network.fetch'];
-  for (const m of methods) {
-    proxy[m] = perms.includes(m) ? (...a) => JSON.stringify({ result: 'stub_' + m, args: a }) : () => JSON.stringify({ error: 'permission denied: ' + m });
-  }
-  return proxy;
-}
-
-main().then(r => process.stdout.write(String(r))).catch(e => process.stdout.write(JSON.stringify({ error: String(e) })));
-`;
+    const sandboxCode = [
+      '// TIMPS WasmSandbox — permission-enforced, env-stripped execution',
+      `const __permissions = ${JSON.stringify(plugin.permissions)};`,
+      `const __pluginName = ${JSON.stringify(pluginName)};`,
+      `const __toolName = ${JSON.stringify(toolName)};`,
+      `const __args = ${JSON.stringify(args)};`,
+      `const __wasmPath = ${JSON.stringify(plugin.wasmPath)};`,
+      '',
+      '// Block dangerous modules at the require level',
+      'const _timsOrigRequire = require;',
+      "const _timsBlocked = new Set(['fs', 'child_process', 'net', 'http', 'http2', 'https', 'dgram', 'dns', 'tls', 'cluster', 'vm', 'worker_threads', 'module']);",
+      'require = function(id) {',
+      "  const norm = String(id).replace(/^node:/, '');",
+      '  if (_timsBlocked.has(norm)) {',
+      "    throw new Error('TIMPS Constitution: module \"' + id + '\" is disabled in WasmSandbox.');",
+      '  }',
+      '  return _timsOrigRequire(id);',
+      '};',
+      '',
+      '// ABI proxy — enforces permissions, uses JSON-lines for real operations',
+      'function createAbiProxy(perms) {',
+      '  const proxy = {};',
+      '  const methods = {',
+      "    'memory.recall': 'memory',",
+      "    'memory.store': 'memory',",
+      "    'network.fetch': 'network',",
+      '  };',
+      '  for (const [m, category] of Object.entries(methods)) {',
+      '    proxy[m] = function(...a) {',
+      '      if (!perms.includes(m)) {',
+      "        return JSON.stringify({ error: 'permission denied: ' + m });",
+      '      }',
+      // Write ABI request to stdout as JSON line; parent will intercept
+      "      process.stdout.write('\\n__TIMPS_ABI__' + JSON.stringify({ fn: m, args: a }) + '\\n');",
+      "      return JSON.stringify({ result: 'ok' });",
+      '    };',
+      '  }',
+      '  return proxy;',
+      '}',
+      '',
+      'async function main() {',
+      '  try {',
+      "    const _fs = _timsOrigRequire('fs');",
+      '    const wasmCode = _fs.readFileSync(__wasmPath);',
+      "    if (typeof WebAssembly !== 'undefined' && WebAssembly.instantiate) {",
+      '      const wasmModule = new WebAssembly.Module(wasmCode);',
+      '      const imports = { timps: createAbiProxy(__permissions) };',
+      '      const instance = new WebAssembly.Instance(wasmModule, imports);',
+      "      if (typeof instance.exports[__toolName] === 'function') {",
+      '        const result = instance.exports[__toolName](JSON.stringify(__args));',
+      '        process.stdout.write(String(result));',
+      '        return;',
+      '      }',
+      '    }',
+      "    process.stdout.write(JSON.stringify({ error: 'WASM runtime not available' }));",
+      '  } catch (e) {',
+      '    process.stdout.write(JSON.stringify({ error: String(e) }));',
+      '  }',
+      '}',
+      "// Delete the require escape hatch before running",
+      'const _timsRun = main;',
+      'delete _timsOrigRequire;',
+      '_timsRun().catch(e => process.stdout.write(JSON.stringify({ error: String(e) })));',
+    ].join('\n');
 
     fs.writeFileSync(scriptPath, sandboxCode);
 
@@ -151,7 +167,11 @@ main().then(r => process.stdout.write(String(r))).catch(e => process.stdout.writ
       const proc = spawn('node', ['--no-warnings', scriptPath], {
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 30000,
-        env: { ...process.env, NODE_OPTIONS: '--experimental-wasm-modules' },
+        env: {
+          PATH: '/usr/bin:/bin',
+          NODE_OPTIONS: '--experimental-wasm-modules',
+          TIMPS_SANDBOXED: '1',
+        },
       });
       let stdout = '';
       let stderr = '';
