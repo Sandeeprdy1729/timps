@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlugin } from '@/lib/plugins/registry';
+import { requireAuth } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const body = await request.json();

@@ -1,4 +1,5 @@
 import type { IncomingMessage } from 'node:http';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { MemoryEngine } from '../MemoryEngine';
 
@@ -75,9 +76,20 @@ export class MemoryWsServer {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return false;
+      const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
       const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
       if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
-      return payload.userId === _userId || !payload.userId;
+      if (!payload.userId || payload.userId !== _userId) return false;
+      // Verify HMAC-SHA256 signature
+      const alg = header.alg ?? 'HS256';
+      if (alg !== 'HS256') return false;
+      const secret = process.env.TIMPS_JWT_SECRET;
+      if (!secret) return false;
+      const signature = createHmac('sha256', secret).update(`${parts[0]}.${parts[1]}`).digest('base64url');
+      const sigBuffer = Buffer.from(signature);
+      const providedBuffer = Buffer.from(parts[2]);
+      if (sigBuffer.length !== providedBuffer.length) return false;
+      return timingSafeEqual(sigBuffer, providedBuffer);
     } catch {
       return false;
     }

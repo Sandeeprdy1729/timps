@@ -120,10 +120,11 @@ export class BenchmarkRunner {
 
   private cleanupTempEngine(engine: MemoryEngine): void {
     try {
+      // Remove the engine's storage directory itself.
       const dir = (engine as unknown as { dir: string }).dir;
-      // Walk up to the temp root (memory/ is a subfolder).
-      const root = path.resolve(dir, '..', '..');
-      fs.rmSync(root, { recursive: true, force: true });
+      if (dir && dir.includes('timps-bench')) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
     } catch { /* best effort */ }
   }
 
@@ -175,7 +176,7 @@ export class BenchmarkRunner {
     }
 
     try {
-      fs.rmSync(path.resolve(tmpDir, '..'), { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     } catch { /* best effort */ }
 
     const total = CONTRADICTION_CASES.length;
@@ -446,7 +447,7 @@ export class BenchmarkRunner {
     } catch (e) { failed.push(`schemaInferrer threw: ${(e as Error).message}`); }
 
     try {
-      fs.rmSync(path.resolve(tmpDir, '..'), { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     } catch { /* best effort */ }
 
     const total = 25;
@@ -493,7 +494,7 @@ export class BenchmarkRunner {
       out.push({ corpus: n, meanLatencyMs: mean, p95LatencyMs: p95 });
 
       try {
-        fs.rmSync(path.resolve(tmpDir, '..'), { recursive: true, force: true });
+        fs.rmSync(tmpDir, { recursive: true, force: true });
       } catch { /* best effort */ }
     }
 

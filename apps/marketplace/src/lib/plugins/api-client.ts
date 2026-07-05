@@ -1,5 +1,28 @@
 import { BasePlugin, PluginResult, PluginConfig } from './base';
 
+const BLOCKED_HOSTS = [
+  /^localhost$/i,
+  /^127\.\d+\.\d+\.\d+$/,
+  /^10\.\d+\.\d+\.\d+$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+  /^192\.168\.\d+\.\d+$/,
+  /^169\.254\.\d+\.\d+$/,
+  /^0\.0\.0\.0$/,
+  /^::1$/,
+  /^[fF][cCdD]/,
+];
+
+function isBlockedUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
+    const hostname = parsed.hostname;
+    return BLOCKED_HOSTS.some((re) => re.test(hostname));
+  } catch {
+    return true;
+  }
+}
+
 export class ApiClientPlugin extends BasePlugin {
   private client: typeof fetch;
 
@@ -15,6 +38,10 @@ export class ApiClientPlugin extends BasePlugin {
   async run(): Promise<PluginResult> {
     try {
       const url = this.config?.params?.url || 'https://jsonplaceholder.typicode.com/posts/1';
+
+      if (isBlockedUrl(url)) {
+        return { success: false, error: 'URL blocked: requests to private/internal networks are not allowed' };
+      }
       const method = (this.config?.params?.method || 'GET').toUpperCase();
       const headers = this.config?.params?.headers ? JSON.parse(this.config.params.headers) : {};
 

@@ -410,8 +410,7 @@ function getEnvVarForProvider(provider: ProviderName): string {
 }
 
 export function getProjectId(projectPath: string): string {
-  // Derive a stable project ID from the folder name
-  return path.basename(path.resolve(projectPath)).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+  return hashProject(path.resolve(projectPath));
 }
 
 export function getMemoryDir(projectPath: string): string {
@@ -435,7 +434,8 @@ export function getHistoryDir(): string {
 }
 
 function hashProject(p: string): string {
+  const normalized = path.resolve(p);
   let h = 0;
-  for (let i = 0; i < p.length; i++) { h = ((h << 5) - h) + p.charCodeAt(i); h |= 0; }
+  for (let i = 0; i < normalized.length; i++) { h = ((h << 5) - h) + normalized.charCodeAt(i); h |= 0; }
   return Math.abs(h).toString(36);
 }
