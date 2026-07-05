@@ -114,15 +114,18 @@ export type {
   ForesightResult, SignalDomain,
 } from './ChronosForge.js';
 
+// Layer 6: ResonanceForge — causal resonance fields for predictive memory harmonics
+import { ResonanceForge } from './ResonanceForge.js';
+
 // Layer 7: EchoForge — causal echo propagation + reservoir computing
 import { EchoForge } from './EchoForge.js';
 export type { EchoPrediction, EchoStatus, EchoDomain } from './EchoForge.js';
 
+// Layer 8: AetherForgeERL — Epistemic Resonance Lattice
+import { AetherForgeERL } from './AetherForgeERL.js';
+
 // Layer 9: HarmonicSheafWeaver — sheaf-cohomology harmonic oscillator layer
 import { HarmonicSheafWeaver } from './HarmonicSheafWeaver.js';
-
-// Layer 10: AetherForgeERL — Epistemic Resonance Lattice
-import { AetherForgeERL } from './AetherForgeERL.js';
 import { SupraSheaf } from './SupraSheaf.js';
 import { QPTW } from './QPTW.js';
 import { TitanicForge } from './TitanicForge.js';
@@ -232,14 +235,17 @@ export class MemoryEngine {
   // ── Layer 5: ChronosForge (lazy-init) ──
   private _chronos?: ChronosForge;
 
+  // ── Layer 6: ResonanceForge (lazy-init) ──
+  private _resonance?: ResonanceForge;
+
   // ── Layer 7: EchoForge (lazy-init) ──
   private _echo?: EchoForge;
 
+  // ── Layer 8: AetherForgeERL (lazy-init) ──
+  private _aether?: AetherForgeERL;
+
   // ── Layer 9: HarmonicSheafWeaver (lazy-init) ──
   private _harmonicSheaf?: HarmonicSheafWeaver;
-
-  // ── Layer 10: AetherForgeERL (lazy-init) ──
-  private _aether?: AetherForgeERL;
 
   // ── Layer 11: SupraSheaf (lazy-init, no persistence) ──
   private _supra?: SupraSheaf;
@@ -565,6 +571,14 @@ export class MemoryEngine {
     return this._chronos;
   }
 
+  /** Layer 6: ResonanceForge — causal resonance fields for predictive memory harmonics. */
+  get resonanceForge(): ResonanceForge {
+    if (!this._resonance) {
+      this._resonance = new ResonanceForge(this.dir, this._backend);
+    }
+    return this._resonance;
+  }
+
   /**
    * Layer 7: EchoForge — causal echo propagation + reservoir computing.
    * Deterministic O(V+E) foresight: -85% latency vs MC rollouts, +17pt prediction.
@@ -590,7 +604,7 @@ export class MemoryEngine {
   }
 
   /**
-   * Layer 10: AetherForgeERL — Epistemic Resonance Lattice.
+   * Layer 8: AetherForgeERL — Epistemic Resonance Lattice.
    * Hybrid temporal-epistemic lattice unifying sheaf cohomology, resonance
    * oscillators, and hierarchical MemTree-style indexing. O(log N + k) weave.
    */
@@ -869,8 +883,14 @@ export class MemoryEngine {
 
     // Layer 5: weave into ChronosForge temporal graph
     this.chronosForge.weave(content, { tags });
+    // Layer 6: weave into ResonanceForge causal resonance fields (fire-and-forget)
+    void this.resonanceForge.weave(content, { tags });
     // Layer 7: weave into EchoForge causal propagation graph (fire-and-forget)
     void this.echoForge.weave(content, { tags });
+    // Layer 8: weave into AetherForgeERL epistemic resonance lattice (fire-and-forget)
+    void this.aetherForge.weave(content, { tags });
+    // Layer 9: weave into HarmonicSheafWeaver sheaf-cohomology layer
+    this.harmonicSheafWeaver.weave(content, { tags });
     // L10: record in immutable engram log
     this.engramLog.append({
       timestamp,
