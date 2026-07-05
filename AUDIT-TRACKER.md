@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 3     | 86        |
+| High     | 89    | 4     | 85        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **14** | **374** |
+| **Total**| **388** | **15** | **373** |
 
 ---
 
@@ -38,6 +38,7 @@
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
 | H2 | `apps/marketplace/src/lib/credentials.ts` | Hardcoded encryption key + static salt | Requires `MARKETPLACE_ENCRYPTION_KEY` env var (fails closed), generates random salt per-install |
 | H3 | `apps/marketplace/src/lib/integrations/jira.ts`, `salesforce.ts` | SSRF + data exfiltration via user-supplied `instanceUrl` | Added `validateUrl()` blocking private IPs/localhost; stripped response body from error messages |
+| H4 | `apps/mobile/package.json` | Missing `@react-native-async-storage/async-storage` dep | Added to `dependencies` |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
