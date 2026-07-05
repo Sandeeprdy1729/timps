@@ -106,6 +106,24 @@ export async function runChronosEval(): Promise<{
     }
   }
 
+  // ── Helpers for real baselines ────────────────────────────────────────
+  /** Trigram Jaccard similarity (mirrors ChronosForge internals). */
+  function trigramJaccard(a: string, b: string): number {
+    const trigrams = new Set<string>();
+    for (let i = 0; i < a.length - 2; i++) trigrams.add(a.slice(i, i + 3));
+    let overlap = 0;
+    for (let i = 0; i < b.length - 2; i++) {
+      if (trigrams.has(b.slice(i, i + 3))) overlap++;
+    }
+    const total = trigrams.size + b.length - 2 - overlap;
+    return total === 0 ? 0 : overlap / total;
+  }
+
+  /** Load raw nodes from a ChronosForge instance (via file or backend). */
+  function loadNodes(f: typeof forge): Array<{ id: string; content: string; domain: string; validFrom: number; validTo: number | null; invalidAt: number | null; retrievalCount: number; baseImportance: number }> {
+    return (f as any)._loadNodes();
+  }
+
   // ── Metric 1: Temporal recall — queryAt() ─────────────────────────────
   let forgeTemporalHits = 0;
   let baselineTemporalHits = 0;
@@ -124,13 +142,21 @@ export async function runChronosEval(): Promise<{
     const hit = result.nodes.some(n => n.id === targetSeed.id);
     if (hit) forgeTemporalHits++;
 
-    // Baseline: flat array filter (no temporal scoring)
+    // Baseline: flat Jaccard similarity search (no temporal weighting)
     const t1 = performance.now();
-    const allNodes = forge.getStats(); // proxy; real baseline would load JSON directly
-    void allNodes;
+    const allRaw = loadNodes(forge);
+    const candidates = allRaw
+      .filter(n =>
+        n.domain === targetSeed.domain &&
+        (n.validFrom <= atTime) &&
+        (n.validTo === null || n.validTo >= atTime) &&
+        (n.invalidAt === null || n.invalidAt > atTime)
+      )
+      .map(n => ({ n, score: trigramJaccard(n.content, targetSeed.content) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
     latenciesBaseline.push(performance.now() - t1);
-    // Baseline simulates ~65% recall based on literature gap (pure vector vs temporal)
-    if (Math.random() < 0.65) baselineTemporalHits++;
+    if (candidates.some(c => c.n.id === targetSeed.id)) baselineTemporalHits++;
   }
 
   const temporalRecall = {
@@ -152,8 +178,8 @@ export async function runChronosEval(): Promise<{
     const r2 = forge.weave(contradiction, { domain: 'decision', baseImportance: 0.8 });
 
     if (r2.detectedContradictions.length > 0 || r2.supersededIds.length > 0) forgeContraDetected++;
-    // Baseline: random ~62% detection (literature baseline for flat stores)
-    if (Math.random() < 0.62) baselineContraDetected++;
+    // Baseline: trigram Jaccard overlap >= 0.45 (same threshold ChronosForge uses)
+    if (trigramJaccard(original, contradiction) >= 0.45) baselineContraDetected++;
   }
 
   const contradictionF1 = {
@@ -182,8 +208,11 @@ export async function runChronosEval(): Promise<{
   for (let f = 0; f < FORESIGHT_TRIALS; f++) {
     const res = foresightForge.simulateForesight('burnout', { steps: 10, lookbackDays: 30 });
     if (res.riskLevel !== 'low') foresightHits++;
-    // Baseline: ~55% correct (no trajectory awareness)
-    if (Math.random() < 0.55) baselineForesightHits++;
+    // Baseline: simple count-based heuristic — if more than half of signals
+    // have importance > midpoint, predict non-low risk.
+    const fNodes = loadNodes(foresightForge);
+    const highImportance = fNodes.filter(n => n.domain === 'burnout' && n.baseImportance > 0.67).length;
+    if (highImportance >= FORESIGHT_SIGNAL_COUNT / 2) baselineForesightHits++;
   }
 
   const foresightAccuracy = {
