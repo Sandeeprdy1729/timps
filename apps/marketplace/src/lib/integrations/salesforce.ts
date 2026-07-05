@@ -1,5 +1,33 @@
 import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult } from './base';
 
+const BLOCKED_HOSTS = [
+  /^localhost$/i,
+  /^127\.\d+\.\d+\.\d+/,
+  /^10\.\d+\.\d+\.\d+/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/,
+  /^192\.168\.\d+\.\d+/,
+  /^169\.254\.\d+\.\d+/,
+  /^0\.0\.0\.0$/,
+  /^::1$/,
+  /^[fF][cCdD]/,
+];
+
+function validateUrl(raw: string, label: string): string {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error(`${label}: only http/https URLs are allowed`);
+    }
+    if (BLOCKED_HOSTS.some((re) => re.test(parsed.hostname))) {
+      throw new Error(`${label}: requests to private/internal networks are not allowed`);
+    }
+    return raw.replace(/\/$/, '');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes(label)) throw err;
+    throw new Error(`${label}: invalid URL "${raw}"`);
+  }
+}
+
 interface SalesforceAuth {
   accessToken: string;
   instanceUrl: string;
@@ -20,7 +48,8 @@ export class SalesforceIntegration extends BaseIntegration {
     const clientSecret = process.env.SALESFORCE_CLIENT_SECRET || '';
 
     if (this.config?.accessToken && this.config?.instanceUrl) {
-      this.auth = { accessToken: this.config.accessToken, instanceUrl: this.config.instanceUrl };
+      const instanceUrl = validateUrl(this.config.instanceUrl, 'Salesforce');
+      this.auth = { accessToken: this.config.accessToken, instanceUrl };
       return this.auth;
     }
 
@@ -43,7 +72,8 @@ export class SalesforceIntegration extends BaseIntegration {
     }
 
     const data = await response.json() as SalesforceAuth & { access_token: string; instance_url: string };
-    this.auth = { accessToken: data.access_token || data.accessToken, instanceUrl: data.instance_url || data.instanceUrl };
+    const instanceUrl = validateUrl(data.instance_url || data.instanceUrl || '', 'Salesforce');
+    this.auth = { accessToken: data.access_token || data.accessToken, instanceUrl };
     return this.auth;
   }
 
@@ -60,8 +90,7 @@ export class SalesforceIntegration extends BaseIntegration {
       },
     });
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Salesforce API error: ${response.status} ${text}`);
+      throw new Error(`Salesforce API error: ${response.status}`);
     }
     return response.json() as Promise<T>;
   }
