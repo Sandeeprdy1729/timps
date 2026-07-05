@@ -47,8 +47,8 @@ export function createAuthMiddleware(config: AuthConfig) {
     if (parts.length !== 3) return null;
     const [header, body, signature] = parts;
     const expected = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
-    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
     try {
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
       const payload = JSON.parse(Buffer.from(body, 'base64url').toString()) as AuthPayload;
       if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
       if (issuer && payload.iss !== issuer) return null;
