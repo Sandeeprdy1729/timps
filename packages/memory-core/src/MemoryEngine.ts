@@ -1798,7 +1798,6 @@ export class MemoryEngine {
     const { actorId, since, until, types, project, limit = 100 } = query;
     const filter: Partial<EngramEntry> = {};
     if (actorId) filter.actorId = actorId;
-    if (since) filter.timestamp = since;
 
     const rawEntries = this.engramLog.query(filter, limit * 2);
     const entries: AuditResultEntry[] = [];
