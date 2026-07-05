@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 28    | 61        |
+| High     | 89    | 29    | 60        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **39** | **349** |
+| **Total**| **388** | **40** | **348** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 28 High
+## ✅ Fixed — 11 Critical + 29 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 349 Issues
+## 📋 Remaining — 348 Issues
 
-### High (61)
+### High (60)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -63,6 +63,7 @@
 | H26 | `packages/memory-core/src/MemoryEngine.ts` | store() passes null provenance to ConstitutionalGuard → always rejected but write proceeds anyway (only lowers confidence) | Now passes minimal provenance with confidence+evidenceCount; store() returns early when guard rejects; logs rejection to EngramLog |
 | H27 | `packages/memory-core/src/MemoryEngine.ts` | L6 ResonanceForge missing entirely, L8 AetherForgeERL and L9 HarmonicSheafWeaver have getters but never receive store data; ~9K lines of forge code is shelf-ware | Added resonanceForge getter; wired all 3 into store() weave pipeline alongside L5/L7; fixed layer number comments |
 | H28 | `packages/memory-core/src/MemoryEngine.ts` | multiProjectRecall mutates shared backend scope without try/finally — exception leaves foreign scope active permanently; concurrent ops see wrong tenant | Wrapped setScope/recall/restore in try/finally so scope always restores |
+| H29 | `packages/memory-core/src/MemoryEngine.ts` | audit({since}) passes timestamp as strict-equality filter to EngramLog.query() — zero entries match because millisecond-exact timestamps never hit | Removed `filter.timestamp = since` from audit(); loop's >= range check already handles it |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
