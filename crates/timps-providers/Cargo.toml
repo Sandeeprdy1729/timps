@@ -13,6 +13,7 @@ thiserror   = { workspace = true }
 reqwest     = { workspace = true }
 tracing     = { workspace = true }
 futures     = { workspace = true }
+tokio-util  = "0.7"
 async-trait = { workspace = true }
 dirs        = { workspace = true }
 toml        = "0.8"
