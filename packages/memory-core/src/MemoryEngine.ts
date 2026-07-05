@@ -835,9 +835,23 @@ export class MemoryEngine {
     let confidence = 0.7;
     let evidenceCount = 1;
     if (!opts?.skipGuard) {
-      const guardVerdict = this.constitutionalGuard.evaluate(content, null, 0);
+      const guardVerdict = this.constitutionalGuard.evaluate(content, {
+        confidence,
+        evidenceCount,
+        sourceKind: 'agent_inference',
+        sourceDetail: 'MemoryEngine.store()',
+        actorId: this.actorId,
+        observedAt: timestamp,
+      } as never, 0);
       if (!guardVerdict.allowed) {
-        confidence = 0.3;
+        this._telemetry?.metrics.counter('guard_rejected_store', 1);
+        const tip = `store(): guard rejected "${content.slice(0, 60)}" — ${guardVerdict.reason}`;
+        this.engramLog.append({
+          timestamp, op: 'update', layerId: 'L15', entryId: id, actorId: actor,
+          payload: { rejectedContent: content, reason: guardVerdict.reason },
+          justification: tip,
+        });
+        return;
       }
     }
 
