@@ -64,22 +64,40 @@ need_cmd curl
 
 if [[ "$VERSION" == "latest" ]]; then
   say "Fetching latest release..."
-  VERSION="$(curl -fsSL "${GITHUB_API}/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "\(.*\)".*/\1/')"
-  [[ -n "$VERSION" ]] || die "Could not determine latest version"
+  VERSION="$(curl -fsSL "${GITHUB_API}/latest" 2>/dev/null | grep '"tag_name"' | sed 's/.*"tag_name": "\(.*\)".*/\1/')"
 fi
 
-say "Installing TIMPS ${VERSION}..."
+# ── Download or build ─────────────────────────────────────────────────────
 
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_NAME}"
-
-# ── Download ───────────────────────────────────────────────────────────────
-
-TMPDIR="$(mktemp -d)"
-TMPFILE="${TMPDIR}/${ASSET_NAME}"
-
-say "Downloading ${DOWNLOAD_URL}..."
-curl -fsSL --progress-bar -o "${TMPFILE}" "${DOWNLOAD_URL}" \
-  || die "Download failed. Check that version ${VERSION} exists on GitHub Releases."
+if [[ -z "${VERSION:-}" || "$VERSION" == "latest" ]]; then
+  say "No pre-built release found — building from source..."
+  need_cmd cargo
+  need_cmd git
+  TMPDIR="$(mktemp -d)"
+  # Shallow clone into the temp directory for isolation.
+  say "Cloning ${REPO}..."
+  git clone --depth 1 "https://github.com/${REPO}.git" "${TMPDIR}/repo" 2>&1 | tail -3
+  say "cargo build --release --package timps-cli (this may take a few minutes)..."
+  (cd "${TMPDIR}/repo" && cargo build --release --package timps-cli 2>&1 | tail -10) || die "Build failed"
+  BINARY="${TMPDIR}/repo/target/release/timps"
+  if [[ ! -f "$BINARY" ]]; then
+    BINARY="${TMPDIR}/repo/target/release/timps.exe"
+  fi
+  if [[ ! -f "$BINARY" ]]; then
+    die "Build completed but binary not found at target/release/timps"
+  fi
+  cp "$BINARY" "${TMPDIR}/${ASSET_NAME}"
+  BUILD_FROM_SOURCE=true
+else
+  say "Installing TIMPS ${VERSION}..."
+  DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_NAME}"
+  TMPDIR="$(mktemp -d)"
+  TMPFILE="${TMPDIR}/${ASSET_NAME}"
+  say "Downloading ${DOWNLOAD_URL}..."
+  curl -fsSL --progress-bar -o "${TMPFILE}" "${DOWNLOAD_URL}" \
+    || die "Download failed. Check that version ${VERSION} exists on GitHub Releases."
+  BUILD_FROM_SOURCE=false
+fi
 
 # ── Install ────────────────────────────────────────────────────────────────
 
@@ -90,7 +108,7 @@ if [[ "$PLATFORM" == "windows" ]]; then
   DEST="${INSTALL_DIR}/${BIN_NAME}.exe"
 fi
 
-cp "${TMPFILE}" "${DEST}"
+cp "${TMPDIR}/${ASSET_NAME}" "${DEST}"
 chmod +x "${DEST}"
 rm -rf "${TMPDIR}"
 
