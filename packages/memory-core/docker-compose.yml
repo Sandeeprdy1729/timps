@@ -128,6 +128,11 @@ services:
     restart: unless-stopped
 
   # ── MemoryServer instances (horizontally scalable) ──
+  # All env vars below are read by src/server/start.ts:
+  #   POSTGRES_*  → PostgresBackend (primary + replicas)
+  #   REDIS_URL   → CacheManager + EventBus
+  #   QDRANT_URL  → QdrantBackend
+  #   TIMPS_*     → TelemetryManager
   memory:
     build:
       context: .

@@ -13,4 +13,4 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/proto ./proto
 EXPOSE 4100 4101
 ENV NODE_ENV=production
-CMD ["node", "dist/server/index.js"]
+CMD ["node", "dist/server/start.js"]

@@ -2,10 +2,16 @@
 # Apply: kubectl apply -k deploy/k8s/
 # Scale: kubectl scale deployment timps-memory --replicas=5
 #
-# NOTE: Data is stored on a PVC mounted at /data (FileBackend). Multiple
-# replicas use sessionAffinity: ClientIP so each client sticks to one pod.
-# For horizontal scaling without data silos, configure PostgresBackend and
-# remove sessionAffinity — the shared DB keeps all pods consistent.
+# All env vars below are consumed by src/server/start.ts:
+#   POSTGRES_PRIMARY / POSTGRES_REPLICAS  → PostgresBackend (primary + replicas)
+#   REDIS_URL                              → CacheManager + EventBus
+#   QDRANT_URL                             → QdrantBackend
+#   TIMPS_TELEMETRY_LEVEL / _OTEL_ENDPOINT → TelemetryManager
+#
+# When BACKEND env is unset (default), data is stored on a PVC mounted at
+# /data (FileBackend). Multiple replicas use sessionAffinity: ClientIP so
+# each client sticks to one pod. For true horizontal scaling without data
+# silos, set POSTGRES_PRIMARY to switch to PostgresBackend.
 
 ---
 apiVersion: apps/v1
