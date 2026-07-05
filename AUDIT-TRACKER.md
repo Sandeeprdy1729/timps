@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 19    | 70        |
+| High     | 89    | 20    | 69        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **30** | **358** |
+| **Total**| **388** | **31** | **357** |
 
 ---
 
@@ -54,6 +54,7 @@
 | H17 | `packages/logger/src/index.ts` + `package.json` | Two issues: `picocolors` has no named export `c` (TypeError on load), and neither `winston` nor `picocolors` declared as dependencies — module resolution fails | Changed import to `import pc from 'picocolors'` + `pc.` throughout; added `winston` and `picocolors` to package.json dependencies; ran `npm install` |
 | H18 | `packages/memory-core/src/native.ts`, `packages/memory-core/src/search.ts`, `packages/memory-core-rs/bench/bench.ts` | NativeCore interface, search.ts, and benchmark declare 9 storage/search/hashing functions that Rust addon doesn't export (only computeBatchSimilarity, kmeansClusterFlat, eigenmodeWarmStart, RustLsh exist) | Removed phantom function declarations from NativeCore interface; removed dead `n.searchEntries()` call + `getNative` import from search.ts; stripped native benchmark section that would crash at runtime |
 | H19 | `packages/memory-core/deploy/k8s/timps-memory.yaml` | Three k8s anti-patterns: emptyDir wipes data on pod eviction (defeats "persistent memory"), 3 replicas with no session affinity produce divergent state, image is unpinned `:latest` | Replaced emptyDir with PVC (10Gi ReadWriteOnce); added `sessionAffinity: ClientIP` (1h timeout); pinned image tag with `TIMPS_VERSION` env var; added doc comment explaining scaling assumptions |
+| H20 | `packages/memory-core/src/server/start.ts` (new), `packages/memory-core/docker-compose.yml`, `packages/memory-core/deploy/k8s/timps-memory.yaml`, `packages/memory-core/Dockerfile`, `packages/memory-core/package.json` | 13 env vars (POSTGRES_PRIMARY, REDIS_URL, QDRANT_URL, MEMORY_PORT, TIMPS_TELEMETRY_*, etc.) passed to memory service in docker-compose + k8s but never read by the server — the entire horizontal scale stack (Postgres primary+2 replicas, Redis, Qdrant, PgBouncer) is scenery | Created `src/server/start.ts` entry point that reads all env vars and dynamically imports the correct backends (PostgresBackend, CacheManager, QdrantBackend, EventBus, TelemetryManager); updated tsup build, Dockerfile CMD, and manifests with doc comments confirming the env vars are now consumed |
 
 ⏸️ Paused — awaiting user instruction to proceed
 

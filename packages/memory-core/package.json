@@ -34,7 +34,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/server/index.ts src/client/index.ts --format cjs --dts --out-dir dist",
+    "build": "tsup src/index.ts src/server/index.ts src/server/start.ts src/client/index.ts --format cjs --dts --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist"
