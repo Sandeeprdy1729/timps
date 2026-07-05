@@ -53,10 +53,10 @@ describe('MetricsRegistry', () => {
     registry.counter('test.ops', 42, { layer: 'echo' });
     registry.histogram('test.latency', 10, { layer: 'echo' });
     const output = registry.prometheusExport();
-    expect(output).toContain('TYPE timps.test.ops counter');
-    expect(output).toContain('timps.test.ops{layer="echo"} 42');
-    expect(output).toContain('TYPE timps.test.latency_bucket histogram');
-    expect(output).toContain('_bucket{layer="echo"}{le=');
+    expect(output).toContain('TYPE timps_test_ops counter');
+    expect(output).toContain('timps_test_ops{layer="echo"} 42');
+    expect(output).toContain('TYPE timps_test_latency_bucket histogram');
+    expect(output).toContain('_bucket{layer="echo",le="');
   });
 
   it('resets all metrics', () => {
