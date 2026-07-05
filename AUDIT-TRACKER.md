@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 25    | 64        |
+| High     | 89    | 26    | 63        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **36** | **352** |
+| **Total**| **388** | **37** | **351** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 25 High
+## ✅ Fixed — 11 Critical + 26 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 352 Issues
+## 📋 Remaining — 351 Issues
 
-### High (64)
+### High (63)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -60,6 +60,7 @@
 | H23 | `packages/memory-core/src/EchoForge.ts` | ReservoirReadout generates hash-seeded random weights on every call — untrained, content-independent pseudo-noise centred on 0.5 | Replaced with 4-factor content-aware scoring: reservoir activation energy (35%), active node density (30%), contradiction edge weight (20%), recency-weighted echo amplitude (15%) |
 | H24 | `packages/memory-core/src/EngramLog.ts` | recover() JSON.parses last line with no try/catch — torn write bricks all memory stores | Added try/catch with backward walk skipping unparseable lines; same fix in verifyChain() and query() |
 | H25 | `packages/memory-core/src/EngramLog.ts` | Plain SHA-256 chain with no secret and no external head anchor — in-place edits and truncation pass verifyChain() | Switched to HMAC-SHA256 with auto-generated project-local secret; added engram.head.json written atomically per append; verifyChain() checks anchor for truncation |
+| H26 | `packages/memory-core/src/MemoryEngine.ts` | store() passes null provenance to ConstitutionalGuard → always rejected but write proceeds anyway (only lowers confidence) | Now passes minimal provenance with confidence+evidenceCount; store() returns early when guard rejects; logs rejection to EngramLog |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
