@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 29    | 60        |
+| High     | 89    | 30    | 59        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **40** | **348** |
+| **Total**| **388** | **41** | **347** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 29 High
+## ✅ Fixed — 11 Critical + 30 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 348 Issues
+## 📋 Remaining — 347 Issues
 
-### High (60)
+### High (59)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -64,6 +64,7 @@
 | H27 | `packages/memory-core/src/MemoryEngine.ts` | L6 ResonanceForge missing entirely, L8 AetherForgeERL and L9 HarmonicSheafWeaver have getters but never receive store data; ~9K lines of forge code is shelf-ware | Added resonanceForge getter; wired all 3 into store() weave pipeline alongside L5/L7; fixed layer number comments |
 | H28 | `packages/memory-core/src/MemoryEngine.ts` | multiProjectRecall mutates shared backend scope without try/finally — exception leaves foreign scope active permanently; concurrent ops see wrong tenant | Wrapped setScope/recall/restore in try/finally so scope always restores |
 | H29 | `packages/memory-core/src/MemoryEngine.ts` | audit({since}) passes timestamp as strict-equality filter to EngramLog.query() — zero entries match because millisecond-exact timestamps never hit | Removed `filter.timestamp = since` from audit(); loop's >= range check already handles it |
+| H30 | `packages/memory-core/src/ProvenanceForge.ts`, `MemoryEngine.ts` | ProvenanceForge.record() generates content-hash ID (sha256) and saves as {hash}.json, but _recallCompute/provenanceForge.explain(entry.id) looks up by memory entry ID (mem_xxx) — file never exists; entire intelligence pipeline operates on defaults | record() accepts optional overrideId; store() passes the memory entry ID so provenance is keyed by the same ID used in lookups |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
