@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 12    | 77        |
+| High     | 89    | 13    | 76        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **23** | **365** |
+| **Total**| **388** | **24** | **364** |
 
 ---
 
@@ -47,6 +47,7 @@
 | H10 | `evals/suites/chronos-forge.ts` | Baseline metrics fabricated with `Math.random()` dice-rolls, fake improvement deltas | Replaced with real computations: trigram Jaccard for temporal recall + contradiction detection, count-based heuristic for foresight, measured latency |
 | H11 | `Formula/timps.rb` | Homebrew formula has all-zero sha256 placeholders and points to non-existent release assets | Rewritten as head-only formula that builds from source via `cargo install` |
 | H12 | `install.sh` | Interactive `read` prompts break `curl|bash`; `npm bin -g` removed in npm 9; `sudo npm install -g` in piped script | Added `PIPED` detection (`[[ -t 0 ]]`), all prompts guarded and use `</dev/tty`; replaced `npm bin -g` with `npm root -g`; replaced `sudo` fallback with manual instructions |
+| H13 | `packages/cache/src/index.ts` | Extra stray `};` after `cacheWithTTL` arrow function makes the file a SyntaxError | Removed the unmatched closing brace |
 
 ⏸️ Paused — awaiting user instruction to proceed
 

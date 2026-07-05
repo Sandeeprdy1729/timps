@@ -220,7 +220,6 @@ export function cacheWithTTL<T>(ttl: number): (target: any, propertyKey: string,
 
     return descriptor;
   };
-  };
 }
 
 export class CacheMiddleware {
