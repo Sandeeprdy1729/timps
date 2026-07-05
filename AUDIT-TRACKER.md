@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 16    | 73        |
+| High     | 89    | 17    | 72        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **27** | **361** |
+| **Total**| **388** | **28** | **360** |
 
 ---
 
@@ -51,6 +51,7 @@
 | H14 | `packages/connection-manager/src/index.ts` | API keys/OAuth tokens stored in plaintext in localStorage | Added AES-256-GCM encryption via Web Crypto API; key in sessionStorage (ephemeral); credentials encrypted before serialization, decrypted on load |
 | H15 | `packages/date-utils/src/index.ts` | Two missing closing parentheses (`endOfWeek` line 96, `min` line 236) cause SyntaxError | Added the missing `)` on both lines |
 | H16 | `packages/event-bus/src/index.ts`, `packages/connection-manager/src/index.ts`, `packages/timps-desktop/src/components/IntegrationSettings.tsx` | Triple-dead activity feed: wildcard filter never matches (strict equality), no publisher bridges to EventBus, subscription leaks on remount | Added `matchWildcard()` to EventBus (supports `*`-suffix patterns); bridged `ConnectionManager.emit()` → `eventBus.publish()`; stored sub ID and unsub on cleanup |
+| H17 | `packages/logger/src/index.ts` + `package.json` | Two issues: `picocolors` has no named export `c` (TypeError on load), and neither `winston` nor `picocolors` declared as dependencies — module resolution fails | Changed import to `import pc from 'picocolors'` + `pc.` throughout; added `winston` and `picocolors` to package.json dependencies; ran `npm install` |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
