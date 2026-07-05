@@ -13,16 +13,30 @@ interface StoredCredentials {
   };
 }
 
-const CREDENTIALS_PATH = path.join(
-  process.cwd(),
-  '.timps',
-  'marketplace',
-  'credentials.json'
-);
+const MARKETPLACE_DIR = path.join(process.cwd(), '.timps', 'marketplace');
+const CREDENTIALS_PATH = path.join(MARKETPLACE_DIR, 'credentials.json');
+const SALT_PATH = path.join(MARKETPLACE_DIR, 'salt');
+
+function getOrCreateSalt(): string {
+  if (fs.existsSync(SALT_PATH)) {
+    return fs.readFileSync(SALT_PATH, 'utf-8').trim();
+  }
+  const salt = crypto.randomBytes(32).toString('hex');
+  fs.mkdirSync(MARKETPLACE_DIR, { recursive: true });
+  fs.writeFileSync(SALT_PATH, salt, 'utf-8');
+  return salt;
+}
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.MARKETPLACE_ENCRYPTION_KEY || 'timps-marketplace-dev-key-32chars!';
-  return crypto.scryptSync(key, 'timps-salt', 32);
+  const key = process.env.MARKETPLACE_ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error(
+      'MARKETPLACE_ENCRYPTION_KEY environment variable is required. ' +
+      'Set it to a 32+ character secret before storing credentials.'
+    );
+  }
+  const salt = getOrCreateSalt();
+  return crypto.scryptSync(key, salt, 32);
 }
 
 function encrypt(text: string): string {
