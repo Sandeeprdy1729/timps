@@ -1,6 +1,11 @@
 # ── TIMPS MemoryServer — Kubernetes Deployment ──
 # Apply: kubectl apply -k deploy/k8s/
 # Scale: kubectl scale deployment timps-memory --replicas=5
+#
+# NOTE: Data is stored on a PVC mounted at /data (FileBackend). Multiple
+# replicas use sessionAffinity: ClientIP so each client sticks to one pod.
+# For horizontal scaling without data silos, configure PostgresBackend and
+# remove sessionAffinity — the shared DB keeps all pods consistent.
 
 ---
 apiVersion: apps/v1
@@ -23,7 +28,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: memory
-          image: timps/memory-core:latest
+          # Pin to the matching @timps-ai/memory-core release tag in CI/CD
+          image: timps/memory-core:${TIMPS_VERSION:-latest}
           ports:
             - containerPort: 4100
               name: http
@@ -77,9 +83,25 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-      volumes:
-        - name: data
-          emptyDir: {}
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: timps-memory-data
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: timps-memory-data
+  labels:
+    app: timps-memory
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 
 ---
 apiVersion: v1
@@ -98,6 +120,10 @@ spec:
     - name: grpc
       port: 4101
       targetPort: 4101
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
   type: ClusterIP
 
 ---
