@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 37    | 52        |
+| High     | 89    | 38    | 51        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **48** | **340** |
+| **Total**| **388** | **49** | **339** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 37 High
+## ✅ Fixed — 11 Critical + 38 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 340 Issues
+## 📋 Remaining — 339 Issues
 
-### High (52)
+### High (51)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -71,7 +71,7 @@
 | H34 | `packages/memory-core/src/telemetry/MetricsRegistry.ts:252` | prometheusExport() emits dots in metric names and two adjacent label blocks — Prometheus rejects the scrape payload | Sanitize dots → underscores at output; merge labels into single block (e.g. `{layer="echo",le="5"}`); fix test assertions |
 | H35 | `packages/plugin-git/src/index.ts:21`, `packages/plugin-shell/src/index.ts:14` | Both plugins define tools as Array with `{content}` returns, but SDK requires `manifest.tools: ToolSpec[]` + `tools: Record<string, ToolHandler>` returning `{output, error}` — `allTools()` skips them, contributing zero tools | Added `manifest.tools` (5 specs for git, 3 for shell); rewrote `tools` as Record; handlers now return `{output, error}` and accept `_ctx` param. All 8 tools now resolve via registry. |
 | H36 | `packages/server/tools/toolsDb.ts:787` | `CREATE INDEX USING GIN(gist)` on plain `TEXT` column — stock Postgres has no default GIN opclass for text; migration aborts mid-way, dropping all downstream tables | Changed to `(gist)` — default b-tree index works correctly on TEXT |
-| H37 | `packages/storybook/src/stories/*.stories.tsx` | All 17 stories import components that don't exist (5 from `../src/components/X`, 12 from `../X`); `preview.ts` imports missing `setGlobalConfig` from `@storybook/test` and missing `../src/index.css` — complete facade with zero implementable components | Created 17 component files implementing all story APIs; fixed `preview.ts` (removed broken import); created `src/index.css` |
+| H38 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | All storage paths derived from `HOME` env var (5 locations in commands.rs, 1 in nexus_bridge.rs) — Windows GUI processes use `USERPROFILE`, not `HOME`, so memory resolves to `C:\Program Files\TIMPS\.timps` making the entire desktop app non-functional on Windows | Created `pub(crate) fn home_dir()` checking `HOME` → `USERPROFILE` → `.`; replaced all 6 direct `HOME` references |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
