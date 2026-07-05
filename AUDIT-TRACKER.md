@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 31    | 58        |
+| High     | 89    | 32    | 57        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **42** | **346** |
+| **Total**| **388** | **43** | **345** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 31 High
+## ✅ Fixed — 11 Critical + 32 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 346 Issues
+## 📋 Remaining — 345 Issues
 
-### High (58)
+### High (57)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -66,6 +66,7 @@
 | H29 | `packages/memory-core/src/MemoryEngine.ts` | audit({since}) passes timestamp as strict-equality filter to EngramLog.query() — zero entries match because millisecond-exact timestamps never hit | Removed `filter.timestamp = since` from audit(); loop's >= range check already handles it |
 | H30 | `packages/memory-core/src/ProvenanceForge.ts`, `MemoryEngine.ts` | ProvenanceForge.record() generates content-hash ID (sha256) and saves as {hash}.json, but _recallCompute/provenanceForge.explain(entry.id) looks up by memory entry ID (mem_xxx) — file never exists; entire intelligence pipeline operates on defaults | record() accepts optional overrideId; store() passes the memory entry ID so provenance is keyed by the same ID used in lookups |
 | H31 | `packages/memory-core/src/sandbox/Sandbox.ts` | 3 sub-issues: (1) BashSandbox has no network block when network:none, (2) NodeSandbox only shadows require() leaving fetch/ESM import/process.binding open, (3) memoryMb/cpuShares never enforced | (1) Bash function overrides + PATH no-op wrappers for 13 network tools, (2) globalThis.fetch/XMLHttpRequest/Request/WebSocket blocked, process.binding deleted, (3) ulimit -v for bash, V8 --max-old-space-size/--max-semi-space-size for Node, (4) buildEnv drops credentials/SSH/proxy vars |
+| H32 | `packages/memory-core/src/sandbox/WasmSandbox.ts` | 3 sub-issues: (1) runNode passes ...process.env leaking all secrets, (2) dead ternary (both branches 'null') makes permission check a no-op, (3) createAbiProxy returns 'stub_' strings instead of real results or denial errors | (1) Stripped env to PATH:/usr/bin:/bin + NODE_OPTIONS + TIMPS_SANDBOXED, (2) require() shadowed for 13 dangerous modules; _timsOrigRequire deleted before main(), (3) ABI proxy checks perms.includes(m), denies or emits JSON-lines marker, (4) dead ternary removed |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
