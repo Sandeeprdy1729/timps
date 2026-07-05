@@ -1663,7 +1663,7 @@ function renderMd(text) {
   // Code blocks
   const bt3 = String.fromCharCode(96,96,96); const singleBt = String.fromCharCode(96);
   const codeBlockRe = new RegExp(bt3 + '(\\w+)?\\n?([\\s\\S]*?)' + bt3, 'g');
-  html = html.replace(codeBlockRe, (_: string, lang: string, code: string) => {
+  html = html.replace(codeBlockRe, (_, lang, code) => {
     const l = lang || 'text';
     return '<div class="code-block">'
       + '<div class="code-block-header">'

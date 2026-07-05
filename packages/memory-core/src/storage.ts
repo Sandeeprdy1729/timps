@@ -12,8 +12,8 @@ import type { MemoryEntry, EpisodicEntry, WorkingState, MemoryScope } from './ty
 import { FileBackend, type StorageBackend } from './backends/index.js';
 
 const TIMPS_DIR = path.join(os.homedir(), '.timps');
-const MAX_SEMANTIC = 500;
-const MAX_EPISODES = 100;
+const MAX_SEMANTIC = parseInt(process.env.TIMPS_MAX_SEMANTIC ?? '', 10) || 100000;
+const MAX_EPISODES = parseInt(process.env.TIMPS_MAX_EPISODES ?? '', 10) || 10000;
 const MAX_WORKING_FILES = 20;
 const MAX_WORKING_ERRORS = 10;
 const MAX_WORKING_PATTERNS = 20;
@@ -139,6 +139,9 @@ export function loadSemantic(dir: string, backend?: StorageBackend): MemoryEntry
 
 export function saveSemantic(dir: string, entries: MemoryEntry[], backend?: StorageBackend): void {
   const trimmed = entries.length > MAX_SEMANTIC ? entries.slice(-MAX_SEMANTIC) : entries;
+  if (trimmed !== entries) {
+    console.warn(`[memory-core] semantic store at ${dir} exceeded ${MAX_SEMANTIC} entries; oldest ${entries.length - MAX_SEMANTIC} entries discarded. Set TIMPS_MAX_SEMANTIC to increase cap.`);
+  }
   const bk = backend ?? getBackend(dir);
   bk.write('semantic.json', trimmed);
 }

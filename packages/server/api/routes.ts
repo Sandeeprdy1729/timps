@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { eventBus } from '../core/eventBus';
 import { Agent } from '../core/agent';
 import { memoryIndex } from '../memory/memoryIndex';
@@ -12,6 +13,58 @@ import { chronosForge } from '../memory/chronosForge.js';
 
 const router = Router();
 const contradictionTool = new ContradictionTool();
+
+const JWT_SECRET = process.env.TIMPS_JWT_SECRET ?? '';
+
+// JWT auth middleware — extracts verified userId from Authorization header
+function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    return;
+  }
+  const token = auth.slice(7);
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) { res.status(401).json({ error: 'Invalid token format' }); return; }
+    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      res.status(401).json({ error: 'Token expired' }); return;
+    }
+    if (!JWT_SECRET) { res.status(500).json({ error: 'Server not configured for auth' }); return; }
+    const alg = header.alg ?? 'HS256';
+    if (alg !== 'HS256') { res.status(401).json({ error: 'Unsupported algorithm' }); return; }
+    const sig = createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
+    if (!timingSafeEqual(Buffer.from(sig), Buffer.from(parts[2]))) {
+      res.status(401).json({ error: 'Invalid token signature' }); return;
+    }
+    (req as any).authenticatedUserId = payload.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// Helper to get the effective userId (from auth if available, fallback to request value)
+function effectiveUserId(req: Request, fallback: number | null): number | null {
+  const authId = (req as any).authenticatedUserId as number | undefined;
+  if (authId !== undefined) return authId;
+  return fallback;
+}
+
+// Middleware: requireAuth + verify route param userId matches authenticated user
+function requireUserId(param = 'userId'): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, res, next) => {
+    const authId = (req as any).authenticatedUserId as number | undefined;
+    const paramId = parseInt(req.params[param], 10);
+    if (!authId || isNaN(paramId) || authId !== paramId) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    next();
+  };
+}
 
 // Helper: returns a meaningful error string regardless of error type
 function errMsg(err: unknown): string {
@@ -96,11 +149,11 @@ function boundedPositiveInt(value: unknown, min: number, max: number): number | 
   return parsed >= min && parsed <= max ? parsed : null;
 }
 
-router.post('/chat', async (req: Request, res: Response) => {
+router.post('/chat', requireAuth, async (req: Request, res: Response) => {
   if (!requireDb(res)) return;
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId);
+    const userId = (req as any).authenticatedUserId as number;
     const message = requiredString(body?.message, 20_000);
     const username = optionalString(body?.username, 120);
     const systemPrompt = optionalString(body?.systemPrompt, 20_000);
@@ -157,14 +210,10 @@ router.post('/chat', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/memory/:userId', async (req: Request, res: Response) => {
+router.get('/memory/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
-    if (isNaN(userId)) {
-      res.status(400).json({ error: 'Invalid userId' });
-      return;
-    }
     const context = await memoryIndex.retrieveContext(userId, '', '');
     res.json({
       memories: context.memories,
@@ -178,7 +227,7 @@ router.get('/memory/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/goals/:userId', async (req: Request, res: Response) => {
+router.get('/goals/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
@@ -197,7 +246,7 @@ router.get('/goals/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/goals/:userId', async (req: Request, res: Response) => {
+router.post('/goals/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const body = bodyObject(req.body);
@@ -241,7 +290,7 @@ router.put('/goals/:goalId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/preferences/:userId', async (req: Request, res: Response) => {
+router.get('/preferences/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -259,7 +308,7 @@ router.get('/preferences/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/preferences/:userId', async (req: Request, res: Response) => {
+router.post('/preferences/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const body = bodyObject(req.body);
@@ -279,7 +328,7 @@ router.post('/preferences/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/projects/:userId', async (req: Request, res: Response) => {
+router.get('/projects/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -297,7 +346,7 @@ router.get('/projects/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/conversations/:userId', async (req: Request, res: Response) => {
+router.post('/conversations/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const body = bodyObject(req.body);
@@ -326,15 +375,15 @@ router.get('/health', (_req: Request, res: Response) => {
 // Tool 5 — Argument DNA Mapper endpoints
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.post('/contradiction/check', async (req: Request, res: Response) => {
+router.post('/contradiction/check', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId);
+    const userId = (req as any).authenticatedUserId as number;
     const text = requiredString(body?.text, 20_000);
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const autoStore = optionalBool(body?.autoStore);
     if (!userId || !text) {
-      res.status(400).json({ error: 'userId and text are required' });
+      res.status(400).json({ error: 'text is required' });
       return;
     }
     await ensureUser(userId);
@@ -367,7 +416,7 @@ router.post('/contradiction/check', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/positions/:userId', async (req: Request, res: Response) => {
+router.get('/positions/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   if (!requireDb(res)) return;
   try {
     const userId = parseInt(req.params.userId, 10);
@@ -384,7 +433,7 @@ router.get('/positions/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/positions/:userId', async (req: Request, res: Response) => {
+router.post('/positions/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const body = bodyObject(req.body);
@@ -446,7 +495,7 @@ router.get('/contradiction/history/:positionId', async (req: Request, res: Respo
 
 // ─── Dashboard API endpoints ──────────────────────────────────────────────────
 
-router.get('/dashboard/burnout/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/burnout/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const signals = await query(
@@ -468,7 +517,7 @@ router.get('/dashboard/burnout/:userId', async (req: Request, res: Response) => 
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/dashboard/commitments/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/commitments/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const pending = await query(
@@ -485,7 +534,7 @@ router.get('/dashboard/commitments/:userId', async (req: Request, res: Response)
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/dashboard/relationships/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/relationships/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const health = await query(
@@ -497,7 +546,7 @@ router.get('/dashboard/relationships/:userId', async (req: Request, res: Respons
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/dashboard/bugs/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/bugs/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const bugs = await query(
@@ -509,7 +558,7 @@ router.get('/dashboard/bugs/:userId', async (req: Request, res: Response) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/dashboard/manifesto/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/manifesto/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const manifesto = await query(
@@ -528,7 +577,7 @@ router.get('/dashboard/manifesto/:userId', async (req: Request, res: Response) =
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/dashboard/stats/:userId', async (req: Request, res: Response) => {
+router.get('/dashboard/stats/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const [memories, positions, commitments, relationships, bugs, decisions] = await Promise.all([
@@ -552,7 +601,7 @@ router.get('/dashboard/stats/:userId', async (req: Request, res: Response) => {
 
 
 // ─── Real-time SSE endpoint ───────────────────────────────────────────────────
-router.get('/events/:userId', (req: Request, res: Response) => {
+router.get('/events/:userId', requireAuth, requireUserId(), (req: Request, res: Response) => {
   const userId = parseInt(req.params.userId, 10);
   if (isNaN(userId)) { res.status(400).json({ error: 'Invalid userId' }); return; }
 
@@ -580,16 +629,16 @@ router.get('/events/:userId', (req: Request, res: Response) => {
 
 // ─── NexusForge API Routes ───────────────────────────────────────────────
 
-router.post('/nexus/ingest', async (req: Request, res: Response) => {
+router.post('/nexus/ingest', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const content = requiredString(body?.content, 50_000);
     const sourceModule = requiredString(body?.sourceModule, 160);
     const tags = Array.isArray(body?.tags) ? body.tags : [];
     const metadata = bodyObject(body?.metadata) || {};
-    if (!content || !sourceModule) {
+    if (!userId || !content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
@@ -615,11 +664,11 @@ router.post('/nexus/ingest', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/nexus/query', async (req: Request, res: Response) => {
+router.post('/nexus/query', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
     const q = requiredString(body?.query, 10_000);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     if (!q) {
       res.status(400).json({ error: 'query required' });
@@ -639,7 +688,7 @@ router.post('/nexus/query', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/nexus/stats/:userId', async (req: Request, res: Response) => {
+router.get('/nexus/stats/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -665,7 +714,7 @@ router.get('/nexus/stats/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
+router.get('/nexus/graph/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
@@ -698,17 +747,17 @@ router.get('/nexus/graph/:userId', async (req: Request, res: Response) => {
 
 // ─── ChronosVeil API Routes ───────────────────────────────────────────────
 
-router.post('/chronos/ingest', async (req: Request, res: Response) => {
+router.post('/chronos/ingest', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const content = requiredString(body?.content, 50_000);
     const tags = Array.isArray(body?.tags) ? body.tags : [];
     const entity = optionalString(body?.entity, 160);
     const metadata = bodyObject(body?.metadata) || {};
     const sourceModule = requiredString(body?.sourceModule, 160);
-    if (!content || !sourceModule) {
+    if (!userId || !content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
@@ -743,11 +792,11 @@ router.post('/chronos/ingest', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/chronos/query', async (req: Request, res: Response) => {
+router.post('/chronos/query', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
     const q = requiredString(body?.query, 10_000);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const limit = boundedPositiveInt(body?.limit, 1, 100) || 8;
     if (!q) {
@@ -769,7 +818,7 @@ router.post('/chronos/query', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/chronos/context/:userId', async (req: Request, res: Response) => {
+router.get('/chronos/context/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const projectId = (req.query.projectId as string) || 'default';
@@ -793,7 +842,7 @@ router.get('/chronos/context/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/chronos/stats/:userId', async (req: Request, res: Response) => {
+router.get('/chronos/stats/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -819,7 +868,7 @@ router.get('/chronos/stats/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/chronos/edges/:userId', async (req: Request, res: Response) => {
+router.get('/chronos/edges/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     if (isNaN(userId)) {
@@ -847,10 +896,10 @@ router.get('/chronos/edges/:userId', async (req: Request, res: Response) => {
 
 // ─── SynapseMetabolon API Routes ─────────────────────────────────────────────
 
-router.post('/synapse/ingest', async (req: Request, res: Response) => {
+router.post('/synapse/ingest', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const content = requiredString(body?.content, 50_000);
     const tags = Array.isArray(body?.tags) ? body.tags : [];
@@ -859,7 +908,7 @@ router.post('/synapse/ingest', async (req: Request, res: Response) => {
     const sourceModule = requiredString(body?.sourceModule, 160);
     const confidence = typeof body?.confidence === 'number' ? body.confidence : undefined;
     const outcomeScore = typeof body?.outcomeScore === 'number' ? body.outcomeScore : undefined;
-    if (!content || !sourceModule) {
+    if (!userId || !content || !sourceModule) {
       res.status(400).json({ error: 'content and sourceModule required' });
       return;
     }
@@ -896,11 +945,11 @@ router.post('/synapse/ingest', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/synapse/query', async (req: Request, res: Response) => {
+router.post('/synapse/query', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
     const q = requiredString(body?.query, 10_000);
-    const userId = positiveInt(body?.userId) || 1;
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
     if (!q) {
@@ -922,7 +971,7 @@ router.post('/synapse/query', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/synapse/context/:userId', async (req: Request, res: Response) => {
+router.get('/synapse/context/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const projectId = (req.query.projectId as string) || 'default';
@@ -946,7 +995,7 @@ router.get('/synapse/context/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/synapse/stats/:userId', async (req: Request, res: Response) => {
+router.get('/synapse/stats/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId, 10);
     const projectId = (req.query.projectId as string) || 'default';
@@ -963,7 +1012,7 @@ router.get('/synapse/stats/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
+router.get('/synapse/graph/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const limit = boundedPositiveInt(req.query.limit, 1, 200) || 30;
@@ -980,7 +1029,7 @@ router.get('/synapse/graph/:userId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) => {
+router.post('/synapse/consolidate/:userId', requireAuth, requireUserId(), async (req: Request, res: Response) => {
   try {
     const userId = positiveInt(req.params.userId);
     const body = bodyObject(req.body);
@@ -1001,16 +1050,16 @@ router.post('/synapse/consolidate/:userId', async (req: Request, res: Response) 
 
 // ── ChronosForge Routes ────────────────────────────────────────────────────
 
-router.post('/chrono/query', async (req: Request, res: Response) => {
+router.post('/chrono/query', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId);
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const atTime = Number(body?.atTime);
     const domain = optionalString(body?.domain, 160) as import('../memory/chronosForge.js').SignalDomain | undefined;
     const limit = boundedPositiveInt(body?.limit, 1, 100) || 10;
     if (!userId || !Number.isFinite(atTime)) {
-      res.status(400).json({ error: 'userId and atTime are required' });
+      res.status(400).json({ error: 'atTime is required' });
       return;
     }
     const result = await chronosForge.queryAt(
@@ -1025,16 +1074,16 @@ router.post('/chrono/query', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/chrono/foresight', async (req: Request, res: Response) => {
+router.post('/chrono/foresight', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId);
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const domain = requiredString(body?.domain, 160) as import('../memory/chronosForge.js').SignalDomain;
     const lookbackDays = boundedPositiveInt(body?.lookbackDays, 1, 3650);
     const steps = boundedPositiveInt(body?.steps, 1, 365);
     if (!userId || !domain) {
-      res.status(400).json({ error: 'userId and domain are required' });
+      res.status(400).json({ error: 'domain is required' });
       return;
     }
     const result = await chronosForge.simulateForesight(
@@ -1049,14 +1098,14 @@ router.post('/chrono/foresight', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/chrono/consolidate', async (req: Request, res: Response) => {
+router.post('/chrono/consolidate', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = bodyObject(req.body);
-    const userId = positiveInt(body?.userId);
+    const userId = (req as any).authenticatedUserId as number;
     const projectId = optionalString(body?.projectId, 160) || 'default';
     const importanceThreshold = typeof body?.importanceThreshold === 'number' ? body.importanceThreshold : undefined;
     if (!userId) {
-      res.status(400).json({ error: 'userId is required' });
+      res.status(400).json({ error: 'Authentication required' });
       return;
     }
     const result = await chronosForge.consolidate(

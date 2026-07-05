@@ -114,7 +114,7 @@ export class SessionManager {
       '--eval',
       `
         const { createREPL } = require('./dist/repl.js');
-        createREPL({ sessionId: '${opts.sessionId}', token: '${opts.accessToken}' });
+        createREPL({ sessionId: process.env.TIMPS_SESSION_ID, token: process.env.TIMPS_SESSION_TOKEN });
       `,
     ], {
       cwd: dir,

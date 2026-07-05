@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 import { generateId, generateRandomSecret } from './utils.js';
 
 // ── Platform registry ──────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ export interface PlatformConfig {
   wecomCorpId?: string;
   wecomCorpSecret?: string;
   wecomAgentId?: number;
+  wecomToken?: string;         // Callback verification token (set in WeCom admin console)
 
   // ── Weixin personal (ilink) ───────────────────────────────────────────────
   weixinToken?: string;     // ilink session token
@@ -638,7 +640,7 @@ export class Gateway {
           break;
         case 'wecom':
           if (config.wecomCorpId && config.wecomCorpSecret) {
-            this.startWecomWebhook(config.wecomCorpId, config.wecomCorpSecret, config.wecomAgentId, config.allowedUsers);
+            this.startWecomWebhook(config.wecomCorpId, config.wecomCorpSecret, config.wecomAgentId, config.wecomToken, config.allowedUsers);
           }
           break;
         case 'weixin':
@@ -849,11 +851,30 @@ export class Gateway {
         const chunks: Buffer[] = [];
         req.on('data', (c: Buffer) => chunks.push(c));
         req.on('end', async () => {
-          const body = JSON.parse(Buffer.concat(chunks).toString()) as {
+          const rawBody = Buffer.concat(chunks);
+          const body = JSON.parse(rawBody.toString()) as {
             challenge?: string;
             header?: { event_type?: string };
             event?: { message?: { content?: string; chat_id?: string }; sender?: { sender_id?: { open_id?: string } } };
           };
+
+          // Verify Feishu webhook signature
+          const timestamp = req.headers['x-lark-request-timestamp'] as string | undefined;
+          const nonce = req.headers['x-lark-request-nonce'] as string | undefined;
+          const signature = req.headers['x-lark-signature'] as string | undefined;
+          if (timestamp && nonce && signature) {
+            const signingContent = timestamp + nonce + rawBody.toString();
+            const hmac = crypto.createHmac('sha256', appSecret);
+            hmac.update(signingContent);
+            const expected = hmac.digest('hex');
+            try {
+              if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+                res.writeHead(401); res.end('{}'); return;
+              }
+            } catch {
+              res.writeHead(401); res.end('{}'); return;
+            }
+          }
 
           // URL verification challenge
           if (body.challenge) { res.end(JSON.stringify({ challenge: body.challenge })); return; }
@@ -1005,7 +1026,7 @@ export class Gateway {
   }
 
   // ── WeChat Work (WeCom) webhook ────────────────────────────────────────────
-  private startWecomWebhook(corpId: string, corpSecret: string, agentId: number | undefined, allowedUsers?: string[]): void {
+  private startWecomWebhook(corpId: string, corpSecret: string, agentId: number | undefined, wecomToken: string | undefined, allowedUsers?: string[]): void {
     const port = 8182;
     let tokenCache = { token: '', expiresAt: 0 };
 
@@ -1018,13 +1039,54 @@ export class Gateway {
       return tokenCache.token;
     };
 
+    const verifySignature = (signature: string, timestamp: string, nonce: string, echostr: string): boolean => {
+      if (!wecomToken) return true; // skip verification if no token configured
+      const arr = [wecomToken, timestamp, nonce, echostr].sort();
+      const sha1 = crypto.createHash('sha1').update(arr.join('')).digest('hex');
+      try {
+        return crypto.timingSafeEqual(Buffer.from(sha1), Buffer.from(signature));
+      } catch {
+        return false;
+      }
+    };
+
     import('node:http').then(http => {
       this.httpServer = http.createServer(async (req: any, res: any) => {
+        const url = new URL(req.url ?? '/', 'http://localhost');
+
+        // WeCom URL verification (GET with echostr)
+        if (req.method === 'GET') {
+          const msgSignature = url.searchParams.get('msg_signature') ?? '';
+          const timestamp = url.searchParams.get('timestamp') ?? '';
+          const nonce = url.searchParams.get('nonce') ?? '';
+          const echostr = url.searchParams.get('echostr') ?? '';
+          if (msgSignature && timestamp && nonce && echostr) {
+            if (verifySignature(msgSignature, timestamp, nonce, echostr)) {
+              res.end(echostr);
+            } else {
+              res.writeHead(401); res.end('');
+            }
+          } else {
+            res.end('');
+          }
+          return;
+        }
+
         if (req.method !== 'POST') { res.end(''); return; }
         const chunks: Buffer[] = [];
         req.on('data', (c: Buffer) => chunks.push(c));
         req.on('end', async () => {
-          const body = JSON.parse(Buffer.concat(chunks).toString()) as {
+          const rawBody = Buffer.concat(chunks).toString();
+
+          // Verify WeCom webhook signature
+          const msgSignature = url.searchParams.get('msg_signature') ?? req.headers['msg_signature'] as string ?? '';
+          const timestamp = url.searchParams.get('timestamp') ?? req.headers['timestamp'] as string ?? '';
+          const nonce = url.searchParams.get('nonce') ?? req.headers['nonce'] as string ?? '';
+          if (msgSignature && timestamp && nonce && !verifySignature(msgSignature, timestamp, nonce, rawBody)) {
+            res.writeHead(401); res.end(''); return;
+          }
+
+          const body = JSON.parse(rawBody) as {
             MsgType?: string; Content?: string; FromUserName?: string; ToUserName?: string;
           };
 
@@ -1415,14 +1477,16 @@ export async function handleGatewayCommand(args: string[]): Promise<string> {
         const corpId = args[2] ?? process.env.WECOM_CORP_ID;
         const corpSecret = args[3] ?? process.env.WECOM_CORP_SECRET;
         const agentIdStr = args[4] ?? process.env.WECOM_AGENT_ID;
+        const wecomToken = args[5] ?? process.env.WECOM_TOKEN;
         if (!corpId || !corpSecret || !agentIdStr) {
-          return 'Usage: timps gateway setup wecom <corp_id> <corp_secret> <agent_id>\n'
+          return 'Usage: timps gateway setup wecom <corp_id> <corp_secret> <agent_id> [token]\n'
             + '  1. Log in to https://work.weixin.qq.com/\n'
             + '  2. Go to App Management → Create a self-built app\n'
             + '  3. Note the CorpID, AgentSecret, and AgentID\n'
-            + '  4. Set Callback URL to your public IP:8182/wecom';
+            + '  4. Set Callback URL to your public IP:8182/wecom\n'
+            + '  5. [token] is the callback verification Token from WeCom admin';
         }
-        gateway.configure('wecom', { type: 'wecom', enabled: true, wecomCorpId: corpId, wecomCorpSecret: corpSecret, wecomAgentId: parseInt(agentIdStr, 10) });
+        gateway.configure('wecom', { type: 'wecom', enabled: true, wecomCorpId: corpId, wecomCorpSecret: corpSecret, wecomAgentId: parseInt(agentIdStr, 10), wecomToken });
         return 'WeChat Work (WeCom) configured. Run: timps gateway start';
       }
       case 'weixin': {
