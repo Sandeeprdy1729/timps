@@ -1,30 +1,13 @@
 class Timps < Formula
   desc "The AI coding agent that remembers — CLI tool"
   homepage "https://timps.dev"
-  version "0.1.0"
+  license "MIT"
+  head "https://github.com/Sandeeprdy1729/timps.git", branch: "main"
 
-  on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/Sandeeprdy1729/timps/releases/download/v#{version}/timps-aarch64-macos"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-    else
-      url "https://github.com/Sandeeprdy1729/timps/releases/download/v#{version}/timps-x86_64-macos"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-    end
-  end
-
-  on_linux do
-    if Hardware::CPU.arm?
-      url "https://github.com/Sandeeprdy1729/timps/releases/download/v#{version}/timps-aarch64-linux"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-    else
-      url "https://github.com/Sandeeprdy1729/timps/releases/download/v#{version}/timps-x86_64-linux"
-      sha256 "0000000000000000000000000000000000000000000000000000000000000000"
-    end
-  end
+  depends_on "rust" => :build
 
   def install
-    bin.install "timps"
+    system "cargo", "install", *std_cargo_args(path: "crates/timps-cli")
   end
 
   def caveats
