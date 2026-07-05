@@ -25,6 +25,14 @@ export interface EventSubscription {
 
 type EventCallback = (event: Event) => void | Promise<void>;
 
+function matchWildcard(pattern: string, value: string): boolean {
+  if (pattern === '*' || pattern === value) return true;
+  if (pattern.endsWith('*')) {
+    return value.startsWith(pattern.slice(0, -1));
+  }
+  return false;
+}
+
 export class EventBus {
   private subscriptions: Map<string, EventSubscription> = new Map();
   private eventStore: Event[] = [];
@@ -96,7 +104,7 @@ export class EventBus {
   }
 
   private matchesFilter(event: Event, filter: EventFilter): boolean {
-    if (filter.type && event.type !== filter.type) {
+    if (filter.type && !matchWildcard(filter.type, event.type)) {
       return false;
     }
 
@@ -119,7 +127,7 @@ export class EventBus {
     let results = this.eventStore;
 
     if (filter.type) {
-      results = results.filter(e => e.type === filter.type);
+      results = results.filter(e => matchWildcard(filter.type!, e.type));
     }
 
     if (filter.source) {

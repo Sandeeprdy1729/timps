@@ -51,7 +51,8 @@ export function IntegrationSettings() {
 
   useEffect(() => {
     loadConnections();
-    setupEventListeners();
+    const subId = setupEventListeners();
+    return () => { if (subId) eventBus.unsubscribe(subId); };
   }, []);
 
   const loadConnections = useCallback(() => {
@@ -60,12 +61,13 @@ export function IntegrationSettings() {
   }, []);
 
   const setupEventListeners = useCallback(() => {
-    eventBus.subscribe(
+    const subId = eventBus.subscribe(
       { type: 'connection:*' },
       (event) => {
         setActivityFeed(prev => [event, ...prev].slice(0, 50));
       }
     );
+    return subId;
   }, []);
 
   const filteredIntegrations = integrations.filter(int => {
