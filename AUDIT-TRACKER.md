@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 13    | 76        |
+| High     | 89    | 14    | 75        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **24** | **364** |
+| **Total**| **388** | **25** | **363** |
 
 ---
 
@@ -48,6 +48,7 @@
 | H11 | `Formula/timps.rb` | Homebrew formula has all-zero sha256 placeholders and points to non-existent release assets | Rewritten as head-only formula that builds from source via `cargo install` |
 | H12 | `install.sh` | Interactive `read` prompts break `curl|bash`; `npm bin -g` removed in npm 9; `sudo npm install -g` in piped script | Added `PIPED` detection (`[[ -t 0 ]]`), all prompts guarded and use `</dev/tty`; replaced `npm bin -g` with `npm root -g`; replaced `sudo` fallback with manual instructions |
 | H13 | `packages/cache/src/index.ts` | Extra stray `};` after `cacheWithTTL` arrow function makes the file a SyntaxError | Removed the unmatched closing brace |
+| H14 | `packages/connection-manager/src/index.ts` | API keys/OAuth tokens stored in plaintext in localStorage | Added AES-256-GCM encryption via Web Crypto API; key in sessionStorage (ephemeral); credentials encrypted before serialization, decrypted on load |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
