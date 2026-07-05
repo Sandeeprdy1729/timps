@@ -93,8 +93,14 @@ fn project_hash_inner(project_path: &str) -> String {
     to_base36(h.unsigned_abs())
 }
 
+pub(crate) fn home_dir() -> String {
+    std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string())
+}
+
 fn memory_dir(project_path: &str) -> String {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = home_dir();
     let hash = project_hash_inner(project_path);
     format!("{}/.timps/memory/{}", home, hash)
 }
@@ -217,8 +223,7 @@ pub fn load_knowledge_graph(project_path: String) -> Result<KnowledgeGraph, Stri
 /// List all known project hashes (directories under ~/.timps/memory/)
 #[tauri::command]
 pub fn list_projects() -> Result<Vec<String>, String> {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let base = format!("{}/.timps/memory", home);
+    let base = format!("{}/.timps/memory", home_dir());
     match fs::read_dir(&base) {
         Ok(entries) => {
             let hashes: Vec<String> = entries
@@ -1052,8 +1057,7 @@ pub fn detect_link_type_inner(url: &str) -> &'static str {
 }
 
 fn lens_dir() -> String {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    format!("{}/.timps/lens", home)
+    format!("{}/.timps/lens", home_dir())
 }
 
 fn is_leap_year(year: i32) -> bool {
@@ -1450,7 +1454,7 @@ pub async fn analyze_lens_link(
 /// Checks: Desktop, Documents, Home, CWD. Looks for .git, package.json, Cargo.toml.
 #[tauri::command]
 pub fn detect_project_path() -> String {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let home = home_dir();
     let candidates = vec![
         format!("{}/Desktop", home),
         format!("{}/Documents", home),
