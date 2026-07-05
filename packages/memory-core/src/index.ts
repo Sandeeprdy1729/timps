@@ -379,7 +379,7 @@ export { AbTestRunner } from './eval/abtest.js';
 export { EvalStorage } from './eval/storage.js';
 export { createEvalRoutes } from './server/evalRoutes.js';
 export type {
-  EvalExample, EvalDataset, EvalMetric, EvalResult, EvalBaseline,
+  EvalExample, EvalEntrySeed, EvalDataset, EvalMetric, EvalResult, EvalBaseline,
   RegressionResult, VariantConfig, EvalConfig, AbTestResult, DatasetName,
 } from './eval/types.js';
 export { DATASET_NAMES, DEFAULT_EVAL_THRESHOLDS } from './eval/types.js';

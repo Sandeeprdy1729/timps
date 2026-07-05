@@ -820,15 +820,15 @@ export class MemoryEngine {
   }
 
   /** Store a fact/pattern/preference in semantic memory. Deduplicates by Jaccard similarity. */
-  store(entry: { content: string; type?: MemoryEntryType; tags?: string[]; platform?: string; channel?: string }, opts?: { skipGuard?: boolean }): void {
+  store(entry: { content: string; type?: MemoryEntryType; tags?: string[]; platform?: string; channel?: string; timestamp?: number }, opts?: { skipGuard?: boolean }): void {
     const _span = this._telemetry?.tracer.startSpan('engine.store', { 'timps.operation': 'store' });
     const startTime = Date.now();
     try {
     const facts = loadSemantic(this.dir, this._backend);
-    const { content, type = 'fact', tags = [], platform, channel } = entry;
+    const { content, type = 'fact', tags = [], platform, channel, timestamp: explicitTimestamp } = entry;
     if (facts.some(f => jaccardSimilarity(f.content, content) > 0.8)) return;
     const id = generateId('mem');
-    const timestamp = Date.now();
+    const timestamp = explicitTimestamp ?? Date.now();
     const actor = this.actorId;
 
     // L15: ConstitutionalGuard gate — check before storing
