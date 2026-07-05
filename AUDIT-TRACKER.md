@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 21    | 68        |
+| High     | 89    | 25    | 64        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **32** | **356** |
+| **Total**| **388** | **36** | **352** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 2 High
+## ✅ Fixed — 11 Critical + 25 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 377 Issues
+## 📋 Remaining — 352 Issues
 
-### High (88)
+### High (64)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -56,6 +56,10 @@
 | H19 | `packages/memory-core/deploy/k8s/timps-memory.yaml` | Three k8s anti-patterns: emptyDir wipes data on pod eviction (defeats "persistent memory"), 3 replicas with no session affinity produce divergent state, image is unpinned `:latest` | Replaced emptyDir with PVC (10Gi ReadWriteOnce); added `sessionAffinity: ClientIP` (1h timeout); pinned image tag with `TIMPS_VERSION` env var; added doc comment explaining scaling assumptions |
 | H20 | `packages/memory-core/src/server/start.ts` (new), `packages/memory-core/docker-compose.yml`, `packages/memory-core/deploy/k8s/timps-memory.yaml`, `packages/memory-core/Dockerfile`, `packages/memory-core/package.json` | 13 env vars (POSTGRES_PRIMARY, REDIS_URL, QDRANT_URL, MEMORY_PORT, TIMPS_TELEMETRY_*, etc.) passed to memory service in docker-compose + k8s but never read by the server — the entire horizontal scale stack (Postgres primary+2 replicas, Redis, Qdrant, PgBouncer) is scenery | Created `src/server/start.ts` entry point that reads all env vars and dynamically imports the correct backends (PostgresBackend, CacheManager, QdrantBackend, EventBus, TelemetryManager); updated tsup build, Dockerfile CMD, and manifests with doc comments confirming the env vars are now consumed |
 | H21 | `packages/memory-core/Dockerfile` + `src/server/index.ts` | Dockerfile CMD points to barrel file (re-exports only) — container loads module and exits immediately; CrashLoopBackOff | Fixed as part of H20: CMD now points to `dist/server/start.js` which bootstraps and runs the MemoryServer |
+| H22 | `packages/memory-core/evals/datasets/*.json`, `src/eval/types.ts`, `src/eval/runner.ts`, `src/MemoryEngine.ts` | 4 eval datasets don't test what they claim: long-context has no distractors, multi-agent lacks actorIds, contradictions have <30% Jaccard overlap, temporal ordering all uses same timestamp | Added 57 distractors (long-context), seeds with actorId (multi-agent), >50% Jaccard-overlap pairs (adversarial), explicit timestamps months apart (temporal); added EvalEntrySeed type; seedEngineWithDataset consumes seeds/distractors; MemoryEngine.store() accepts optional timestamp |
+| H23 | `packages/memory-core/src/EchoForge.ts` | ReservoirReadout generates hash-seeded random weights on every call — untrained, content-independent pseudo-noise centred on 0.5 | Replaced with 4-factor content-aware scoring: reservoir activation energy (35%), active node density (30%), contradiction edge weight (20%), recency-weighted echo amplitude (15%) |
+| H24 | `packages/memory-core/src/EngramLog.ts` | recover() JSON.parses last line with no try/catch — torn write bricks all memory stores | Added try/catch with backward walk skipping unparseable lines; same fix in verifyChain() and query() |
+| H25 | `packages/memory-core/src/EngramLog.ts` | Plain SHA-256 chain with no secret and no external head anchor — in-place edits and truncation pass verifyChain() | Switched to HMAC-SHA256 with auto-generated project-local secret; added engram.head.json written atomically per append; verifyChain() checks anchor for truncation |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
