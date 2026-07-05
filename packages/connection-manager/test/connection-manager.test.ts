@@ -11,6 +11,34 @@ Object.defineProperty(globalThis, 'localStorage', {
   writable: true,
 });
 
+const mockSessionStorage: Record<string, string> = {};
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: {
+    getItem: (k: string) => mockSessionStorage[k] ?? null,
+    setItem: (k: string, v: string) => { mockSessionStorage[k] = v; },
+    removeItem: (k: string) => { delete mockSessionStorage[k]; },
+    clear: () => { Object.keys(mockSessionStorage).forEach(k => delete mockSessionStorage[k]); },
+  },
+  writable: true,
+});
+
+// Mock Web Crypto API for AES-GCM encryption round-trip.
+const mockKey = {};
+function txt(s: string): ArrayBuffer { return new TextEncoder().encode(s).buffer; }
+Object.defineProperty(globalThis, 'crypto', {
+  value: {
+    getRandomValues: (arr: Uint8Array) => { for (let i = 0; i < arr.length; i++) arr[i] = i; return arr; },
+    subtle: {
+      generateKey: async () => mockKey,
+      exportKey: async () => txt('mock-key-data'),
+      importKey: async () => mockKey,
+      encrypt: async (_algo: any, _key: any, data: ArrayBuffer) => data,
+      decrypt: async (_algo: any, _key: any, data: ArrayBuffer) => data,
+    } as SubtleCrypto,
+  },
+  writable: true,
+});
+
 const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
 globalThis.fetch = mockFetch as any;
 
@@ -133,7 +161,7 @@ describe('ConnectionManager', () => {
   describe('updateLastSync', () => {
     it('updates lastSyncAt', async () => {
       const state = await mgr.connect(makeConfig());
-      mgr.updateLastSync(state.id);
+      await mgr.updateLastSync(state.id);
       const updated = mgr.getConnection(state.id);
       expect(updated!.lastSyncAt).toBeTruthy();
     });
@@ -156,7 +184,7 @@ describe('ConnectionManager', () => {
     it('restores connection after reauth', async () => {
       const state = await mgr.connect(makeConfig());
       mgr.getConnection(state.id)!.status = 'expired';
-      mgr.completeReauth(state.id, { accessToken: 'new_token' });
+      await mgr.completeReauth(state.id, { accessToken: 'new_token' });
       expect(mgr.getConnection(state.id)!.status).toBe('connected');
       expect(mgr.getConfig(state.id)!.credentials.accessToken).toBe('new_token');
     });

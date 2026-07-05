@@ -25,6 +25,16 @@ export interface ConnectionEvent {
 
 type EventCallback = (event: ConnectionEvent) => void | Promise<void>;
 
+function bufToHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBuf(hex: string): ArrayBuffer {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  return bytes.buffer;
+}
+
 export class ConnectionManager {
   private connections: Map<string, ConnectionState> = new Map();
   private configs: Map<string, ConnectionConfig> = new Map();
@@ -33,29 +43,90 @@ export class ConnectionManager {
   private reauthQueue: ReauthTrigger[] = [];
   private storageKey = 'timps_connections';
   private idCounter = 0;
+  private _cryptoInit: Promise<CryptoKey> | null = null;
 
   constructor() {
-    this.loadFromStorage();
+    this.loadFromStorage().catch(() => {});
   }
 
-  private loadFromStorage(): void {
+  private async _initCrypto(): Promise<CryptoKey> {
+    if (!this._cryptoInit) {
+      this._cryptoInit = this._loadOrCreateKey();
+    }
+    return this._cryptoInit;
+  }
+
+  private async _loadOrCreateKey(): Promise<CryptoKey> {
+    const keyHex = sessionStorage.getItem(this.storageKey + '_key');
+    if (keyHex) {
+      const raw = hexToBuf(keyHex);
+      return await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    }
+    const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    const raw = await crypto.subtle.exportKey('raw', key);
+    sessionStorage.setItem(this.storageKey + '_key', bufToHex(raw));
+    return key;
+  }
+
+  private async _encryptCredentials(credentials: Record<string, string>): Promise<string> {
+    const key = await this._initCrypto();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(JSON.stringify(credentials));
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+    return bufToHex(iv) + ':' + bufToHex(encrypted);
+  }
+
+  private async _decryptCredentials(stored: string): Promise<Record<string, string>> {
+    const key = await this._initCrypto();
+    const sep = stored.indexOf(':');
+    if (sep === -1) throw new Error('Invalid encrypted credential format');
+    const iv = hexToBuf(stored.slice(0, sep));
+    const data = hexToBuf(stored.slice(sep + 1));
+    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+    return JSON.parse(new TextDecoder().decode(decrypted));
+  }
+
+  private async loadFromStorage(): Promise<void> {
     try {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
         const data = JSON.parse(stored);
         this.connections = new Map(Object.entries(data.connections || {}));
-        this.configs = new Map(Object.entries(data.configs || {}));
+        const rawConfigs: Record<string, any> = data.configs || {};
+        const configs = new Map<string, ConnectionConfig>();
+        for (const [id, raw] of Object.entries(rawConfigs)) {
+          const r = raw as any;
+          if (r.credentialsEncrypted) {
+            try {
+              r.credentials = await this._decryptCredentials(r.credentialsEncrypted);
+            } catch {
+              r.credentials = {};
+            }
+            delete r.credentialsEncrypted;
+          }
+          configs.set(id, r as ConnectionConfig);
+        }
+        this.configs = configs;
       }
     } catch (e) {
       console.error('Failed to load connections from storage:', e);
     }
   }
 
-  private saveToStorage(): void {
+  private async saveToStorage(): Promise<void> {
     try {
+      const serialized: Record<string, any> = {};
+      for (const [id, config] of this.configs) {
+        const copy = { ...config } as any;
+        if (config.credentials && Object.keys(config.credentials).length > 0) {
+          copy.credentialsEncrypted = await this._encryptCredentials(config.credentials);
+          delete copy.credentials;
+        }
+        serialized[id] = copy;
+      }
       const data = {
         connections: Object.fromEntries(this.connections),
-        configs: Object.fromEntries(this.configs),
+        configs: serialized,
       };
       localStorage.setItem(this.storageKey, JSON.stringify(data));
     } catch (e) {
@@ -102,7 +173,7 @@ export class ConnectionManager {
 
     this.connections.set(connectionId, state);
     this.configs.set(connectionId, config);
-    this.saveToStorage();
+    await this.saveToStorage();
 
     this.emit({
       type: 'connection:connected',
@@ -126,7 +197,7 @@ export class ConnectionManager {
     this.stopHealthCheck(connectionId);
     this.connections.delete(connectionId);
     this.configs.delete(connectionId);
-    this.saveToStorage();
+    await this.saveToStorage();
 
     this.emit({
       type: 'connection:disconnected',
@@ -166,7 +237,7 @@ export class ConnectionManager {
     }
 
     config.credentials = { ...config.credentials, ...credentials };
-    this.saveToStorage();
+    await this.saveToStorage();
   }
 
   async testConnection(connectionId: string): Promise<boolean> {
@@ -187,7 +258,7 @@ export class ConnectionManager {
       
       state.lastError = healthy ? undefined : `HTTP ${response.status}`;
       state.status = healthy ? 'connected' : 'error';
-      this.saveToStorage();
+      await this.saveToStorage();
 
       this.emit({
         type: 'connection:health_check',
@@ -201,7 +272,7 @@ export class ConnectionManager {
     } catch (error) {
       state.status = 'error';
       state.lastError = error instanceof Error ? error.message : 'Unknown error';
-      this.saveToStorage();
+      await this.saveToStorage();
 
       this.emit({
         type: 'connection:error',
@@ -296,14 +367,14 @@ export class ConnectionManager {
       }
     }
 
-    this.saveToStorage();
+    await this.saveToStorage();
   }
 
   getReauthQueue(): ReauthTrigger[] {
     return [...this.reauthQueue];
   }
 
-  completeReauth(connectionId: string, newCredentials: Record<string, string>): void {
+  async completeReauth(connectionId: string, newCredentials: Record<string, string>): Promise<void> {
     const state = this.connections.get(connectionId);
     const config = this.configs.get(connectionId);
     const queueIndex = this.reauthQueue.findIndex(t => t.connectionId === connectionId);
@@ -318,7 +389,7 @@ export class ConnectionManager {
         this.reauthQueue[queueIndex].status = 'completed';
       }
 
-      this.saveToStorage();
+      await this.saveToStorage();
 
       this.emit({
         type: 'connection:connected',
@@ -342,11 +413,11 @@ export class ConnectionManager {
     };
   }
 
-  updateLastSync(connectionId: string): void {
+  async updateLastSync(connectionId: string): Promise<void> {
     const state = this.connections.get(connectionId);
     if (state) {
       state.lastSyncAt = new Date().toISOString();
-      this.saveToStorage();
+      await this.saveToStorage();
     }
   }
 
