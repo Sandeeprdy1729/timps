@@ -151,7 +151,7 @@ impl Agent {
         let mut final_output = String::new();
         let mut iterations = 0u32;
 
-        loop {
+        'turn: loop {
             iterations += 1;
             if iterations > self.opts.max_iterations {
                 final_output = format!("Agent stopped after {} iterations (max: {})", iterations - 1, self.opts.max_iterations);
@@ -178,7 +178,7 @@ impl Agent {
                         let _ = tx.send(AgentEvent::Error(e.clone())).await;
                         if retries < self.opts.max_retries {
                             retries += 1;
-                            continue;
+                            continue 'turn;
                         }
                         return Err(anyhow::anyhow!(e));
                     }

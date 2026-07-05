@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 4     | 85        |
+| High     | 89    | 5     | 84        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **15** | **373** |
+| **Total**| **388** | **16** | **372** |
 
 ---
 
@@ -39,6 +39,7 @@
 | H2 | `apps/marketplace/src/lib/credentials.ts` | Hardcoded encryption key + static salt | Requires `MARKETPLACE_ENCRYPTION_KEY` env var (fails closed), generates random salt per-install |
 | H3 | `apps/marketplace/src/lib/integrations/jira.ts`, `salesforce.ts` | SSRF + data exfiltration via user-supplied `instanceUrl` | Added `validateUrl()` blocking private IPs/localhost; stripped response body from error messages |
 | H4 | `apps/mobile/package.json` | Missing `@react-native-async-storage/async-storage` dep | Added to `dependencies` |
+| H5 | `crates/timps-agent/src/lib.rs` | Retry `continue` resumes dead stream instead of re-calling provider | Changed to labeled `continue 'turn` to restart the outer provider loop |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
