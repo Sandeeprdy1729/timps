@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 26    | 63        |
+| High     | 89    | 27    | 62        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **37** | **351** |
+| **Total**| **388** | **38** | **350** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 26 High
+## ✅ Fixed — 11 Critical + 27 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 351 Issues
+## 📋 Remaining — 350 Issues
 
-### High (63)
+### High (62)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -61,6 +61,7 @@
 | H24 | `packages/memory-core/src/EngramLog.ts` | recover() JSON.parses last line with no try/catch — torn write bricks all memory stores | Added try/catch with backward walk skipping unparseable lines; same fix in verifyChain() and query() |
 | H25 | `packages/memory-core/src/EngramLog.ts` | Plain SHA-256 chain with no secret and no external head anchor — in-place edits and truncation pass verifyChain() | Switched to HMAC-SHA256 with auto-generated project-local secret; added engram.head.json written atomically per append; verifyChain() checks anchor for truncation |
 | H26 | `packages/memory-core/src/MemoryEngine.ts` | store() passes null provenance to ConstitutionalGuard → always rejected but write proceeds anyway (only lowers confidence) | Now passes minimal provenance with confidence+evidenceCount; store() returns early when guard rejects; logs rejection to EngramLog |
+| H27 | `packages/memory-core/src/MemoryEngine.ts` | L6 ResonanceForge missing entirely, L8 AetherForgeERL and L9 HarmonicSheafWeaver have getters but never receive store data; ~9K lines of forge code is shelf-ware | Added resonanceForge getter; wired all 3 into store() weave pipeline alongside L5/L7; fixed layer number comments |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
