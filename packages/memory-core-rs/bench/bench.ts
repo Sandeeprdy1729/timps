@@ -119,58 +119,14 @@ const tsSearch = bench(`searchEntries (${ENTRY_COUNT} entries)`, ITERS, () =>
   tsSearchEntries(entries, QUERY, 10));
 console.log('└────────────────────────────────────────────────────────────┘\n');
 
-// ── Try native ──
-interface NativeCore {
-  projectHash(p: string): string;
-  loadSemantic(dir: string): string;
-  loadEpisodes(dir: string, count: number): string;
-  jaccardSimilarity(a: string, b: string): number;
-  searchEntries(json: string, query: string, limit: number): string;
-}
-
-let native: NativeCore | null = null;
-
-const candidatePaths = [
-  path.join(__dirname, '..', `memory-core-rs.darwin-${process.arch === 'arm64' ? 'arm64' : 'x64'}.node`),
-  path.join(__dirname, '..', `memory-core-rs.linux-${process.arch}-gnu.node`),
-  path.join(__dirname, '..', `memory-core-rs.win32-x64-msvc.node`),
-];
-
-for (const p of candidatePaths) {
-  try {
-    native = _require(p) as NativeCore;
-    console.log(`  ✓ Loaded native addon: ${path.basename(p)}\n`);
-    break;
-  } catch { /* try next */ }
-}
-
-if (!native) {
-  console.log('  ⚠️  Native addon not yet built.');
-  console.log('     Run:  cd packages/memory-core-rs && npm run build');
-  console.log('     Then re-run this benchmark to see the speedup.\n');
-} else {
-  const entriesJson = JSON.stringify(entries);
-  const A = 'TypeScript React hooks async state';
-  const B = 'hooks state async TypeScript patterns';
-
-  console.log('┌─ Rust native addon ────────────────────────────────────────┐');
-  const rsHash   = bench('projectHash', ITERS * 4, () => native!.projectHash(tmpDir));
-  const rsLoad   = bench(`loadSemantic (${ENTRY_COUNT} entries)`, ITERS, () => native!.loadSemantic(tmpDir));
-  const rsEp     = bench('loadEpisodes (50 lines)', ITERS, () => native!.loadEpisodes(tmpDir, 20));
-  const rsJacc   = bench('jaccardSimilarity', ITERS * 4, () => native!.jaccardSimilarity(A, B));
-  const rsSearch = bench(`searchEntries (${ENTRY_COUNT} entries)`, ITERS, () =>
-    native!.searchEntries(entriesJson, QUERY, 10));
-  console.log('└────────────────────────────────────────────────────────────┘\n');
-
-  const spd = (ts: number, rs: number) => (ts / rs).toFixed(1) + '×';
-  console.log('┌─ Speedup ──────────────────────────────────────────────────┐');
-  console.log(`  projectHash:        ${spd(tsHash, rsHash).padStart(6)}`);
-  console.log(`  loadSemantic:       ${spd(tsLoad, rsLoad).padStart(6)}`);
-  console.log(`  loadEpisodes:       ${spd(tsEp, rsEp).padStart(6)}`);
-  console.log(`  jaccardSimilarity:  ${spd(tsJacc, rsJacc).padStart(6)}`);
-  console.log(`  searchEntries:      ${spd(tsSearch, rsSearch).padStart(6)}`);
-  console.log('└────────────────────────────────────────────────────────────┘\n');
-}
+// ── Native addon ──
+// Storage/search native benchmarks (projectHash, loadSemantic, loadEpisodes,
+// jaccardSimilarity, searchEntries) were removed because the Rust addon
+// doesn't export them — only computeBatchSimilarity, kmeansClusterFlat,
+// eigenmodeWarmStart and RustLsh are implemented (see H18 audit).
+// Re-add native benchmarks here once the storage/search functions are
+// implemented in Rust, with corresponding TS baselines above.
+console.log('  ⚠️  No native benchmarks — Rust addon only exposes compute/LSH functions.\n');
 
 // Cleanup
 fs.rmSync(tmpDir, { recursive: true });

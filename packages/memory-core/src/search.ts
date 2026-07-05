@@ -1,10 +1,8 @@
 // ── @timps/memory-core — BM25 Search via MiniSearch ──
 // Wraps MiniSearch to provide keyword-based recall over MemoryEntry[]
-// Uses native Rust fast-path when @timps/memory-core-rs addon is available.
 
 import MiniSearch from 'minisearch';
 import type { MemoryEntry, SearchOptions } from './types.js';
-import { getNative } from './native.js';
 
 export function buildIndex(entries: MemoryEntry[]): MiniSearch<MemoryEntry> {
   const index = new MiniSearch<MemoryEntry>({
@@ -30,15 +28,7 @@ export function searchEntries(entries: MemoryEntry[], query: string, options: Se
     return pool.slice(-limit).reverse();
   }
 
-  // Native fast-path: Rust scores and ranks the filtered pool.
-  // Only beneficial for larger pools (>50 entries) where scoring speedup
-  // outweighs the JSON marshal/unmarshal overhead of the NAPI boundary.
-  const n = getNative();
-  if (n && pool.length > 50) {
-    return JSON.parse(n.searchEntries(JSON.stringify(pool), query, limit)) as MemoryEntry[];
-  }
-
-  // TypeScript fallback via MiniSearch
+  // TypeScript via MiniSearch (searchEntries was never implemented in Rust — see H18)
   const index = buildIndex(pool);
   const results = index.search(query, { boost: { content: 2 }, fuzzy: 0.2, prefix: true });
 

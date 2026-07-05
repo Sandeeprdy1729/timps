@@ -8,17 +8,6 @@
 const _req: (id: string) => any = typeof require !== 'undefined' ? require : (() => { throw new Error('require not available'); });
 
 export interface NativeCore {
-  // Existing functions (Phase 2c-4a)
-  projectHash(path: string): string;
-  loadSemantic(dir: string): string;
-  saveSemantic(dir: string, json: string): void;
-  loadEpisodes(dir: string, count: number): string;
-  appendEpisode(dir: string, json: string): void;
-  loadWorking(dir: string): string;
-  saveWorking(dir: string, json: string): void;
-  jaccardSimilarity(a: string, b: string): number;
-  searchEntries(entriesJson: string, query: string, limit: number): string;
-
   // Phase 4d: batch cosine similarity (accepts JS Array<number>, returns Float64Array)
   computeBatchSimilarity(vectors: number[], query: number[], count: number, dims: number): Float64Array;
 
