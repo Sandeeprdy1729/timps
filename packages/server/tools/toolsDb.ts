@@ -784,7 +784,7 @@ export async function initToolsTables(): Promise<void> {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_nexus_nodes_user_project ON nexus_episodic_nodes(user_id, project_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_gist ON nexus_episodic_nodes USING GIN(gist);
+    CREATE INDEX IF NOT EXISTS idx_nexus_nodes_gist ON nexus_episodic_nodes(gist);
     CREATE INDEX IF NOT EXISTS idx_nexus_nodes_entities ON nexus_episodic_nodes USING GIN(entity_keys);
     CREATE INDEX IF NOT EXISTS idx_nexus_nodes_source ON nexus_episodic_nodes(source_module);
   `);
