@@ -11,6 +11,16 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# ── Detect piped mode ─────────────────────────────────────────────────────────
+# When stdin is not a terminal (e.g. curl | bash), skip all interactive prompts.
+if [[ -t 0 ]]; then
+  PIPED=false
+else
+  PIPED=true
+  warn "Running in piped mode — prompts will be skipped."
+  warn "Run install.sh directly for interactive setup."
+fi
+
 # ── Colors & helpers ──────────────────────────────────────────────────────────
 C_RESET="\033[0m"
 C_TEAL="\033[38;5;36m"
@@ -98,8 +108,15 @@ if command -v ollama &>/dev/null; then
 else
   warn "Ollama not found. TIMPS works with Ollama for 100% free local AI."
   echo ""
-  read -rp "  Install Ollama now? [Y/n] " _INSTALL_OLLAMA
-  _INSTALL_OLLAMA="${_INSTALL_OLLAMA:-Y}"
+  if "$PIPED"; then
+    _INSTALL_OLLAMA="n"
+    warn "Skipping Ollama install (piped mode)."
+    warn "  After install, run: brew install --cask ollama  (macOS)"
+    warn "                       or visit https://ollama.com/download"
+  else
+    read -rp "  Install Ollama now? [Y/n] " _INSTALL_OLLAMA </dev/tty
+    _INSTALL_OLLAMA="${_INSTALL_OLLAMA:-Y}"
+  fi
   if [[ "$_INSTALL_OLLAMA" =~ ^[Yy] ]]; then
     if [[ "$OS" == "Darwin" ]]; then
       if command -v brew &>/dev/null; then
@@ -162,10 +179,11 @@ cd "$INSTALL_DIR/$PACKAGE_DIR"
 if npm install -g . 2>/dev/null; then
   success "'timps' installed globally via npm ✓"
 else
-  warn "Global install failed (may need sudo). Trying npm link…"
+  warn "Global install failed (may need permissions). Trying npm link…"
   npm link 2>/dev/null || {
-    warn "npm link failed. Trying with sudo…"
-    sudo npm install -g . || warn "Could not install globally. Try: sudo npm install -g $INSTALL_DIR/$PACKAGE_DIR  —  or use: npx timps-code"
+    warn "npm link failed. To install manually, run:"
+    warn "  cd $INSTALL_DIR/$PACKAGE_DIR && npm install -g ."
+    warn "  —  or use: npx timps-code"
   }
   success "'timps' linked globally ✓"
 fi
@@ -176,7 +194,7 @@ TIMPS_BIN="$(command -v timps 2>/dev/null || true)"
 
 if [[ -z "$TIMPS_BIN" ]]; then
   warn "'timps' not found in PATH after install."
-  NPM_BIN_DIR="$(npm bin -g 2>/dev/null || echo "$HOME/.npm-global/bin")"
+  NPM_BIN_DIR="$(dirname "$(npm root -g 2>/dev/null || echo "$HOME/.npm-global/lib/node_modules")" 2>/dev/null)"
 
   echo ""
   warn "Add the following to your shell profile (~/.zshrc or ~/.bashrc):"
@@ -184,8 +202,12 @@ if [[ -z "$TIMPS_BIN" ]]; then
   echo -e "    ${C_TEAL}export PATH=\"$NPM_BIN_DIR:\$PATH\"${C_RESET}"
   echo ""
 
-  read -rp "  Auto-add to ~/.zshrc now? [Y/n] " _ADD_PATH
-  _ADD_PATH="${_ADD_PATH:-Y}"
+  if "$PIPED"; then
+    _ADD_PATH="n"
+  else
+    read -rp "  Auto-add to ~/.zshrc now? [Y/n] " _ADD_PATH </dev/tty
+    _ADD_PATH="${_ADD_PATH:-Y}"
+  fi
   if [[ "$_ADD_PATH" =~ ^[Yy] ]]; then
     PROFILE="$HOME/.zshrc"
     if [[ "$SHELL" == *"bash"* ]]; then PROFILE="$HOME/.bashrc"; fi
@@ -208,8 +230,13 @@ if command -v ollama &>/dev/null; then
   echo ""
   info "TIMPS works best with a local model. Recommended: qwen2.5-coder:7b (4.7 GB)"
   echo ""
-  read -rp "  Pull qwen2.5-coder:7b now? (~4.7 GB download) [Y/n] " _PULL
-  _PULL="${_PULL:-Y}"
+  if "$PIPED"; then
+    _PULL="n"
+    warn "Skipping model pull (piped mode). Pull later with: ollama pull qwen2.5-coder:7b"
+  else
+    read -rp "  Pull qwen2.5-coder:7b now? (~4.7 GB download) [Y/n] " _PULL </dev/tty
+    _PULL="${_PULL:-Y}"
+  fi
   if [[ "$_PULL" =~ ^[Yy] ]]; then
     info "Pulling model (this may take a few minutes)…"
     ollama pull qwen2.5-coder:7b && success "Model ready ✓" || warn "Model pull failed — try: ollama pull qwen2.5-coder:7b"
@@ -240,8 +267,8 @@ echo -e "  ${C_MUTED}Docs: ${C_TEAL}https://github.com/Sandeeprdy1729/timps${C_R
 echo ""
 
 # ── Step 13: Launch ────────────────────────────────────────────────────────────
-if command -v timps &>/dev/null; then
-  read -rp "  Launch TIMPS now? [Y/n] " _LAUNCH
+if command -v timps &>/dev/null && ! "$PIPED"; then
+  read -rp "  Launch TIMPS now? [Y/n] " _LAUNCH </dev/tty
   _LAUNCH="${_LAUNCH:-Y}"
   if [[ "$_LAUNCH" =~ ^[Yy] ]]; then
     echo ""

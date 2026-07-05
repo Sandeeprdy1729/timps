@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 11    | 78        |
+| High     | 89    | 12    | 77        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **22** | **366** |
+| **Total**| **388** | **23** | **365** |
 
 ---
 
@@ -46,6 +46,7 @@
 | H9 | `download_cli.sh` | Always dies with 'Could not determine latest version' because repo has zero releases | Falls back to `git clone` + `cargo build --release` when no GitHub release is found |
 | H10 | `evals/suites/chronos-forge.ts` | Baseline metrics fabricated with `Math.random()` dice-rolls, fake improvement deltas | Replaced with real computations: trigram Jaccard for temporal recall + contradiction detection, count-based heuristic for foresight, measured latency |
 | H11 | `Formula/timps.rb` | Homebrew formula has all-zero sha256 placeholders and points to non-existent release assets | Rewritten as head-only formula that builds from source via `cargo install` |
+| H12 | `install.sh` | Interactive `read` prompts break `curl|bash`; `npm bin -g` removed in npm 9; `sudo npm install -g` in piped script | Added `PIPED` detection (`[[ -t 0 ]]`), all prompts guarded and use `</dev/tty`; replaced `npm bin -g` with `npm root -g`; replaced `sudo` fallback with manual instructions |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
