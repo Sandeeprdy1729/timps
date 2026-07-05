@@ -33,6 +33,16 @@ jobs:
       - name: Run unit tests
         run: npx vitest run --reporter verbose
 
+      - name: Restore eval baseline cache
+        id: baseline_cache
+        uses: actions/cache@v4
+        with:
+          path: .timps/eval-baselines
+          key: eval-baselines-${{ github.sha }}
+          restore-keys: |
+            eval-baselines-main
+            eval-baselines-
+
       - name: Run eval suite
         run: npx tsx packages/memory-core/src/eval/cli.ts --all --json .timps/eval-results.json
 
@@ -42,8 +52,9 @@ jobs:
           BASELINE_DIR=".timps/eval-baselines"
           mkdir -p "$BASELINE_DIR"
           
-          # If baseline doesn't exist for main branch, create it
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          IS_MAIN_PUSH="${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
+          
+          if [ "$IS_MAIN_PUSH" = "true" ]; then
             npx tsx packages/memory-core/src/eval/cli.ts --baseline --baseline-dir "$BASELINE_DIR"
             echo "✅ Baseline updated on main branch"
           else
@@ -61,6 +72,13 @@ jobs:
               echo "eval_gate=passed" >> $GITHUB_OUTPUT
             fi
           fi
+
+      - name: Save eval baseline cache (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .timps/eval-baselines
+          key: eval-baselines-${{ github.sha }}
 
       - name: Upload eval results
         if: always()
