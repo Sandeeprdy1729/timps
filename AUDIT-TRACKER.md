@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 14    | 75        |
+| High     | 89    | 15    | 74        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **25** | **363** |
+| **Total**| **388** | **26** | **362** |
 
 ---
 
@@ -49,6 +49,7 @@
 | H12 | `install.sh` | Interactive `read` prompts break `curl|bash`; `npm bin -g` removed in npm 9; `sudo npm install -g` in piped script | Added `PIPED` detection (`[[ -t 0 ]]`), all prompts guarded and use `</dev/tty`; replaced `npm bin -g` with `npm root -g`; replaced `sudo` fallback with manual instructions |
 | H13 | `packages/cache/src/index.ts` | Extra stray `};` after `cacheWithTTL` arrow function makes the file a SyntaxError | Removed the unmatched closing brace |
 | H14 | `packages/connection-manager/src/index.ts` | API keys/OAuth tokens stored in plaintext in localStorage | Added AES-256-GCM encryption via Web Crypto API; key in sessionStorage (ephemeral); credentials encrypted before serialization, decrypted on load |
+| H15 | `packages/date-utils/src/index.ts` | Two missing closing parentheses (`endOfWeek` line 96, `min` line 236) cause SyntaxError | Added the missing `)` on both lines |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
