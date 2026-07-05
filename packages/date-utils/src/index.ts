@@ -93,7 +93,7 @@ export function startOfWeek(date: Date | number | string, weekStartsOn: 0 | 1 = 
 }
 
 export function endOfWeek(date: Date | number | string, weekStartsOn: 0 | 1 = 1): Date {
-  return endOfDay(addDays(startOfWeek(date, weekStartsOn), 6);
+  return endOfDay(addDays(startOfWeek(date, weekStartsOn), 6));
 }
 
 export function startOfMonth(date: Date | number | string): Date {
@@ -233,7 +233,7 @@ export function fromUnixTimestamp(timestamp: number): Date {
 }
 
 export function min(...dates: (Date | number | string)[]): Date {
-  return new Date(Math.min(...dates.map(d => new Date(d).getTime()));
+  return new Date(Math.min(...dates.map(d => new Date(d).getTime())));
 }
 
 export function max(...dates: (Date | number | string)[]): Date {
