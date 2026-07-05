@@ -911,7 +911,7 @@ export class MemoryEngine {
       evidenceCount,
       confidence,
       parentIds: [id],
-    });
+    }, id);
     // L19: capture context vector snapshot
     this.contextVector.capture({
       domain: type,
