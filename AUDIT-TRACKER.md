@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 0     | 89        |
+| High     | 89    | 1     | 88        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **11** | **377** |
+| **Total**| **388** | **12** | **376** |
 
 ---
 
@@ -32,7 +32,11 @@
 
 ## 📋 Remaining — 377 Issues
 
-### High (89)
+### High (88)
+| ID | File | Issue | Fix Summary |
+|----|------|-------|-------------|
+| H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
+
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Medium (208)
