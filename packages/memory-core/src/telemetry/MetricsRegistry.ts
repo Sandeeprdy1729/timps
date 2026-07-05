@@ -223,10 +223,12 @@ export class MetricsRegistry {
 
   /**
    * Export metrics in Prometheus-compatible text format.
+   * Sanitizes metric names (dots → underscores) and ensures single label blocks.
    */
   prometheusExport(): string {
     const lines: string[] = [];
     const now = Date.now();
+    const sanitize = (name: string) => name.replace(/\./g, '_');
 
     for (const [name, entries] of this._counters) {
       for (const e of entries) {
@@ -234,8 +236,9 @@ export class MetricsRegistry {
           .map(([k, v]) => `${k}="${v}"`)
           .join(',');
         const labels = attrs ? `{${attrs}}` : '';
-        lines.push(`# TYPE ${name} counter`);
-        lines.push(`${name}${labels} ${e.value} ${now}`);
+        const sName = sanitize(name);
+        lines.push(`# TYPE ${sName} counter`);
+        lines.push(`${sName}${labels} ${e.value} ${now}`);
       }
     }
 
@@ -244,16 +247,19 @@ export class MetricsRegistry {
         const attrs = Object.entries(e.attributes)
           .map(([k, v]) => `${k}="${v}"`)
           .join(',');
-        const labels = attrs ? `{${attrs}}` : '';
+        const sName = sanitize(name);
         const h = e.buckets;
-        lines.push(`# TYPE ${name}_bucket histogram`);
+        lines.push(`# TYPE ${sName}_bucket histogram`);
         for (let i = 0; i < h.bounds.length; i++) {
           const le = h.bounds[i];
-          lines.push(`${name}_bucket${labels}{le="${le}"} ${h.counts[i]} ${now}`);
+          const allLabels = attrs ? `{${attrs},le="${le}"}` : `{le="${le}"}`;
+          lines.push(`${sName}_bucket${allLabels} ${h.counts[i]} ${now}`);
         }
-        lines.push(`${name}_bucket${labels}{le="+Inf"} ${h.counts[h.bounds.length]} ${now}`);
-        lines.push(`${name}_count${labels} ${h.totalCount} ${now}`);
-        lines.push(`${name}_sum${labels} ${h.totalSum} ${now}`);
+        const infLabels = attrs ? `{${attrs},le="+Inf"}` : `{le="+Inf"}`;
+        lines.push(`${sName}_bucket${infLabels} ${h.counts[h.bounds.length]} ${now}`);
+        const countLabels = attrs ? `{${attrs}}` : '';
+        lines.push(`${sName}_count${countLabels} ${h.totalCount} ${now}`);
+        lines.push(`${sName}_sum${countLabels} ${h.totalSum} ${now}`);
       }
     }
 
@@ -263,8 +269,9 @@ export class MetricsRegistry {
           .map(([k, v]) => `${k}="${v}"`)
           .join(',');
         const labels = attrs ? `{${attrs}}` : '';
-        lines.push(`# TYPE ${name} gauge`);
-        lines.push(`${name}${labels} ${e.value} ${e.lastUpdate}`);
+        const sName = sanitize(name);
+        lines.push(`# TYPE ${sName} gauge`);
+        lines.push(`${sName}${labels} ${e.value} ${e.lastUpdate}`);
       }
     }
 
