@@ -20,8 +20,9 @@ impl Provider for AzureOpenAIProvider {
     async fn complete(&self, system: &str, messages: &[Message], tools: &[Value]) -> Result<ProviderStream> {
         let (tx, rx) = mpsc::channel(64);
         let base = format!("{}/openai/deployments/{}", self.endpoint.trim_end_matches('/'), self.model);
-        let url = format!("{base}?api-version={}", self.api_version);
-        let compat = OpenAICompat::new(url, &self.api_key, &self.model);
+        let compat = OpenAICompat::new(&base, &self.api_key, &self.model)
+            .with_query(vec![("api-version".into(), self.api_version.clone())])
+            .with_auth_header("api-key");
         let (s, m, t) = (system.to_string(), messages.to_vec(), tools.to_vec());
         tokio::spawn(async move { let _ = compat.complete(&s, &m, &t, tx).await; });
         Ok(rx)

@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 6     | 83        |
+| High     | 89    | 7     | 82        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **17** | **371** |
+| **Total**| **388** | **18** | **370** |
 
 ---
 
@@ -41,6 +41,7 @@
 | H4 | `apps/mobile/package.json` | Missing `@react-native-async-storage/async-storage` dep | Added to `dependencies` |
 | H5 | `crates/timps-agent/src/lib.rs` | Retry `continue` resumes dead stream instead of re-calling provider | Changed to labeled `continue 'turn` to restart the outer provider loop |
 | H6 | `crates/timps-cli/src/main.rs` | Tools constructed but never registered with AgentBuilder | Added `.tool(t)` loop in `run_one_shot` and `run_interactive` from `tools.all()` |
+| H7 | `crates/timps-providers/src/azure.rs`, `compat.rs` | Azure URL has `?api-version` before `/chat/completions`; uses Bearer auth instead of `api-key` header | Added `with_query()` and `with_auth_header()` builders to `OpenAICompat`; Azure now uses `api-key` header and `api-version` as query param |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
