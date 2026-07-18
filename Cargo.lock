@@ -5109,9 +5109,11 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "core-graphics",
+ "hex",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
@@ -5154,6 +5156,7 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-util",
  "toml 0.8.2",
  "tracing",
 ]

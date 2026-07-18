@@ -1,8 +1,0 @@
-apiVersion: 1
-
-providers:
-  - name: 'TIMPS'
-    folder: 'TIMPS'
-    type: file
-    options:
-      path: /var/lib/grafana/dashboards

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use sha2::{Sha256, Digest};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -73,24 +75,18 @@ pub struct MemoryStats {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-fn to_base36(mut n: u32) -> String {
-    const DIGITS: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
-    if n == 0 { return "0".to_string(); }
-    let mut result = Vec::new();
-    while n > 0 {
-        result.push(DIGITS[(n % 36) as usize]);
-        n /= 36;
-    }
-    result.reverse();
-    String::from_utf8(result).unwrap()
-}
-
-fn project_hash_inner(project_path: &str) -> String {
-    let mut h: i32 = 0;
-    for b in project_path.bytes() {
-        h = h.wrapping_mul(31).wrapping_add(b as i32);
-    }
-    to_base36(h.unsigned_abs())
+pub(crate) fn project_hash_inner(project_path: &str) -> String {
+    let path = Path::new(project_path);
+    let normalized = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
+    };
+    let path_str = normalized.to_string_lossy();
+    let mut hasher = Sha256::new();
+    hasher.update(path_str.as_bytes());
+    let result = hasher.finalize();
+    hex::encode(&result[..6]) // first 6 bytes = 12 hex chars
 }
 
 pub(crate) fn home_dir() -> String {
@@ -128,24 +124,18 @@ pub fn load_semantic(project_path: String) -> Result<Vec<SemanticEntry>, String>
 #[tauri::command]
 pub fn load_episodes(project_path: String, count: u32) -> Result<Vec<EpisodicEntry>, String> {
     let dir = memory_dir(&project_path);
-    let p = format!("{}/episodes.jsonl", dir);
-    let file = match fs::File::open(&p) {
-        Ok(f) => f,
+    let p = format!("{}/episodes.json", dir);
+    let content = match fs::read_to_string(&p) {
+        Ok(s) => s,
         Err(_) => return Ok(vec![]),
     };
-    let lines: Vec<String> = BufReader::new(file)
-        .lines()
-        .filter_map(|l| l.ok())
-        .filter(|l| !l.trim().is_empty())
-        .collect();
-
+    let all_entries: Vec<EpisodicEntry> = match serde_json::from_str(&content) {
+        Ok(arr) => arr,
+        Err(_) => return Ok(vec![]),
+    };
     let count_usize = count as usize;
-    let start = lines.len().saturating_sub(count_usize);
-    let entries: Vec<EpisodicEntry> = lines[start..]
-        .iter()
-        .filter_map(|l| serde_json::from_str(l).ok())
-        .collect();
-    Ok(entries)
+    let start = all_entries.len().saturating_sub(count_usize);
+    Ok(all_entries[start..].to_vec())
 }
 
 /// Load working memory state for a project
