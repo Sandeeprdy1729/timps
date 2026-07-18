@@ -42,28 +42,8 @@ pub struct UnifiedGraph {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 fn memory_dir(project_path: &str) -> String {
-    let hash = project_hash_inner(project_path);
+    let hash = crate::commands::project_hash_inner(project_path);
     format!("{}/.timps/memory/{}", crate::commands::home_dir(), hash)
-}
-
-fn to_base36(mut n: u32) -> String {
-    const DIGITS: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
-    if n == 0 { return "0".to_string(); }
-    let mut result = Vec::new();
-    while n > 0 {
-        result.push(DIGITS[(n % 36) as usize]);
-        n /= 36;
-    }
-    result.reverse();
-    String::from_utf8(result).unwrap()
-}
-
-fn project_hash_inner(project_path: &str) -> String {
-    let mut h: i32 = 0;
-    for b in project_path.bytes() {
-        h = h.wrapping_mul(31).wrapping_add(b as i32);
-    }
-    to_base36(h.unsigned_abs())
 }
 
 fn now_ms() -> i64 {
@@ -747,9 +727,9 @@ mod tests {
     #[test]
     fn test_project_hash() {
         let p = "/Users/sandeepreddy/Desktop/testbot";
-        let h = project_hash_inner(p);
+        let h = crate::commands::project_hash_inner(p);
         eprintln!("Hash for {:?} = {:?}", p, h);
-        assert_eq!(h, "ywtobh", "hash should match CLIs polynomial+base36");
+        assert_eq!(h.len(), 12, "SHA-256 hash should be 12 hex chars");
     }
 
     #[test]

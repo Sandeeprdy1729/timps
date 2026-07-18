@@ -85,7 +85,37 @@ claude_desktop_config.json
 # Master architecture plan (internal design doc, not source code)
 TIMPS_Memory_Architecture_Master_Plan.md
 
+# TIMPS Web Kit — source font files (woff2 live in timps-website/fonts/)
+timps-website/TIMPS-Web-Kit/
+
 # Constitutional safety — keep these private
 packages/memory-core/runtime/constitution.md
 packages/memory-core/runtime/safety-rules.json
 packages/memory-core/runtime/safety-log.jsonl
+
+# Memory engine — proprietary source code (don't expose to others)
+packages/memory-core/
+packages/memory-core-rs/
+packages/memory-dashboard/
+crates/timps-memory/
+crates/timps-tools/src/memory_tool.rs
+timps-code/src/memory/
+timps-code/src/tools/memoryStore/
+timps-code/src/tools/memorySearch/
+timps-code/src/tools/memoryDecay/
+timps-code/src/tools/memoryKgQuery/
+timps-code/src/tools/memoryBenchmark/
+timps-code/src/tools/memoryStats/
+timps-code/src/tools/memoryPredict/
+timps-code/src/tools/memoryCompress/
+timps-code/src/tools/memoryTimeline/
+timps-vscode/src/memory.ts
+timps-vscode/src/memory-panel.ts
+timps-vscode/src/memory-watcher.ts
+timps-vscode/src/memoryView.ts
+timps-vscode/src/views/memoryPanel.ts
+timps-vscode/resources/memory-icon.svg
+packages/server/memory/
+packages/timps-desktop/src/services/memory.ts
+evals/suites/memory-accuracy.ts
+apps/mobile/src/screens/MemoryScreen.tsx

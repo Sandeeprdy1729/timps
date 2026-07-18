@@ -35,7 +35,7 @@
   --radius-lg:   12px;
   --shadow:      4px 4px 0px var(--ink);
   --shadow-lg:   6px 6px 0px var(--ink);
-  --font:        'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+  --font:        'TIMPS', 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
   --serif:       'Instrument Serif', 'Playfair Display', serif;
   --mono:        'JetBrains Mono', 'Fira Code', monospace;
 }
