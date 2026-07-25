@@ -12,7 +12,7 @@ function deriveKey(): Buffer {
     os.hostname(),
     os.userInfo().username,
     (os as any).machine ? (os as any).machine() : '',
-    require('child_process').execSync('echo $HOME', { encoding: 'utf-8' }).trim(),
+    process.env.HOME || process.env.USERPROFILE || '',
   ].join('|');
   return crypto.scryptSync(machineFingerprint, SALT, KEY_LENGTH);
 }

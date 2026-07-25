@@ -2,6 +2,9 @@
 // Inspired by Hermes Agent's cron system
 
 import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
 
 export interface ScheduledTask {
   id: string;
@@ -40,8 +43,8 @@ export class TaskScheduler {
     // Load from config file
     try {
       const configPath = this.getConfigPath();
-      if (require('fs').existsSync(configPath)) {
-        const data = JSON.parse(require('fs').readFileSync(configPath, 'utf-8'));
+      if (fs.existsSync(configPath)) {
+        const data = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         for (const task of data.tasks || []) {
           this.tasks.set(task.id, task);
         }
@@ -52,8 +55,8 @@ export class TaskScheduler {
   }
   
   private getConfigPath(): string {
-    return require('path').join(
-      require('os').homedir(), 
+    return path.join(
+      os.homedir(), 
       '.timps', 
       'scheduler.json'
     );
@@ -62,12 +65,12 @@ export class TaskScheduler {
   private saveTasks(): void {
     try {
       const tasks = [...this.tasks.values()];
-      const configDir = require('path').join(
-        require('os').homedir(), 
+      const configDir = path.join(
+        os.homedir(), 
         '.timps'
       );
-      require('fs').mkdirSync(configDir, { recursive: true });
-      require('fs').writeFileSync(
+      fs.mkdirSync(configDir, { recursive: true });
+      fs.writeFileSync(
         this.getConfigPath(),
         JSON.stringify({ tasks }, null, 2)
       );
