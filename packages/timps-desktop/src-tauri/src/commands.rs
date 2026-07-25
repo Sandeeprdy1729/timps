@@ -3,6 +3,7 @@ use sha2::{Sha256, Digest};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
+use std::sync::Mutex;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,19 @@ fn memory_dir(project_path: &str) -> String {
     let home = home_dir();
     let hash = project_hash_inner(project_path);
     format!("{}/.timps/memory/{}", home, hash)
+}
+
+/// Serializes read-modify-write cycles on semantic.json to prevent data loss
+/// from concurrent access (clipboard watcher thread + Tauri commands).
+static SEMANTIC_LOCK: Mutex<()> = Mutex::new(());
+
+/// Write JSON data to a file atomically: write to a temp file, then rename.
+/// Prevents readers from seeing a half-written (truncated) file.
+fn write_json_atomic(path: &str, data: &str) -> Result<(), String> {
+    let tmp = format!("{}.tmp", path);
+    fs::write(&tmp, data).map_err(|e| format!("write tmp: {}", e))?;
+    fs::rename(&tmp, path).map_err(|e| format!("rename: {}", e))?;
+    Ok(())
 }
 
 // ── Tauri Commands ─────────────────────────────────────────────────────────
@@ -273,6 +287,7 @@ pub fn store_memory(
     importance: f64,
     tags: Vec<String>,
 ) -> Result<(), String> {
+    let _guard = SEMANTIC_LOCK.lock().map_err(|e| e.to_string())?;
     let dir = memory_dir(&project_path);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let p = format!("{}/semantic.json", dir);
@@ -294,12 +309,13 @@ pub fn store_memory(
         score: Some(importance),
     });
     let s = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
-    fs::write(&p, s).map_err(|e| e.to_string())
+    write_json_atomic(&p, &s)
 }
 
 /// Delete a semantic memory entry by key
 #[tauri::command]
 pub fn delete_memory(project_path: String, key: String) -> Result<usize, String> {
+    let _guard = SEMANTIC_LOCK.lock().map_err(|e| e.to_string())?;
     let dir = memory_dir(&project_path);
     let p = format!("{}/semantic.json", dir);
     let mut entries: Vec<SemanticEntry> = match fs::read_to_string(&p) {
@@ -309,7 +325,7 @@ pub fn delete_memory(project_path: String, key: String) -> Result<usize, String>
     let before = entries.len();
     entries.retain(|e| e.id != key);
     let s = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
-    fs::write(&p, s).map_err(|e| e.to_string())?;
+    write_json_atomic(&p, &s)?;
     Ok(before - entries.len())
 }
 
@@ -600,6 +616,7 @@ pub fn passive_store(
         return Ok("skip:too_short".to_string());
     }
 
+    let _guard = SEMANTIC_LOCK.lock().map_err(|e| e.to_string())?;
     let dir = memory_dir(&project_path);
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let p = format!("{}/semantic.json", dir);
@@ -649,7 +666,7 @@ pub fn passive_store(
     }
 
     let s = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
-    fs::write(&p, s).map_err(|e| e.to_string())?;
+    write_json_atomic(&p, &s)?;
     Ok(id)
 }
 
@@ -884,33 +901,47 @@ pub fn run_background_summarizer(project_path: String) -> Result<usize, String> 
         .unwrap_or_default()
         .as_secs() as i64;
 
-    for fact in new_facts {
-        if existing_synthesized.contains(&fact) {
-            continue;
-        }
-        if fact.trim().len() < 15 {
-            continue;
-        }
-        let id = format!("synth_{}_{}", now_ts, added);
-        sem_entries.push(SemanticEntry {
-            id,
-            timestamp: now_ts,
-            kind: "pattern".to_string(),
-            content: fact,
-            tags: vec!["synthesized".to_string(), "background".to_string()],
-            score: Some(0.8),
-        });
-        added += 1;
-    }
+    // Lock only the critical section: re-read + merge + write
+    {
+        let _guard = SEMANTIC_LOCK.lock().map_err(|e| e.to_string())?;
+        // Re-read under lock in case another thread wrote since our earlier read
+        sem_entries = match fs::read_to_string(&sem_path) {
+            Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+            Err(_) => vec![],
+        };
 
-    if added > 0 {
-        // Keep most recent 2000
-        if sem_entries.len() > 2000 {
-            let drain = sem_entries.len() - 2000;
-            sem_entries.drain(0..drain);
+        for fact in &new_facts {
+            if existing_synthesized.contains(fact) {
+                continue;
+            }
+            if fact.trim().len() < 15 {
+                continue;
+            }
+            // Deduplicate against current entries under lock
+            if sem_entries.iter().any(|e| e.content == *fact) {
+                continue;
+            }
+            let id = format!("synth_{}_{}", now_ts, added);
+            sem_entries.push(SemanticEntry {
+                id,
+                timestamp: now_ts,
+                kind: "pattern".to_string(),
+                content: fact.clone(),
+                tags: vec!["synthesized".to_string(), "background".to_string()],
+                score: Some(0.8),
+            });
+            added += 1;
         }
-        let s = serde_json::to_string_pretty(&sem_entries).map_err(|e| e.to_string())?;
-        fs::write(&sem_path, s).map_err(|e| e.to_string())?;
+
+        if added > 0 {
+            // Keep most recent 2000
+            if sem_entries.len() > 2000 {
+                let drain = sem_entries.len() - 2000;
+                sem_entries.drain(0..drain);
+            }
+            let s = serde_json::to_string_pretty(&sem_entries).map_err(|e| e.to_string())?;
+            write_json_atomic(&sem_path, &s)?;
+        }
     }
 
     Ok(added)
