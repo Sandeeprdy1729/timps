@@ -1,13 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChatView } from './components/ChatView';
 import { SettingsView } from './components/SettingsView';
 import { NexusView } from './components/NexusView';
 import { Sidebar } from './components/Sidebar';
+import { BackgroundDaemon } from './components/BackgroundDaemon';
+import { PassiveListener } from './components/PassiveListener';
+import { SemanticView } from './components/SemanticView';
+import { EpisodicView } from './components/EpisodicView';
+import { StatsView } from './components/StatsView';
+import { SearchView } from './components/SearchView';
+import { LensView } from './components/LensView';
+import { IntelligenceDashboard } from './components/IntelligenceDashboard';
+import { CommandCenter } from './components/CommandCenter';
 import { useTheme } from './theme/ThemeProvider';
-import { api, MemoryStats } from './api';
+import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
 import './App.css';
 
-type View = 'chat' | 'nexus' | 'settings';
+type View = 'chat' | 'command' | 'lens' | 'semantic' | 'episodic' | 'stats' | 'search' | 'nexus' | 'intelligence' | 'settings';
 
 export default function App() {
   const [projectPath, setProjectPath] = useState<string>(() => {
@@ -15,6 +24,9 @@ export default function App() {
   });
   const [view, setView] = useState<View>('chat');
   const [stats, setStats] = useState<MemoryStats | null>(null);
+  const [semanticEntries, setSemanticEntries] = useState<SemanticEntry[]>([]);
+  const [episodicEntries, setEpisodicEntries] = useState<EpisodicEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
   const { theme, setTheme } = useTheme();
 
   // Auto-detect project path on first launch
@@ -43,14 +55,43 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!projectPath) { setStats(null); return; }
-    api.getMemoryStats(projectPath).then(setStats).catch(() => setStats(null));
+    if (!projectPath) { setStats(null); setSemanticEntries([]); setEpisodicEntries([]); return; }
+    setEntriesLoading(true);
+    Promise.all([
+      api.getMemoryStats(projectPath),
+      api.loadSemantic(projectPath),
+      api.loadEpisodes(projectPath),
+    ]).then(([s, se, ep]) => {
+      setStats(s);
+      setSemanticEntries(se);
+      setEpisodicEntries(ep);
+    }).catch(() => {
+      setStats(null);
+      setSemanticEntries([]);
+      setEpisodicEntries([]);
+    }).finally(() => setEntriesLoading(false));
   }, [projectPath]);
 
-  const viewLabel = view === 'chat' ? 'Chat' : view === 'nexus' ? 'Nexus' : 'Settings';
+  const handleRunPrompt = useCallback((prompt: string) => {
+    setView('chat');
+  }, []);
+
+  const viewLabel =
+    view === 'chat' ? 'Chat' :
+    view === 'command' ? 'Commands' :
+    view === 'lens' ? 'Lens' :
+    view === 'semantic' ? 'Memory' :
+    view === 'episodic' ? 'Sessions' :
+    view === 'stats' ? 'Stats' :
+    view === 'search' ? 'Search' :
+    view === 'nexus' ? 'Nexus' :
+    view === 'intelligence' ? 'Intelligence' :
+    'Settings';
 
   return (
     <div className="app">
+      {projectPath && <BackgroundDaemon projectPath={projectPath} />}
+      {projectPath && <PassiveListener projectPath={projectPath} />}
       <header className="topbar">
         <div className="topbar-left">
           <div className="topbar-brand">
@@ -116,7 +157,14 @@ export default function App() {
         />
         <main className="main-content">
           {view === 'chat' && <ChatView projectPath={projectPath} />}
+          {view === 'command' && <CommandCenter projectPath={projectPath} stats={stats} onRunPrompt={handleRunPrompt} />}
+          {view === 'lens' && <LensView />}
+          {view === 'semantic' && <SemanticView entries={semanticEntries} loading={entriesLoading} />}
+          {view === 'episodic' && <EpisodicView entries={episodicEntries} loading={entriesLoading} />}
+          {view === 'stats' && <StatsView stats={stats} loading={entriesLoading} />}
+          {view === 'search' && <SearchView projectPath={projectPath} semanticEntries={semanticEntries} />}
           {view === 'nexus' && <NexusView projectPath={projectPath} />}
+          {view === 'intelligence' && <IntelligenceDashboard projectPath={projectPath} />}
           {view === 'settings' && (
             <SettingsView
               projectPath={projectPath}
