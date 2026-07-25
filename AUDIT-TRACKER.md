@@ -18,23 +18,17 @@
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
-| C4 | `benchmark/index.ts` | `rmSync` deletes OS temp dir and `~/.timps` | Added guard checks for root/tilde paths before deletion |
-| C6 | `packages/memory-core/src/storage.ts` | `MAX_SEMANTIC=500` silent truncation | Increased to 100000 (env-overridable via `TIMPS_MAX_SEMANTIC`) |
-| C8 | `timps-code/src/config/config.ts` | Project ID uses `path.basename` → hash inconsistency | Changed to `hashProject(path.resolve(p))` for consistent IDs |
-| C11 | `timps-vscode/src/extension.ts` | TypeScript type annotations in webview inline script | Removed `: string` from arrow function params |
-| C5 | `packages/memory-core/src/server/websocket.ts` | JWT HMAC signature never verified in `verifyToken` | Added `crypto.createHmac('sha256', TIMPS_JWT_SECRET)` with `timingSafeEqual` |
-| C7 | `packages/server/api/routes.ts` | No auth on any route, all userId attacker-controlled | Added `requireAuth` + `requireUserId()` middlewares to 45+ routes |
-| C9 | `timps-code/src/services/bridge/sessionManager.ts` | RCE via unsanitized `node --eval` injection | Replaced string interpolation with `process.env` vars |
-| C10 | `timps-code/src/utils/gateway.ts` | No webhook signature verification for Feishu/WeCom | Added HMAC-SHA256 for Feishu, SHA1 for WeCom, `timingSafeEqual` |
 | C1 | `apps/marketplace/src/app/api/integrations/[id]/proxy/route.ts` | No auth on integration proxy | Added `requireAuth` middleware (env: `MARKETPLACE_API_KEY`) |
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
-
-## 📋 Remaining — 333 Issues
-
-### High (46)
-| ID | File | Issue | Fix Summary |
-|----|------|-------|-------------|
+| C4 | `benchmark/index.ts` | `rmSync` deletes OS temp dir and `~/.timps` | Added guard checks for root/tilde paths before deletion |
+| C5 | `packages/memory-core/src/server/websocket.ts` | JWT HMAC signature never verified in `verifyToken` | Added `crypto.createHmac('sha256', TIMPS_JWT_SECRET)` with `timingSafeEqual` |
+| C6 | `packages/memory-core/src/storage.ts` | `MAX_SEMANTIC=500` silent truncation | Increased to 100000 (env-overridable via `TIMPS_MAX_SEMANTIC`) |
+| C7 | `packages/server/api/routes.ts` | No auth on any route, all userId attacker-controlled | Added `requireAuth` + `requireUserId()` middlewares to 45+ routes |
+| C8 | `timps-code/src/config/config.ts` | Project ID uses `path.basename` → hash inconsistency | Changed to `hashProject(path.resolve(p))` for consistent IDs |
+| C9 | `timps-code/src/services/bridge/sessionManager.ts` | RCE via unsanitized `node --eval` injection | Replaced string interpolation with `process.env` vars |
+| C10 | `timps-code/src/utils/gateway.ts` | No webhook signature verification for Feishu/WeCom | Added HMAC-SHA256 for Feishu, SHA1 for WeCom, `timingSafeEqual` |
+| C11 | `timps-vscode/src/extension.ts` | TypeScript type annotations in webview inline script | Removed `: string` from arrow function params |
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
 | H2 | `apps/marketplace/src/lib/credentials.ts` | Hardcoded encryption key + static salt | Requires `MARKETPLACE_ENCRYPTION_KEY` env var (fails closed), generates random salt per-install |
 | H3 | `apps/marketplace/src/lib/integrations/jira.ts`, `salesforce.ts` | SSRF + data exfiltration via user-supplied `instanceUrl` | Added `validateUrl()` blocking private IPs/localhost; stripped response body from error messages |
@@ -80,7 +74,10 @@
 | H46 | `packages/timps-desktop/src/hooks/index.ts:141` + `hooks/interactions.ts:92` + `utils/validation.ts:46` | 3 compile errors block `npm run build`: useRef not imported in hooks/index.ts (TS2304), useEffect + React not imported in interactions.ts (TS2304), Validator type 1-param but used with 2 args in validation.ts (TS2554) | Added useRef to hooks/index.ts import; added React+useEffect to interactions.ts import; widened Validator type to accept optional `values?: Record<string, string>` second param |
 | H47 | `packages/timps-desktop/src/plugins/` (~130 files, ~75k lines) + `App.tsx` | Entire ~130-file plugin layer imported by zero application code — dead code. Sidebar, ChatView, SettingsView all have no plugin hooks. No code path from the running Tauri app reaches the plugins directory, so every documented plugin/integration feature is inert | Narrowed barrel to 12 clean modules; fixed 290 TS errors across plugins+components+hooks+utils (removed phantom `react-native` type, added missing imports, type assertions, widened types); wired `PluginLifecycleManager` + `registerBuiltinPlugins()` into `App.tsx` useEffect — plugins now initialize at app startup |
 
-⏸️ Paused — awaiting user instruction to proceed
+## 📋 Remaining — 333 Issues
+
+### High (45)
+⏸️ All 45 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
