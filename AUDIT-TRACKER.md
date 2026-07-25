@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 49    | 40        |
+| High     | 89    | 50    | 39        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **60** | **328** |
+| **Total**| **388** | **61** | **327** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 49 High
+## ✅ Fixed — 11 Critical + 50 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -79,11 +79,12 @@
 | H51 | `packages/timps-desktop/src/plugins/integrations/convertkit.ts:2` | Import typo: `from './integration-best.js'` should be `from './integration-base.js'`; no such module exists; entire ConvertKit integration fails to load | Fixed in H48 session — import corrected to `./integration-base.js` |
 | H52 | `packages/timps-desktop/src/plugins/integrations/{17 files}` | 17 integration files (calendly-new, contentful, docusign, freshdesk, hubspot, mondaycom, notion-new, pipedrive, resend, salesforce, sendgrid, sentry-new, servicenow, shopify, square, webflow, zendesk) call nonexistent `this.makeRequest()`, pass 3 args to 5-param constructor, and implement none of 5 abstract methods; written against a different base class; tsconfig excluded them from type-checking | Fixed all 17 files: corrected constructor to 5 args (`super(id, name, version, desc, keywords[])`), replaced `this.makeRequest()` with `super.apiCall()`, renamed `config`→`svcConfig` to avoid base class shadowing, added stub implementations of all 5 abstract methods (`authenticate`, `testConnection`, `executeAction`, `fetchData`, `cleanup`), fixed import paths with `.js` extension, added `PluginManifest` and `AuthConfig` imports; 0 tsc errors, 47 integration tests green |
 | H53 | `packages/timps-desktop/src/plugins/integrations/{16 files}` | Fake `runE2ETests()` functions in 15 integration files (github, slack, discord-new, google-calendar, google-gmail, hotjar, jira, linear, mixpanel, raycast, spotify, stripe, ticktick, todoist, twilio-new) + `runSupabaseE2ETests()` in supabase.ts push hardcoded `{test: '...', passed: true}` results without executing any API calls; UI/CI consuming these reports false green checkmarks; openai.ts is the only file with real E2E tests | Removed fake `runE2ETests()` from all 15 files and `runSupabaseE2ETests()` from supabase.ts; removed discord-new re-export of `runE2ETests` from index.ts to eliminate name conflict with openai's real implementation; openai.ts retained with real API-calling tests; 0 tsc errors, 47 integration tests green |
+| H54 | `packages/timps-desktop/src/plugins/integrations/index.ts:7` | Barrel file unloadable: (1) line 7 re-exports from `./discord` which does not exist (only `discord-new.ts`), (2) lines 1-9 export symbols that were never defined (`GoogleCalendarPlugin`, `googleCalendarPlugin`, `googleGmailPlugin`, `googleDrivePlugin`, `microsoftOutlookPlugin`, `microsoftTeamsPlugin`, `slackPlugin`, `discordPlugin`, `GitHubPlugin`, `githubPlugin`), (3) line 35 duplicate `runE2ETests` export (now removed), (4) lines 41-64 use CommonJS `require()` in ESM/Vite renderer module; INTEGRATIONS array can never be constructed | Rewrote barrel with correct exports: removed nonexistent `./discord` import, replaced phantom class/const exports with actual `create*Integration()` function exports, fixed INTEGRATIONS array to call factory functions where no singleton exists (`createGoogleCalendarIntegration()`, etc.), kept singleton exports where they exist (`freshdeskPlugin`, `closePlugin`, etc.); 0 tsc errors, 47 integration tests green |
 
-## 📋 Remaining — 328 Issues
+## 📋 Remaining — 327 Issues
 
-### High (40)
-⏸️ All 40 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (39)
+⏸️ All 39 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
