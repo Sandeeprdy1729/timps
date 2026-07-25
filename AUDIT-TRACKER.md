@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 59    | 30        |
+| High     | 89    | 60    | 29        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **70** | **318** |
+| **Total**| **388** | **71** | **317** |
 
 ---
 
@@ -90,8 +90,9 @@
 | H62 | `timps-code/package-lock.json:1` — All three standalone lockfiles stale and missing workspace dependencies: timps-code/package-lock.json (root name 'timps-code' not '@timps-ai/timps-code'), timps-mcp/package-lock.json, packages/server/package-lock.json (name 'timps' v2.0.2 vs package.json @timps/server v2.0.4); CI runs `cd pkg && npm ci` using these lockfiles which fail or resolve from npm registry instead of workspace | Deleted all three stale sub-package lockfiles (monorepo uses root lockfile). Updated `.github/workflows/publish.yml`: changed all three jobs to use root `npm ci` + `--workspace=` flag for build/publish; removed stale `cache-dependency-path` pointing to deleted lockfiles; fixed publish commands to use correct scoped package names (`@timps/server`, `@timps-ai/timps-code`, `@timps-ai/timps-mcp`) |
 | H63 | `timps-code/src/commands/executor.ts` (1741 lines) — entire file is dead code, never imported anywhere; exports `executeCommand()` and `handleSlashCommand()` that are never called; `args` param declared but never read (re-splits `command` on line 29); duplicate case labels `'context'` (line 187) and `'remote'` (line 238) are unreachable; transitively kills `audit.ts`, `improve.ts`, and `commands/plugin.ts` (all only reachable through executor.ts) | Deleted 4 dead files: `executor.ts` (1741 lines), `audit.ts`, `improve.ts`, `plugin.ts`. Verified: `tsc --noEmit` clean, 889 tests pass. Commands like `/sheaf`, `/aether`, `/qisrd`, `/auth`, `/eval`, `/config:set` were already non-functional (dispatched by app.ts printed 'Unknown command'); removing dead code has zero runtime impact. |
 | H64 | `timps-code/src/config/keyVault.ts:15` — CommonJS `require('child_process')` used inside ESM package (`"type":"module"`, tsconfig module NodeNext), throws `ReferenceError: require is not defined` at runtime; `deriveKey()` is on the save path (`saveConfig → reEncryptAll → encrypt → getKey → deriveKey`), so storing any API key crashes; also `config/config.ts:108` (`require('../services/providerRateLimiter.js')` in `getProviderLimits`) and `:133` (`getProviderStatus`), `core/taskScheduler.ts:43-70` (6x `require('fs')`/`require('path')`/`require('os')`), `core/interactive.ts:375` (`require('../commands/commands.js')` in tab-completer) | Replaced all CJS `require()` calls with ESM `import` statements or `process.env`: `keyVault.ts` — replaced `require('child_process').execSync('echo $HOME')` with `process.env.HOME \|\| process.env.USERPROFILE`; `config.ts` — added top-level ESM imports for `DEFAULT_PROVIDER_LIMITS` and `getUsageStats` from `providerRateLimiter.js`, removed inline `require()` calls; `taskScheduler.ts` — added `import * as fs/path/os` at top, replaced 6 inline `require()` calls; `interactive.ts` — added top-level ESM import for `COMMAND_REGISTRY` from `commands.js`. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H66 | `timps-code/src/data-pipeline/swebench-runner.ts:193` — SWE-bench pass/fail result decided by `Math.random()>0.5` on mock instances, printed as real pass rate; `loadInstances` always falls through to `generateMockInstances` (line 107); `evaluateInstance` runs agent but never evaluates patch (line 193); `runSWEbench` prints fabricated 'SOTA competitive! (78%+)' claim (line 256); mock instances have no expected patches for comparison | Replaced `Math.random()>0.5` with deterministic patch comparison: mock instances now include expected patches; evaluation checks if key lines from expected patch appear in agent output (≥50% match = resolved); removed fabricated 'SOTA competitive!' claim, replaced with honest 'Strong performance on mock instances' message + disclaimer that results are mock-only; added warning prompt when pass rate is low. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
-## 📋 Remaining — 318 Issues
+## 📋 Remaining — 317 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
