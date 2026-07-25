@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 61    | 28        |
+| High     | 89    | 62    | 27        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **72** | **316** |
+| **Total**| **388** | **73** | **315** |
 
 ---
 
@@ -92,8 +92,9 @@
 | H64 | `timps-code/src/config/keyVault.ts:15` — CommonJS `require('child_process')` used inside ESM package (`"type":"module"`, tsconfig module NodeNext), throws `ReferenceError: require is not defined` at runtime; `deriveKey()` is on the save path (`saveConfig → reEncryptAll → encrypt → getKey → deriveKey`), so storing any API key crashes; also `config/config.ts:108` (`require('../services/providerRateLimiter.js')` in `getProviderLimits`) and `:133` (`getProviderStatus`), `core/taskScheduler.ts:43-70` (6x `require('fs')`/`require('path')`/`require('os')`), `core/interactive.ts:375` (`require('../commands/commands.js')` in tab-completer) | Replaced all CJS `require()` calls with ESM `import` statements or `process.env`: `keyVault.ts` — replaced `require('child_process').execSync('echo $HOME')` with `process.env.HOME \|\| process.env.USERPROFILE`; `config.ts` — added top-level ESM imports for `DEFAULT_PROVIDER_LIMITS` and `getUsageStats` from `providerRateLimiter.js`, removed inline `require()` calls; `taskScheduler.ts` — added `import * as fs/path/os` at top, replaced 6 inline `require()` calls; `interactive.ts` — added top-level ESM import for `COMMAND_REGISTRY` from `commands.js`. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H66 | `timps-code/src/data-pipeline/swebench-runner.ts:193` — SWE-bench pass/fail result decided by `Math.random()>0.5` on mock instances, printed as real pass rate; `loadInstances` always falls through to `generateMockInstances` (line 107); `evaluateInstance` runs agent but never evaluates patch (line 193); `runSWEbench` prints fabricated 'SOTA competitive! (78%+)' claim (line 256); mock instances have no expected patches for comparison | Replaced `Math.random()>0.5` with deterministic patch comparison: mock instances now include expected patches; evaluation checks if key lines from expected patch appear in agent output (≥50% match = resolved); removed fabricated 'SOTA competitive!' claim, replaced with honest 'Strong performance on mock instances' message + disclaimer that results are mock-only; added warning prompt when pass rate is low. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H67 | `timps-code/src/data-pipeline/bug-miner.ts:298` — `Math.random()` generates simulated program counts (`~${Math.floor(Math.random() * 500 + 100)}K programs`) that vary on every run; status messages show unstable fabricated numbers; swebench-runner.ts:193 already fixed in H66 | Replaced `Math.random()` with deterministic per-language constants (c: 320K, cpp: 210K, rust: 180K, go: 150K); status messages now show stable representative values; all display text remains marked as '(simulated)'. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H68 | `timps-code/src/memory/selfReflector.ts:19` — Four CLI intelligence sub-modules (`selfReflector.ts`, `benchmark.ts`, `predictivePrefetcher.ts`, `temporalVersioning.ts`) read `semantic.json` from `Memory.dir` which uses `getMemoryDir()` (31-multiply hash), but `MemoryEngine` writes to `memoryDir()` (sha256 hash) — two different directories for one Memory instance; sub-modules always operate on empty entry sets; `timps --benchmark` prints pass rates computed over never-populated data | Changed `Memory.dir` to use `memoryDir()` from `@timps-ai/memory-core` (sha256) instead of `getMemoryDir()` from `config.ts` (31-hash); all sub-modules now read from the same directory `MemoryEngine` writes to; removed unused `getMemoryDir` import. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
-## 📋 Remaining — 316 Issues
+## 📋 Remaining — 315 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
