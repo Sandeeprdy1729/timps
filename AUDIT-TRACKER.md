@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 65    | 24        |
+| High     | 89    | 66    | 23        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **76** | **312** |
+| **Total**| **388** | **77** | **311** |
 
 ---
 
@@ -96,8 +96,9 @@
 | H69 | `timps-code/src/models/ollama.ts:38` — System prompt dropped: `messages.filter(m => m.role !== 'system')` strips system messages; `body.system` set on line 38 but local models also need tool-call parsing; provider sets `supportsFunctionCalling:false` and only yields `text` events; `LOCAL_SYSTEM_PROMPT` tells model to emit ``<tool_call>`` XML but no parser exists in the codebase; file edits/bash/etc. never execute on the default/free Ollama provider | (1) System messages now included as `role:'system'` in the messages array instead of being filtered out; (2) Added full XML `<tool_call>` parser — streaming state machine that detects `<tool_call>...</tool_call>` blocks across chunk boundaries, extracts `<name>` and `<arguments>` tags, and yields `tool_start`/`tool_delta`/`tool_end` events; parser handles edge cases (split chunks, missing names, known tool normalization); tool results flow back as `role:'user'` messages. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H70 | `timps-code/src/utils/utils.ts:42` — `generateRandomSecret()` uses `Math.random()` to generate session secrets (called from `gateway.ts:532` for `sessionSecret`); `timps-vscode/src/chatPanel.ts:1014` — `getNonce()` uses `Math.random()` to generate CSP nonces | Replaced `Math.random()` with `crypto.randomBytes()` in both functions. `generateRandomSecret()` now uses cryptographically secure random bytes for session secret generation. `getNonce()` now uses `crypto.randomBytes(16).toString('hex')` for CSP nonces. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H71 | `packages/plugin-shell/src/index.ts:64` — `shell_which` tool passes user-supplied `command` directly into `execSync(`which ${command}`)` without sanitization; attacker can inject arbitrary shell commands via crafted command name (e.g. `foo; rm -rf /`) | Added input sanitization: strips all characters except `[a-zA-Z0-9._\-\/]` before interpolation, returns error on empty result. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H72 | `timps-code/src/services/compact/index.ts:156` — `generateSummary` is a stub: sleeps 50ms then returns truncated raw JSON of first 20 messages instead of LLM summary; fabricated `compactionUsage` token counts (96-98) report `preCompactTokenCount * 0.8` as input and `summary.length / 4` as output instead of real LLM usage | Replaced stub with real LLM call via `ProviderMesh` (routes to best available provider, prefers local); added `ruleBasedSummary` fallback when no provider available; fixed `compactionUsage` to track actual token counts from LLM response `done` event. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
-## 📋 Remaining — 312 Issues
+## 📋 Remaining — 311 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
