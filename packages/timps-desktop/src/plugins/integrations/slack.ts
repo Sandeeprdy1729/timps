@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface SlackChannel {
   id: string;
@@ -758,7 +759,7 @@ export async function setupSlackTriggers(
     try {
       const response = await fetch(
         `https://slack.com/api/conversations.history?channel=${defaultChannel}&limit=1`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('slack-token')}` }}
+        { headers: { Authorization: `Bearer ${await SecureStore.get('slack-token')}` }}
       );
       
       if (response.ok) {

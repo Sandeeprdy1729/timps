@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface LinearIssue {
   id: string;
@@ -504,7 +505,7 @@ export async function setupLinearTriggers(
   let latestIssueId: string | null = null;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   const defaultTeam = localStorage.getItem('linear-default-team');
-  const accessToken = localStorage.getItem('linear-token');
+  const accessToken = await SecureStore.get('linear-token');
   
   const pollIssues = async () => {
     if (!defaultTeam || !accessToken) return;

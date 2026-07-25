@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface TickTickTask {
   id: string;
@@ -793,7 +794,7 @@ export async function setupTickTickTriggers(
   let lastTaskCount = 0;
   let lastHabitCount = 0;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
-  const accessToken = localStorage.getItem('ticktick-token');
+  const accessToken = await SecureStore.get('ticktick-token');
 
   const pollData = async () => {
     if (!accessToken) return;

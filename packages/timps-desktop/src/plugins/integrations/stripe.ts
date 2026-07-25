@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface StripeCustomer {
   id: string;
@@ -825,7 +826,7 @@ export async function setupStripeTriggers(
   const pollEvents = async () => {
     try {
       const balance = await fetch('https://api.stripe.com/v1/balance', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('stripe-api-key')}` }
+        headers: { Authorization: `Bearer ${await SecureStore.get('stripe-api-key')}` }
       });
       
       if (balance.ok && !lastEventId) {

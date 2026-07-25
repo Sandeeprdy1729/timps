@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface JiraProject {
   id: string;
@@ -639,7 +640,7 @@ export async function setupJiraTriggers(
   let lastChangeDate: string | null = null;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   const defaultProject = localStorage.getItem('jira-default-project');
-  const apiToken = localStorage.getItem('jira-token');
+  const apiToken = await SecureStore.get('jira-token');
   const cloudId = localStorage.getItem('jira-cloud-id');
   
   const pollIssues = async () => {

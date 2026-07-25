@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface GoogleGmailMessage {
   id: string;
@@ -229,7 +230,7 @@ export async function setupGmailTriggers(
       
       const response = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/history?${params}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('google-gmail-token')}` }}
+        { headers: { Authorization: `Bearer ${await SecureStore.get('google-gmail-token')}` }}
       );
       
       if (response.ok) {
@@ -241,7 +242,7 @@ export async function setupGmailTriggers(
               for (const msg of h.messagesAdded) {
                 const msgData = await fetch(
                   `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.message.id}?format=full`,
-                  { headers: { Authorization: `Bearer ${localStorage.getItem('google-gmail-token')}` }}
+                  { headers: { Authorization: `Bearer ${await SecureStore.get('google-gmail-token')}` }}
                 );
                 const fullMsg = await msgData.json();
                 
