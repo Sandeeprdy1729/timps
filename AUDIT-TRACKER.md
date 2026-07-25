@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 57    | 32        |
+| High     | 89    | 58    | 31        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **68** | **320** |
+| **Total**| **388** | **69** | **319** |
 
 ---
 
@@ -88,8 +88,9 @@
 | H60 | `README.md:313` — Fabricated benchmark claims: labels recall metric "LongMemEval-S" but uses 20 self-authored keyword queries over 50-fact synthetic corpus; lists competitor numbers (agentmemory 95.2%, mem0 72%, Letta 68%) with no data; "17ms latency" is total wall time for all 20 in-process queries vs competitors' per-call network latencies; benchmark/results/README.md claims "15 runs" with no committed JSON files; "Baseline (no memory)" column entirely empty; EchoForge/HarmonicSheafWeaver/AetherForgeERL/ResonanceForge headers cite fabricated "Benchmarks vs" numbers; ARCHITECTURE.md cites nonexistent baselines | Rewrote README.md benchmark table: removed fabricated "LongMemEval-S" label and competitor columns, added honest metric descriptions ("19/20 queries find expected answer in top-5"), added disclaimer about in-process vs network latency. Fixed benchmark/results/README.md: removed empty Baseline column, removed false "15 runs" claim, added accurate latency description. Removed fabricated benchmark claims from EchoForge.ts (synthetic 5k nodes), HarmonicSheafWeaver.ts (synthetic 2k nodes), AetherForgeERL.ts (synthetic 2k nodes), ResonanceForge.ts (synthetic 1000-node graph). Removed benchmark sections from ARCHITECTURE.md (lines 109-113, 141-146, 179-182). All files now only contain references to published papers, not fabricated comparisons |
 | H61 | `timps-code/install.sh:50` — Installer installs wrong npm package name (`timps-code` instead of `@timps-ai/timps-code`); failure swallowed by `2>/dev/null \|\| true`; wrapper script (lines 55-63) points to nonexistent `~/.local/timps.js`; PATH check `grep -q "timps"` false-positives on any line containing 'timps'; unconditionally prints success message | Rewrote install.sh: uses correct package name `@timps-ai/timps-code`, removed error swallowing, wrapper only created when needed and points to actual binary via `npm root -g`, PATH check uses exact string match for the export line, final status block checks if install actually succeeded before printing success |
 | H62 | `timps-code/package-lock.json:1` — All three standalone lockfiles stale and missing workspace dependencies: timps-code/package-lock.json (root name 'timps-code' not '@timps-ai/timps-code'), timps-mcp/package-lock.json, packages/server/package-lock.json (name 'timps' v2.0.2 vs package.json @timps/server v2.0.4); CI runs `cd pkg && npm ci` using these lockfiles which fail or resolve from npm registry instead of workspace | Deleted all three stale sub-package lockfiles (monorepo uses root lockfile). Updated `.github/workflows/publish.yml`: changed all three jobs to use root `npm ci` + `--workspace=` flag for build/publish; removed stale `cache-dependency-path` pointing to deleted lockfiles; fixed publish commands to use correct scoped package names (`@timps/server`, `@timps-ai/timps-code`, `@timps-ai/timps-mcp`) |
+| H63 | `timps-code/src/commands/executor.ts` (1741 lines) — entire file is dead code, never imported anywhere; exports `executeCommand()` and `handleSlashCommand()` that are never called; `args` param declared but never read (re-splits `command` on line 29); duplicate case labels `'context'` (line 187) and `'remote'` (line 238) are unreachable; transitively kills `audit.ts`, `improve.ts`, and `commands/plugin.ts` (all only reachable through executor.ts) | Deleted 4 dead files: `executor.ts` (1741 lines), `audit.ts`, `improve.ts`, `plugin.ts`. Verified: `tsc --noEmit` clean, 889 tests pass. Commands like `/sheaf`, `/aether`, `/qisrd`, `/auth`, `/eval`, `/config:set` were already non-functional (dispatched by app.ts printed 'Unknown command'); removing dead code has zero runtime impact. |
 
-## 📋 Remaining — 320 Issues
+## 📋 Remaining — 319 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
