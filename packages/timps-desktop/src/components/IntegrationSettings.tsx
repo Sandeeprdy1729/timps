@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { connectionManager } from '../../connection-manager/src/index.js';
-import { eventBus } from '../../event-bus/src/index.js';
 import './IntegrationSettings.css';
 
 interface IntegrationInfo {

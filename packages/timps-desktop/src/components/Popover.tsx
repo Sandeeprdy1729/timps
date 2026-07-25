@@ -1,4 +1,5 @@
-import React, { forwardRef, useState, useCallback, useEffect, useRef, ReactNode, CSSProperties, createPortal } from 'react';
+import React, { forwardRef, useState, useCallback, useEffect, useRef, ReactNode, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import './Popover.css';
 
 export interface PopoverProps {
