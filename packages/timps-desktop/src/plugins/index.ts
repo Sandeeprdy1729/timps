@@ -10,5 +10,4 @@ export * from './final-utils.js';
 export * from './parser-plugins.js';
 
 import * as _uiPlugins from './ui-plugins.js';
-import * as _integrationBase from './integration-base.js';
-export { _uiPlugins as uiPlugins, _integrationBase as integrationBase };
+export { _uiPlugins as uiPlugins };

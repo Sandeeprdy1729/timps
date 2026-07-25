@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 44    | 45        |
+| High     | 89    | 45    | 44        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **55** | **333** |
+| **Total**| **388** | **56** | **332** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 44 High
+## ✅ Fixed — 11 Critical + 45 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -73,11 +73,12 @@
 | H43 | `packages/timps-desktop/src/components/MemoryGraph.tsx:3-5` + `IntegrationSettings.tsx:2-3` + `Alert.tsx:1` + `Popover.tsx:1` + `Tooltip.tsx:1` | 4 compile errors block `npm run build`/`typecheck`: d3-force/d3-selection/d3-zoom not in package.json (TS2307), connection-manager/event-bus paths nonexistent (TS2307), createPortal imported from 'react' not 'react-dom' (TS2305) | Replaced d3 simulation with inline force layout; removed nonexistent path imports; moved createPortal to react-dom import |
 | H46 | `packages/timps-desktop/src/hooks/index.ts:141` + `hooks/interactions.ts:92` + `utils/validation.ts:46` | 3 compile errors block `npm run build`: useRef not imported in hooks/index.ts (TS2304), useEffect + React not imported in interactions.ts (TS2304), Validator type 1-param but used with 2 args in validation.ts (TS2554) | Added useRef to hooks/index.ts import; added React+useEffect to interactions.ts import; widened Validator type to accept optional `values?: Record<string, string>` second param |
 | H47 | `packages/timps-desktop/src/plugins/` (~130 files, ~75k lines) + `App.tsx` | Entire ~130-file plugin layer imported by zero application code — dead code. Sidebar, ChatView, SettingsView all have no plugin hooks. No code path from the running Tauri app reaches the plugins directory, so every documented plugin/integration feature is inert | Narrowed barrel to 12 clean modules; fixed 290 TS errors across plugins+components+hooks+utils (removed phantom `react-native` type, added missing imports, type assertions, widened types); wired `PluginLifecycleManager` + `registerBuiltinPlugins()` into `App.tsx` useEffect — plugins now initialize at app startup |
+| H48 | `packages/timps-desktop/src/plugins/integration-plugins.ts:2`, `integration-base.ts`, `integration-ecosystem.ts` + `integrations/` | Three parallel, mutually incompatible integration frameworks: (1) plugins/integration-plugins.ts — 3,365 lines, 40 stub Plugin classes for Google/Microsoft/Slack/etc, (2) integrations/ — 67 files, ~36K lines with abstract IntegrationBase, (3) plugins/integration-base.ts — duplicate IntegrationBase/AuthConfig types. All three barrels have zero external imports. 30 services duplicated across frameworks. `convertkit.ts` has broken import (`integration-best.js`) | Deleted 3 dead plugin framework files (4,835 lines total); kept integrations/ as canonical (67 files, abstract base, retry/rate-limit/auth built-in); removed stale barrel re-export; fixed convertkit.ts import to `integration-base.js` |
 
-## 📋 Remaining — 333 Issues
+## 📋 Remaining — 332 Issues
 
-### High (45)
-⏸️ All 45 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (44)
+⏸️ All 44 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
