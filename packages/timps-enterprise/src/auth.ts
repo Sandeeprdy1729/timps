@@ -68,6 +68,66 @@ export function listTeamMembers(teamId: string): Omit<User, 'passwordHash'>[] {
     .map(({ passwordHash: _omit, ...rest }) => rest);
 }
 
+// ── Invitation system ──────────────────────────────────────────────────
+
+export interface TeamInvitation {
+  id: string;
+  teamId: string;
+  email: string;
+  role: 'admin' | 'member' | 'viewer';
+  token: string;
+  createdBy: string;
+  createdAt: string;
+  expiresAt: string;
+  used: boolean;
+}
+
+const invitations = new Map<string, TeamInvitation>(); // id → invitation
+const teamInvites = new Map<string, Set<string>>(); // teamId → set of invitation ids
+
+export function createInvitation(
+  teamId: string,
+  email: string,
+  role: 'admin' | 'member' | 'viewer',
+  createdByUserId: string
+): TeamInvitation {
+  const token = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '').slice(0, 8);
+  const invitation: TeamInvitation = {
+    id: randomUUID(),
+    teamId,
+    email,
+    role,
+    token,
+    createdBy: createdByUserId,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+    used: false,
+  };
+  invitations.set(invitation.id, invitation);
+  if (!teamInvites.has(teamId)) teamInvites.set(teamId, new Set());
+  teamInvites.get(teamId)!.add(invitation.id);
+  return invitation;
+}
+
+export function validateInvitation(token: string, teamId: string, email: string): TeamInvitation | null {
+  for (const inv of invitations.values()) {
+    if (inv.token === token && inv.teamId === teamId && inv.email === email && !inv.used) {
+      if (new Date(inv.expiresAt) < new Date()) return null; // expired
+      return inv;
+    }
+  }
+  return null;
+}
+
+export function consumeInvitation(invitationId: string): void {
+  const inv = invitations.get(invitationId);
+  if (inv) inv.used = true;
+}
+
+export function teamHasMembers(teamId: string): boolean {
+  return [...users.values()].some((u) => u.teamId === teamId);
+}
+
 // ── JWT helpers ────────────────────────────────────────────────────────────
 
 export interface JwtPayload {
