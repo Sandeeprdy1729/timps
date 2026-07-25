@@ -2,6 +2,26 @@ import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
 import { SecureStore } from './secureStore.js';
 
+function encodeFormData(obj: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'object') {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`);
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+    }
+  }
+  return parts.join('&');
+}
+
+function stripeHeaders(apiKey: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+}
+
 export interface StripeCustomer {
   id: string;
   object: 'customer';
@@ -351,7 +371,7 @@ export default class StripeIntegration extends IntegrationBase {
   async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
     if (!this.apiKey) throw new Error('Not authenticated');
 
-    const headers = this.getAuthHeaders();
+    const headers = stripeHeaders(this.apiKey);
 
     switch (action) {
       case 'getCustomers':
@@ -364,14 +384,14 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeCustomer>(`${this.apiBase}/customers`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.customer),
+          body: encodeFormData(params.customer as Record<string, unknown>),
         });
 
       case 'updateCustomer':
         return this.apiCall<StripeCustomer>(`${this.apiBase}/customers/${params.customerId}`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.updates),
+          body: encodeFormData(params.updates as Record<string, unknown>),
         });
 
       case 'deleteCustomer':
@@ -392,7 +412,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeInvoice>(`${this.apiBase}/invoices`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.invoice),
+          body: encodeFormData(params.invoice as Record<string, unknown>),
         });
 
       case 'sendInvoice':
@@ -431,14 +451,14 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeSubscription>(`${this.apiBase}/subscriptions`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.subscription),
+          body: encodeFormData(params.subscription as Record<string, unknown>),
         });
 
       case 'updateSubscription':
         return this.apiCall<StripeSubscription>(`${this.apiBase}/subscriptions/${params.subscriptionId}`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.updates),
+          body: encodeFormData(params.updates as Record<string, unknown>),
         });
 
       case 'cancelSubscription':
@@ -451,14 +471,14 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeSubscription>(`${this.apiBase}/subscriptions/${params.subscriptionId}/pause`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.pause),
+          body: encodeFormData(params.pause as Record<string, unknown>),
         });
 
       case 'resumeSubscription':
         return this.apiCall<StripeSubscription>(`${this.apiBase}/subscriptions/${params.subscriptionId}/resume`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.resume),
+          body: encodeFormData(params.resume as Record<string, unknown>),
         });
 
       case 'getCharges':
@@ -471,7 +491,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeCharge>(`${this.apiBase}/charges`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.charge),
+          body: encodeFormData(params.charge as Record<string, unknown>),
         });
 
       case 'captureCharge':
@@ -487,7 +507,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeRefund>(`${this.apiBase}/refunds`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.refund),
+          body: encodeFormData(params.refund as Record<string, unknown>),
         });
 
       case 'getPaymentIntents':
@@ -502,7 +522,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripePaymentIntent>(`${this.apiBase}/payment_intents`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.paymentIntent),
+          body: encodeFormData(params.paymentIntent as Record<string, unknown>),
         });
 
       case 'confirmPaymentIntent':
@@ -524,7 +544,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall(`${this.apiBase}/payment_methods/${params.paymentMethodId}/attach`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ customer: params.customerId }),
+          body: encodeFormData({ customer: params.customerId as string }),
         });
 
       case 'detachPaymentMethod':
@@ -540,7 +560,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeProduct>(`${this.apiBase}/products`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.product),
+          body: encodeFormData(params.product as Record<string, unknown>),
         });
 
       case 'getPrices':
@@ -550,7 +570,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripePrice>(`${this.apiBase}/prices`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.price),
+          body: encodeFormData(params.price as Record<string, unknown>),
         });
 
       case 'getCards':
@@ -560,7 +580,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeCard>(`${this.apiBase}/customers/${params.customerId}/sources`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.card),
+          body: encodeFormData(params.card as Record<string, unknown>),
         });
 
       case 'getPayouts':
@@ -570,7 +590,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripePayout>(`${this.apiBase}/payouts`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.payout),
+          body: encodeFormData(params.payout as Record<string, unknown>),
         });
 
       case 'getBalance':
@@ -583,7 +603,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeCoupon>(`${this.apiBase}/coupons`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.coupon),
+          body: encodeFormData(params.coupon as Record<string, unknown>),
         });
 
       case 'getTaxRates':
@@ -593,7 +613,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeTaxRate>(`${this.apiBase}/tax_rates`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.taxRate),
+          body: encodeFormData(params.taxRate as Record<string, unknown>),
         });
 
       case 'getOrders':
@@ -603,7 +623,7 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeOrder>(`${this.apiBase}/orders`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.order),
+          body: encodeFormData(params.order as Record<string, unknown>),
         });
 
       case 'returnOrder':
@@ -619,21 +639,21 @@ export default class StripeIntegration extends IntegrationBase {
         return this.apiCall<StripeWebhook>(`${this.apiBase}/webhook_endpoints`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.webhook),
+          body: encodeFormData(params.webhook as Record<string, unknown>),
         });
 
       case 'createSetupIntent':
         return this.apiCall(`${this.apiBase}/setup_intents`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.setupIntent),
+          body: encodeFormData(params.setupIntent as Record<string, unknown>),
         });
 
       case 'createUsageRecord':
         return this.apiCall(`${this.apiBase}/subscription_items/${params.subscriptionItemId}/usage_records`, {
           method: 'POST',
           headers,
-          body: JSON.stringify(params.usageRecord),
+          body: encodeFormData(params.usageRecord as Record<string, unknown>),
         });
 
       default:
