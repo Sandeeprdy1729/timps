@@ -41,7 +41,8 @@ export function formatCost(model: string, inputTokens: number, outputTokens: num
 
 export function generateRandomSecret(length = 32): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const bytes = crypto.randomBytes(length);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
 }
 
 export function formatSize(bytes: number): string {

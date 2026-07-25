@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 63    | 26        |
+| High     | 89    | 65    | 24        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **74** | **314** |
+| **Total**| **388** | **76** | **312** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 50 High
+## ✅ Fixed — 11 Critical + 65 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -94,8 +94,10 @@
 | H67 | `timps-code/src/data-pipeline/bug-miner.ts:298` — `Math.random()` generates simulated program counts (`~${Math.floor(Math.random() * 500 + 100)}K programs`) that vary on every run; status messages show unstable fabricated numbers; swebench-runner.ts:193 already fixed in H66 | Replaced `Math.random()` with deterministic per-language constants (c: 320K, cpp: 210K, rust: 180K, go: 150K); status messages now show stable representative values; all display text remains marked as '(simulated)'. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H68 | `timps-code/src/memory/selfReflector.ts:19` — Four CLI intelligence sub-modules (`selfReflector.ts`, `benchmark.ts`, `predictivePrefetcher.ts`, `temporalVersioning.ts`) read `semantic.json` from `Memory.dir` which uses `getMemoryDir()` (31-multiply hash), but `MemoryEngine` writes to `memoryDir()` (sha256 hash) — two different directories for one Memory instance; sub-modules always operate on empty entry sets; `timps --benchmark` prints pass rates computed over never-populated data | Changed `Memory.dir` to use `memoryDir()` from `@timps-ai/memory-core` (sha256) instead of `getMemoryDir()` from `config.ts` (31-hash); all sub-modules now read from the same directory `MemoryEngine` writes to; removed unused `getMemoryDir` import. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H69 | `timps-code/src/models/ollama.ts:38` — System prompt dropped: `messages.filter(m => m.role !== 'system')` strips system messages; `body.system` set on line 38 but local models also need tool-call parsing; provider sets `supportsFunctionCalling:false` and only yields `text` events; `LOCAL_SYSTEM_PROMPT` tells model to emit ``<tool_call>`` XML but no parser exists in the codebase; file edits/bash/etc. never execute on the default/free Ollama provider | (1) System messages now included as `role:'system'` in the messages array instead of being filtered out; (2) Added full XML `<tool_call>` parser — streaming state machine that detects `<tool_call>...</tool_call>` blocks across chunk boundaries, extracts `<name>` and `<arguments>` tags, and yields `tool_start`/`tool_delta`/`tool_end` events; parser handles edge cases (split chunks, missing names, known tool normalization); tool results flow back as `role:'user'` messages. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H70 | `timps-code/src/utils/utils.ts:42` — `generateRandomSecret()` uses `Math.random()` to generate session secrets (called from `gateway.ts:532` for `sessionSecret`); `timps-vscode/src/chatPanel.ts:1014` — `getNonce()` uses `Math.random()` to generate CSP nonces | Replaced `Math.random()` with `crypto.randomBytes()` in both functions. `generateRandomSecret()` now uses cryptographically secure random bytes for session secret generation. `getNonce()` now uses `crypto.randomBytes(16).toString('hex')` for CSP nonces. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H71 | `packages/plugin-shell/src/index.ts:64` — `shell_which` tool passes user-supplied `command` directly into `execSync(`which ${command}`)` without sanitization; attacker can inject arbitrary shell commands via crafted command name (e.g. `foo; rm -rf /`) | Added input sanitization: strips all characters except `[a-zA-Z0-9._\-\/]` before interpolation, returns error on empty result. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
-## 📋 Remaining — 314 Issues
+## 📋 Remaining — 312 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
