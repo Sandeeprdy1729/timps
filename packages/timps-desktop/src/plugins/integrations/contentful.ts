@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ContentfulEntry {
   sys: {
@@ -117,11 +118,32 @@ interface ContentfulConfig {
 }
 
 export class ContentfulPlugin extends IntegrationBase {
-  private config: ContentfulConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as ContentfulConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: ContentfulConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Contentful', 'contentful', 'Headless CMS integration');
+    super('contentful', 'Contentful', '1.0.0', 'Headless CMS integration', ['cms', 'content', 'headless']);
     this.config = { environmentId: 'master' } as ContentfulConfig;
   }
 
@@ -135,12 +157,12 @@ export class ContentfulPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `https://api.contentful.com/spaces/${this.config.spaceId}/environments/${this.config.environmentId}`;
+    return `https://api.contentful.com/spaces/${this.svcConfig.spaceId}/environments/${this.svcConfig.environmentId}`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getSpace(): Promise<ContentfulSpace> {

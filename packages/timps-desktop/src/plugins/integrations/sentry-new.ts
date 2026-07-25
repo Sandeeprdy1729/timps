@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface SentryIssue {
   id: string;
@@ -79,11 +80,28 @@ interface SentryConfig {
 }
 
 export class SentryPlugin extends IntegrationBase {
-  private config: SentryConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as SentryConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: SentryConfig;
   private baseUrl = 'https://sentry.io/api/0';
 
   constructor() {
-    super('Sentry', 'sentry', 'Application monitoring and error tracking');
+    super('sentry', 'Sentry', '1.0.0', 'Application monitoring and error tracking', ['monitoring', 'errors', 'tracking']);
   }
 
   setConfig(authToken: string, organizationSlug: string): void {
@@ -92,18 +110,18 @@ export class SentryPlugin extends IntegrationBase {
 
   private getHeaders() {
     return {
-      'Authorization': `Bearer ${this.config.authToken}`,
+      'Authorization': `Bearer ${this.svcConfig.authToken}`,
       'Content-Type': 'application/json',
     };
   }
 
   private getOrgUrl(endpoint: string) {
-    return `${this.baseUrl}/organizations/${this.config.organizationSlug}${endpoint}`;
+    return `${this.baseUrl}/organizations/${this.svcConfig.organizationSlug}${endpoint}`;
   }
 
   async apiCall<T>(endpoint: string, options = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    return this.makeRequest<T>(endpoint.startsWith('/organizations') ? url : this.getOrgUrl(endpoint), options, this.getHeaders());
+    const url = endpoint.startsWith('/organizations') ? this.getOrgUrl(endpoint) : `${this.baseUrl}${endpoint}`;
+    return super.apiCall<T>(url, { ...options as RequestInit, headers: this.getHeaders() });
   }
 
   async testConnection(): Promise<boolean> {

@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface DocuSignEnvelope {
   envelopeId: string;
@@ -108,11 +109,32 @@ interface DocuSignConfig {
 }
 
 export class DocuSignPlugin extends IntegrationBase {
-  private config: DocuSignConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as DocuSignConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: DocuSignConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('DocuSign', 'docusign', 'Electronic signature integration');
+    super('docusign', 'DocuSign', '1.0.0', 'Electronic signature integration', ['esignature', 'documents', 'signing']);
     this.config = {} as DocuSignConfig;
   }
 
@@ -125,12 +147,12 @@ export class DocuSignPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return this.config.basePath || 'https://demo.docusign.net/restapi/v2.1';
+    return this.svcConfig.basePath || 'https://demo.docusign.net/restapi/v2.1';
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getAccount(): Promise<{ accounts: DocuSignAccount[] }> {
@@ -143,15 +165,15 @@ export class DocuSignPlugin extends IntegrationBase {
     if (options?.toDate) params.append('to_date', options.toDate);
     if (options?.status) params.append('status', options.status);
     const query = params.toString() ? `?${params.toString()}` : '';
-    return this.apiCall<{ envelopes: DocuSignEnvelope[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes${query}`);
+    return this.apiCall<{ envelopes: DocuSignEnvelope[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes${query}`);
   }
 
   async getEnvelope(envelopeId: string): Promise<{ envelope: DocuSignEnvelope }> {
-    return this.apiCall<{ envelope: DocuSignEnvelope }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}`);
+    return this.apiCall<{ envelope: DocuSignEnvelope }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}`);
   }
 
   async createEnvelope(envelope: { emailSubject?: string; documents?: DocuSignDocument[]; recipients?: any; status?: string }): Promise<{ envelopeId: string }> {
-    return this.apiCall<{ envelopeId: string }>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes`, envelope);
+    return this.apiCall<{ envelopeId: string }>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes`, envelope);
   }
 
   async sendEnvelope(envelope: { emailSubject?: string; documents?: DocuSignDocument[]; recipients?: any }): Promise<{ envelopeId: string }> {
@@ -163,35 +185,35 @@ export class DocuSignPlugin extends IntegrationBase {
   }
 
   async voidEnvelope(envelopeId: string, reason: string): Promise<void> {
-    return this.apiCall<void>('PUT', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}`, { status: 'voided', voidedReason: reason });
+    return this.apiCall<void>('PUT', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}`, { status: 'voided', voidedReason: reason });
   }
 
   async deleteEnvelope(envelopeId: string): Promise<void> {
-    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}`);
+    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}`);
   }
 
   async resendEnvelope(envelopeId: string): Promise<void> {
-    return this.apiCall<void>('PUT', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/resend`, {});
+    return this.apiCall<void>('PUT', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/resend`, {});
   }
 
   async getEnvelopeRecipients(envelopeId: string): Promise<{ signers: DocuSignRecipient[] }> {
-    return this.apiCall<{ signers: DocuSignRecipient[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/recipients`);
+    return this.apiCall<{ signers: DocuSignRecipient[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/recipients`);
   }
 
   async addRecipient(envelopeId: string, recipient: DocuSignRecipient): Promise<{ recipientId: string }> {
-    return this.apiCall<{ recipientId: string }>('PUT', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/recipients`, { signers: [recipient] });
+    return this.apiCall<{ recipientId: string }>('PUT', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/recipients`, { signers: [recipient] });
   }
 
   async voidRecipient(envelopeId: string, recipientId: string): Promise<void> {
-    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/recipients/${recipientId}`);
+    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/recipients/${recipientId}`);
   }
 
   async getEnvelopeDocuments(envelopeId: string): Promise<{ envelopeId: string; name: string }[]> {
-    return this.apiCall<any>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/documents`);
+    return this.apiCall<any>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/documents`);
   }
 
   async getDocument(envelopeId: string, documentId: string): Promise<Blob> {
-    const url = `${this.getBaseUrl()}/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/documents/${documentId}`;
+    const url = `${this.getBaseUrl()}/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/documents/${documentId}`;
     const response = await fetch(url, { method: 'GET', headers: this.baseHeaders });
     return response.blob();
   }
@@ -201,23 +223,23 @@ export class DocuSignPlugin extends IntegrationBase {
   }
 
   async listTemplates(): Promise<{ envelopeTemplates: DocuSignTemplate[] }> {
-    return this.apiCall<{ envelopeTemplates: DocuSignTemplate[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/templates`);
+    return this.apiCall<{ envelopeTemplates: DocuSignTemplate[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/templates`);
   }
 
   async getTemplate(templateId: string): Promise<{ template: DocuSignTemplate }> {
-    return this.apiCall<{ template: DocuSignTemplate }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/templates/${templateId}`);
+    return this.apiCall<{ template: DocuSignTemplate }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/templates/${templateId}`);
   }
 
   async createTemplate(template: { name: string; description?: string; documents?: DocuSignDocument[]; recipients?: any }): Promise<{ templateId: string }> {
-    return this.apiCall<{ templateId: string }>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/templates`, template);
+    return this.apiCall<{ templateId: string }>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/templates`, template);
   }
 
   async deleteTemplate(templateId: string): Promise<void> {
-    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.config.accountId}/templates/${templateId}`);
+    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/templates/${templateId}`);
   }
 
   async createEnvelopeFromTemplate(templateId: string, recipients: any): Promise<{ envelopeId: string }> {
-    return this.apiCall<{ envelopeId: string }>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes`, {
+    return this.apiCall<{ envelopeId: string }>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes`, {
       templateId,
       templateRoles: recipients,
       status: 'sent',
@@ -225,66 +247,66 @@ export class DocuSignPlugin extends IntegrationBase {
   }
 
   async listUsers(): Promise<<{ users: DocuSignUser[] }> {
-    return this.apiCall<{ users: DocuSignUser[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/users`);
+    return this.apiCall<{ users: DocuSignUser[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/users`);
   }
 
   async getUser(userId: string): Promise<{ user: DocuSignUser }> {
-    return this.apiCall<{ user: DocuSignUser }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/users/${userId}`);
+    return this.apiCall<{ user: DocuSignUser }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/users/${userId}`);
   }
 
   async listGroups(): Promise<{ groups: DocuSignGroup[] }> {
-    return this.apiCall<{ groups: DocuSignGroup[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/groups`);
+    return this.apiCall<{ groups: DocuSignGroup[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/groups`);
   }
 
   async getGroup(groupId: string): Promise<{ group: DocuSignGroup }> {
-    return this.apiCall<{ group: DocuSignGroup }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/groups/${groupId}`);
+    return this.apiCall<{ group: DocuSignGroup }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/groups/${groupId}`);
   }
 
   async listBrands(): Promise<{ brands: DocuSignBrand[] }> {
-    return this.apiCall<{ brands: DocuSignBrand[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/brands`);
+    return this.apiCall<{ brands: DocuSignBrand[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/brands`);
   }
 
   async getBrand(brandId: string): Promise<{ brand: DocuSignBrand }> {
-    return this.apiCall<{ brand: DocuSignBrand }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/brands/${brandId}`);
+    return this.apiCall<{ brand: DocuSignBrand }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/brands/${brandId}`);
   }
 
   async listWebhooks(): Promise<{ webhooks: DocuSignWebhook[] }> {
-    return this.apiCall<{ webhooks: DocuSignWebhook[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/connect/webhooks`);
+    return this.apiCall<{ webhooks: DocuSignWebhook[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/connect/webhooks`);
   }
 
   async createWebhook(webhook: { url: string; name: string; events: string[]; configurationType?: string; active?: boolean }): Promise<any> {
-    return this.apiCall<any>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/connect/webhooks`, webhook);
+    return this.apiCall<any>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/connect/webhooks`, webhook);
   }
 
   async deleteWebhook(webhookId: string): Promise<void> {
-    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.config.accountId}/connect/webhooks/${webhookId}`);
+    return this.apiCall<void>('DELETE', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/connect/webhooks/${webhookId}`);
   }
 
   async listConnectLogs(): Promise<{ logs: DocuSignConnectLog[] }> {
-    return this.apiCall<{ logs: DocuSignConnectLog[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/connect/logs`);
+    return this.apiCall<{ logs: DocuSignConnectLog[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/connect/logs`);
   }
 
   async getConnectLog(logId: string): Promise<{ log: DocuSignConnectLog }> {
-    return this.apiCall<{ log: DocuSignConnectLog }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/connect/logs/${logId}`);
+    return this.apiCall<{ log: DocuSignConnectLog }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/connect/logs/${logId}`);
   }
 
   async createBulkEnvelope(batchName: string, recipients: any[]): Promise<{ batchId: string }> {
-    return this.apiCall<{ batchId: string }>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/bulk_envelopes`, {
+    return this.apiCall<{ batchId: string }>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/bulk_envelopes`, {
       batchName,
       recipients,
     });
   }
 
   async getBulkEnvelope(batchId: string): Promise<{ batch: DocuSignBulkEnvelope }> {
-    return this.apiCall<{ batch: DocuSignBulkEnvelope }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/bulk_envelopes/${batchId}`);
+    return this.apiCall<{ batch: DocuSignBulkEnvelope }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/bulk_envelopes/${batchId}`);
   }
 
   async listBulkEnvelopes(): Promise<{ batches: DocuSignBulkEnvelope[] }> {
-    return this.apiCall<{ batches: DocuSignBulkEnvelope[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/bulk_envelopes`);
+    return this.apiCall<{ batches: DocuSignBulkEnvelope[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/bulk_envelopes`);
   }
 
   async getSigningUrl(envelopeId: string, recipientEmail: string, recipientName: string): Promise<{ url: string }> {
-    return this.apiCall<{ url: string }>('POST', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/views/recipient`, {
+    return this.apiCall<{ url: string }>('POST', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/views/recipient`, {
       returnUrl: 'complete',
       authenticationMethod: 'email',
       email: recipientEmail,
@@ -297,7 +319,7 @@ export class DocuSignPlugin extends IntegrationBase {
   }
 
   async getEnvelopeAuditEvents(envelopeId: string): Promise<{ auditEvents: any[] }> {
-    return this.apiCall<{ auditEvents: any[] }>('GET', `/restapi/v2.1/accounts/${this.config.accountId}/envelopes/${envelopeId}/audit_events`);
+    return this.apiCall<{ auditEvents: any[] }>('GET', `/restapi/v2.1/accounts/${this.svcConfig.accountId}/envelopes/${envelopeId}/audit_events`);
   }
 
   getManifest() {

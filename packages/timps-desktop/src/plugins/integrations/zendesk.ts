@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ZendeskTicket {
   id: number;
@@ -154,11 +155,32 @@ interface ZendeskConfig {
 }
 
 export class ZendeskPlugin extends IntegrationBase {
-  private config: ZendeskConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as ZendeskConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: ZendeskConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Zendesk', 'zendesk', 'Customer support and helpdesk integration');
+    super('zendesk', 'Zendesk', '1.0.0', 'Customer support and helpdesk integration', ['support', 'helpdesk', 'tickets']);
     this.config = {} as ZendeskConfig;
   }
 
@@ -172,12 +194,12 @@ export class ZendeskPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `${this.config.instanceUrl}/api/v2`;
+    return `${this.svcConfig.instanceUrl}/api/v2`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getTickets(options?: { status?: string; page?: number }): Promise<{ tickets: ZendeskTicket[] }> {

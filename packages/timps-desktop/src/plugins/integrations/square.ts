@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface SquareCustomer {
   id: string;
@@ -154,12 +155,33 @@ interface SquareConfig {
 }
 
 export class SquarePlugin extends IntegrationBase {
-  private config: SquareConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = { environment: "sandbox" } as SquareConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: SquareConfig;
   private baseHeaders: Record<string, string>;
   private locationId: string = '';
 
   constructor() {
-    super('Square', 'square', 'Payment and POS integration');
+    super('square', 'Square', '1.0.0', 'Payment and POS integration', ['payments', 'pos', 'commerce']);
     this.config = { environment: 'sandbox' } as SquareConfig;
   }
 
@@ -173,13 +195,13 @@ export class SquarePlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    const base = this.config.environment === 'sandbox' ? 'https://connect.squareupsandbox.com' : 'https://connect.square.com';
+    const base = this.svcConfig.environment === 'sandbox' ? 'https://connect.squareupsandbox.com' : 'https://connect.square.com';
     return `${base}/v2`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getLocations(): Promise<{ locations: SquareLocation[] }> {

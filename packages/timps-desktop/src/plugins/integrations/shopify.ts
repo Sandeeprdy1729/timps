@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ShopifyProduct {
   id: number;
@@ -226,11 +227,32 @@ interface ShopifyConfig {
 }
 
 export class ShopifyPlugin extends IntegrationBase {
-  private config: ShopifyConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as ShopifyConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: ShopifyConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Shopify', 'shopify', 'E-commerce platform integration');
+    super('shopify', 'Shopify', '1.0.0', 'E-commerce platform integration', ['ecommerce', 'store', 'products']);
     this.config = {} as ShopifyConfig;
   }
 
@@ -243,12 +265,12 @@ export class ShopifyPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `https://${this.config.shopDomain}/admin/api/2024-01`;
+    return `https://${this.svcConfig.shopDomain}/admin/api/2024-01`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}.json`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getProducts(options?: { limit?: number; status?: string }): Promise<{ products: ShopifyProduct[] }> {

@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface FreshdeskTicket {
   id: number;
@@ -154,11 +155,32 @@ interface FreshdeskConfig {
 }
 
 export class FreshdeskPlugin extends IntegrationBase {
-  private config: FreshdeskConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as FreshdeskConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: FreshdeskConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Freshdesk', 'freshdesk', 'Customer support and helpdesk integration');
+    super('freshdesk', 'Freshdesk', '1.0.0', 'Customer support and helpdesk integration', ['support', 'helpdesk', 'tickets']);
     this.config = {} as FreshdeskConfig;
     this.baseHeaders = {
       'Content-Type': 'application/json',
@@ -171,12 +193,12 @@ export class FreshdeskPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `https://${this.config.domain}.freshdesk.com/api/v2`;
+    return `https://${this.svcConfig.domain}.freshdesk.com/api/v2`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async createTicket(ticket: Partial<FreshdeskTicket>): Promise<FreshdeskTicket> {

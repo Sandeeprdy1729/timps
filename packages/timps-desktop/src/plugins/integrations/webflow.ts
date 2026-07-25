@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface WebflowCollection {
   id: string;
@@ -100,11 +101,32 @@ interface WebflowConfig {
 }
 
 export class WebflowPlugin extends IntegrationBase {
-  private config: WebflowConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as WebflowConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: WebflowConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Webflow', 'webflow', 'Website builder and CMS integration');
+    super('webflow', 'Webflow', '1.0.0', 'Website builder and CMS integration', ['website', 'cms', 'design']);
     this.config = {} as WebflowConfig;
   }
 
@@ -118,12 +140,12 @@ export class WebflowPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `https://api.webflow.com/v3/sites/${this.config.siteId}`;
+    return `https://api.webflow.com/v3/sites/${this.svcConfig.siteId}`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async listCollections(): Promise<{ collections: WebflowCollection[] }> {

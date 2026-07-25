@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface CalendlyEvent {
   uri: string;
@@ -108,11 +109,32 @@ interface CalendlyConfig {
 }
 
 export class CalendlyPlugin extends IntegrationBase {
-  private config: CalendlyConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as CalendlyConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: CalendlyConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Calendly', 'Calendly', 'Scheduling and meeting integration');
+    super('calendly', 'Calendly', '1.0.0', 'Scheduling and meeting integration', ['calendar', 'scheduling', 'meetings']);
     this.config = {} as CalendlyConfig;
   }
 
@@ -130,7 +152,7 @@ export class CalendlyPlugin extends IntegrationBase {
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getCurrentUser(): Promise<CalendlyUser> {
