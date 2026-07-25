@@ -114,23 +114,23 @@ export class SWEBenchRunner {
 
   private generateMockInstances(count: number): SWEBenchInstance[] {
     const mockIssues = [
-      { repo: 'django/django', issue: 'Fix timezone handling in DateTimeField' },
-      { repo: 'pytest-dev/pytest', issue: 'Handle parametrized fixtures correctly' },
-      { repo: 'pandas-dev/pandas', issue: 'Fix dtype inference for nullable integers' },
-      { repo: 'requests/requests', issue: 'Handle streaming responses properly' },
-      { repo: 'numpy/numpy', issue: 'Resolve broadcasting edge case' },
-      { repo: 'flask/flask', issue: 'Fix blueprint registration order' },
-      { repo: 'scikit-learn/scikit-learn', issue: 'Handle NaN in preprocessing' },
-      { repo: 'matplotlib/matplotlib', issue: 'Fix figure close event' },
-      { repo: 'pillow/Pillow', issue: 'Handle corrupt image gracefully' },
-      { repo: 'redis/redis', issue: 'Fix client connection pool' },
+      { repo: 'django/django', issue: 'Fix timezone handling in DateTimeField', patch: '--- a/django/db/models/fields/__init__.py\n+++ b/django/db/models/fields/__init__.py\n@@ -100 +100 @@\n-        return super().to_python(value)\n+        if value is None:\n+            return value\n+        return super().to_python(value)' },
+      { repo: 'pytest-dev/pytest', issue: 'Handle parametrized fixtures correctly', patch: '--- a/src/_pytest/fixtures.py\n+++ b/src/_pytest/fixtures.py\n@@ -50 +50 @@\n-        raise FixturesLookupError(msg)\n+        if name not in self._arg2fixturedefs:\n+            raise FixturesLookupError(msg)' },
+      { repo: 'pandas-dev/pandas', issue: 'Fix dtype inference for nullable integers', patch: '--- a/pandas/core/arrays/integer.py\n+++ b/pandas/core/arrays/integer.py\n@@ -80 +80 @@\n-        return cls._from_sequence(data, dtype)\n+        if len(data) == 0:\n+            return cls._from_sequence([], dtype)' },
+      { repo: 'requests/requests', issue: 'Handle streaming responses properly', patch: '--- a/src/requests/models.py\n+++ b/src/requests/models.py\n@@ -200 +200 @@\n-        return stream\n+        if not hasattr(stream, \"close\"):\n+            return stream' },
+      { repo: 'numpy/numpy', issue: 'Resolve broadcasting edge case', patch: '--- a/numpy/lib/stride_tricks.py\n+++ b/numpy/lib/stride_tricks.py\n@@ -120 +120 @@\n-    return as_strided(a, shape=shape, strides=strides)\n+    if a.ndim == 0:\n+        return a.reshape(1, 1)\n+    return as_strided(a, shape=shape, strides=strides)' },
+      { repo: 'flask/flask', issue: 'Fix blueprint registration order', patch: '--- a/src/flask/blueprints.py\n+++ b/src/flask/blueprints.py\n@@ -300 +300 @@\n-        self.deferred_functions.append(f)\n+        if f not in self.deferred_functions:\n+            self.deferred_functions.append(f)' },
+      { repo: 'scikit-learn/scikit-learn', issue: 'Handle NaN in preprocessing', patch: '--- a/sklearn/preprocessing/_data.py\n+++ b/sklearn/preprocessing/_data.py\n@@ -150 +150 @@\n-        self.mean_ = np.nanmean(X, axis=0)\n+        with warnings.catch_warnings():\n+            warnings.simplefilter(\"ignore\", RuntimeWarning)\n+            self.mean_ = np.nanmean(X, axis=0)' },
+      { repo: 'matplotlib/matplotlib', issue: 'Fix figure close event', patch: '--- a/lib/matplotlib/figure.py\n+++ b/lib/matplotlib/figure.py\n@@ -250 +250 @@\n-        self.canvas.mpl_disconnect(cid)\n+        if self.canvas is not None:\n+            self.canvas.mpl_disconnect(cid)' },
+      { repo: 'pillow/Pillow', issue: 'Handle corrupt image gracefully', patch: '--- a/src/PIL/Image.py\n+++ b/src/PIL/Image.py\n@@ -300 +300 @@\n-        raise SyntaxError(msg)\n+        try:\n+            self.load()\n+        except Exception:\n+            raise SyntaxError(msg)' },
+      { repo: 'redis/redis', issue: 'Fix client connection pool', patch: '--- a/redis/connection.py\n+++ b/redis/connection.py\n@@ -400 +400 @@\n-        self._connections.put(connection)\n+        if connection.is_connected:\n+            self._connections.put(connection)' },
     ];
 
     return mockIssues.slice(0, count).map((issue, idx) => ({
-      instance_id: `django-12345_${idx}`,
+      instance_id: `${issue.repo.replace('/', '-')}_${idx}`,
       repo: issue.repo,
       base_commit: 'abc123def456',
-      patch: '',
+      patch: issue.patch,
       problem_statement: issue.issue,
     }));
   }
@@ -189,8 +189,23 @@ Working directory: ${instanceDir}`;
         }
       }
 
-      // Simulate evaluation
-      const status = Math.random() > 0.5 ? 'resolved' : 'unresolved';
+      // Evaluate by comparing agent patch against expected patch
+      const expectedPatch = instance.patch || '';
+      const agentPatch = patchContent.trim();
+      
+      // Deterministic evaluation: check if key lines from expected patch appear in agent output
+      let status: 'resolved' | 'unresolved';
+      if (expectedPatch && agentPatch) {
+        const expectedLines = expectedPatch.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+        const matchingLines = expectedLines.filter(line => agentPatch.includes(line.replace(/^\+/, '')));
+        const matchRatio = expectedLines.length > 0 ? matchingLines.length / expectedLines.length : 0;
+        status = matchRatio >= 0.5 ? 'resolved' : 'unresolved';
+      } else if (agentPatch && !expectedPatch) {
+        // Mock instance with no expected patch: count as resolved if agent produced output
+        status = agentPatch.length > 10 ? 'resolved' : 'unresolved';
+      } else {
+        status = 'unresolved';
+      }
 
       return {
         instance_id: instance.instance_id,
@@ -253,6 +268,8 @@ export async function runSWEbench(config: SWEBenchConfig): Promise<void> {
   console.log(`   Pass Rate: ${stats.passRate.toFixed(1)}%`);
   
   if (stats.passRate >= 78) {
-    console.log(`\n🎉 SOTA competitive! (78%+ on Verified)`);
+    console.log(`\n✅ Strong performance on mock instances`);
+  } else {
+    console.log(`\n⚠️  Results are on mock instances only — install SWE-bench for real evaluation`);
   }
 }
