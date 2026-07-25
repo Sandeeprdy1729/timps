@@ -4,6 +4,7 @@
  */
 
 import type { Message } from '../../types/message.js'
+import { getProviderMesh } from '../../models/providerMesh.js'
 
 export type CompactionResult = {
   boundaryMarker: unknown
@@ -41,6 +42,7 @@ class CompactService {
   private compactionHistory: CompactionResult[] = []
   private lastCompactionUuid: string | null = null
   private turnsSincePreviousCompact = 0
+  private lastUsage: { input_tokens: number; output_tokens: number } | null = null
 
   private constructor() {}
 
@@ -92,9 +94,9 @@ class CompactService {
       messagesToKeep,
       preCompactTokenCount,
       postCompactTokenCount: this.estimateTokenCount(messagesToKeep),
-      compactionUsage: {
-        input_tokens: Math.floor(preCompactTokenCount * 0.8),
-        output_tokens: Math.floor(summary.length / 4),
+      compactionUsage: this.lastUsage ?? {
+        input_tokens: 0,
+        output_tokens: 0,
       },
     }
 
@@ -141,6 +143,10 @@ class CompactService {
       hookResults: [],
       preCompactTokenCount: this.estimateTokenCount(allMessages),
       postCompactTokenCount: this.estimateTokenCount(allMessages),
+      compactionUsage: this.lastUsage ?? {
+        input_tokens: 0,
+        output_tokens: 0,
+      },
     }
 
     this.compactionHistory.push(result)
@@ -153,15 +159,66 @@ class CompactService {
   ): Promise<string> {
     const prompt = this.buildCompactPrompt(messages, options.customInstructions)
 
-    await new Promise(resolve => setTimeout(resolve, 50))
+    try {
+      const mesh = getProviderMesh()
+      const route = mesh.route('summarize', { taskType: 'fast', preferLocal: true, requireFunctionCalling: false })
+      const provider = mesh.createProvider(route.provider)
 
-    const summaryLength = Math.min(prompt.length / 10, COMPACT_MAX_OUTPUT_TOKENS)
-    const sampleContent = messages
-      .slice(0, 20)
-      .map(m => `[${m.role}]: ${JSON.stringify(m).slice(0, 100)}`)
-      .join('\n')
+      let summary = ''
+      let inputTokens = 0
+      let outputTokens = 0
 
-    return `Conversation summary (${messages.length} messages, ~${Math.floor(summaryLength)} tokens):\n${sampleContent.slice(0, 500)}`
+      for await (const event of provider.stream(
+        [{ role: 'user', content: prompt }],
+        [],
+        { maxTokens: COMPACT_MAX_OUTPUT_TOKENS },
+      )) {
+        if (event.type === 'text') {
+          summary += event.content
+        }
+        if (event.type === 'done' && event.usage) {
+          inputTokens = event.usage.inputTokens
+          outputTokens = event.usage.outputTokens
+        }
+      }
+
+      if (summary.trim()) {
+        this.lastUsage = { input_tokens: inputTokens, output_tokens: outputTokens }
+        return summary.trim()
+      }
+    } catch {
+      // LLM unavailable — fall back to rule-based extraction
+    }
+
+    return this.ruleBasedSummary(messages)
+  }
+
+  private ruleBasedSummary(messages: Message[]): string {
+    const lines: string[] = []
+    lines.push(`Conversation summary (${messages.length} messages):`)
+
+    let lastUserTopic = ''
+    const toolCalls: string[] = []
+    const decisions: string[] = []
+
+    for (const msg of messages.slice(-50)) {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+      if (msg.role === 'user' && content.length > 10) {
+        lastUserTopic = content.slice(0, 200)
+      }
+      if (msg.role === 'assistant') {
+        const toolMatch = content.match(/(?:called|used|executed)\s+(\w+)/)
+        if (toolMatch) toolCalls.push(toolMatch[1])
+        const decisionMatch = content.match(/(?:decided|chose|selected|will)\s+(.{10,80})/)
+        if (decisionMatch) decisions.push(decisionMatch[1])
+      }
+    }
+
+    if (lastUserTopic) lines.push(`Last topic: ${lastUserTopic}`)
+    if (decisions.length > 0) lines.push(`Decisions: ${[...new Set(decisions)].slice(0, 5).join('; ')}`)
+    if (toolCalls.length > 0) lines.push(`Tools used: ${[...new Set(toolCalls)].join(', ')}`)
+
+    return lines.join('\n')
   }
 
   private buildCompactPrompt(
