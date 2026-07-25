@@ -1,25 +1,25 @@
 # TIMPS Memory Recall Benchmark
 
-> **Last run:** `npx tsx benchmark/index.ts --quick` (15 runs, latest: `run_1781067808285.json`)
+> **Last run:** `npx tsx benchmark/index.ts --quick`
 > **Corpus:** 50 facts, 20 queries, 10 contradiction pairs, 25 intelligence tools
 
 ## Summary
 
-| Metric | Baseline (no memory) | TIMPS (with memory) | Improvement |
-|---|---|---|---|
-| **Recall@1** | — | 75% | — |
-| **Recall@5** | — | 95% | — |
-| **Recall@10** | — | 95% | — |
-| **MRR** | — | 0.82 | — |
-| **NDCG** | — | 0.85 | — |
-| **Contradiction Detection** | — | 100% (10/10) | — |
-| **Intelligence Tools** | — | 100% (25/25) | — |
-| **Scalability (50 facts)** | — | 0.2ms mean / 1ms p95 | — |
-| **Scalability (200 facts)** | — | 0.2ms mean / 1ms p95 | — |
-| **Scalability (500 facts)** | — | 0.6ms mean / 1ms p95 | — |
-| **Memory Recall Latency** | — | 17ms | — |
+| Metric | TIMPS |
+|---|---|
+| **Recall@1** | 75% |
+| **Recall@5** | 95% |
+| **Recall@10** | 95% |
+| **MRR** | 0.82 |
+| **NDCG** | 0.85 |
+| **Contradiction Detection** | 100% (10/10) |
+| **Intelligence Tools** | 100% (25/25) |
+| **Scalability (50 facts)** | 0.2ms mean / 1ms p95 |
+| **Scalability (200 facts)** | 0.2ms mean / 1ms p95 |
+| **Scalability (500 facts)** | 0.6ms mean / 1ms p95 |
+| **Memory Recall Latency** | ~17ms total for 20 queries in-process |
 
-Results are saved to `.timps/benchmarks/run_<timestamp>.json`. See `benchmark/index.ts` for the canonical runner. All 15 runs are consistent — every metric is deterministic (zero `Math.random()` calls in the intelligence layer).
+Results are saved to `.timps/benchmarks/run_<timestamp>.json`. See `benchmark/index.ts` for the canonical runner. All metrics are deterministic (zero `Math.random()` calls in the intelligence layer).
 
 ---
 

@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 54    | 35        |
+| High     | 89    | 55    | 34        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **65** | **323** |
+| **Total**| **388** | **66** | **322** |
 
 ---
 
@@ -85,11 +85,12 @@
 | H57 | `packages/timps-desktop/src/plugins/plugin-sets.ts:57` — Multiple TS compilation errors: syntax error, nonexistent imports, missing types | **Already fixed** — no errors in current code; all imports resolve to `./types`, syntax is valid |
 | H58 | `packages/timps-enterprise/src/server.ts:64` — Open registration: POST /auth/register accepts arbitrary caller-supplied teamId with no invitation/verification check; any attacker can join any team by guessing teamId, gaining full read/write/delete access to team memory | Added invitation system: `createInvitation()`, `validateInvitation()`, `consumeInvitation()`, `teamHasMembers()` in auth.ts. Registration now requires `inviteToken` for existing teams; new teams (first member) skip check. Added `POST /team/invite` endpoint (admin-only) that generates 7-day expiring tokens. Invitation token validated against teamId + email, consumed on use. 0 new tsc errors |
 | H59 | `packages/workflow-engine/src/index.ts:539` — `condition` action steps have no effect on control flow: `handleCondition` returns boolean but `executeSteps` always follows `onSuccess`/next-step regardless; no false-branch, skip, or halt exists | Modified `executeSteps` to detect condition steps and branch on result: when `handleCondition` returns `true`, follows `onSuccess` (or increments); when `false`, follows `onFailure` (or increments). Uses existing `onFailure` field for false-branch, maintaining backward compatibility with non-condition steps |
+| H60 | `README.md:313` — Fabricated benchmark claims: labels recall metric "LongMemEval-S" but uses 20 self-authored keyword queries over 50-fact synthetic corpus; lists competitor numbers (agentmemory 95.2%, mem0 72%, Letta 68%) with no data; "17ms latency" is total wall time for all 20 in-process queries vs competitors' per-call network latencies; benchmark/results/README.md claims "15 runs" with no committed JSON files; "Baseline (no memory)" column entirely empty | Rewrote README.md benchmark table: removed fabricated "LongMemEval-S" label and competitor columns, added honest metric descriptions ("19/20 queries find expected answer in top-5"), added disclaimer about in-process vs network latency. Fixed benchmark/results/README.md: removed empty Baseline column, removed false "15 runs" claim, added accurate latency description |
 
-## 📋 Remaining — 323 Issues
+## 📋 Remaining — 322 Issues
 
-### High (35)
-⏸️ All 35 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (34)
+⏸️ All 34 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed

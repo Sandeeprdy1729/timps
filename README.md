@@ -306,16 +306,18 @@ When the branch is merged, memory is merged into main if patterns are generally 
 
 ## Performance / Benchmarks
 
-All 25 intelligence tools are benchmarked continuously against a standardized evaluation suite. Results are tracked per-commit to prevent regression.
+The benchmark suite (`benchmark/index.ts`) validates all 25 intelligence tools against a 50-fact synthetic corpus and 20 recall queries. Results are deterministic and tracked per-commit.
 
-| Metric | TIMPS | agentmemory | mem0 | Letta |
-|---|---|---|---|---|
-| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
-| **MRR** | **0.82** | 0.882 | 0.71 | 0.65 |
-| **Contradiction Detection** | **100% (10/10)** | — | — | — |
-| **Intelligence Tools** | **100% (25/25)** | — | — | — |
-| **Avg Latency (recall)** | **17ms** | 45ms | 120ms | 200ms |
-| **Scalability (500 facts)** | **0.6ms mean / 1ms p95** | — | — | — |
+| Metric | TIMPS |
+|---|---|
+| **Recall@5** | 95% (19/20 queries find expected answer in top-5) |
+| **MRR** | 0.82 |
+| **Contradiction Detection** | 100% (10/10 pairs) |
+| **Intelligence Tools** | 100% (25/25 pass) |
+| **Avg Recall Latency (50 facts)** | ~17ms total for 20 queries in-process |
+| **Scalability (500 facts)** | 0.6ms mean / 1ms p95 per query |
+
+**Note:** Latency figures are in-process measurements on a synthetic corpus. They do not include network overhead or real-world query complexity. Competitor comparisons require independent benchmarking against the same dataset.
 
 Run the benchmark suite locally:
 
