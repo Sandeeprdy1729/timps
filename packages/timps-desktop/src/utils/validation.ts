@@ -10,7 +10,7 @@ export interface ValidationResult {
   error?: string;
 }
 
-export type Validator = (value: string) => ValidationResult;
+export type Validator = (value: string, values?: Record<string, string>) => ValidationResult;
 
 export const validators = {
   required: (message = 'This field is required'): Validator => (value) => ({
