@@ -351,7 +351,34 @@ export class WorkflowEngine extends EventEmitter {
         context = { ...context, ...(output || {}), lastOutput: output };
         attempts = 0;
 
-        if (step.onSuccess) {
+        // Condition steps: branch based on boolean result
+        if (step.action?.type === 'condition') {
+          const conditionMet = output === true;
+          if (conditionMet) {
+            if (step.onSuccess) {
+              const nextIndex = workflow.steps.findIndex(s => s.id === step.onSuccess);
+              if (nextIndex >= 0) {
+                currentStepIndex = nextIndex;
+              } else {
+                currentStepIndex++;
+              }
+            } else {
+              currentStepIndex++;
+            }
+          } else {
+            // Condition false: follow onFailure branch, or skip to next step
+            if (step.onFailure) {
+              const nextIndex = workflow.steps.findIndex(s => s.id === step.onFailure);
+              if (nextIndex >= 0) {
+                currentStepIndex = nextIndex;
+              } else {
+                currentStepIndex++;
+              }
+            } else {
+              currentStepIndex++;
+            }
+          }
+        } else if (step.onSuccess) {
           const nextIndex = workflow.steps.findIndex(s => s.id === step.onSuccess);
           if (nextIndex >= 0) {
             currentStepIndex = nextIndex;

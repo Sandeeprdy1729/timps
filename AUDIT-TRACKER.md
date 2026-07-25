@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 53    | 36        |
+| High     | 89    | 54    | 35        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **64** | **324** |
+| **Total**| **388** | **65** | **323** |
 
 ---
 
@@ -84,11 +84,12 @@
 | H56 | `packages/timps-desktop/src/plugins/integrations/stripe.ts:366` — All Stripe write operations (21 POST calls) send JSON bodies via `JSON.stringify()` but Stripe API only accepts `application/x-www-form-urlencoded`; every create/update/delete returns 400 "Invalid request" | Added `encodeFormData()` helper that URL-encodes objects (nested objects JSON-stringified as values), added `stripeHeaders()` returning `Authorization` + `Content-Type: application/x-www-form-urlencoded`. Replaced all 21 `JSON.stringify()` body encodings with `encodeFormData()`. 0 tsc errors, 47 integration tests green |
 | H57 | `packages/timps-desktop/src/plugins/plugin-sets.ts:57` — Multiple TS compilation errors: syntax error, nonexistent imports, missing types | **Already fixed** — no errors in current code; all imports resolve to `./types`, syntax is valid |
 | H58 | `packages/timps-enterprise/src/server.ts:64` — Open registration: POST /auth/register accepts arbitrary caller-supplied teamId with no invitation/verification check; any attacker can join any team by guessing teamId, gaining full read/write/delete access to team memory | Added invitation system: `createInvitation()`, `validateInvitation()`, `consumeInvitation()`, `teamHasMembers()` in auth.ts. Registration now requires `inviteToken` for existing teams; new teams (first member) skip check. Added `POST /team/invite` endpoint (admin-only) that generates 7-day expiring tokens. Invitation token validated against teamId + email, consumed on use. 0 new tsc errors |
+| H59 | `packages/workflow-engine/src/index.ts:539` — `condition` action steps have no effect on control flow: `handleCondition` returns boolean but `executeSteps` always follows `onSuccess`/next-step regardless; no false-branch, skip, or halt exists | Modified `executeSteps` to detect condition steps and branch on result: when `handleCondition` returns `true`, follows `onSuccess` (or increments); when `false`, follows `onFailure` (or increments). Uses existing `onFailure` field for false-branch, maintaining backward compatibility with non-condition steps |
 
-## 📋 Remaining — 324 Issues
+## 📋 Remaining — 323 Issues
 
-### High (36)
-⏸️ All 36 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (35)
+⏸️ All 35 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
