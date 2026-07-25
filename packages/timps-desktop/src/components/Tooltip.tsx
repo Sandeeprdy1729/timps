@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef, ReactNode, CSSProperties, createPortal } from 'react';
+import React, { useState, useCallback, useEffect, useRef, ReactNode, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import './Tooltip.css';
 
 export interface TooltipProps {

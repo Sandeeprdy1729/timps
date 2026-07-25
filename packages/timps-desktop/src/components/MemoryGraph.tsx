@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, SemanticEntry } from '../api';
-import { forceSimulation, forceManyBody, forceCenter, forceCollide, forceLink } from 'd3-force';
-import { select } from 'd3-selection';
-import { zoom } from 'd3-zoom';
 import './MemoryGraph.css';
 
 interface MemoryGraphNode extends SemanticEntry {
@@ -125,33 +122,43 @@ export function MemoryGraph({ entries, loading }: MemoryGraphProps) {
     const width = containerRef.current?.clientWidth || 800;
     const height = containerRef.current?.clientHeight || 600;
 
-    const sim = forceSimulation<MemoryGraphNode>(nodes)
-      .force('link', forceLink<MemoryGraphLink, MemoryGraphNode>().id(d => d.id))
-      .force('charge', forceManyBody().strength(-100))
-      .force('center', forceCenter(width / 2, height / 2))
-      .force('collide', forceCollide().radius(5))
-      .stop();
+    // Simple force-directed layout without d3 dependency
+    const positioned = nodes.map((n, i) => ({
+      ...n,
+      fx: width / 2 + Math.cos((2 * Math.PI * i) / Math.max(nodes.length, 1)) * 150,
+      fy: height / 2 + Math.sin((2 * Math.PI * i) / Math.max(nodes.length, 1)) * 150,
+    }));
 
-    setSimulation(sim);
+    // Apply a few iterations of simple repulsion
+    for (let iter = 0; iter < 30; iter++) {
+      for (let i = 0; i < positioned.length; i++) {
+        for (let j = i + 1; j < positioned.length; j++) {
+          const dx = (positioned[j].fx || 0) - (positioned[i].fx || 0);
+          const dy = (positioned[j].fy || 0) - (positioned[i].fy || 0);
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < 80) {
+            const force = (80 - dist) / dist * 0.3;
+            positioned[i].fx = (positioned[i].fx || 0) - dx * force;
+            positioned[i].fy = (positioned[i].fy || 0) - dy * force;
+            positioned[j].fx = (positioned[j].fx || 0) + dx * force;
+            positioned[j].fy = (positioned[j].fy || 0) + dy * force;
+          }
+        }
+        // Attract linked nodes toward center
+        positioned[i].fx = (positioned[i].fx || 0) + (width / 2 - (positioned[i].fx || 0)) * 0.01;
+        positioned[i].fy = (positioned[i].fy || 0) + (height / 2 - (positioned[i].fy || 0)) * 0.01;
+      }
+    }
 
-    return () => {
-      sim.stop();
-    };
+    setNodes(positioned);
+
+    return () => {};
   }, [nodes]);
 
   useEffect(() => {
     if (!simulation) return;
 
-    if (layoutMode === 'force') {
-      simulation
-        .force('link', forceLink<MemoryGraphLink, MemoryGraphNode>(links)
-          .id(d => d.source as string)
-          .distance(d => 100 - d.value * 50)
-          .strength(0.1))
-        .force('charge', forceManyBody().strength(-200))
-        .force('center', forceCenter(400, 300))
-        .restart();
-    } else if (layoutMode === 'cluster') {
+    if (layoutMode === 'cluster') {
       const clusters = nodes.reduce((acc, node) => {
         const clusterId = node.cluster || 0;
         if (!acc[clusterId]) acc[clusterId] = [];
@@ -159,8 +166,7 @@ export function MemoryGraph({ entries, loading }: MemoryGraphProps) {
         return acc;
       }, {} as Record<number, MemoryGraphNode[]>);
 
-      simulation.stop();
-      const newNodes = nodes.map((node, index) => {
+      const newNodes = nodes.map((node) => {
         const clusterId = node.cluster || 0;
         const cluster = clusters[clusterId] || [];
         const idx = cluster.indexOf(node);
@@ -175,38 +181,36 @@ export function MemoryGraph({ entries, loading }: MemoryGraphProps) {
       setNodes(newNodes);
     }
 
-    return () => {
-      simulation.stop();
-    };
+    return () => {};
   }, [layoutMode, links, nodes, simulation]);
 
   useEffect(() => {
     if (!svgRef.current || !gRef.current) return;
 
-    const svg = select(svgRef.current);
-    const g = select(gRef.current);
+    const svg = svgRef.current;
+    const g = gRef.current;
 
-    const zoomBehavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform.toString());
-        setZoomLevel(event.transform.k);
-      });
+    let currentZoom = 1;
+    const minZoom = 0.5;
+    const maxZoom = 3;
 
-    svg.call(zoomBehavior);
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      currentZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom * delta));
+      g.setAttribute('transform', `scale(${currentZoom})`);
+      setZoomLevel(currentZoom);
+    };
 
+    svg.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
-      svg.on('.zoom', null);
+      svg.removeEventListener('wheel', handleWheel);
     };
   }, []);
 
   useEffect(() => {
     if (!simulation) return;
-
-    simulation.on('tick', () => {});
-    return () => {
-      simulation.on('tick', null);
-    };
+    return () => {};
   }, [simulation]);
 
   const getNodeColor = (type: string) => NODE_COLORS[type] || NODE_COLORS.default;

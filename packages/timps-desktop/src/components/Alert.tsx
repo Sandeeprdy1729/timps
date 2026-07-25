@@ -1,4 +1,5 @@
-import React, { useState, useCallback, CSSProperties, createPortal } from 'react';
+import React, { useState, useCallback, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import './Alert.css';
 
 export interface AlertProps {
