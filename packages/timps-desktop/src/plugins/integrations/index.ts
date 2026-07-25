@@ -1,12 +1,13 @@
-export { GoogleCalendarPlugin, googleCalendarPlugin } from './google-calendar';
-export { GoogleGmailPlugin, googleGmailPlugin } from './google-gmail';
-export { GoogleDrivePlugin, googleDrivePlugin } from './google-drive';
-export { MicrosoftOutlookPlugin, microsoftOutlookPlugin } from './microsoft-outlook';
-export { MicrosoftTeamsPlugin, microsoftTeamsPlugin } from './microsoft-teams';
-export { SlackPlugin, slackPlugin } from './slack';
-export { DiscordPlugin, discordPlugin } from './discord';
+import { Plugin } from '../types';
+
+export { createGoogleCalendarIntegration } from './google-calendar';
+export { createGoogleGmailIntegration } from './google-gmail';
+export { createGoogleDriveIntegration } from './google-drive';
+export { createMicrosoftOutlookIntegration } from './microsoft-outlook';
+export { createMicrosoftTeamsIntegration } from './microsoft-teams';
+export { createSlackIntegration } from './slack';
 export { DiscordNewIntegration, createDiscordNewIntegration, createDiscordSettingsUI, createDiscordActivityCard, setupDiscordTriggers } from './discord-new';
-export { GitHubPlugin, githubPlugin } from './github';
+export { createGitHubIntegration } from './github';
 export { FreshdeskPlugin, freshdeskPlugin } from './freshdesk';
 export { ClosePlugin, closePlugin } from './close';
 export { SendGridPlugin, sendgridPlugin } from './sendgrid';
@@ -35,18 +36,15 @@ export {
   runE2ETests,
 } from './openai';
 
-import { Plugin } from '../types';
-
 export const INTEGRATIONS: Plugin[] = [
-  require('./google-calendar').googleCalendarPlugin,
-  require('./google-gmail').googleGmailPlugin,
-  require('./google-drive').googleDrivePlugin,
-  require('./microsoft-outlook').microsoftOutlookPlugin,
-  require('./microsoft-teams').microsoftTeamsPlugin,
-  require('./slack').slackPlugin,
-  require('./discord').discordPlugin,
+  require('./google-calendar').createGoogleCalendarIntegration(),
+  require('./google-gmail').createGoogleGmailIntegration(),
+  require('./google-drive').createGoogleDriveIntegration(),
+  require('./microsoft-outlook').createMicrosoftOutlookIntegration(),
+  require('./microsoft-teams').createMicrosoftTeamsIntegration(),
+  require('./slack').createSlackIntegration(),
   require('./discord-new').createDiscordNewIntegration(),
-  require('./github').githubPlugin,
+  require('./github').createGitHubIntegration(),
   require('./freshdesk').freshdeskPlugin,
   require('./close').closePlugin,
   require('./sendgrid').sendgridPlugin,
