@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface SpotifyTrack {
   id: string;
@@ -279,7 +280,7 @@ export async function setupSpotifyTriggers(
 ): Promise<() => void> {
   let latestTrackId: string | null = null;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
-  const accessToken = localStorage.getItem('spotify-access-token');
+  const accessToken = await SecureStore.get('spotify-access-token');
   
   const pollPlayback = async () => {
     if (!accessToken) return;

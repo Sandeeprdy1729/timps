@@ -1,5 +1,6 @@
 import { PluginManifest, PluginCapabilities } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface OpenAIModel {
   id: string;
@@ -1009,7 +1010,7 @@ export async function setupOpenAIMonitoring(
 }
 
 async function fetchUsage(startDate: string, endDate: string): Promise<UsageRecord> {
-  const apiKey = localStorage.getItem('openai-api-key');
+  const apiKey = await SecureStore.get('openai-api-key');
   if (!apiKey) throw new Error('API key not configured');
 
   const start = new Date(startDate);
@@ -1049,7 +1050,7 @@ export async function streamChatCompletion(
   onChunk: (chunk: string) => void,
   onComplete: (full: string) => void
 ): Promise<void> {
-  const apiKey = localStorage.getItem('openai-api-key');
+  const apiKey = await SecureStore.get('openai-api-key');
   if (!apiKey) throw new Error('API key not configured');
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1132,7 +1133,7 @@ export async function runE2ETests(): Promise<{ passed: boolean; results: Array<{
   };
 
   await runTest('Authentication', async () => {
-    const apiKey = localStorage.getItem('openai-api-key');
+    const apiKey = await SecureStore.get('openai-api-key');
     if (!apiKey) throw new Error('No API key');
     const integration = createOpenAIIntegration();
     await integration.authenticate({ type: 'apiKey', apiKey });
@@ -1140,7 +1141,7 @@ export async function runE2ETests(): Promise<{ passed: boolean; results: Array<{
   });
 
   await runTest('List Models', async () => {
-    const apiKey = localStorage.getItem('openai-api-key');
+    const apiKey = await SecureStore.get('openai-api-key');
     if (!apiKey) throw new Error('No API key');
     const integration = createOpenAIIntegration();
     await integration.authenticate({ type: 'apiKey', apiKey });
@@ -1149,7 +1150,7 @@ export async function runE2ETests(): Promise<{ passed: boolean; results: Array<{
   });
 
   await runTest('Chat Completion', async () => {
-    const apiKey = localStorage.getItem('openai-api-key');
+    const apiKey = await SecureStore.get('openai-api-key');
     if (!apiKey) throw new Error('No API key');
     const integration = createOpenAIIntegration();
     await integration.authenticate({ type: 'apiKey', apiKey });
@@ -1162,7 +1163,7 @@ export async function runE2ETests(): Promise<{ passed: boolean; results: Array<{
   });
 
   await runTest('Embedding', async () => {
-    const apiKey = localStorage.getItem('openai-api-key');
+    const apiKey = await SecureStore.get('openai-api-key');
     if (!apiKey) throw new Error('No API key');
     const integration = createOpenAIIntegration();
     await integration.authenticate({ type: 'apiKey', apiKey });

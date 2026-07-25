@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface DiscordGuild {
   id: string;
@@ -1577,7 +1578,7 @@ export async function setupDiscordTriggers(
     if (!defaultChannelId || !defaultGuildId) return;
 
     try {
-      const token = localStorage.getItem('discord-token');
+      const token = await SecureStore.get('discord-token');
       if (!token) return;
 
       const response = await fetch(

@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface MixpanelEvent {
   event_name: string;
@@ -882,7 +883,7 @@ export async function setupMixpanelTriggers(
   const pollEvents = async () => {
     try {
       const response = await fetch('https://api.mixpanel.com/events', {
-        headers: { Authorization: `Basic ${btoa(localStorage.getItem('mixpanel-api-key') + ':')}` },
+        headers: { Authorization: `Basic ${btoa(await SecureStore.get('mixpanel-api-key') + ':')}` },
       });
 
       if (response.ok) {

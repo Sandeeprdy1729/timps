@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface GoogleCalendarEvent {
   id: string;
@@ -231,7 +232,7 @@ export async function setupCalendarTriggers(
     try {
       const response = await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&updatedMin=${new Date().toISOString()}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('google-calendar-token')}` }}
+        { headers: { Authorization: `Bearer ${await SecureStore.get('google-calendar-token')}` }}
       );
       
       if (response.ok) {

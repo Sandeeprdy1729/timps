@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface TodoistTask {
   id: number;
@@ -623,7 +624,7 @@ export async function setupTodoistTriggers(
   let lastTaskCount = 0;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   const defaultProject = localStorage.getItem('todoist-default-project');
-  const accessToken = localStorage.getItem('todoist-token');
+  const accessToken = await SecureStore.get('todoist-token');
 
   const pollTasks = async () => {
     if (!accessToken) return;

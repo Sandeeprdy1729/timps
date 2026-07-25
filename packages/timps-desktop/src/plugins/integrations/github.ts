@@ -1,5 +1,6 @@
 import { PluginManifest } from '../types';
 import { IntegrationBase, AuthConfig } from './integration-base.js';
+import { SecureStore } from './secureStore.js';
 
 export interface GitHubRepo {
   id: number;
@@ -298,7 +299,7 @@ export async function setupGitHubTriggers(
     try {
       const response = await fetch(
         `https://api.github.com/repos/${defaultRepo}/events`,
-        { headers: { Authorization: `token ${localStorage.getItem('github-token')}` }}
+        { headers: { Authorization: `token ${await SecureStore.get('github-token')}` }}
       );
       
       if (response.ok) {
