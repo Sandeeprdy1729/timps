@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ResendEmail {
   from?: string;
@@ -124,11 +125,32 @@ interface ResendConfig {
 }
 
 export class ResendPlugin extends IntegrationBase {
-  private config: ResendConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as ResendConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: ResendConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Resend', 'resend', 'Transactional email API - emails, contacts, domains, batch sending');
+    super('resend', 'Resend', '1.0.0', 'Transactional email API', ['email', 'transactional', 'api']);
     this.config = {} as ResendConfig;
   }
 
@@ -146,7 +168,7 @@ export class ResendPlugin extends IntegrationBase {
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async sendEmail(email: ResendEmail): Promise<{ id: string; object: string }> {

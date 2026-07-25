@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface MondayColumn {
   id: string;
@@ -89,11 +90,32 @@ interface MondayConfig {
 }
 
 export class MondayComPlugin extends IntegrationBase {
-  private config: MondayConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as MondayConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: MondayConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('MondayCom', 'mondaycom', 'Project management integration');
+    super('mondaycom', 'MondayCom', '1.0.0', 'Project management integration', ['project-management', 'tasks', 'boards']);
     this.config = {} as MondayConfig;
   }
 
@@ -113,7 +135,7 @@ export class MondayComPlugin extends IntegrationBase {
   async apiCall<T>(query: string, variables?: any): Promise<T> {
     const url = this.getBaseUrl();
     const body = { query, variables };
-    return this.makeRequest<T>('POST', url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: 'POST', headers: this.baseHeaders, body: JSON.stringify(body) });
   }
 
   async getBoards(): Promise<{ data: { boards: MondayBoard[] } }> {

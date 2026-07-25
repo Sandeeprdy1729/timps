@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ServiceNowIncident {
   sys_id: string;
@@ -143,11 +144,32 @@ interface ServiceNowConfig {
 }
 
 export class ServiceNowPlugin extends IntegrationBase {
-  private config: ServiceNowConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as ServiceNowConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: ServiceNowConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('ServiceNow', 'servicenow', 'IT service management integration');
+    super('servicenow', 'ServiceNow', '1.0.0', 'IT service management integration', ['itsm', 'incident', 'service-desk']);
     this.config = {} as ServiceNowConfig;
   }
 
@@ -161,12 +183,12 @@ export class ServiceNowPlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `${this.config.instanceUrl}/api/now/table`;
+    return `${this.svcConfig.instanceUrl}/api/now/table`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async query(table: string, query?: string): Promise<{ result: any[] }> {

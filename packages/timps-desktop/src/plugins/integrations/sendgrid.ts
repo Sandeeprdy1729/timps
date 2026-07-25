@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface SendGridEmail {
   personalizations: Array<{
@@ -163,11 +164,32 @@ interface SendGridConfig {
 }
 
 export class SendGridPlugin extends IntegrationBase {
-  private config: SendGridConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as SendGridConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: SendGridConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('SendGrid', 'sendgrid', 'Email delivery and marketing integration');
+    super('sendgrid', 'SendGrid', '1.0.0', 'Email delivery and marketing integration', ['email', 'delivery', 'marketing']);
     this.config = {} as SendGridConfig;
   }
 
@@ -185,7 +207,7 @@ export class SendGridPlugin extends IntegrationBase {
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async sendEmail(email: SendGridEmail): Promise<{ message: string }> {

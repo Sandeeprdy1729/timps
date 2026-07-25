@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface SalesforceAccount {
   id: string;
@@ -261,11 +262,32 @@ interface SalesforceConfig {
 }
 
 export class SalesforcePlugin extends IntegrationBase {
-  private config: SalesforceConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as SalesforceConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: SalesforceConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Salesforce', 'salesforce', 'CRM integration');
+    super('salesforce', 'Salesforce', '1.0.0', 'CRM integration', ['crm', 'sales', 'enterprise']);
     this.config = {} as SalesforceConfig;
   }
 
@@ -278,12 +300,12 @@ export class SalesforcePlugin extends IntegrationBase {
   }
 
   private getBaseUrl(): string {
-    return `${this.config.instanceUrl}/services/data/v59.0`;
+    return `${this.svcConfig.instanceUrl}/services/data/v59.0`;
   }
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async query<T>(soql: string): Promise<{ totalSize: number; done: boolean; records: T[] }> {

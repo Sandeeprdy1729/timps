@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface NotionPage {
   id: string;
@@ -143,11 +144,32 @@ interface NotionConfig {
 }
 
 export class NotionPlugin extends IntegrationBase {
-  private config: NotionConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as NotionConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: NotionConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Notion', 'notion', 'All-in-one workspace integration');
+    super('notion', 'Notion', '1.0.0', 'All-in-one workspace integration', ['workspace', 'notes', 'databases']);
     this.config = {} as NotionConfig;
   }
 
@@ -166,7 +188,7 @@ export class NotionPlugin extends IntegrationBase {
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async search(query?: string, options?: { filter?: { value: string; property: string }; sort?: { direction: string; timestamp: string }; page_size?: number; start_cursor?: string }): Promise<NotionSearchResult> {

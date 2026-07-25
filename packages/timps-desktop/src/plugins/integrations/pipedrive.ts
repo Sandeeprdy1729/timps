@@ -1,4 +1,5 @@
-import { IntegrationBase } from './integration-base';
+import { PluginManifest } from '../types';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface PipedriveDeal {
   id: number;
@@ -164,11 +165,32 @@ interface PipedriveConfig {
 }
 
 export class PipedrivePlugin extends IntegrationBase {
-  private config: PipedriveConfig;
+  async authenticate(config: AuthConfig): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async testConnection(): Promise<boolean> {
+    return this.isAuthenticated();
+  }
+
+  async cleanup(): Promise<void> {
+    this.svcConfig = {} as PipedriveConfig;
+    this.accessToken = null;
+    this.apiKey = null;
+  }
+
+  async executeAction(action: string, params: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Action ${action} not implemented`);
+  }
+
+  async fetchData(resource: string, options?: Record<string, unknown>): Promise<unknown> {
+    throw new Error(`Resource ${resource} not implemented`);
+  }
+  private svcConfig: PipedriveConfig;
   private baseHeaders: Record<string, string>;
 
   constructor() {
-    super('Pipedrive', 'pipedrive', 'CRM integration');
+    super('pipedrive', 'Pipedrive', '1.0.0', 'CRM integration', ['crm', 'sales', 'deals']);
     this.config = {} as PipedriveConfig;
   }
 
@@ -186,7 +208,7 @@ export class PipedrivePlugin extends IntegrationBase {
 
   async apiCall<T>(method: string, endpoint: string, body?: any): Promise<T> {
     const url = `${this.getBaseUrl()}${endpoint}`;
-    return this.makeRequest<T>(method, url, body, this.baseHeaders);
+    return super.apiCall<T>(url, { method: method, headers: this.baseHeaders, body: body ? JSON.stringify(body) : undefined });
   }
 
   async getDeals(options?: { limit?: number; status?: string }): Promise<{ data: PipedriveDeal[] }> {
