@@ -5,7 +5,7 @@ export { MicrosoftOutlookPlugin, microsoftOutlookPlugin } from './microsoft-outl
 export { MicrosoftTeamsPlugin, microsoftTeamsPlugin } from './microsoft-teams';
 export { SlackPlugin, slackPlugin } from './slack';
 export { DiscordPlugin, discordPlugin } from './discord';
-export { DiscordNewIntegration, createDiscordNewIntegration, createDiscordSettingsUI, createDiscordActivityCard, setupDiscordTriggers, runE2ETests } from './discord-new';
+export { DiscordNewIntegration, createDiscordNewIntegration, createDiscordSettingsUI, createDiscordActivityCard, setupDiscordTriggers } from './discord-new';
 export { GitHubPlugin, githubPlugin } from './github';
 export { FreshdeskPlugin, freshdeskPlugin } from './freshdesk';
 export { ClosePlugin, closePlugin } from './close';

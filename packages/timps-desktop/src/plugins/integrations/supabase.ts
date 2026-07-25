@@ -1023,8 +1023,7 @@ export async function setupSupabaseRealtimeTriggers(
     cleanupFns.forEach(fn => fn());
   };
 }
-
-export async function runSupabaseE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
   
   const runTests = async () => {

@@ -264,8 +264,7 @@ export async function setupCalendarTriggers(
     if (pollingInterval) clearInterval(pollingInterval);
   };
 }
-
-export async function runE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
   
   const testAuth = async () => {
