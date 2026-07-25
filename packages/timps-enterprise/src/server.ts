@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import {
   registerUser, validatePassword, signToken, requireAuth, requireRole,
-  listTeamMembers,
+  listTeamMembers, createInvitation, validateInvitation, consumeInvitation, teamHasMembers,
   type AuthenticatedRequest,
 } from './auth.js';
 import {
@@ -47,8 +47,9 @@ app.get('/admin', (_req, res) => {
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 app.post('/auth/register', async (req, res) => {
-  const { email, password, teamId, role } = req.body as {
+  const { email, password, teamId, role, inviteToken } = req.body as {
     email?: string; password?: string; teamId?: string; role?: 'admin' | 'member' | 'viewer';
+    inviteToken?: string;
   };
   if (!email || !password || !teamId) {
     res.status(400).json({ error: 'email, password, teamId are required' });
@@ -59,6 +60,20 @@ app.post('/auth/register', async (req, res) => {
   if (requestedRole === 'admin') {
     res.status(403).json({ error: 'Admin role cannot be self-assigned. Contact an existing admin.' });
     return;
+  }
+  // Invitation is required for existing teams; new teams (first member) skip this check
+  const isExistingTeam = teamHasMembers(teamId);
+  if (isExistingTeam) {
+    if (!inviteToken) {
+      res.status(403).json({ error: 'Invitation token required to join an existing team. Ask a team admin for an invite.' });
+      return;
+    }
+    const invitation = validateInvitation(inviteToken, teamId, email);
+    if (!invitation) {
+      res.status(403).json({ error: 'Invalid, expired, or already-used invitation token.' });
+      return;
+    }
+    consumeInvitation(invitation.id);
   }
   try {
     const user = await registerUser(email, password, teamId, requestedRole);
@@ -88,6 +103,29 @@ app.post('/auth/login', async (req, res) => {
 app.get('/team/members', requireAuth, (req: AuthenticatedRequest, res) => {
   const members = listTeamMembers(req.user!.teamId);
   res.json({ members });
+});
+
+// ── Team invitations ──────────────────────────────────────────────────
+
+app.post('/team/invite', requireAuth, requireRole('admin'), (req: AuthenticatedRequest, res) => {
+  const { email, role } = req.body as { email?: string; role?: 'admin' | 'member' | 'viewer' };
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  const inviteRole = role ?? 'member';
+  if (inviteRole === 'admin') {
+    res.status(403).json({ error: 'Cannot invite users as admin. Change role after they join.' });
+    return;
+  }
+  const invitation = createInvitation(req.user!.teamId, email, inviteRole, req.user!.sub);
+  res.status(201).json({
+    invitationId: invitation.id,
+    token: invitation.token,
+    email: invitation.email,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt,
+  });
 });
 
 // ── Team memory ────────────────────────────────────────────────────────────
