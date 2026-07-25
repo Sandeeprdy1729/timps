@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 43    | 46        |
+| High     | 89    | 44    | 45        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **54** | **334** |
+| **Total**| **388** | **55** | **333** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 43 High
+## ✅ Fixed — 11 Critical + 44 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 334 Issues
+## 📋 Remaining — 333 Issues
 
-### High (46)
+### High (45)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -77,6 +77,7 @@
 | H41 | `packages/timps-desktop/src-tauri/src/commands.rs:642` | `passive_store` builds id with `&lc_new[..lc_new.len().min(8)]` — raw byte slice panics if multi-byte UTF-8 char (emoji, CJK) straddles offset 8; `panic = "abort"` in release crashes entire app instantly | Replaced with `char_indices()` that finds last char boundary ≤ 8 bytes before slicing |
 | H42 | `packages/timps-desktop/src/App.tsx:1` | ~55 of 62 component files imported by nothing; Sidebar has 10 tabs but App.tsx only renders 3 (chat, nexus, settings); BackgroundDaemon and PassiveListener never mounted — clipboard watcher, 30-min summarizer, passive memory capture, proactive notifications all dead at runtime | Mounted BackgroundDaemon + PassiveListener, imported and routed all 10 sidebar views (SemanticView, EpisodicView, StatsView, SearchView, LensView, IntelligenceDashboard, CommandCenter), added data fetching for semantic/episodic entries |
 | H43 | `packages/timps-desktop/src/components/MemoryGraph.tsx:3-5` + `IntegrationSettings.tsx:2-3` + `Alert.tsx:1` + `Popover.tsx:1` + `Tooltip.tsx:1` | 4 compile errors block `npm run build`/`typecheck`: d3-force/d3-selection/d3-zoom not in package.json (TS2307), connection-manager/event-bus paths nonexistent (TS2307), createPortal imported from 'react' not 'react-dom' (TS2305) | Replaced d3 simulation with inline force layout; removed nonexistent path imports; moved createPortal to react-dom import |
+| H46 | `packages/timps-desktop/src/hooks/index.ts:141` + `hooks/interactions.ts:92` + `utils/validation.ts:46` | 3 compile errors block `npm run build`: useRef not imported in hooks/index.ts (TS2304), useEffect + React not imported in interactions.ts (TS2304), Validator type 1-param but used with 2 args in validation.ts (TS2554) | Added useRef to hooks/index.ts import; added React+useEffect to interactions.ts import; widened Validator type to accept optional `values?: Record<string, string>` second param |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
