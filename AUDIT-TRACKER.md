@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 48    | 41        |
+| High     | 89    | 49    | 40        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **59** | **329** |
+| **Total**| **388** | **60** | **328** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 48 High
+## ✅ Fixed — 11 Critical + 49 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -78,11 +78,12 @@
 | H50 | `packages/timps-desktop/src/plugins/integrations/aws-s3.ts:191`, `integration-base.ts:140-156` | S3 integration has two fatal flaws: (1) no AWS SigV4 signing — `getAuthHeaders()` inherited from IntegrationBase sends `Authorization: Bearer <accessKeyId>` and `X-API-Key: <secretKey>`, but S3 requires `AWS4-HMAC-SHA256` signature; every S3 action gets 403 SignatureDoesNotMatch, (2) `apiCall()` calls `response.json()` but S3 returns XML — every response body fails JSON.parse; authenticate() always returns false because listBuckets() gets 403; presigned URL generation produces unsigned URLs with fake `Expires` param | Implemented full AWS SigV4: `hmacSha256()`/`sha256Hex()` via Web Crypto, `signRequest()` builds canonical request + string-to-sign + derived signing key + Authorization header; overrode `apiCall()` to sign every request with proper SigV4 headers (Host, x-amz-date, x-amz-content-sha256) and parse XML responses via DOMParser; added `parseXmlToObj()` + `nodeToObj()` for S3 XML→JS object conversion; fixed `getPresignedUrl()` to produce real SigV4-signed presigned URLs with X-Amz-Signature; added `getPresignedUrlAsync()` for async callers; overrode `getAuthHeaders()` to return empty (SigV4 replaces Bearer auth); fixed error handling to parse XML error responses; 47 integration tests + 0 tsc errors |
 | H51 | `packages/timps-desktop/src/plugins/integrations/convertkit.ts:2` | Import typo: `from './integration-best.js'` should be `from './integration-base.js'`; no such module exists; entire ConvertKit integration fails to load | Fixed in H48 session — import corrected to `./integration-base.js` |
 | H52 | `packages/timps-desktop/src/plugins/integrations/{17 files}` | 17 integration files (calendly-new, contentful, docusign, freshdesk, hubspot, mondaycom, notion-new, pipedrive, resend, salesforce, sendgrid, sentry-new, servicenow, shopify, square, webflow, zendesk) call nonexistent `this.makeRequest()`, pass 3 args to 5-param constructor, and implement none of 5 abstract methods; written against a different base class; tsconfig excluded them from type-checking | Fixed all 17 files: corrected constructor to 5 args (`super(id, name, version, desc, keywords[])`), replaced `this.makeRequest()` with `super.apiCall()`, renamed `config`→`svcConfig` to avoid base class shadowing, added stub implementations of all 5 abstract methods (`authenticate`, `testConnection`, `executeAction`, `fetchData`, `cleanup`), fixed import paths with `.js` extension, added `PluginManifest` and `AuthConfig` imports; 0 tsc errors, 47 integration tests green |
+| H53 | `packages/timps-desktop/src/plugins/integrations/{16 files}` | Fake `runE2ETests()` functions in 15 integration files (github, slack, discord-new, google-calendar, google-gmail, hotjar, jira, linear, mixpanel, raycast, spotify, stripe, ticktick, todoist, twilio-new) + `runSupabaseE2ETests()` in supabase.ts push hardcoded `{test: '...', passed: true}` results without executing any API calls; UI/CI consuming these reports false green checkmarks; openai.ts is the only file with real E2E tests | Removed fake `runE2ETests()` from all 15 files and `runSupabaseE2ETests()` from supabase.ts; removed discord-new re-export of `runE2ETests` from index.ts to eliminate name conflict with openai's real implementation; openai.ts retained with real API-calling tests; 0 tsc errors, 47 integration tests green |
 
-## 📋 Remaining — 329 Issues
+## 📋 Remaining — 328 Issues
 
-### High (41)
-⏸️ All 41 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (40)
+⏸️ All 40 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed

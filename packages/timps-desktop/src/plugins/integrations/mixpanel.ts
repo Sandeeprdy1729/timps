@@ -930,8 +930,7 @@ export function generateGroupCode(token: string, groupKey: string, groupId: stri
   return `mixpanel.init('${token}');
 mixpanel.group.setGroup('${groupKey}', '${groupId}');`;
 }
-
-export async function runE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
 
   try {

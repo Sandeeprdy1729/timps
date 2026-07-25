@@ -1167,8 +1167,7 @@ export function calculateDropOffRate(step: HotjarFunnelStep, previousStep?: Hotj
   if (!previousStep) return 0;
   return ((previousStep.visitors - step.visitors) / previousStep.visitors) * 100;
 }
-
-export async function runE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
 
   try {

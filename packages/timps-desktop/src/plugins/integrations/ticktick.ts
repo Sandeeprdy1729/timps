@@ -886,8 +886,7 @@ export function getPriorityLabel(priority: number): string {
     default: return 'None';
   }
 }
-
-export async function runE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
 
   const runTests = async () => {

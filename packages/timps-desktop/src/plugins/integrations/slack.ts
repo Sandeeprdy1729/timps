@@ -795,8 +795,7 @@ export async function setupSlackTriggers(
     if (pollingInterval) clearInterval(pollingInterval);
   };
 }
-
-export async function runE2ETests(): Promise<{ passed: boolean; results: any[] }> {
+> {
   const results: any[] = [];
   
   const runTests = async () => {
