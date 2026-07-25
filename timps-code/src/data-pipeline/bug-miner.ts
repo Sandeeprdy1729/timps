@@ -293,9 +293,11 @@ export class BugMiner {
     yield { type: 'status', message: `   3. Apply quality filters: exclude forks, archived, <10 stars` };
     
     // Simulate finding high-quality C/C++/Rust programs for binary synthesis training
-    const sampleLanguages = ['c', 'cpp', 'rust', 'go'];
-    for (const lang of sampleLanguages) {
-      yield { type: 'status', message: `   📊 ${lang}: ~${Math.floor(Math.random() * 500 + 100)}K programs (simulated)` };
+    const sampleLanguages: Record<string, number> = {
+      c: 320, cpp: 210, rust: 180, go: 150,
+    };
+    for (const lang of Object.keys(sampleLanguages)) {
+      yield { type: 'status', message: `   📊 ${lang}: ~${sampleLanguages[lang]}K programs (simulated)` };
     }
 
     // For actual implementation, would use:
