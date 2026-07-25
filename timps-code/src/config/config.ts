@@ -6,6 +6,7 @@ import { stdin, stdout } from 'node:process';
 import type { TimpsConfig, ProviderName, TrustLevel, TerminalBackend, TerminalConfig, ToolConfig, PlatformType, PlatformConfig, SetupResult, ProviderLimitConfig, FallbackStep } from './types.js';
 import { t, icons, LOGO } from './theme.js';
 import { encrypt, decrypt, isEncrypted, reEncryptAll } from './keyVault.js';
+import { DEFAULT_PROVIDER_LIMITS, getUsageStats as getProviderUsageStats } from '../services/providerRateLimiter.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.timps');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
@@ -105,7 +106,6 @@ export function getDefaultModel(provider: ProviderName): string {
 export function getProviderLimits(config: TimpsConfig, provider: ProviderName): { maxPerDay: number; maxPerMinute: number } {
   const custom = config.providerLimits?.[provider];
   if (custom) return custom;
-  const { DEFAULT_PROVIDER_LIMITS } = require('../services/providerRateLimiter.js');
   return DEFAULT_PROVIDER_LIMITS[provider] || { maxPerDay: 1000, maxPerMinute: 60 };
 }
 
@@ -130,8 +130,7 @@ export function getProviderStatus(config: TimpsConfig, provider: ProviderName): 
   const key = getApiKey(config, provider);
   const keySource = config.keys?.[provider] ? 'config' : (process.env[getEnvVarForProvider(provider)] ? 'env' : 'none');
   const limit = getProviderLimits(config, provider);
-  const { getUsageStats } = require('../services/providerRateLimiter.js');
-  const usage = getUsageStats(provider);
+  const usage = getProviderUsageStats(provider);
   return {
     configured: !!key || provider === 'ollama' || provider === 'hybrid',
     keySet: !!key,

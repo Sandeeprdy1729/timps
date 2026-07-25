@@ -12,6 +12,7 @@ import { handleSlashCommand } from './app.js';
 import type { TokenUsage } from '../config/types.js';
 import { getAnalytics } from '../utils/analytics.js';
 import { isFeatureEnabled } from '../utils/featureFlags.js';
+import { COMMAND_REGISTRY } from '../commands/commands.js';
 
 const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*m/g, '');
 
@@ -372,7 +373,6 @@ export class InteractiveREPL {
     const completions: string[] = [];
 
     if (line.startsWith('/')) {
-      const { COMMAND_REGISTRY } = require('../commands/commands.js');
       const partial = line.slice(1).toLowerCase();
       for (const cmd of COMMAND_REGISTRY) {
         if (cmd.name.startsWith(partial)) {
