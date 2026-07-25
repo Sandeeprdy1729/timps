@@ -3,7 +3,7 @@
  * Selection utilities for lists and grids.
  */
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 interface UseSelectionOptions<T> {
   multiple?: boolean;
