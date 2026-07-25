@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 39    | 50        |
+| High     | 89    | 40    | 49        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **50** | **338** |
+| **Total**| **388** | **51** | **337** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 39 High
+## ✅ Fixed — 11 Critical + 40 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 338 Issues
+## 📋 Remaining — 337 Issues
 
-### High (50)
+### High (49)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -73,6 +73,7 @@
 | H36 | `packages/server/tools/toolsDb.ts:787` | `CREATE INDEX USING GIN(gist)` on plain `TEXT` column — stock Postgres has no default GIN opclass for text; migration aborts mid-way, dropping all downstream tables | Changed to `(gist)` — default b-tree index works correctly on TEXT |
 | H38 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | All storage paths derived from `HOME` env var (5 locations in commands.rs, 1 in nexus_bridge.rs) — Windows GUI processes use `USERPROFILE`, not `HOME`, so memory resolves to `C:\Program Files\TIMPS\.timps` making the entire desktop app non-functional on Windows | Created `pub(crate) fn home_dir()` checking `HOME` → `USERPROFILE` → `.`; replaced all 6 direct `HOME` references |
 | H39 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | Desktop memory reader triply broken: (1) `project_hash_inner` uses 31-multiply→base36 while memory-core uses SHA-256→12 hex chars so directory names never match, (2) `load_episodes` reads `episodes.jsonl` but v1→v2 migration converts to `episodes.json` and deletes `.jsonl`, (3) nexus_bridge.rs duplicates the wrong hash | Replaced `project_hash_inner` with SHA-256→12 hex chars matching memory-core; `load_episodes` now reads `episodes.json` JSON array; nexus_bridge delegates to `crate::commands::project_hash_inner`; `sha2`+`hex` deps added to Cargo.toml |
+| H40 | `packages/timps-desktop/src-tauri/src/commands.rs:613` | 4 semantic.json writers (store_memory, passive_store, delete_memory, run_background_summarizer) do bare fs::read→modify→fs::write with no locking; clipboard watcher thread races with Tauri commands and summarizer; `fs::write` truncates first so a concurrent reader parses truncated JSON as empty, then rewrites file with only its entry — silent full memory wipe | Added `SEMANTIC_LOCK: Mutex<()>` serializing all read-modify-write cycles; added `write_json_atomic()` (write to .tmp + rename); lock held only during critical section in summarizer (not during expensive episode analysis) |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
