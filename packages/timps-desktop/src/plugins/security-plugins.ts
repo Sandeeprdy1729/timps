@@ -314,7 +314,7 @@ export class LDAPPlugin implements Plugin {
     return [];
   }
 
-  async getUser(username: string): Promise<Record<string, unknown> | null {
+  async getUser(username: string): Promise<Record<string, unknown> | null> {
     console.log(`Getting user: ${username}`);
     return null;
   }

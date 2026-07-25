@@ -490,7 +490,7 @@ export class SyncEnginePlugin implements Plugin {
       job.pendingChanges.push({
         ...conflict,
         type: 'update',
-        data,
+        data: data as Record<string, unknown>,
       });
     }
 

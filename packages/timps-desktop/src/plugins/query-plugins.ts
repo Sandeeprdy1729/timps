@@ -261,8 +261,8 @@ export class FilterPlugin implements Plugin {
     direction: 'asc' | 'desc' = 'asc'
   ): T[] {
     return [...data].sort((a, b) => {
-      const aVal = a[field];
-      const bVal = b[field];
+      const aVal = (a as any)[field];
+      const bVal = (b as any)[field];
 
       if (aVal < bVal) return direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return direction === 'asc' ? 1 : -1;
@@ -410,7 +410,7 @@ export class JSONPathPlugin implements Plugin {
           }
           break;
         case 'index':
-          if (Array.isArray(obj) {
+          if (Array.isArray(obj)) {
             const val = obj[token.value as number];
             if (val !== undefined) results.push(val);
           }
@@ -940,7 +940,7 @@ export class TypeCheckPlugin implements Plugin {
   }
 
   isPromise(value: unknown): value is Promise<unknown> {
-    return value instanceof Promise || (typeof value === 'object' && 'then' in value && 'catch' in value);
+    return value instanceof Promise || (typeof value === 'object' && value !== null && 'then' in value && 'catch' in value);
   }
 }
 

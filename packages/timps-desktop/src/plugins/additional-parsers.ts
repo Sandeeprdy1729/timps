@@ -211,21 +211,21 @@ export class Json5ParserPlugin implements Plugin {
     let index = 0;
 
     const parseValue = (): unknown => {
-      this.skipWhitespace();
+      skipWhitespace();
 
-      const char = this.peek();
+      const char = peek();
 
-      if (char === '{') return this.parseObject();
-      if (char === '[') return this.parseArray();
-      if (char === '"') return this.parseString();
-      if (char === "'") return this.parseString();
-      if (char === 't' || char === 'f') return this.parseBoolean();
-      if (char === 'n') return this.parseNull();
-      if (char === 'I' || char === 'N') return this.parseInfinity();
+      if (char === '{') return parseObject();
+      if (char === '[') return parseArray();
+      if (char === '"') return parseString();
+      if (char === "'") return parseString();
+      if (char === 't' || char === 'f') return parseBoolean();
+      if (char === 'n') return parseNull();
+      if (char === 'I' || char === 'N') return parseInfinity();
 
       if (char === '-' || char === '+' || char === '.' ||
           (char >= '0' && char <= '9')) {
-        return this.parseNumber();
+        return parseNumber();
       }
 
       throw new Error(`Unexpected character: ${char}`);
@@ -249,7 +249,7 @@ export class Json5ParserPlugin implements Plugin {
     const parseObject = (): Record<string, unknown> => {
       const obj: Record<string, unknown> = {};
       consume('{');
-      this.skipWhitespace();
+      skipWhitespace();
 
       if (peek() === '}') {
         consume('}');
@@ -257,11 +257,11 @@ export class Json5ParserPlugin implements Plugin {
       }
 
       while (true) {
-        this.skipWhitespace();
+        skipWhitespace();
         let key: string;
 
         if (peek() === '"' || peek() === "'") {
-          key = this.parseString();
+          key = parseString();
         } else {
           const keyStart = index;
           while (index < input.length && input[index] !== ':') {
@@ -274,7 +274,7 @@ export class Json5ParserPlugin implements Plugin {
         const value = parseValue();
         obj[key] = value;
 
-        this.skipWhitespace();
+        skipWhitespace();
 
         if (peek() === ',') {
           consume(',');
@@ -290,7 +290,7 @@ export class Json5ParserPlugin implements Plugin {
     const parseArray = (): unknown[] => {
       const arr: unknown[] = [];
       consume('[');
-      this.skipWhitespace();
+      skipWhitespace();
 
       if (peek() === ']') {
         consume(']');
@@ -298,9 +298,9 @@ export class Json5ParserPlugin implements Plugin {
       }
 
       while (true) {
-        this.skipWhitespace();
+        skipWhitespace();
         arr.push(parseValue());
-        this.skipWhitespace();
+        skipWhitespace();
 
         if (peek() === ',') {
           consume(',');
@@ -609,9 +609,9 @@ export class TomlParserPlugin implements Plugin {
 
     if (typeof value === 'string') {
       if (value.includes('"') || value.includes("'") || value.includes('\n')) {
-        return '"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"';
+        return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
       }
-      return '"${value}"';
+      return `"${value}"`;
     }
 
     return String(value);
@@ -951,7 +951,7 @@ export class GraphqlParserPlugin implements Plugin {
 
         selections.push({
           name: field,
-          arguments: args ? this.parseArguments(args) : [],
+          arguments: args ? this.parseArguments(args) : undefined,
           alias: field.includes(':') ? field.split(':')[0] : undefined,
         });
       } else {

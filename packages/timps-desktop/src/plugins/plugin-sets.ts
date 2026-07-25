@@ -1,5 +1,4 @@
-import { Plugin, PluginManifest, PluginCapabilities, PluginAPI, PERMISSIONS } from '../core/types';
-import { FileSystemPlugin } from './filesystems';
+import { Plugin, PluginManifest, PluginCapabilities } from './types';
 
 export class GitPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -54,7 +53,7 @@ export class GitPlugin implements Plugin {
     console.log(`Checking out: ${branch}`);
   }
 
-  async log(maxCount = 10): Promise<Array<{ hash: string; message: string; author: string; date: Date }> {
+  async log(maxCount = 10): Promise<Array<{ hash: string; message: string; author: string; date: Date }>> {
     return [];
   }
 }
@@ -211,7 +210,7 @@ export class WebServerPlugin implements Plugin {
     }
   }
 
-  async registerRoute(method: string, path: string, handler: (req: unknown, res: unknown) => void): void {
+  async registerRoute(method: string, path: string, handler: (req: unknown, res: unknown) => void): Promise<void> {
     console.log(`Registering route: ${method} ${path}`);
   }
 }
@@ -231,7 +230,7 @@ export class LoggerPlugin implements Plugin {
     api: {
       storage: true,
     },
-  };
+  } as any;
 
   private logs: Array<{ timestamp: number; level: string; message: string }> = [];
 

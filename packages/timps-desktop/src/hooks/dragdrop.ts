@@ -46,16 +46,21 @@ export function useDragDrop<T>(options?: UseDragOptions<T>) {
   useEffect(() => {
     const element = dropRef.current;
     if (element) {
-      element.addEventListener('dragenter', handleDragEnter);
-      element.addEventListener('dragleave', handleDragLeave);
-      element.addEventListener('dragover', handleDragOver);
-      element.addEventListener('drop', handleDrop);
+      const onDragEnter = (e: Event) => handleDragEnter(e as unknown as React.DragEvent);
+      const onDragLeave = (e: Event) => handleDragLeave(e as unknown as React.DragEvent);
+      const onDragOver = (e: Event) => handleDragOver(e as unknown as React.DragEvent);
+      const onDrop = (e: Event) => handleDrop(e as unknown as React.DragEvent);
+
+      element.addEventListener('dragenter', onDragEnter);
+      element.addEventListener('dragleave', onDragLeave);
+      element.addEventListener('dragover', onDragOver);
+      element.addEventListener('drop', onDrop);
       
       return () => {
-        element.removeEventListener('dragenter', handleDragEnter);
-        element.removeEventListener('dragleave', handleDragLeave);
-        element.removeEventListener('dragover', handleDragOver);
-        element.removeEventListener('drop', handleDrop);
+        element.removeEventListener('dragenter', onDragEnter);
+        element.removeEventListener('dragleave', onDragLeave);
+        element.removeEventListener('dragover', onDragOver);
+        element.removeEventListener('drop', onDrop);
       };
     }
   }, [handleDragEnter, handleDragLeave, handleDragOver, handleDrop]);

@@ -146,8 +146,8 @@ export class PluginProfiler {
     this.profiles.set(pluginId, {
       pluginId,
       startTime: performance.now(),
-      marks: [],
-    });
+      marks: [] as Array<{ name: string; time: number }>,
+    } as any);
   }
 
   mark(pluginId: string, name: string): void {

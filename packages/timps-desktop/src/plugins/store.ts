@@ -1,5 +1,3 @@
-import { PluginSettings } from './store';
-
 export interface PluginStorageOptions {
   namespace?: string;
   maxSize?: number;

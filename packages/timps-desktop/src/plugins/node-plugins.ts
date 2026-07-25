@@ -71,7 +71,7 @@ export class NodePlugin implements Plugin {
   }
 
   emit(event: string, ...args: unknown[]): void {
-    process.emit(event, ...args);
+    (process as any).emit(event, ...args);
   }
 
   chdir(dir: string): void {
@@ -546,14 +546,14 @@ export class WritableStream implements Stream {
 
 export class TransformStream implements Stream {
   constructor(
-    private transform: (chunk: unknown) => unknown,
+    private _transformFn: (chunk: unknown) => unknown,
     public options?: TransformOptions
   ) {}
 
   on(event: string, handler: (...args: unknown[]) => void): void {}
 
   transform(chunk: unknown): unknown {
-    return this.transform(chunk);
+    return this._transformFn(chunk);
   }
 }
 
@@ -602,7 +602,10 @@ export class EventEmitter {
   }
 
   once(event: string, handler: EventHandler): this {
-    this.onceEvents.get(event, new Set()).add(handler);
+    if (!this.onceEvents.has(event)) {
+      this.onceEvents.set(event, new Set());
+    }
+    this.onceEvents.get(event)!.add(handler);
     return this;
   }
 

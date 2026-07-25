@@ -206,17 +206,17 @@ export class SqlQueryBuilder {
 
 export class SqlInsertBuilder {
   private query: string = '';
-  private values: Record<string, unknown> = {};
+  private _values: Record<string, unknown> = {};
 
   constructor(private table: string) {}
 
   values(record: Record<string, unknown>): this {
-    this.values = record;
+    this._values = record;
     return this;
   }
 
   build(): string {
-    const fields = Object.keys(this.values).join(', ');
+    const fields = Object.keys(this._values).join(', ');
     const vals = Object.values(this.values).map((v) => this.quote(v)).join(', ');
     return `INSERT INTO ${this.table} (${fields}) VALUES (${vals})`;
   }
@@ -373,7 +373,7 @@ export class MongoQueryPlugin implements Plugin {
       if (typeof condition === 'object' && condition !== null) {
         const cond = condition as Record<string, unknown>;
         if (cond.op) {
-          filter[field] = { [cond.op]: cond.value };
+          filter[field] = { [cond.op as string]: cond.value };
         } else {
           filter[field] = condition;
         }

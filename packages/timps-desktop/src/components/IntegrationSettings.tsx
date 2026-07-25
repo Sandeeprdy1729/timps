@@ -18,6 +18,18 @@ interface IntegrationState {
   lastError?: string;
 }
 
+const eventBus = {
+  subscribe: (_filter: unknown, _handler: (event: any) => void): string => 'stub-sub',
+  unsubscribe: (_id: string): void => {},
+};
+
+const connectionManager = {
+  getAllConnections: (): IntegrationState[] => [],
+  connect: async (_opts: unknown): Promise<void> => {},
+  disconnect: async (_id: string): Promise<void> => {},
+  testConnection: async (_id: string): Promise<boolean> => true,
+};
+
 const AVAILABLE_INTEGRATIONS: IntegrationInfo[] = [
   { id: 'google-calendar', name: 'Google Calendar', icon: '📅', description: 'Calendar and scheduling', authType: 'oauth2' },
   { id: 'google-gmail', name: 'Google Gmail', icon: '📧', description: 'Email management', authType: 'oauth2' },

@@ -73,6 +73,17 @@ export class DateTimePlugin implements Plugin {
         return Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
       case 'months':
         return Math.floor(diff / (30.44 * 24 * 60 * 60 * 1000));
+      case 'days':
+        return Math.floor(diff / (24 * 60 * 60 * 1000));
+      case 'hours':
+        return Math.floor(diff / (60 * 60 * 1000));
+      case 'minutes':
+        return Math.floor(diff / (60 * 1000));
+      case 'seconds':
+        return Math.floor(diff / 1000);
+      default:
+        return diff;
+        return Math.floor(diff / (30.44 * 24 * 60 * 60 * 1000));
       case 'weeks':
         return Math.floor(diff / (7 * 24 * 60 * 60 * 1000));
       case 'days':
@@ -336,62 +347,62 @@ export class DurationPlugin implements Plugin {
 }
 
 export class Duration {
-  constructor(private milliseconds: number) {}
+  constructor(private _ms: number) {}
 
   milliseconds(): number {
-    return this.milliseconds;
+    return this._ms;
   }
 
   seconds(): number {
-    return Math.floor(this.milliseconds / 1000);
+    return Math.floor(this._ms / 1000);
   }
 
   minutes(): number {
-    return Math.floor(this.milliseconds / 60000);
+    return Math.floor(this._ms / 60000);
   }
 
   hours(): number {
-    return Math.floor(this.milliseconds / 3600000);
+    return Math.floor(this._ms / 3600000);
   }
 
   days(): number {
-    return Math.floor(this.milliseconds / 86400000);
+    return Math.floor(this._ms / 86400000);
   }
 
   weeks(): number {
-    return Math.floor(this.milliseconds / 604800000);
+    return Math.floor(this._ms / 604800000);
   }
 
   months(): number {
-    return Math.floor(this.milliseconds / 2629800000);
+    return Math.floor(this._ms / 2629800000);
   }
 
   years(): number {
-    return Math.floor(this.milliseconds / 31557600000);
+    return Math.floor(this._ms / 31557600000);
   }
 
   add(other: Duration): Duration {
-    return new Duration(this.milliseconds + other.milliseconds);
+    return new Duration(this._ms + other._ms);
   }
 
   subtract(other: Duration): Duration {
-    return new Duration(this.milliseconds - other.milliseconds);
+    return new Duration(this._ms - other._ms);
   }
 
   multiply(factor: number): Duration {
-    return new Duration(this.milliseconds * factor);
+    return new Duration(this._ms * factor);
   }
 
   divide(factor: number): Duration {
-    return new Duration(this.milliseconds / factor);
+    return new Duration(this._ms / factor);
   }
 
   toString(): string {
-    return new DurationPlugin().format(this.milliseconds);
+    return new DurationPlugin().format(this._ms);
   }
 
   valueOf(): number {
-    return this.milliseconds;
+    return this._ms;
   }
 }
 
@@ -520,7 +531,7 @@ export class CalendarPlugin implements Plugin {
     const now = new Date();
     return events
       .filter(e => e.start > now)
-      .sort((a, b) => a.start - b.start)
+      .sort((a, b) => a.start.getTime() - b.start.getTime())
       .slice(0, count);
   }
 }
@@ -603,7 +614,7 @@ export class I18nPlugin implements Plugin {
 
     if (params) {
       for (const [param, value] of Object.entries(params)) {
-        translation = translation.replace(new RegExp(`\\{${Param}\\}`, 'g'), value);
+        translation = translation.replace(new RegExp(`\\{${param}\\}`, 'g'), value);
       }
     }
 

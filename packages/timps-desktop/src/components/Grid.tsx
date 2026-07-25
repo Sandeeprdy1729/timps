@@ -116,7 +116,7 @@ export const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(({
   maxColumns = 4,
 }, ref) => {
   const [columnCount, setColumnCount] = useState(1);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const updateColumns = useCallback(() => {
     const width = containerRef.current?.clientWidth || window.innerWidth;
@@ -162,6 +162,8 @@ export interface MasonryGridProps {
   gap?: number;
 }
 
+type MasonryColumn = Array<{ key: string; content: ReactNode }>;
+
 export const MasonryGrid: React.FC<MasonryGridProps> = ({
   items,
   className = '',
@@ -169,12 +171,12 @@ export const MasonryGrid: React.FC<MasonryGridProps> = ({
   columnCount = 3,
   gap = 16,
 }) => {
-  const [columns, setColumns] = useState<Array<Array<{ key: string; content: ReactNode }>>(
+  const [columns, setColumns] = useState<MasonryColumn[]>(
     Array.from({ length: columnCount }, () => [])
   );
 
   useEffect(() => {
-    const distribution = Array.from({ length: columnCount }, () => [] as Array<{ key: string; content: ReactNode }>);
+    const distribution: MasonryColumn[] = Array.from({ length: columnCount }, () => [] as MasonryColumn);
     const heights = new Array(columnCount).fill(0);
 
     items.forEach((item, index) => {

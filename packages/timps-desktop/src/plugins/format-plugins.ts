@@ -433,7 +433,7 @@ export class XmlParserPlugin implements Plugin {
       if (token.startsWith('</')) {
         level--;
         formatted += spaces.repeat(Math.max(0, level)) + token + '\n';
-      } else if (token.startsWith('<') && !token.startsWith('</') && !token.startsWith('<?'))) {
+      } else if (token.startsWith('<') && !token.startsWith('</') && !token.startsWith('<?')) {
         formatted += spaces.repeat(level) + token + '\n';
         level++;
       } else {

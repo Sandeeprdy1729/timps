@@ -1,5 +1,5 @@
 import { PluginManifest, PluginCapabilities } from './types';
-import { Plugin } from '../core/types';
+import { Plugin } from './types';
 
 export class FileSystemPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -49,13 +49,13 @@ export class FileSystemPlugin implements Plugin {
     return null;
   }
 
-  async watch(path: string, callback: () => void): string {
+  async watch(path: string, callback: () => void): Promise<string> {
     const id = `watch-${Date.now()}`;
     this.watchCallbacks.set(id, callback);
     return id;
   }
 
-  async unwatch(id: string): void {
+  async unwatch(id: string): Promise<void> {
     this.watchCallbacks.delete(id);
   }
 

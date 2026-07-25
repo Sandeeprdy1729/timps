@@ -1,4 +1,6 @@
-export type { EventEmitter as IEventEmitter, Listener } from 'eventemitter3';
+export interface Listener {
+  (...args: unknown[]): void;
+}
 
 export interface EventMap {
   [event: string]: unknown[];
@@ -9,25 +11,6 @@ export interface EventEmitter {
   once(event: string, fn: Listener): this;
   off(event: string, fn?: Listener): this;
   emit(event: string, ...args: unknown[]): this;
-}
-
-export type Listener = (...args: unknown[]) => void;
-
-declare module 'eventemitter3' {
-  class EventEmitter {
-    constructor();
-    on(event: string, fn: Listener): this;
-    once(event: string, fn: Listener): this;
-    off(event: string, fn?: Listener): this;
-    emit(event: string, ...args: unknown[]): this;
-    addListener(event: string, fn: Listener): this;
-    removeListener(event: string, fn?: Listener): this;
-    removeAllListeners(event?: string): this;
-    listeners(event: string): Listener[];
-    listenerCount(event: string): number;
-    hasListeners(event: string): boolean;
-  }
-  export = EventEmitter;
 }
 
 export class EventEmitter3 implements EventEmitter {
@@ -124,5 +107,4 @@ export class EventEmitter3 implements EventEmitter {
   }
 }
 
-import { EventEmitter3 };
 export default EventEmitter3;

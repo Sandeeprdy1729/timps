@@ -25,22 +25,23 @@ export class TestPlugin implements Plugin {
     return new Stub();
   }
 
-  mock<T>(fn: (...args: unknown[]) => unknown):jest.fn) {
-    const mockFn = (...args: unknown[]) => {
-      mockFn.calls.push(args);
-      return mockFn.mockImplementation ? mockFn.mockImplementation(...args) : undefined;
-    };
-    mockFn.calls = [];
+  mock<T extends (...args: unknown[]) => unknown>(fn: T): Mock<T> {
+    const calls: unknown[][] = [];
+    const mockFn = ((...args: unknown[]) => {
+      calls.push(args);
+      return fn(...args);
+    }) as any;
+    mockFn.calls = calls;
     mockFn.mockReturnValue = undefined;
     mockFn.mockImplementation = undefined;
-    return mockFn;
+    return mockFn as Mock<T>;
   }
 
   spyOn(obj: Record<string, unknown>, method: string): Spy {
     const original = obj[method] as (...args: unknown[]) => unknown;
     const spy = this.createSpy(original);
 
-    obj[method] = (...args: unknown[]) => spy(...args);
+    (obj as any)[method] = (...args: unknown[]) => (spy as any)(...args);
 
     return spy;
   }
@@ -60,7 +61,7 @@ export class TestPlugin implements Plugin {
     return mockFn as T;
   }
 
-  fn.mock<T>(implementation?: T): T {
+  mockFn<T extends (...args: unknown[]) => unknown>(implementation?: T): T {
     return this.fn<T>(implementation);
   }
 
@@ -341,7 +342,7 @@ export class FuzzPlugin implements Plugin {
     return Math.random() > 0.5;
   }
 
-  array<T>(generator: () => T>, minLen = 0, maxLen = 10): T[] {
+  array<T>(generator: () => T, minLen = 0, maxLen = 10): T[] {
     const len = Math.floor(Math.random() * (maxLen - minLen + 1)) + minLen;
     const result: T[] = [];
     for (let i = 0; i < len; i++) {

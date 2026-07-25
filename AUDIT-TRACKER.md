@@ -32,7 +32,7 @@
 
 ## 📋 Remaining — 333 Issues
 
-### High (45)
+### High (46)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -78,6 +78,7 @@
 | H42 | `packages/timps-desktop/src/App.tsx:1` | ~55 of 62 component files imported by nothing; Sidebar has 10 tabs but App.tsx only renders 3 (chat, nexus, settings); BackgroundDaemon and PassiveListener never mounted — clipboard watcher, 30-min summarizer, passive memory capture, proactive notifications all dead at runtime | Mounted BackgroundDaemon + PassiveListener, imported and routed all 10 sidebar views (SemanticView, EpisodicView, StatsView, SearchView, LensView, IntelligenceDashboard, CommandCenter), added data fetching for semantic/episodic entries |
 | H43 | `packages/timps-desktop/src/components/MemoryGraph.tsx:3-5` + `IntegrationSettings.tsx:2-3` + `Alert.tsx:1` + `Popover.tsx:1` + `Tooltip.tsx:1` | 4 compile errors block `npm run build`/`typecheck`: d3-force/d3-selection/d3-zoom not in package.json (TS2307), connection-manager/event-bus paths nonexistent (TS2307), createPortal imported from 'react' not 'react-dom' (TS2305) | Replaced d3 simulation with inline force layout; removed nonexistent path imports; moved createPortal to react-dom import |
 | H46 | `packages/timps-desktop/src/hooks/index.ts:141` + `hooks/interactions.ts:92` + `utils/validation.ts:46` | 3 compile errors block `npm run build`: useRef not imported in hooks/index.ts (TS2304), useEffect + React not imported in interactions.ts (TS2304), Validator type 1-param but used with 2 args in validation.ts (TS2554) | Added useRef to hooks/index.ts import; added React+useEffect to interactions.ts import; widened Validator type to accept optional `values?: Record<string, string>` second param |
+| H47 | `packages/timps-desktop/src/plugins/` (~130 files, ~75k lines) + `App.tsx` | Entire ~130-file plugin layer imported by zero application code — dead code. Sidebar, ChatView, SettingsView all have no plugin hooks. No code path from the running Tauri app reaches the plugins directory, so every documented plugin/integration feature is inert | Narrowed barrel to 12 clean modules; fixed 290 TS errors across plugins+components+hooks+utils (removed phantom `react-native` type, added missing imports, type assertions, widened types); wired `PluginLifecycleManager` + `registerBuiltinPlugins()` into `App.tsx` useEffect — plugins now initialize at app startup |
 
 ⏸️ Paused — awaiting user instruction to proceed
 

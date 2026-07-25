@@ -308,7 +308,7 @@ export function memoize<T extends (...args: unknown[]) => unknown>(fn: T): T {
   return ((...args: unknown[]) => {
     const key = JSON.stringify(args);
     if (cache.has(key)) return cache.get(key);
-    const result = fn(...args);
+    const result = fn(...args) as ReturnType<T>;
     cache.set(key, result);
     return result;
   }) as T;
@@ -319,7 +319,7 @@ export function once<T extends (...args: unknown[]) => unknown>(fn: T): T {
   let result: ReturnType<T>;
   return ((...args: unknown[]) => {
     if (!called) {
-      result = fn(...args);
+      result = fn(...args) as ReturnType<T>;
       called = true;
     }
     return result;

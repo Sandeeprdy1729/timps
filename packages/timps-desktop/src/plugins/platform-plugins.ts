@@ -94,7 +94,7 @@ export class AnimationsPlugin implements Plugin {
 
   addKeyframes(name: string, keyframes: Keyframe[]): void {
     const style = document.createElement('style');
-    style.textContent = `@keyframes ${name} { ${keyframes.map(k => `${k.offset * 100}% { ${Object.entries(k).filter(([k]) => k !== 'offset').map(([k, v]) => `${k}: ${v}`).join('; ')} }`).join(' ')} }`;
+    style.textContent = `@keyframes ${name} { ${keyframes.map(k => `${(k.offset ?? 0) * 100}% { ${Object.entries(k).filter(([k]) => k !== 'offset').map(([k, v]) => `${k}: ${v}`).join('; ')} }`).join(' ')} }`;
     document.head.appendChild(style);
   }
 }
@@ -653,17 +653,17 @@ export class NetworkPlugin implements Plugin {
     };
   }
 
-  async getConnection(): Promise<NetworkInformation | null> {
-    return (navigator as unknown as { connection?: NetworkInformation }).connection || null;
+  async getConnection(): Promise<{ effectiveType?: string; saveData?: boolean } | null> {
+    return (navigator as any).connection || null;
   }
 
   getEffectiveType(): 'slow-2g' | '2g' | '3g' | '4g' | undefined {
-    const conn = navigator.connection;
+    const conn = (navigator as any).connection;
     return conn?.effectiveType;
   }
 
   isSaveDataEnabled(): boolean {
-    return navigator.connection?.saveData || false;
+    return (navigator as any).connection?.saveData || false;
   }
 }
 

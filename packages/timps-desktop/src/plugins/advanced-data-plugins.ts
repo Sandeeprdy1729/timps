@@ -121,7 +121,8 @@ export class DatabaseORMPlugin implements Plugin {
 
   async update<T extends Record<string, unknown>>(model: string, id: string, updates: Partial<T>): Promise<boolean> {
     const modelData = this.data.get(model);
-    const existing = modelData?.get(id);
+    if (!modelData) return false;
+    const existing = modelData.get(id);
     if (!existing) return false;
 
     modelData.set(id, { ...existing, ...updates });
@@ -548,7 +549,7 @@ export class WorkflowPlugin implements Plugin {
         output: stepResult,
       });
 
-      if (stepResult && 'error' in stepResult) {
+      if (stepResult && typeof stepResult === 'object' && 'error' in stepResult) {
         break;
       }
     }

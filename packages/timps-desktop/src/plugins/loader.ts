@@ -28,7 +28,7 @@ export class PluginLoader {
 
   async loadFromSource(source: string): Promise<Plugin> {
     console.log(`Loading plugin from: ${source}`);
-    const manifest: PluginManifest = {
+    const manifest = {
       id: source,
       name: source,
       version: '1.0.0',

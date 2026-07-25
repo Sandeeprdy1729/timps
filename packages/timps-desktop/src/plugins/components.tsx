@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useCallback, CSSProperties, ReactNode } from 'react';
-import { PluginManifest, PluginMetadata, Plugin } from '../core/types';
+import { PluginManifest, PluginCapabilities } from './types';
+
+export interface PluginMetadata extends PluginManifest {
+  enabled?: boolean;
+  source?: string;
+  icon?: string;
+  license?: string;
+  homepage?: string;
+  installedAt?: string;
+  updatedAt?: string;
+}
+
+type Plugin = {
+  manifest: PluginMetadata;
+  capabilities?: PluginCapabilities;
+};
 
 export interface PluginCardProps {
   plugin: PluginMetadata;

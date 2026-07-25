@@ -251,7 +251,7 @@ export class CachePlugin implements Plugin {
 
   set(key: string, value: unknown, ttl?: number): void {
     if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
+      const firstKey: string = this.cache.keys().next().value as string;
       this.cache.delete(firstKey);
     }
 
@@ -466,7 +466,7 @@ export class QueuePlugin implements Plugin {
 
   add<T>(task: () => Promise<T>, priority = 0): Promise<T> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ task, priority, resolve, reject });
+      this.queue.push({ task, priority, resolve: resolve as (value: unknown) => void, reject });
       this.queue.sort((a, b) => b.priority - a.priority);
       this.process();
     });
@@ -486,7 +486,7 @@ export class QueuePlugin implements Plugin {
         const result = await item.task();
         item.resolve(result);
       } catch (error) {
-        item.reject(error);
+        item.reject(error as Error);
       } finally {
         this.running--;
       }
@@ -536,7 +536,10 @@ export class EventBusPlugin implements Plugin {
   }
 
   once(event: string, handler: EventHandler): void {
-    this.onceHandlers.get(event, new Set()).add(handler);
+    if (!this.onceHandlers.has(event)) {
+      this.onceHandlers.set(event, new Set());
+    }
+    this.onceHandlers.get(event)!.add(handler);
   }
 
   off(event: string, handler: EventHandler): void {
@@ -614,7 +617,7 @@ export class LruCachePlugin implements Plugin {
     if (this.cache.has(key)) {
       this.cache.delete(key);
     } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
+      const firstKey: string = this.cache.keys().next().value as string;
       this.cache.delete(firstKey);
     }
 

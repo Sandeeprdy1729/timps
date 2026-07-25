@@ -1,4 +1,4 @@
-import { Plugin, PluginManifest, PluginCapabilities, PluginAPI, PERMISSIONS } from '../core/types';
+import { Plugin, PluginManifest, PluginCapabilities, PluginAPI, PERMISSIONS } from './types';
 
 export interface KeyboardShortcut {
   id: string;
@@ -185,7 +185,7 @@ export class ClipboardPlugin implements Plugin {
 
   async write(text: string): Promise<void> {
     try {
-      await navigatorClipboard.writeText(text);
+      await navigator.clipboard.writeText(text);
       this.history.unshift(text);
       if (this.history.length > this.maxHistory) {
         this.history.pop();
@@ -198,7 +198,7 @@ export class ClipboardPlugin implements Plugin {
 
   async read(): Promise<string> {
     try {
-      const text = await navigatorClipboard.readText();
+      const text = await navigator.clipboard.readText();
       return text;
     } catch (error) {
       throw new Error(`Failed to read from clipboard: ${error}`);
@@ -215,7 +215,7 @@ export class ClipboardPlugin implements Plugin {
   }
 
   hasPermission(): Promise<boolean> {
-    return navigatorClipboard.readText().then(() => true).catch(() => false);
+    return navigator.clipboard.readText().then(() => true).catch(() => false);
   }
 }
 

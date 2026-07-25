@@ -2906,7 +2906,7 @@ export class DropboxPlugin implements Plugin {
       ...options,
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
-        'Dropbox-API-Arg': JSON.stringify(options.headers?.['Dropbox-API-Arg'] || {}),
+        'Dropbox-API-Arg': JSON.stringify((options.headers as any)?.['Dropbox-API-Arg'] || {}),
         'Content-Type': 'application/octet-stream',
       },
     });

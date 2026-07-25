@@ -624,39 +624,35 @@ export class ColorUtilsPlugin implements Plugin {
   }
 
   lighten(color: string, amount: number): string {
-    const hsl = this.rgbToHsl(
-      ...Object.values(this.hexToRgb(color)!)
-    );
+    const rgb1 = this.hexToRgb(color)!;
+    const hsl = this.rgbToHsl(rgb1.r, rgb1.g, rgb1.b);
     hsl.l = Math.min(100, hsl.l + amount);
-    const rgb = this.hslToRgb(hsl.h, hsl.s, hsl.l);
-    return this.rgbToHex(rgb.r, rgb.g, rgb.b);
+    const rgb2 = this.hslToRgb(hsl.h, hsl.s, hsl.l);
+    return this.rgbToHex(rgb2.r, rgb2.g, rgb2.b);
   }
 
   darken(color: string, amount: number): string {
-    const hsl = this.rgbToHsl(
-      ...Object.values(this.hexToRgb(color)!)
-    );
+    const rgb1 = this.hexToRgb(color)!;
+    const hsl = this.rgbToHsl(rgb1.r, rgb1.g, rgb1.b);
     hsl.l = Math.max(0, hsl.l - amount);
-    const rgb = this.hslToRgb(hsl.h, hsl.s, hsl.l);
-    return this.rgbToHex(rgb.r, rgb.g, rgb.b);
+    const rgb2 = this.hslToRgb(hsl.h, hsl.s, hsl.l);
+    return this.rgbToHex(rgb2.r, rgb2.g, rgb2.b);
   }
 
   saturate(color: string, amount: number): string {
-    const hsl = this.rgbToHsl(
-      ...Object.values(this.hexToRgb(color)!)
-    );
+    const rgb1 = this.hexToRgb(color)!;
+    const hsl = this.rgbToHsl(rgb1.r, rgb1.g, rgb1.b);
     hsl.s = Math.min(100, hsl.s + amount);
-    const rgb = this.hslToRgb(hsl.h, hsl.s, hsl.l);
-    return this.rgbToHex(rgb.r, rgb.g, rgb.b);
+    const rgb2 = this.hslToRgb(hsl.h, hsl.s, hsl.l);
+    return this.rgbToHex(rgb2.r, rgb2.g, rgb2.b);
   }
 
   desaturate(color: string, amount: number): string {
-    const hsl = this.rgbToHsl(
-      ...Object.values(this.hexToRgb(color)!)
-    );
+    const rgb1 = this.hexToRgb(color)!;
+    const hsl = this.rgbToHsl(rgb1.r, rgb1.g, rgb1.b);
     hsl.s = Math.max(0, hsl.s - amount);
-    const rgb = this.hslToRgb(hsl.h, hsl.s, hsl.l);
-    return this.rgbToHex(rgb.r, rgb.g, rgb.b);
+    const rgb2 = this.hslToRgb(hsl.h, hsl.s, hsl.l);
+    return this.rgbToHex(rgb2.r, rgb2.g, rgb2.b);
   }
 
   mix(color1: string, color2: string, weight = 50): string {

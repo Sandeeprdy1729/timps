@@ -187,7 +187,7 @@ export class LanguageModelToolPlugin implements Plugin {
     if (!tool) {
       return Promise.reject(new Error(`Tool not found: ${name}`));
     }
-    return tool.execute(params);
+    return tool.execute(params) as Promise<ToolResult>;
   }
 
   validateParams(name: string, params: Record<string, unknown>): ValidationResult {
@@ -557,7 +557,7 @@ export class Instructions {
   }
 
   getScope(): 'always' | 'file' | 'when' {
-    return this.config.scope;
+    return this.config.scope as 'always' | 'file' | 'when';
   }
 
   matches(path: string): boolean {
@@ -569,7 +569,11 @@ export class Instructions {
   }
 }
 
-export class AlwaysOnInstruction extends Instructions {}
+export class AlwaysOnInstruction extends Instructions {
+  constructor(name: string, content: string) {
+    super({ scope: 'always', content } as any);
+  }
+}
 
 export class FileBasedInstruction extends Instructions {
   private pathPattern: string;
@@ -800,7 +804,7 @@ export class McpServer {
       return { tools: this.tools.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })) };
     }
     if (request.method === 'resources/list') {
-      return { resources: this.resources.map(r => ({ uri: r.uri, name: r.name, description: r.description })) };
+      return { resources: this.resources.map(r => ({ uri: r.uri, name: r.name, description: r.description ?? '' })) };
     }
     if (request.method === 'prompts/list') {
       return { prompts: this.prompts.map(p => ({ name: p.name, description: p.description })) };

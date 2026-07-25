@@ -54,9 +54,10 @@ export function useScrollPosition({ ref, onScroll }: UseScrollPositionOptions = 
     const target = ref?.current || window;
 
     const handleScroll = () => {
+      const isWindow = target === window;
       const newPosition = {
-        x: target.scrollX || (target as unknown as { scrollLeft: number }).scrollLeft || 0,
-        y: target.scrollY || (target as unknown as { scrollTop: number }).scrollTop || 0,
+        x: isWindow ? (target as Window).scrollX : (target as HTMLElement).scrollLeft || 0,
+        y: isWindow ? (target as Window).scrollY : (target as HTMLElement).scrollTop || 0,
       };
       setPosition(newPosition);
       onScroll?.(newPosition);
