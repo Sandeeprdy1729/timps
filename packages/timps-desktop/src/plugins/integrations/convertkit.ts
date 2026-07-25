@@ -1,5 +1,5 @@
 import { PluginManifest } from '../types';
-import { IntegrationBase, AuthConfig } from './integration-best.js';
+import { IntegrationBase, AuthConfig } from './integration-base.js';
 
 export interface ConvertKitSubscriber {
   id: number;
