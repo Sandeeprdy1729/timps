@@ -639,7 +639,15 @@ pub fn passive_store(
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs(),
-        &lc_new[..lc_new.len().min(8)].replace(' ', "_")
+        // Safe char-boundary slice: find the last char boundary ≤ 8 bytes
+        {
+            let limit = lc_new.char_indices()
+                .take_while(|(i, _)| *i < 8)
+                .last()
+                .map(|(i, c)| i + c.len_utf8())
+                .unwrap_or(0);
+            lc_new[..limit].replace(' ', "_")
+        }
     );
 
     let mut all_tags = tags;
