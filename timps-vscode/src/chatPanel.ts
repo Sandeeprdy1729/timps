@@ -1,3 +1,5 @@
+import * as crypto from 'node:crypto';
+
 // ============================================================
 // TIMPS Chat Panel v2.1 — FIXED
 // Bugs fixed:
@@ -1012,8 +1014,5 @@ document.getElementById('inp').focus();
     }
 }
 function getNonce(): string {
-    let t = '';
-    const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) t += p[Math.floor(Math.random() * p.length)];
-    return t;
+    return crypto.randomBytes(16).toString('hex');
 }

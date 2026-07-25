@@ -61,8 +61,10 @@ const plugin: Plugin = {
     },
     async shell_which({ command }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        const path = execSync(`which ${command}`, { encoding: 'utf8' }).trim();
-        return { output: `${command} found at: ${path}` };
+        const cmd = String(command || '').replace(/[^a-zA-Z0-9._\-\/]/g, '');
+        if (!cmd) return { output: '', error: 'Invalid command name' };
+        const path = execSync(`which ${cmd}`, { encoding: 'utf8' }).trim();
+        return { output: `${cmd} found at: ${path}` };
       } catch {
         return { output: '', error: `${command} not found in PATH` };
       }
