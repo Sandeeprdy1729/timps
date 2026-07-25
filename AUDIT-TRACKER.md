@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 45    | 44        |
+| High     | 89    | 46    | 43        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **56** | **332** |
+| **Total**| **388** | **57** | **331** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 45 High
+## ✅ Fixed — 11 Critical + 46 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -74,11 +74,12 @@
 | H46 | `packages/timps-desktop/src/hooks/index.ts:141` + `hooks/interactions.ts:92` + `utils/validation.ts:46` | 3 compile errors block `npm run build`: useRef not imported in hooks/index.ts (TS2304), useEffect + React not imported in interactions.ts (TS2304), Validator type 1-param but used with 2 args in validation.ts (TS2554) | Added useRef to hooks/index.ts import; added React+useEffect to interactions.ts import; widened Validator type to accept optional `values?: Record<string, string>` second param |
 | H47 | `packages/timps-desktop/src/plugins/` (~130 files, ~75k lines) + `App.tsx` | Entire ~130-file plugin layer imported by zero application code — dead code. Sidebar, ChatView, SettingsView all have no plugin hooks. No code path from the running Tauri app reaches the plugins directory, so every documented plugin/integration feature is inert | Narrowed barrel to 12 clean modules; fixed 290 TS errors across plugins+components+hooks+utils (removed phantom `react-native` type, added missing imports, type assertions, widened types); wired `PluginLifecycleManager` + `registerBuiltinPlugins()` into `App.tsx` useEffect — plugins now initialize at app startup |
 | H48 | `packages/timps-desktop/src/plugins/integration-plugins.ts:2`, `integration-base.ts`, `integration-ecosystem.ts` + `integrations/` | Three parallel, mutually incompatible integration frameworks: (1) plugins/integration-plugins.ts — 3,365 lines, 40 stub Plugin classes for Google/Microsoft/Slack/etc, (2) integrations/ — 67 files, ~36K lines with abstract IntegrationBase, (3) plugins/integration-base.ts — duplicate IntegrationBase/AuthConfig types. All three barrels have zero external imports. 30 services duplicated across frameworks. `convertkit.ts` has broken import (`integration-best.js`) | Deleted 3 dead plugin framework files (4,835 lines total); kept integrations/ as canonical (67 files, abstract base, retry/rate-limit/auth built-in); removed stale barrel re-export; fixed convertkit.ts import to `integration-base.js` |
+| H49 | `packages/timps-desktop/src/plugins/integrations/__tests__/integration-base.test.ts:2` | Only test file in area cannot run and tests nonexistent behavior: imports `nock` (not in package.json), instantiates abstract IntegrationBase with 3-arg constructor (real: 5 params), calls `apiCall('GET','/data')` (real: `apiCall(endpoint, options)` — fetch invoked with 'GET' as URL), asserts retry-on-429/429-token-refresh/exponential-backoff/custom-header-interceptors that IntegrationBase never implements; 35,938 lines of integration code have zero functional test coverage | Rewrote 47 tests against real IntegrationBase API: constructor (5 params), setAccessToken/setApiKey/setConfig, isAuthenticated, apiCall with fetch mock (auth headers, error codes), withRetry (success/retry/exhaustion), rate limiting (bucket creation, token check), event system (on/off/emit), validateConfig (name/type/oauth), getStatus/getHealth/cleanup, IntegrationRegistry (register/unregister/connect/disconnect), createIntegration factory; removed nock dependency; removed vitest exclusion for integrations/; all 47 tests green |
 
-## 📋 Remaining — 332 Issues
+## 📋 Remaining — 331 Issues
 
-### High (44)
-⏸️ All 44 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (43)
+⏸️ All 43 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
