@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 62    | 27        |
+| High     | 89    | 63    | 26        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **73** | **315** |
+| **Total**| **388** | **74** | **314** |
 
 ---
 
@@ -93,8 +93,9 @@
 | H66 | `timps-code/src/data-pipeline/swebench-runner.ts:193` — SWE-bench pass/fail result decided by `Math.random()>0.5` on mock instances, printed as real pass rate; `loadInstances` always falls through to `generateMockInstances` (line 107); `evaluateInstance` runs agent but never evaluates patch (line 193); `runSWEbench` prints fabricated 'SOTA competitive! (78%+)' claim (line 256); mock instances have no expected patches for comparison | Replaced `Math.random()>0.5` with deterministic patch comparison: mock instances now include expected patches; evaluation checks if key lines from expected patch appear in agent output (≥50% match = resolved); removed fabricated 'SOTA competitive!' claim, replaced with honest 'Strong performance on mock instances' message + disclaimer that results are mock-only; added warning prompt when pass rate is low. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H67 | `timps-code/src/data-pipeline/bug-miner.ts:298` — `Math.random()` generates simulated program counts (`~${Math.floor(Math.random() * 500 + 100)}K programs`) that vary on every run; status messages show unstable fabricated numbers; swebench-runner.ts:193 already fixed in H66 | Replaced `Math.random()` with deterministic per-language constants (c: 320K, cpp: 210K, rust: 180K, go: 150K); status messages now show stable representative values; all display text remains marked as '(simulated)'. Verified: `tsc --noEmit` clean, 889 tests pass. |
 | H68 | `timps-code/src/memory/selfReflector.ts:19` — Four CLI intelligence sub-modules (`selfReflector.ts`, `benchmark.ts`, `predictivePrefetcher.ts`, `temporalVersioning.ts`) read `semantic.json` from `Memory.dir` which uses `getMemoryDir()` (31-multiply hash), but `MemoryEngine` writes to `memoryDir()` (sha256 hash) — two different directories for one Memory instance; sub-modules always operate on empty entry sets; `timps --benchmark` prints pass rates computed over never-populated data | Changed `Memory.dir` to use `memoryDir()` from `@timps-ai/memory-core` (sha256) instead of `getMemoryDir()` from `config.ts` (31-hash); all sub-modules now read from the same directory `MemoryEngine` writes to; removed unused `getMemoryDir` import. Verified: `tsc --noEmit` clean, 889 tests pass. |
+| H69 | `timps-code/src/models/ollama.ts:38` — System prompt dropped: `messages.filter(m => m.role !== 'system')` strips system messages; `body.system` set on line 38 but local models also need tool-call parsing; provider sets `supportsFunctionCalling:false` and only yields `text` events; `LOCAL_SYSTEM_PROMPT` tells model to emit ``<tool_call>`` XML but no parser exists in the codebase; file edits/bash/etc. never execute on the default/free Ollama provider | (1) System messages now included as `role:'system'` in the messages array instead of being filtered out; (2) Added full XML `<tool_call>` parser — streaming state machine that detects `<tool_call>...</tool_call>` blocks across chunk boundaries, extracts `<name>` and `<arguments>` tags, and yields `tool_start`/`tool_delta`/`tool_end` events; parser handles edge cases (split chunks, missing names, known tool normalization); tool results flow back as `role:'user'` messages. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
-## 📋 Remaining — 315 Issues
+## 📋 Remaining — 314 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
