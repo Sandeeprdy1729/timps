@@ -14,7 +14,7 @@ export function WorkflowBuilder({ engine, workflowId, onSave, onCancel }: Workfl
   const [name, setName] = useState(existing?.name || '');
   const [description, setDescription] = useState(existing?.description || '');
   const [triggerType, setTriggerType] = useState<'schedule' | 'event' | 'webhook' | 'manual'>(
-    existing?.trigger.type || 'manual'
+    (existing?.trigger.type as 'schedule' | 'event' | 'webhook' | 'manual') || 'manual'
   );
   const [triggerConfig, setTriggerConfig] = useState(existing?.trigger.config || {});
   const [steps, setSteps] = useState<WorkflowStep[]>(existing?.steps || []);

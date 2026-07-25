@@ -165,7 +165,7 @@ export class AgentPlugin implements Plugin {
     agent: Agent,
     task: string
   ): AsyncGenerator<AgentStep, void, unknown> {
-    yield { type: 'start', content: '' };
+    yield { type: 'observation' as const, content: '' };
   }
 }
 
@@ -417,7 +417,7 @@ export class ReflectionPlugin implements Plugin {
     generate: GenerateFn,
     reflect: ReflectFn
   ): Promise<string> {
-    return '';
+    return Promise.resolve('');
   }
 }
 
@@ -646,11 +646,11 @@ export class CodeExecutionPlugin implements Plugin {
   public capabilities: PluginCapabilities = {};
 
   async execute(code: string, language: string): Promise<ExecutionResult> {
-    return { stdout: '', stderr: '', exitCode: 0 };
+    return { stdout: '', stderr: '', exitCode: 0, duration: 0 };
   }
 
   async executeInSandbox(code: string, language: string): Promise<ExecutionResult> {
-    return { stdout: '', stderr: '', exitCode: 0 };
+    return { stdout: '', stderr: '', exitCode: 0, duration: 0 };
   }
 
   createSandbox(options?: SandboxOptions): Sandbox {

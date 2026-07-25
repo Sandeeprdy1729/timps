@@ -14,7 +14,7 @@ export class GraphQLPlugin implements Plugin {
   public capabilities: PluginCapabilities = {};
 
   createSchema(typeDefs: string): GraphQLSchema {
-    return new GraphQLSchema(typeDefs);
+    return new GraphQLSchema();
   }
 
   parseSchema(schema: string): GraphQLDocument {
@@ -38,12 +38,7 @@ export class GraphQLPlugin implements Plugin {
   }
 
   subscribe(query: string, variables?: Record<string, unknown>): AsyncGenerator<ExecutionResult> {
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: () => Promise.resolve({ done: true, value: { data: null, errors: [] } }),
-    };
+    return (async function*() { yield { data: null, errors: [] } as ExecutionResult; })();
   }
 
   createExecutableSchema(config: ExecutableSchemaConfig): GraphQLSchema {
@@ -86,7 +81,7 @@ export class GraphQLPlugin implements Plugin {
     return '';
   }
 
-  add directives(definition: string): void {}
+  directives(definition: string): void {}
 
   parseSDL(sdl: string): GraphQLDocument {
     return new GraphQLDocument();
@@ -313,7 +308,7 @@ export class RestApiServerPlugin implements Plugin {
   }
 
   errorHandler(handler: ErrorHandler): Middleware {
-    return handler;
+    return handler as any;
   }
 
   bodyParser(options?: BodyParserOptions): Middleware {
@@ -573,8 +568,8 @@ export class WebSocketServer {
 }
 
 export class WebSocketClient {
-  id: string;
-  ip: string;
+  id: string = '';
+  ip: string = '';
 
   send(data: unknown): void {}
 
@@ -597,7 +592,7 @@ export interface WebSocketOptions {
 
 export type ConnectionHandler = (socket: WebSocketClient) => void;
 export type DisconnectHandler = (socket: WebSocketClient) => void;
-export type MessageHandler = (socket: WebSocketClient, message: string) => void;
+export type WsMessageHandler = (socket: WebSocketClient, message: string) => void;
 export type WsMiddleware = (socket: WebSocketClient, next: NextFunction) => void;
 
 export class GrpcPlugin implements Plugin {
@@ -614,7 +609,7 @@ export class GrpcPlugin implements Plugin {
   public capabilities: PluginCapabilities = {};
 
   parseProto(content: string): ProtoDefinition {
-    return { services: [], messages: [] };
+    return { services: [], messageDefs: [] };
   }
 
   generateServices(proto: ProtoDefinition): string {
@@ -642,12 +637,7 @@ export class GrpcPlugin implements Plugin {
   }
 
   serverStream<T extends GrpcRequest>(method: string, request: T, metadata?: Metadata): AsyncGenerator<GrpcResponse> {
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: () => Promise.resolve({ done: true, value: {} as GrpcResponse }),
-    };
+    return (async function*() { yield {} as GrpcResponse; })();
   }
 
   clientStream<T extends GrpcRequest>(method: string, requests: T[], metadata?: Metadata): Promise<GrpcResponse> {
@@ -655,12 +645,7 @@ export class GrpcPlugin implements Plugin {
   }
 
   bidirectionalStream<T extends GrpcRequest>(method: string, requests: T[], metadata?: Metadata): AsyncGenerator<GrpcResponse> {
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: () => Promise.resolve({ done: true, value: {} as GrpcResponse }),
-    };
+    return (async function*() { yield {} as GrpcResponse; })();
   }
 
   getServices(): GrpcServiceDef[] {
@@ -672,7 +657,7 @@ export class GrpcPlugin implements Plugin {
   }
 
   loadProto(path: string): ProtoDefinition {
-    return { services: [], messages: [] };
+    return { services: [], messageDefs: [] };
   }
 }
 
@@ -685,7 +670,7 @@ export class GrpcServer {
 
   start(): void {}
 
-  tryShutdown(): Promise<void> {}
+  tryShutdown(): Promise<void> { return Promise.resolve(); }
 }
 
 export class GrpcClient {

@@ -433,9 +433,10 @@ export class OtpPlugin implements Plugin {
       (hmac[offset + 3] & 0xff);
 
     let otp = '';
+    let _binary = binary;
     for (let i = 0; i < digits; i++) {
-      otp = (binary % 10) + otp;
-      binary = Math.floor(binary / 10);
+      otp = (_binary % 10) + otp;
+      _binary = Math.floor(_binary / 10);
     }
 
     return otp.padStart(digits, '0');

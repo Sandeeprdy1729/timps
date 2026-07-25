@@ -818,11 +818,11 @@ export class SchemaBuilder {
   }
 
   increments(name: string): this {
-    return this.integer(name).unsigned().autoIncrement().primaryKey();
+    return this.integer(name).unsigned().primaryKey();
   }
 
   bigincrements(name: string): this {
-    return this.bigInteger(name).unsigned().autoIncrement().primaryKey();
+    return this.bigInteger(name).unsigned().primaryKey();
   }
 
   string(name: string, length?: number): this {
@@ -957,7 +957,7 @@ export class SchemaBuilder {
     return '';
   }
 
-  to-blueprints(): Record<string, unknown> {
+  toBlueprints(): Record<string, unknown> {
     return { table: this.table, columns: this.columns, indexes: this.indexes, foreignKeys: this.foreignKeys };
   }
 }

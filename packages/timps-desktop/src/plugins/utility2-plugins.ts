@@ -560,7 +560,7 @@ export class ObjectPlugin implements Plugin {
     for (const source of sources) {
       for (const key in source) {
         if (Object.prototype.hasOwnProperty.call(source, key)) {
-          target[key as keyof T] = source[key as T[keyof T];
+          (target as any)[key] = source[key as keyof T];
         }
       }
     }
@@ -608,10 +608,10 @@ export class ObjectPlugin implements Plugin {
     obj: T,
     fn: (value: T[keyof T], key: keyof T) => boolean
   ): Partial<T> {
-    const result = {};
+    const result: Partial<T> = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key) && fn(obj[key], key)) {
-        result[key] = obj[key];
+        (result as any)[key] = obj[key];
       }
     }
     return result;

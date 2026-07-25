@@ -28,7 +28,7 @@ export class ExpressPlugin implements Plugin {
 
   cors(options?: CorsOptions): Middleware {
     return (req, res, next) => {
-      res.setHeader('Access-Control-Allow-Origin', options?.origin || '*');
+      res.setHeader('Access-Control-Allow-Origin', String(options?.origin || '*'));
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       next();
@@ -148,7 +148,7 @@ export class ExpressRouter {
     return this;
   }
 
-  options(path: string, ...handlers: Handler[]): this {
+  optionsMethod(path: string, ...handlers: Handler[]): this {
     this.routes.push({ method: 'OPTIONS', path, handlers });
     return this;
   }
@@ -163,7 +163,7 @@ export class ExpressRouter {
     return this;
   }
 
-  use(fn: Handler | Router): this {
+  use(fn: Handler | ExpressRouter): this {
     this.routes.push({ method: 'USE', path: '*', handlers: [fn as Handler] });
     return this;
   }
@@ -369,7 +369,7 @@ export class KoaPlugin implements Plugin {
   compose(middlewares: KoaMiddleware[]): KoaMiddleware {
     return async (ctx, next) => {
       let i = 0;
-      const dispatch = (i: number) => {
+      const dispatch = (i: number): Promise<void> => {
         if (i >= middlewares.length) return next();
         return middlewares[i++](ctx, () => dispatch(i));
       };
@@ -380,7 +380,7 @@ export class KoaPlugin implements Plugin {
 
 export class KoaApp {
   private middlewares: KoaMiddleware[] = [];
-  private context: KoaContext = {};
+  private context: KoaContext = {} as KoaContext;
 
   constructor(public options?: KoaOptions) {}
 
@@ -393,7 +393,7 @@ export class KoaApp {
     return async (req, res) => {
       const ctx = this.createContext(req, res);
       const fn = this.compose(this.middlewares);
-      await fn(ctx, () => {});
+      await fn(ctx, () => Promise.resolve());
     };
   }
 
@@ -404,7 +404,7 @@ export class KoaApp {
   private compose(middlewares: KoaMiddleware[]): KoaMiddleware {
     return async (ctx, next) => {
       let i = 0;
-      const dispatch = (i: number) => {
+      const dispatch = (i: number): Promise<void> => {
         if (i >= middlewares.length) return next();
         return middlewares[i++](ctx, () => dispatch(i));
       };
@@ -434,7 +434,6 @@ export interface KoaContext {
   message: string;
   statusCode: number;
   statusMessage: string;
-  body: unknown;
 }
 
 export interface KoaOptions {
@@ -458,8 +457,8 @@ export class WebFrameworkPlugin implements Plugin {
 
   public capabilities: PluginCapabilities = {};
 
-  createServer(options?: ServerOptions): Server {
-    return new Server(options);
+  createServer(options?: ServerOptions): any {
+    return { listen: () => {}, close: () => {} };
   }
 
   parseRoute(path: string): RouteConfig {
@@ -472,7 +471,7 @@ export class WebFrameworkPlugin implements Plugin {
   }
 
   matchRoute(route: RouteConfig, path: string): Record<string, boolean> {
-    return { matched: true, params: {} };
+    return { matched: true, params: false } as any;
   }
 
   parseBody(body: string, contentType: string): unknown {
@@ -548,14 +547,17 @@ export class RestApiPlugin implements Plugin {
       path,
       method: 'GET',
       params,
-      query: query ? query.split('&') : []
+      query: query ? query.split('&') : [],
+      handler: () => {},
     };
   }
 
   buildUrl(base: string, params?: Record<string, string>, query?: Record<string, string>): string {
     let url = base;
-    for (const key in params || {}) {
-      url = url.replace(`:${key}`, params[key]);
+    if (params) {
+      for (const key in params) {
+        url = url.replace(`:${key}`, params[key] ?? '');
+      }
     }
     const queryString = new URLSearchParams(query).toString();
     return url + (queryString ? '?' + queryString : '');

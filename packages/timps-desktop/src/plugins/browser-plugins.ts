@@ -61,7 +61,7 @@ export class WorkerPool {
   private available: Worker[] = [];
   private queue: Array<{ fn: (worker: Worker) => void; resolve: () => void }> = [];
 
-  constructor(private size: number) {}
+  constructor(private _size: number) {}
 
   async run<T>(fn: (worker: Worker) => Promise<T>): Promise<T> {
     return Promise.resolve(undefined as T);
@@ -73,8 +73,8 @@ export class WorkerPool {
     }
   }
 
-  size(): number {
-    return this.size;
+  getSize(): number {
+    return this._size;
   }
 }
 

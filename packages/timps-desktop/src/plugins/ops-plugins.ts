@@ -299,8 +299,8 @@ export class DockerPlugin implements Plugin {
     return '';
   }
 
-  async run(image: string, options?: RunOptions): Promise<Container> {
-    return new Container();
+  async run(image: string, options?: RunOptions): Promise<any> {
+    return {};
   }
 
   async pull(image: string, options?: PullOptions): Promise<void> {}
@@ -311,7 +311,7 @@ export class DockerPlugin implements Plugin {
     return [];
   }
 
-  async images(options?: ImagesOptions): Promise<Image[]> {
+  async images(options?: ImagesOptions): Promise<any[]> {
     return [];
   }
 
@@ -825,6 +825,10 @@ export class MonitoringPlugin implements Plugin {
   createHistogram(name: string, help: string, buckets?: number[]): Histogram {
     return new Histogram(name, help, buckets);
   }
+
+  createCounter(name: string, type: string, help: string): Metric {
+    return new Metric(name, type as any, help);
+  }
 }
 
 export interface MetricsOptions {
@@ -883,7 +887,11 @@ export class Metric {
   }
 }
 
-export class Histogram extends Metric {}
+export class Histogram extends Metric {
+  constructor(name: string, help: string, buckets?: number[]) {
+    super(name, 'histogram', help);
+  }
+}
 
 export type MetricType = 'counter' | 'gauge' | 'histogram' | 'summary';
 
@@ -930,7 +938,7 @@ export class TerraformPlugin implements Plugin {
     return {};
   }
 
-  async show(options?: ShowOptions): PlanResult {
+  async show(options?: ShowOptions): Promise<PlanResult> {
     return { add: 0, change: 0, destroy: 0, resources: [] };
   }
 

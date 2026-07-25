@@ -211,7 +211,7 @@ export class CodeAnalysisPlugin implements Plugin {
         issues.push({
           line: source.slice(0, match.index).split('\n').length,
           column: match.index,
-          severity,
+          severity: severity as 'critical' | 'medium' | 'low' | 'high',
           message,
           code: match[0],
         });
@@ -602,7 +602,7 @@ export class CodeGenerationPlugin implements Plugin {
 
   generateClass(name: string, options?: ClassOptions): string {
     const props = (options?.properties || []).map(p => `  ${p.access}${p.static ? ' static' : ''} ${p.name}${p.init ? ` = ${p.init}` : ''};`).join('\n');
-    const methods = (options?.methods || []).map(m => this.generateMethod(m.name, m.params, m.body, options.language)).join('\n\n');
+    const methods = (options?.methods || []).map(m => this.generateMethod(m.name, m.params ?? [], m.body ?? '', options?.language ?? 'typescript')).join('\n\n');
 
     return `class ${name} {\n${props ? props + '\n' : ''}${props && methods ? '\n' : ''}${methods}\n}`;
   }

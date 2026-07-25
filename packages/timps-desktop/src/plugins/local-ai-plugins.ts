@@ -107,7 +107,7 @@ export class LocalAIPlugin implements Plugin {
   }
 
   validateModel(path: string): Promise<ValidationResult> {
-    return Promise.resolve({ valid: true, format: 'gguf', size: 0 });
+    return Promise.resolve({ valid: true, errors: [] });
   }
 
   estimateMemory(modelPath: string): number {
@@ -538,7 +538,7 @@ export class OfflineModePlugin implements Plugin {
     return 'not_set';
   }
 
-  retryWithCloud(): Promise<void> {}
+  retryWithCloud(): Promise<void> { return Promise.resolve(); }
 }
 
 export class OfflineDatabase {
@@ -664,7 +664,7 @@ export class NLUPlugin implements Plugin {
     return [];
   }
 
-  train(utterances: Utterance[], options?: TrainOptions): Promise<void> {}
+  train(utterances: Array<{ text: string; intent: string; entities?: Record<string, unknown> }>, options?: TrainOptions): Promise<void> { return Promise.resolve(); }
 
   async extractEntities(
     input: string,
@@ -984,10 +984,10 @@ export class MemoryPlugin implements Plugin {
   async clear(): Promise<void> {}
 
   exportMemories(options?: ExportOptions): Promise<MemoryData[]> {
-    return [];
+    return Promise.resolve([]);
   }
 
-  importMemories(memories: MemoryData[]): Promise<void> {}
+  importMemories(memories: MemoryData[]): Promise<void> { return Promise.resolve(); }
 
   getRecent(count: number): Promise<Memory[]> {
     return Promise.resolve([]);
@@ -997,9 +997,9 @@ export class MemoryPlugin implements Plugin {
     return Promise.resolve([]);
   }
 
-  markAsImportant(memoryId: string): Promise<void> {}
+  markAsImportant(memoryId: string): Promise<void> { return Promise.resolve(); }
 
-  tag(memoryId: string, tags: string[]): Promise<void> {}
+  tag(memoryId: string, tags: string[]): Promise<void> { return Promise.resolve(); }
 
   getByTag(tag: string): Promise<Memory[]> {
     return Promise.resolve([]);
@@ -1085,7 +1085,7 @@ export class SessionPlugin implements Plugin {
   public capabilities: PluginCapabilities = {};
 
   create(sessionId?: string): Session {
-    return new Session(sessionId);
+    return new Session(sessionId ?? '');
   }
 
   async save(session: Session): Promise<void> {}
@@ -1287,7 +1287,7 @@ export class LocalModelManager implements Plugin {
     modelId: string,
     options?: DownloadOptions
   ): Promise<DownloadResult> {
-    return { path: '', size: 0 };
+    return { path: '', size: 0, time: 0 };
   }
 
   async deleteLocal(modelId: string): Promise<void> {}
@@ -1321,7 +1321,7 @@ export class LocalModelManager implements Plugin {
     return false;
   }
 
-  cancelDownload(modelId: string): Promise<void> {}
+  cancelDownload(modelId: string): Promise<void> { return Promise.resolve(); }
 
   verifyChecksum(modelPath: string): Promise<boolean> {
     return Promise.resolve(true);
@@ -1439,12 +1439,12 @@ export class GrammarPlugin implements Plugin {
     return grammar;
   }
 
-  validate(grammar: string): ValidationResult {
+  validate(grammar: string): GrammarValidationResult {
     return { valid: true, errors: [] };
   }
 }
 
-export interface ValidationResult {
+export interface GrammarValidationResult {
   valid: boolean;
   errors: string[];
 }
@@ -1497,7 +1497,7 @@ export class BenchmarkPlugin implements Plugin {
     return { fastest: '', slowest: '', comparison: {} };
   }
 
-  saveResults(result: BenchmarkResult, path: string): Promise<void> {}
+  saveResults(result: BenchmarkResult, path: string): Promise<void> { return Promise.resolve(); }
 
   loadResults(path: string): Promise<BenchmarkResult[]> {
     return Promise.resolve([]);

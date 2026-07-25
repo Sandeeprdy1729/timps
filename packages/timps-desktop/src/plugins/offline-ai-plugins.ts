@@ -46,7 +46,7 @@ export class WhisperPlugin implements Plugin {
     return 'base';
   }
 
-  downloadModel(model: string): Promise<void> {}
+  downloadModel(model: string): Promise<void> { return Promise.resolve(); }
 
   isModelDownloaded(model: string): boolean {
     return false;
@@ -66,7 +66,7 @@ export class WhisperPlugin implements Plugin {
     return 0;
   }
 
-  preprocessAudio(input: string, output: string, options?: AudioOptions): Promise<void> {}
+  preprocessAudio(input: string, output: string, options?: AudioOptions): Promise<void> { return Promise.resolve(); }
 }
 
 export interface TranscribeOptions {
@@ -94,9 +94,9 @@ export interface Transcript {
   text: string;
   segments: Segment[];
   language: string;
-  languageProb: number;
+  languageProb?: number;
   duration: number;
-  encoding: string;
+  encoding?: string;
 }
 
 export interface Segment {
@@ -143,8 +143,8 @@ export class TTSPlugin implements Plugin {
 
   async speakToFile(text: string, outputPath: string, options?: TTSOptions): Promise<void> {}
 
-  async speakStream(text: string, options?: TTSOptions): Promise<ReadableStream> {
-    return new ReadableStream();
+  async speakStream(text: string, options?: TTSOptions): Promise<any> {
+    return new (globalThis as any).ReadableStream();
   }
 
   setVoice(voice: string): void {}
@@ -217,11 +217,11 @@ export class OllamaPlugin implements Plugin {
   }
 
   async chat(model: string, messages: OllamaMessage[]): Promise<OllamaResponse> {
-    return { message: { role: '', content: '' }, done: true };
+    return { message: { role: 'assistant', content: '' }, done: true };
   }
 
   async generate(model: string, prompt: string): Promise<OllamaResponse> {
-    return { message: { role: '', content: '' }, done: true };
+    return { message: { role: 'assistant', content: '' }, done: true };
   }
 
   async embed(model: string, input: string | string[]): Promise<number[]> {
@@ -229,21 +229,11 @@ export class OllamaPlugin implements Plugin {
   }
 
   async pull(model: string): Promise<AsyncGenerator<PullProgress>> {
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: () => Promise.resolve({ done: true, value: { status: '' } }),
-    };
+    return (async function*() { yield { status: '' }; })();
   }
 
   async push(model: string): Promise<AsyncGenerator<PushProgress>> {
-    return {
-      [Symbol.asyncIterator]() {
-        return this;
-      },
-      next: () => Promise.resolve({ done: true, value: { status: '' } }),
-    };
+    return (async function*() { yield { status: '' }; })();
   }
 
   async create(model: string, modelfile: string): Promise<void> {}
@@ -261,11 +251,11 @@ export class OllamaClient {
   }
 
   async chat(messages: OllamaMessage[]): Promise<OllamaResponse> {
-    return { message: { role: '', content: '' }, done: true };
+    return { message: { role: 'assistant', content: '' }, done: true };
   }
 
   async generate(prompt: string): Promise<OllamaResponse> {
-    return { message: { role: '', content: '' }, done: true };
+    return { message: { role: 'assistant', content: '' }, done: true };
   }
 }
 
@@ -516,7 +506,10 @@ export class LlamafileInstance {
   private port: number;
   private process: any;
 
-  constructor(private options: LlamafileOptions = {}) {}
+  constructor(private options: LlamafileOptions = {}) {
+    this.host = options.host || 'localhost';
+    this.port = options.port || 8080;
+  }
 
   async waitUntilReady(timeout?: number): Promise<void> {}
 
@@ -594,7 +587,7 @@ export class BentoMLPlugin implements Plugin {
 }
 
 export class BentoService {
-  constructor(private serviceName: string) {}
+  constructor(private serviceName: string = '') {}
 
   async predict(input: unknown): Promise<unknown> {
     return null;
@@ -648,7 +641,7 @@ export interface DeployOptions {
 }
 
 export class LocalFunction {
-  constructor(private functionPath: string) {}
+  constructor(private functionPath: string = '') {}
 
   async call(payload: unknown): Promise<unknown> {
     return null;
@@ -676,13 +669,18 @@ export class ModelCachePlugin implements Plugin {
     return loader();
   }
 
-  preload(modelIds: string[], loader: (id: string) => Promise<ModelHandle>): Promise<void> {}
+  preload(modelIds: string[], loader: (id: string) => Promise<ModelHandle>): Promise<void> { return Promise.resolve(); }
 
   evict(modelId: string): void {}
 
-  getStats(): CacheStats {
-    return { hits: 0, misses: 0, capacity: 0, size: 0 };
+  getStats(): ModelCacheStats {
+    return { hits: 0, misses: 0, hitRate: 0, capacity: 0, size: 0 };
   }
+}
+
+export interface ModelHandle {
+  dispose(): void;
+  [key: string]: unknown;
 }
 
 export class ModelCache {
@@ -693,7 +691,7 @@ export class ModelCache {
 
   constructor(private maxSize: number = 2) {}
 
-  async get(key: string, load: () => Promise<ModelHandle>): Promise<ModelHandle> {
+  async getOrLoad(key: string, load: () => Promise<ModelHandle>): Promise<ModelHandle> {
     if (this.cache.has(key)) {
       this.hits++;
       this.updateAccess(key);
@@ -753,7 +751,7 @@ export class ModelCache {
     return this.cache.size;
   }
 
-  getStats(): CacheStats {
+  getStats(): ModelCacheStats {
     const total = this.hits + this.misses;
     return {
       hits: this.hits,
@@ -779,7 +777,7 @@ export class ModelCache {
   }
 }
 
-export interface CacheStats {
+export interface ModelCacheStats {
   hits: number;
   misses: number;
   hitRate: number;
@@ -813,7 +811,7 @@ export class TextSplitPlugin implements Plugin {
     if (!options?.sentencesPerChunk) return sentences;
 
     return sentences.reduce((chunks: string[], sentence, i) => {
-      const chunkIndex = Math.floor(i / options.sentencesPerChunk);
+      const chunkIndex = Math.floor(i / (options?.sentencesPerChunk ?? 1));
       chunks[chunkIndex] = (chunks[chunkIndex] || '') + sentence;
       return chunks;
     }, []);
@@ -1047,7 +1045,7 @@ export class PromptCachePlugin implements Plugin {
 
   async clear(): Promise<void> {}
 
-  async getStats(): Promise<CacheStats> {
+  async getStats(): Promise<PromptCacheStats> {
     return { count: 0, hits: 0, misses: 0 };
   }
 }
@@ -1060,7 +1058,7 @@ export interface CachedCompletion {
   lastUsed: number;
 }
 
-export interface CacheStats {
+export interface PromptCacheStats {
   count: number;
   hits: number;
   misses: number;
@@ -1103,9 +1101,9 @@ export class SafetyPlugin implements Plugin {
 }
 
 export class SafetyResult {
-  safe: boolean;
-  categories: string[];
-  scores: number[];
+  safe: boolean = true;
+  categories: string[] = [];
+  scores: number[] = [];
   reason?: string;
 }
 

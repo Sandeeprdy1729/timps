@@ -257,16 +257,16 @@ describe('utils', () => {
   describe('searchSemantic', () => {
     it('should search by content', () => {
       const entries = [
-        { id: '1', type: 'fact', content: 'hello world', tags: [] } as SemanticEntry,
-        { id: '2', type: 'fact', content: 'foo bar', tags: [] } as SemanticEntry,
+        { id: '1', type: 'fact', content: 'hello world', tags: [], timestamp: 0 } as SemanticEntry,
+        { id: '2', type: 'fact', content: 'foo bar', tags: [], timestamp: 0 } as SemanticEntry,
       ];
       expect(searchSemantic(entries, 'hello')).toHaveLength(1);
     });
 
     it('should search by tags', () => {
       const entries = [
-        { id: '1', type: 'fact', content: 'test', tags: ['important'] } as SemanticEntry,
-        { id: '2', type: 'fact', content: 'test2', tags: [] } as SemanticEntry,
+        { id: '1', type: 'fact', content: 'test', tags: ['important'], timestamp: 0 } as SemanticEntry,
+        { id: '2', type: 'fact', content: 'test2', tags: [], timestamp: 0 } as SemanticEntry,
       ];
       expect(searchSemantic(entries, 'important')).toHaveLength(1);
     });

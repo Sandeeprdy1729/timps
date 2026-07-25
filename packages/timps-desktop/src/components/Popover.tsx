@@ -23,7 +23,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(({
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [positionStyle, setPositionStyle] = useState<CSSProperties>({});
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const calculatePosition = useCallback(() => {

@@ -1,5 +1,17 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface WebAppManifest {
+  name?: string;
+  short_name?: string;
+  icons?: Array<{ src: string; sizes: string }>;
+  screenshots?: Array<{ src: string }>;
+  [key: string]: unknown;
+}
+
 export class PWAPlugin implements Plugin {
   public manifest: PluginManifest = {
     id: '@timps/pwa',
@@ -147,21 +159,21 @@ export class ManifestPlugin implements Plugin {
 
   public capabilities: PluginCapabilities = {};
 
-  private manifest: Partial<Manifest> | null = null;
+  private webManifest: Partial<WebAppManifest> | null = null;
 
-  async load(): Promise<Partial<Manifest> {
-    if (this.manifest) return this.manifest;
+  async load(): Promise<Partial<WebAppManifest>> {
+    if (this.webManifest) return this.webManifest;
 
     const link = document.querySelector('link[rel="manifest"]');
     if (!link) throw new Error('Manifest link not found');
 
     const response = await fetch(link.getAttribute('href')!);
-    this.manifest = await response.json();
-    return this.manifest;
+    this.webManifest = await response.json();
+    return this.webManifest!;
   }
 
-  async get(): Promise<Partial<Manifest> {
-    return this.manifest || this.load();
+  async get(): Promise<Partial<WebAppManifest>> {
+    return this.webManifest || this.load();
   }
 
   async getIcons(): Promise<Array<{ src: string; sizes: string }>> {
@@ -173,11 +185,11 @@ export class ManifestPlugin implements Plugin {
   }
 
   getName(): string {
-    return this.manifest?.name || 'TIMPS';
+    return this.webManifest?.name || 'TIMPS';
   }
 
   getShortName(): string {
-    return this.manifest?.short_name || 'TIMPS';
+    return this.webManifest?.short_name || 'TIMPS';
   }
 }
 
@@ -732,13 +744,15 @@ export class SignalPlugin implements Plugin {
   }
 
   createDerived<T, U>(
-    signal: { get: () => T },
+    signal: { get: () => T; subscribe?: (handler: (value: T) => void) => void },
     compute: (value: T) => U
   ): { get: () => U } {
     let derivedValue: U = compute(signal.get());
-    signal.subscribe(value => {
-      derivedValue = compute(value);
-    });
+    if (signal.subscribe) {
+      signal.subscribe((value: T) => {
+        derivedValue = compute(value);
+      });
+    }
     return { get: () => derivedValue };
   }
 

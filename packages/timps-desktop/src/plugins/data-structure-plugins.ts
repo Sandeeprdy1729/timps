@@ -14,7 +14,7 @@ export class GraphPlugin implements Plugin {
   public capabilities: PluginCapabilities = {};
 
   private nodes: Map<string, unknown> = new Map();
-  private edges: Array<{ from: string; to: string; weight?: number }> = new Map();
+  private edges: Array<{ from: string; to: string; weight?: number }> = [];
 
   addNode(id: string, data: unknown): void {
     this.nodes.set(id, data);
@@ -75,16 +75,16 @@ export class TreePlugin implements Plugin {
 
   public capabilities: PluginCapabilities = {};
 
-  private root: { id: string; data: unknown; children: Array<{ id: string; data: unknown }> } | null = null;
+  private root: { id: string; data: unknown; children: Array<{ id: string; data: unknown; children: Array<{ id: string; data: unknown }> }> } | null = null;
 
   setRoot(id: string, data: unknown): void {
-    this.root = { id, data, children: [] };
+    this.root = { id, data, children: [] as Array<{ id: string; data: unknown; children: Array<{ id: string; data: unknown }> }> };
   }
 
   addChild(parentId: string, id: string, data: unknown): void {
     const node = this.findNode(parentId);
     if (node) {
-      node.children.push({ id, data });
+      node.children.push({ id, data, children: [] as any } as any);
     }
   }
 
@@ -136,7 +136,7 @@ export class TreePlugin implements Plugin {
     let maxDepth = 0;
     for (const child of children) {
       if (child.children) {
-        maxDepth = Math.max(maxDepth, this.calculateDepth(child.children as Array<{ id: string; data: unknown; children: Array<{ id: string; data: unknown }> }));
+        maxDepth = Math.max(maxDepth, this.calculateDepth(child.children as Array<{ id: string; data: unknown; children: Array<{ id: string; data: unknown }> }>));
       }
     }
     return maxDepth + 1;
@@ -209,7 +209,7 @@ export class HeapPlugin implements Plugin {
   private bubbleUp(index: number): void {
     while (index > 0) {
       const parentIndex = Math.floor((index - 1) / 2);
-      if (this.compare(this.heap[index], this.heap[parentIndex]) {
+      if (this.compare(this.heap[index], this.heap[parentIndex])) {
         [this.heap[index], this.heap[parentIndex]] = [this.heap[parentIndex], this.heap[index]];
         index = parentIndex;
       } else {
@@ -367,7 +367,7 @@ export class TriePlugin implements Plugin {
 
   public capabilities: PluginCapabilities = {};
 
-  private root: Map<string, Map<string, unknown>> = new Map();
+  private root: Map<string, unknown> = new Map();
 
   insert(word: string, value?: unknown): void {
     let current = this.root;

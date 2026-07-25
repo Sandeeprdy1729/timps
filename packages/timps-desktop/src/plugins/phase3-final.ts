@@ -22,7 +22,7 @@ export class FinalPhase3Plugin implements Plugin {
     return value;
   }
 
-  useWith<T>(fn: (...args: unknown[]) => T, transformer: (fn: (...args: unknown[]) => unknown): T): (...args: unknown[]) => T {
+  useWith<T>(fn: (...args: unknown[]) => T, transformer: (fn: (...args: unknown[]) => unknown) => (...args: unknown[]) => T): (...args: unknown[]) => T {
     return (...args: unknown[]) => transformer(fn)(...args);
   }
 
@@ -35,7 +35,7 @@ export class FinalPhase3Plugin implements Plugin {
   }
 
   retry<T>(fn: () => T, attempts: number): T {
-    let lastError: Error;
+    let lastError: Error | undefined;
     for (let i = 0; i < attempts; i++) {
       try {
         return fn();
@@ -43,7 +43,7 @@ export class FinalPhase3Plugin implements Plugin {
         lastError = e as Error;
       }
     }
-    throw lastError;
+    throw lastError!;
   }
 
   until<T>(fn: () => T, condition: (val: T) => boolean): T {

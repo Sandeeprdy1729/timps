@@ -119,3 +119,4 @@ packages/server/memory/
 packages/timps-desktop/src/services/memory.ts
 evals/suites/memory-accuracy.ts
 apps/mobile/src/screens/MemoryScreen.tsx
+memory-core

@@ -122,6 +122,18 @@ export interface HuggingFaceMeta {
   library_name: string | null;
 }
 
+export interface IntelligenceAlert {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  severity: string;
+  timestamp: number;
+  dismissed: boolean;
+  source: string;
+  snoozed_until?: number;
+}
+
 // ── Invoke helper — falls back in non-Tauri context ───────────────────────
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -345,4 +357,15 @@ export const api = {
 
   analyzeLensLink: (url: string, linkType: string, metadataJson: string, extraPrompt?: string) =>
     invoke<string>('analyze_lens_link', { url, linkType, metadataJson, extraPrompt: extraPrompt ?? null }),
+
+  // ── Intelligence Alerts ────────────────────────────────────────────────
+
+  getAlerts: (projectPath: string) =>
+    invoke<IntelligenceAlert[]>('get_alerts', { projectPath }),
+
+  dismissAlert: (projectPath: string, alertId: string) =>
+    invoke<void>('dismiss_alert', { projectPath, alertId }),
+
+  snoozeAlert: (projectPath: string, alertId: string, until: number) =>
+    invoke<void>('snooze_alert', { projectPath, alertId, until }),
 };

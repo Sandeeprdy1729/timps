@@ -14,6 +14,8 @@ import { IntelligenceDashboard } from './components/IntelligenceDashboard';
 import { CommandCenter } from './components/CommandCenter';
 import { useTheme } from './theme/ThemeProvider';
 import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
+import { PluginLifecycleManager } from './plugins/lifecycle';
+import { registerBuiltinPlugins } from './plugins/builtins';
 import './App.css';
 
 type View = 'chat' | 'command' | 'lens' | 'semantic' | 'episodic' | 'stats' | 'search' | 'nexus' | 'intelligence' | 'settings';
@@ -28,6 +30,17 @@ export default function App() {
   const [episodicEntries, setEpisodicEntries] = useState<EpisodicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  // Initialize plugin system on mount
+  useEffect(() => {
+    const lifecycle = new PluginLifecycleManager();
+    registerBuiltinPlugins().forEach(plugin => {
+      lifecycle.register(plugin);
+    });
+    lifecycle.initializeAll().catch(err => {
+      console.warn('Plugin initialization failed:', err);
+    });
+  }, []);
 
   // Auto-detect project path on first launch
   useEffect(() => {

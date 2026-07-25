@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, CSSProperties, ReactNode, createContext, useContext } from 'react';
-import { Plugin, PluginManifest, PluginCapabilities } from '../core/types';
+import { Plugin, PluginManifest, PluginCapabilities } from './types';
 
 export interface PluginUIConfig {
   position?: 'left' | 'right' | 'bottom';

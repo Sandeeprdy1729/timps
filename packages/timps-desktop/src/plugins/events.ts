@@ -8,7 +8,7 @@ interface EventMap {
 
 export class PluginEventEmitter {
   private events: EventMap = {};
-  private pluginEvents: Map<string, EventMap> = new Map();
+  protected pluginEvents: Map<string, EventMap> = new Map();
 
   on(event: string, handler: EventCallback): void {
     if (!this.events[event]) {

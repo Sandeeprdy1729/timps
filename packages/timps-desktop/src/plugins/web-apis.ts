@@ -122,7 +122,7 @@ export class FileSystemPlugin implements Plugin {
     return true;
   }
 
-  async createWritableFileStream(handle: FileSystemFileHandle, options?: WritableStreamOptions): Promise<WritableStream> {
+  async createWritableFileStream(handle: FileSystemFileHandle, options?: any): Promise<WritableStream> {
     return new WritableStream();
   }
 }

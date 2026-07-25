@@ -1,7 +1,7 @@
-import { Plugin, PluginMetadata, Plugin, PluginCapabilities } from './types';
+import { PluginManifest as _PluginManifest, PluginCapabilities } from './types';
 
-export interface Plugin {
-  manifest: PluginManifest;
+interface Plugin {
+  manifest: _PluginManifest;
   capabilities?: PluginCapabilities;
   hooks?: PluginHooks;
 }
@@ -595,7 +595,7 @@ export class CalculatorPlugin implements Plugin {
   }
 
   async convert(value: number, from: string, to: string): Promise<number> {
-    const conversions: Record<string, Record<string, number>> = {
+    const conversions: Record<string, Record<string, number | ((v: number) => number)>> = {
       km: { mi: 0.621371 },
       mi: { km: 1.60934 },
       kg: { lb: 2.20462 },
@@ -605,9 +605,15 @@ export class CalculatorPlugin implements Plugin {
       k: { c: (v: number) => v - 273.15, f: (v: number) => (v - 273.15) * 9/5 + 32 },
     };
     const rates = conversions[from];
-    if (!rates || typeof rates[to] === 'number') {
-      return value * (rates?.[to] as number || 1);
+    if (!rates) return value;
+    const rate = rates[to];
+    if (typeof rate === 'function') {
+      return rate(value);
     }
+    if (typeof rate === 'number') {
+      return value * rate;
+    }
+    return value;
     return (rates[to] as (v: number) => number)(value);
   }
 
@@ -638,7 +644,7 @@ export class ConverterPlugin implements Plugin {
   private units: Record<string, Record<string, {
     to: (v: number) => number;
     from: (v: number) => number;
-  }> = {};
+  }>> = {};
 
   async registerUnit(category: string, unit: string, to: (v: number) => number, from: (v: number) => number): Promise<void> {
     if (!this.units[category]) {

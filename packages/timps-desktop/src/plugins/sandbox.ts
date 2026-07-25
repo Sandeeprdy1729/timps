@@ -113,7 +113,7 @@ export class PluginSandbox {
       throw new Error('Cannot access iframe window');
     }
 
-    const fn = new iframeWindow.Function(code);
+    const fn = new (iframeWindow as any).Function(code);
     return fn();
   }
 

@@ -434,7 +434,7 @@ export class CanvasPlugin implements Plugin {
   }
 
   toDataURL(ctx: CanvasRenderingContext, type = 'image/png', quality = 1): string {
-    return ctx.canvas.toDataURL(type, quality);
+    return (ctx.canvas as any).toDataURL(type, quality);
   }
 }
 
@@ -446,7 +446,7 @@ export class Canvas {
     this.canvas = document.createElement('canvas');
     this.canvas.width = w;
     this.canvas.height = h;
-    this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext;
+    this.ctx = this.canvas.getContext('2d') as unknown as CanvasRenderingContext;
   }
 
   get width(): number {

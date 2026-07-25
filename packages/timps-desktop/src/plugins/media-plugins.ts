@@ -493,7 +493,7 @@ export class SVGPlugin implements Plugin {
 
   setStyle(el: SVGElement, style: Record<string, string>): void {
     for (const [key, value] of Object.entries(style)) {
-      (el.style as Record<string, string>)[key] = value;
+      (el.style as any)[key] = value;
     }
   }
 }

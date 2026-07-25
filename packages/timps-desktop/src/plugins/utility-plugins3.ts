@@ -316,8 +316,8 @@ export class ObjectUtilsPlugin implements Plugin {
     const result = { ...obj };
     for (const def of defaults) {
       for (const [key, value] of Object.entries(def)) {
-        if (!(key in result) || result[key] === undefined) {
-          result[key] = value;
+        if (!(key in result) || (result as any)[key] === undefined) {
+          (result as any)[key] = value;
         }
       }
     }
@@ -373,7 +373,7 @@ export class ObjectUtilsPlugin implements Plugin {
     const result: Partial<T> = {};
     for (const [key, value] of Object.entries(obj)) {
       if (predicate(value, key)) {
-        result[key as keyof T] = value;
+        (result as any)[key] = value;
       }
     }
     return result;
@@ -383,7 +383,7 @@ export class ObjectUtilsPlugin implements Plugin {
     const result: Partial<T> = {};
     for (const [key, value] of Object.entries(obj)) {
       if (!predicate(value, key)) {
-        result[key as keyof T] = value;
+        (result as any)[key] = value;
       }
     }
     return result;

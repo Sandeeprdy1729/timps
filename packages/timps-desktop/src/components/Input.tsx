@@ -23,7 +23,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 }, ref) => {
   const [focused, setFocused] = useState(false);
   const [hasValue, setHasValue] = useState(!!props.value || !!props.defaultValue);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFocus = useCallback(() => setFocused(true), []);
   const handleBlur = useCallback(() => setFocused(false), []);
@@ -93,7 +93,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
   ...props
 }, ref) => {
   const [focused, setFocused] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleFocus = useCallback(() => setFocused(true), []);
   const handleBlur = useCallback(() => setFocused(false), []);
@@ -206,7 +206,7 @@ export const FileInput = forwardRef<HTMLInputElement, FileInputProps>(({
 }, ref) => {
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string>('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);

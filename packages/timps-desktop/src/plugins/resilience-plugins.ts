@@ -214,7 +214,7 @@ export class CachePlugin implements Plugin {
 
   set(key: string, value: unknown, ttl?: number): void {
     if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
-      const oldestKey = this.cache.keys().next().value;
+      const oldestKey = this.cache.keys().next().value ?? '';
       this.cache.delete(oldestKey);
     }
     this.cache.set(key, {
@@ -302,7 +302,8 @@ export class CacheInvalidationPlugin implements Plugin {
     if (!regex) return [];
 
     const invalidated: string[] = [];
-    for (const key of regex.keys()) {
+    // regex doesn't have .keys() in standard JS; iterate matches via a known keys store
+    for (const key of (this as any)._patternKeys?.(pattern) ?? []) {
       invalidated.push(key);
     }
     return invalidated;
@@ -502,7 +503,7 @@ export class MemoPlugin implements Plugin {
       });
 
       if (options?.maxSize && cache.size > options.maxSize) {
-        const firstKey = cache.keys().next().value;
+        const firstKey = cache.keys().next().value ?? '';
         cache.delete(firstKey);
       }
 
@@ -675,8 +676,8 @@ export class BatchPlugin implements Plugin {
     const executing: Promise<void>[] = [];
 
     for (const item of items) {
-      const promise = processor(item).then(r => results.push(r));
-      executing.push(promise);
+      const promise = processor(item).then(r => { results.push(r); });
+      executing.push(promise as Promise<void>);
 
       if (executing.length >= concurrency) {
         await Promise.race(executing);

@@ -201,7 +201,7 @@ export class EnvPlugin implements Plugin {
   }
 
   all(): Record<string, string> {
-    return { ...process.env };
+    return { ...process.env } as Record<string, string>;
   }
 
   require(key: string): string {
@@ -473,7 +473,6 @@ export interface WatchOptions {
   cwd?: string;
   disableGlobbing?: boolean;
   ignored?: string | string[];
-  persistent?: boolean;
 }
 
 export class ThrottlePlugin implements Plugin {

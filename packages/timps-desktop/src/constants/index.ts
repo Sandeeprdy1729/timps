@@ -94,3 +94,10 @@ export const ERROR_MESSAGES = {
   unauthorized: 'Authentication required',
   notFound: 'Resource not found',
 } as const;
+
+export const INTEGRATION_CATEGORIES = {
+  'dev-tools': { label: 'Developer Tools', icon: '' },
+  'ai-agents': { label: 'AI & Agents', icon: '' },
+  'messaging': { label: 'Messaging', icon: '' },
+  'productivity': { label: 'Productivity', icon: '' },
+} as const;

@@ -148,7 +148,7 @@ export class PluginSecurityPolicy {
       errors.push('Plugin ID is required');
     }
 
-    if (manifest.capabilities?.api?.network && !manifest.capabilities?.api?.http) {
+    if (manifest.capabilities?.api?.network && !(manifest.capabilities?.api as any)?.http) {
       errors.push('Network capability requires http permission');
     }
 

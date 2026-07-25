@@ -56,7 +56,7 @@ export class MarkdownPlugin implements Plugin {
     const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
     let match;
 
-    while ((match = regex.exec(markdown)) {
+    while ((match = regex.exec(markdown))) {
       links.push({
         text: match[1],
         url: match[2],
@@ -140,7 +140,7 @@ export class TemplateEnginePlugin implements Plugin {
 
     const conditionalRegex = /\{\{#if (\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
     while ((match = conditionalRegex.exec(template))) {
-      if (data[match[1]])) {
+      if (data[match[1]]) {
         result = result.replace(match[0], match[2]);
       } else {
         result = result.replace(match[0], '');
@@ -165,7 +165,7 @@ export class TemplateEnginePlugin implements Plugin {
   }
 }
 
-export class i18nPlugin implements Plugin {
+export class I18nPlugin implements Plugin {
   public manifest: PluginManifest = {
     id: '@timps/i18n',
     name: 'Internationalization',
@@ -522,7 +522,7 @@ export class ErrorHandlerPlugin implements Plugin {
   ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
     return async (...args: Parameters<T>) => {
       try {
-        return await fn(...args);
+        return await fn(...args) as ReturnType<T>;
       } catch (error) {
         this.handleError(error as Error, { fn: fn.name });
         throw error;
@@ -743,7 +743,7 @@ export class PerformancePlugin implements Plugin {
 
 export const markdownPlugin = new MarkdownPlugin();
 export const templateEnginePlugin = new TemplateEnginePlugin();
-export const i18nPlugin = new i18nPlugin();
+export const i18nPlugin = new I18nPlugin();
 export const dateFormatPlugin = new DateFormatPlugin();
 export const numberFormatPlugin = new NumberFormatPlugin();
 export const validationPlugin = new ValidationPlugin();
