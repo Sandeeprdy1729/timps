@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 51    | 38        |
+| High     | 89    | 52    | 37        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **62** | **326** |
+| **Total**| **388** | **63** | **325** |
 
 ---
 
@@ -81,11 +81,12 @@
 | H53 | `packages/timps-desktop/src/plugins/integrations/{16 files}` | Fake `runE2ETests()` functions in 15 integration files (github, slack, discord-new, google-calendar, google-gmail, hotjar, jira, linear, mixpanel, raycast, spotify, stripe, ticktick, todoist, twilio-new) + `runSupabaseE2ETests()` in supabase.ts push hardcoded `{test: '...', passed: true}` results without executing any API calls; UI/CI consuming these reports false green checkmarks; openai.ts is the only file with real E2E tests | Removed fake `runE2ETests()` from all 15 files and `runSupabaseE2ETests()` from supabase.ts; removed discord-new re-export of `runE2ETests` from index.ts to eliminate name conflict with openai's real implementation; openai.ts retained with real API-calling tests; 0 tsc errors, 47 integration tests green |
 | H54 | `packages/timps-desktop/src/plugins/integrations/index.ts:7` | Barrel file unloadable: (1) line 7 re-exports from `./discord` which does not exist (only `discord-new.ts`), (2) lines 1-9 export symbols that were never defined (`GoogleCalendarPlugin`, `googleCalendarPlugin`, `googleGmailPlugin`, `googleDrivePlugin`, `microsoftOutlookPlugin`, `microsoftTeamsPlugin`, `slackPlugin`, `discordPlugin`, `GitHubPlugin`, `githubPlugin`), (3) line 35 duplicate `runE2ETests` export (now removed), (4) lines 41-64 use CommonJS `require()` in ESM/Vite renderer module; INTEGRATIONS array can never be constructed | Rewrote barrel with correct exports: removed nonexistent `./discord` import, replaced phantom class/const exports with actual `create*Integration()` function exports, fixed INTEGRATIONS array to call factory functions where no singleton exists (`createGoogleCalendarIntegration()`, etc.), kept singleton exports where they exist (`freshdeskPlugin`, `closePlugin`, etc.); 0 tsc errors, 47 integration tests green |
 | H55 | `packages/timps-desktop/src/plugins/integrations/openai.ts:1012` (and 12 other integration files) — API keys/tokens for 14+ services read from plaintext `localStorage` (`openai-api-key`, `github-token`, `slack-token`, `stripe-api-key`, `discord-token`, `google-calendar-token`, `google-gmail-token`, `jira-token`, `linear-token`, `mixpanel-api-key`, `spotify-access-token`, `ticktick-token`, `todoist-token`); localStorage in Tauri webview is unencrypted on disk, readable by any XSS; no code calls `setItem` so the reads always return null — flows doubly broken | Created `secureStore.ts` with AES-256-GCM encryption via Web Crypto API (PBKDF2-derived key from device-specific values, random IV per encrypt, 100K iterations). Updated all 13 integration files to import `SecureStore` and use `await SecureStore.get()` instead of `localStorage.getItem()` for credential reads. Added `SecureStore.set()` and `migrate()` methods for writes and legacy migration. 0 tsc errors, 47 integration tests green |
+| H56 | `packages/timps-desktop/src/plugins/integrations/stripe.ts:366` — All Stripe write operations (21 POST calls) send JSON bodies via `JSON.stringify()` but Stripe API only accepts `application/x-www-form-urlencoded`; every create/update/delete returns 400 "Invalid request" | Added `encodeFormData()` helper that URL-encodes objects (nested objects JSON-stringified as values), added `stripeHeaders()` returning `Authorization` + `Content-Type: application/x-www-form-urlencoded`. Replaced all 21 `JSON.stringify()` body encodings with `encodeFormData()`. 0 tsc errors, 47 integration tests green |
 
-## 📋 Remaining — 326 Issues
+## 📋 Remaining — 325 Issues
 
-### High (38)
-⏸️ All 38 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (37)
+⏸️ All 37 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
