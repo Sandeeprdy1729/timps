@@ -7,10 +7,10 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 56    | 33        |
+| High     | 89    | 57    | 32        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **67** | **321** |
+| **Total**| **388** | **68** | **320** |
 
 ---
 
@@ -87,11 +87,12 @@
 | H59 | `packages/workflow-engine/src/index.ts:539` — `condition` action steps have no effect on control flow: `handleCondition` returns boolean but `executeSteps` always follows `onSuccess`/next-step regardless; no false-branch, skip, or halt exists | Modified `executeSteps` to detect condition steps and branch on result: when `handleCondition` returns `true`, follows `onSuccess` (or increments); when `false`, follows `onFailure` (or increments). Uses existing `onFailure` field for false-branch, maintaining backward compatibility with non-condition steps |
 | H60 | `README.md:313` — Fabricated benchmark claims: labels recall metric "LongMemEval-S" but uses 20 self-authored keyword queries over 50-fact synthetic corpus; lists competitor numbers (agentmemory 95.2%, mem0 72%, Letta 68%) with no data; "17ms latency" is total wall time for all 20 in-process queries vs competitors' per-call network latencies; benchmark/results/README.md claims "15 runs" with no committed JSON files; "Baseline (no memory)" column entirely empty; EchoForge/HarmonicSheafWeaver/AetherForgeERL/ResonanceForge headers cite fabricated "Benchmarks vs" numbers; ARCHITECTURE.md cites nonexistent baselines | Rewrote README.md benchmark table: removed fabricated "LongMemEval-S" label and competitor columns, added honest metric descriptions ("19/20 queries find expected answer in top-5"), added disclaimer about in-process vs network latency. Fixed benchmark/results/README.md: removed empty Baseline column, removed false "15 runs" claim, added accurate latency description. Removed fabricated benchmark claims from EchoForge.ts (synthetic 5k nodes), HarmonicSheafWeaver.ts (synthetic 2k nodes), AetherForgeERL.ts (synthetic 2k nodes), ResonanceForge.ts (synthetic 1000-node graph). Removed benchmark sections from ARCHITECTURE.md (lines 109-113, 141-146, 179-182). All files now only contain references to published papers, not fabricated comparisons |
 | H61 | `timps-code/install.sh:50` — Installer installs wrong npm package name (`timps-code` instead of `@timps-ai/timps-code`); failure swallowed by `2>/dev/null \|\| true`; wrapper script (lines 55-63) points to nonexistent `~/.local/timps.js`; PATH check `grep -q "timps"` false-positives on any line containing 'timps'; unconditionally prints success message | Rewrote install.sh: uses correct package name `@timps-ai/timps-code`, removed error swallowing, wrapper only created when needed and points to actual binary via `npm root -g`, PATH check uses exact string match for the export line, final status block checks if install actually succeeded before printing success |
+| H62 | `timps-code/package-lock.json:1` — All three standalone lockfiles stale and missing workspace dependencies: timps-code/package-lock.json (root name 'timps-code' not '@timps-ai/timps-code'), timps-mcp/package-lock.json, packages/server/package-lock.json (name 'timps' v2.0.2 vs package.json @timps/server v2.0.4); CI runs `cd pkg && npm ci` using these lockfiles which fail or resolve from npm registry instead of workspace | Deleted all three stale sub-package lockfiles (monorepo uses root lockfile). Updated `.github/workflows/publish.yml`: changed all three jobs to use root `npm ci` + `--workspace=` flag for build/publish; removed stale `cache-dependency-path` pointing to deleted lockfiles; fixed publish commands to use correct scoped package names (`@timps/server`, `@timps-ai/timps-code`, `@timps-ai/timps-mcp`) |
 
-## 📋 Remaining — 321 Issues
+## 📋 Remaining — 320 Issues
 
-### High (33)
-⏸️ All 33 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (32)
+⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed

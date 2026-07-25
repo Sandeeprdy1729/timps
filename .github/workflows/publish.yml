@@ -21,19 +21,18 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: packages/server/package-lock.json
 
       - name: Install dependencies
-        run: cd packages/server && npm ci
+        run: npm ci
 
       - name: Build
-        run: cd packages/server && npm run build
+        run: npm run build --workspace=packages/server
 
       - name: Verify build
         run: test -f packages/server/dist/main.js
 
       - name: Publish to npm
-        run: cd packages/server && npm publish --access public
+        run: npm publish --access public --workspace=packages/server
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -45,7 +44,7 @@ jobs:
 
             Install or update:
             ```bash
-            npm install -g timps
+            npm install -g @timps/server
             ```
 
             See the [full changelog](https://github.com/Sandeeprdy1729/timps/releases) for what's new.
@@ -65,19 +64,18 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: timps-code/package-lock.json
 
       - name: Install dependencies
-        run: cd timps-code && npm ci
+        run: npm ci
 
       - name: Build
-        run: cd timps-code && npm run build
+        run: npm run build --workspace=timps-code
 
       - name: Verify build
         run: test -f timps-code/dist/bin/timps.js
 
       - name: Publish to npm
-        run: cd timps-code && npm publish --access public
+        run: npm publish --access public --workspace=timps-code
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -90,7 +88,7 @@ jobs:
 
             Install or update:
             ```bash
-            npm install -g timps-code
+            npm install -g @timps-ai/timps-code
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -108,19 +106,18 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: timps-mcp/package-lock.json
 
       - name: Install dependencies
-        run: cd timps-mcp && npm ci
+        run: npm ci
 
       - name: Build
-        run: cd timps-mcp && npm run build
+        run: npm run build --workspace=timps-mcp
 
       - name: Verify build
         run: test -f timps-mcp/dist/index.js
 
       - name: Publish to npm
-        run: cd timps-mcp && npm publish --access public
+        run: npm publish --access public --workspace=timps-mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -133,7 +130,7 @@ jobs:
 
             Install or update:
             ```bash
-            npm install -g timps-mcp
+            npm install -g @timps-ai/timps-mcp
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
