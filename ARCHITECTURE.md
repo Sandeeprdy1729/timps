@@ -106,12 +106,6 @@ Layer 6 — ResonanceForge        → ~/.timps/memory/<project-hash>/resonance/
   Wave-interference patterns between nodes predict burnout trajectories,
   contradiction emergence, and relationship drift—without Monte-Carlo randomness.
 
-  Benchmarks vs ChronosForge MC rollouts (1000-node synthetic graph):
-    • Query latency:       45 ms → 12 ms  (-73%)
-    • Burnout foresight:   68%   → 91%    (+23 pt)
-    • Contradiction catch: 82%   → 94%    (+12 pt)
-    • Memory after prune:  -41% via harmonic quenching
-
   Sub-components (by package):
     • packages/memory-core/src/ResonanceForge.ts — file-backed (CLI / MCP / VSCode)
     • packages/server/memory/resonanceForge.ts         — PostgreSQL-backed (full server)
@@ -143,13 +137,6 @@ Layer 7 — EchoForge             → ~/.timps/memory/<project-hash>/echo/
     4. Bi-temporal filtering     — queryAt(atTime) enforces validFrom ≤ t < validTo
     5. Ebbinghaus decay          — HALF_LIFE_MS=14 days, RETRIEVAL_BOOST=0.08
     6. Crystallisation           — nodes surviving 30 days are crystallised (immune to quench)
-
-  Benchmarks vs ResonanceForge L6 (5000-node synthetic graph):
-    • Propagation latency:  -85% vs O(n²) wave scan
-    • Burnout prediction:   +17 pt F1 vs ResonanceForge MC
-    • Contradiction catch:  +13 pt recall vs keyword baseline
-    • Spectral radius:      enforced < 1.0 (all reservoir states bounded)
-    • Bi-temporal accuracy: ≥ 80% point-in-time isolation
 
   Sub-components (by package):
     • packages/memory-core/src/EchoForge.ts   — file-backed (CLI / MCP / VSCode)
@@ -188,11 +175,6 @@ Layer 9 — HarmonicSheafWeaver (HSW)  → ~/.timps/memory/<project-hash>/sheaf-
     • Deterministic trajectories (no Monte-Carlo, no reservoir drift)
     • Phase-coherence modulated restriction maps for sheaf consistency
     • Incremental Laplacian updates (cache invalidation on weave, O(affected))
-
-  Benchmarks (synthetic 2k-node graph):
-    • vs EchoForge:     -87% latency, +13pt contradiction recall, +16pt burnout
-    • vs SynapseQuench: -40% latency, +8pt contradiction recall (algebraic H¹)
-    • vs Baseline BFS:  -92% latency, +20pt overall accuracy
 
   Sub-components (by package):
     • packages/memory-core/src/HarmonicSheafWeaver.ts — file-backed core engine
