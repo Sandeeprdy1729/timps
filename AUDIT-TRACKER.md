@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 38    | 51        |
+| High     | 89    | 39    | 50        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **49** | **339** |
+| **Total**| **388** | **50** | **338** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 38 High
+## ✅ Fixed — 11 Critical + 39 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -30,9 +30,9 @@
 | C2 | `apps/marketplace/src/app/api/plugins/[id]/run/route.ts` | No auth on plugin run | Added `requireAuth` middleware |
 | C3 | `apps/marketplace/src/lib/plugins/api-client.ts` | SSRF via unvalidated URL fetch | Added `isBlockedUrl()` — blocks private IPs, localhost, cloud metadata |
 
-## 📋 Remaining — 339 Issues
+## 📋 Remaining — 338 Issues
 
-### High (51)
+### High (50)
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
 | H1 | `.github/workflows/eval.yml` | Eval baseline never persisted, `github.ref_name` never `"main"` on PR | Added `actions/cache` for baseline dir, fixed branch detection with `github.event_name == 'push' && github.ref == 'refs/heads/main'` |
@@ -72,6 +72,7 @@
 | H35 | `packages/plugin-git/src/index.ts:21`, `packages/plugin-shell/src/index.ts:14` | Both plugins define tools as Array with `{content}` returns, but SDK requires `manifest.tools: ToolSpec[]` + `tools: Record<string, ToolHandler>` returning `{output, error}` — `allTools()` skips them, contributing zero tools | Added `manifest.tools` (5 specs for git, 3 for shell); rewrote `tools` as Record; handlers now return `{output, error}` and accept `_ctx` param. All 8 tools now resolve via registry. |
 | H36 | `packages/server/tools/toolsDb.ts:787` | `CREATE INDEX USING GIN(gist)` on plain `TEXT` column — stock Postgres has no default GIN opclass for text; migration aborts mid-way, dropping all downstream tables | Changed to `(gist)` — default b-tree index works correctly on TEXT |
 | H38 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | All storage paths derived from `HOME` env var (5 locations in commands.rs, 1 in nexus_bridge.rs) — Windows GUI processes use `USERPROFILE`, not `HOME`, so memory resolves to `C:\Program Files\TIMPS\.timps` making the entire desktop app non-functional on Windows | Created `pub(crate) fn home_dir()` checking `HOME` → `USERPROFILE` → `.`; replaced all 6 direct `HOME` references |
+| H39 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | Desktop memory reader triply broken: (1) `project_hash_inner` uses 31-multiply→base36 while memory-core uses SHA-256→12 hex chars so directory names never match, (2) `load_episodes` reads `episodes.jsonl` but v1→v2 migration converts to `episodes.json` and deletes `.jsonl`, (3) nexus_bridge.rs duplicates the wrong hash | Replaced `project_hash_inner` with SHA-256→12 hex chars matching memory-core; `load_episodes` now reads `episodes.json` JSON array; nexus_bridge delegates to `crate::commands::project_hash_inner`; `sha2`+`hex` deps added to Cargo.toml |
 
 ⏸️ Paused — awaiting user instruction to proceed
 
