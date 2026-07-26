@@ -13,6 +13,7 @@ import { ContradictionChecker } from './contradiction-checker';
 import { TimpsClient } from './client/timpsClient';
 import { TimpsLspClient } from './lsp-client';
 import { TIMPS_THEME, TIMPS_ANIMATIONS, TIMPS_GLOBAL_RESET } from './design-tokens';
+import { TIMPsMemory } from './memory';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,9 @@ function detectCodingEntities(content: string): string[] {
 export function activate(context: vscode.ExtensionContext) {
   console.log('TIMPS AI Coding Agent activating...');
 
-  chatProvider = new TIMPSChatViewProvider(context);
+  const memoryInstance = new TIMPsMemory(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || os.homedir());
+  memoryInstance.init().catch(() => {});
+  chatProvider = new TIMPSChatViewProvider(context, memoryInstance);
   const timpsClient = new TimpsClient();
 
   const cfg = vscode.workspace.getConfiguration('timps');
@@ -377,8 +380,10 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
   private _sessions: Session[] = [];
   private _currentSessionId: string;
   private _abortController?: AbortController;
+  private _memory: TIMPsMemory;
 
-  constructor(private readonly _context: vscode.ExtensionContext) {
+  constructor(private readonly _context: vscode.ExtensionContext, memory: TIMPsMemory) {
+    this._memory = memory;
     this._currentSessionId = this._createSession();
     this._sessions = this._context.globalState.get<Session[]>('timps.sessions', []);
     if (this._sessions.length === 0) {
@@ -681,6 +686,13 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
       this._sendToView({ type: 'assistantDone', messageId: assistantMsg.id, content: assistantMsg.content, sessionId });
       this._saveSessions();
       this._saveToChronosVeil(session, userMsg.content, assistantMsg.content);
+
+      // Write to shared memory (visible to CLI/MCP/desktop)
+      this._memory.store({ content: `User: ${userMsg.content.slice(0, 200)}`, type: 'explicit', importance: 1, tags: ['conversation'] }).catch(() => {});
+      this._memory.reflect(userMsg.content, assistantMsg.content).catch(() => {});
+      this._memory.storeEpisode({ summary: userMsg.content.slice(0, 80), userMessage: userMsg.content.slice(0, 300), assistantResponse: assistantMsg.content.slice(0, 300) });
+      const editor = vscode.window.activeTextEditor;
+      if (editor) this._memory.trackFile(editor.document.fileName);
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
