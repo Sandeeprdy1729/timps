@@ -72,9 +72,17 @@ async function main() {
       message: z.string().describe('Message to send to TIMPs'),
       username: z.string().optional().describe('Optional username'),
     },
-  }, async ({ message, username }) => ({
-    content: [{ type: 'text' as const, text: await chat(message, username) }],
-  }));
+  }, async ({ message, username }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content: message, type: 'fact', tags: username ? [`user:${username}`] : [] });
+      const facts = await localEngine.recall(message, { limit: 3 });
+      const context = facts.length > 0
+        ? `\n\nRelated memories:\n${facts.map((f: any) => `- ${f.content}`).join('\n')}`
+        : '';
+      return { content: [{ type: 'text' as const, text: `Received.${context}` }] };
+    }
+    return { content: [{ type: 'text' as const, text: await chat(message, username) }] };
+  });
 
   registerTool('timps_get_memories', {
     description: 'Get all stored memories, goals, and preferences. Use before starting a complex task.',
@@ -583,6 +591,10 @@ async function main() {
       entity: z.string().optional().describe('Primary entity identifier'),
     },
   }, async ({ content, source_module, tags, entity }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content, type: 'fact', tags: [...(tags || []), `source:${source_module}`, entity ? `entity:${entity}` : ''].filter(Boolean) });
+      return { content: [{ type: 'text' as const, text: `✓ Event ingested (local) → tags: ${(tags || []).join(', ') || 'none'}, entity: ${entity || 'none'}` }] };
+    }
     const data = await timpsAPI('/chronos/ingest', 'POST', {
       content,
       sourceModule: source_module,
@@ -601,6 +613,17 @@ async function main() {
       limit: z.number().optional().describe('Max events to return (default 8)'),
     },
   }, async ({ query, limit }) => {
+    if (!SERVER_MODE) {
+      const results = await localEngine.recall(query, { limit: limit || 8 });
+      if (!results.length) {
+        return { content: [{ type: 'text' as const, text: 'No temporal events found for this query.' }] };
+      }
+      const lines = [`**Chronos Veil Resolution (local, ${results.length} results)**\n`];
+      for (const r of results) {
+        lines.push(`- [${r.type}] ${(r.content || '').slice(0, 80)}`);
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
     const data = await timpsAPI('/chronos/query', 'POST', {
       query,
       userId: TIMPS_USER_ID,
@@ -626,6 +649,15 @@ async function main() {
     description: 'Get Chronos Veil statistics: event counts by layer, recent events, and entity graph edges.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      const facts = await localEngine.recall('', { limit: 100 });
+      const text = [
+        `**Chronos Veil Stats (local)**`,
+        `Total events: ${facts.length}`,
+        `  (Full layer classification requires server mode)`,
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/chronos/stats/${TIMPS_USER_ID}`);
     const byLayer = data.byLayer || {};
     const text = [
@@ -649,6 +681,10 @@ async function main() {
       tags: z.array(z.string()).optional().describe('Entity tags: code, bug, tech-debt, api, burnout, relationship, regret'),
     },
   }, async ({ content, source_module, tags }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content, type: 'fact', tags: [...(tags || []), `source:${source_module}`] });
+      return { content: [{ type: 'text' as const, text: `✓ Episodic node created (local)` }] };
+    }
     const data = await timpsAPI('/nexus/ingest', 'POST', {
       content,
       sourceModule: source_module,
@@ -665,6 +701,17 @@ async function main() {
       query: z.string().describe('Episodic query (e.g. "what coding sessions led to burnout signals?", "show my regret patterns around API decisions")'),
     },
   }, async ({ query }) => {
+    if (!SERVER_MODE) {
+      const results = await localEngine.recall(query, { limit: 8 });
+      if (!results.length) {
+        return { content: [{ type: 'text' as const, text: 'No episodic results.' }] };
+      }
+      const lines = [`**NexusForge Results (local, ${results.length} results)**\n`];
+      for (const r of results) {
+        lines.push(`- [${r.type}] ${(r.content || '').slice(0, 120)}`);
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
     const data = await timpsAPI('/nexus/query', 'POST', {
       query,
       userId: TIMPS_USER_ID,
@@ -688,6 +735,17 @@ async function main() {
     description: 'Get NexusForge episodic memory statistics: node counts, edge counts, and source breakdown.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      const facts = await localEngine.recall('', { limit: 100 });
+      const text = [
+        `**NexusForge Stats (local)**`,
+        `Episodic nodes: ${facts.length}`,
+        `Temporal edges: 0`,
+        `Causal edges: 0`,
+        `Sources: local engine`,
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/nexus/stats/${TIMPS_USER_ID}`);
     const sources = data.sources || {};
     const srcLines = Object.entries(sources).map(([k, v]) => `  ${k}: ${v}`).join('\n');
@@ -707,6 +765,19 @@ async function main() {
       limit: z.number().optional().describe('Max nodes to return (default 30)'),
     },
   }, async ({ limit }) => {
+    if (!SERVER_MODE) {
+      const results = await localEngine.recall('', { limit: limit || 30 });
+      if (!results.length) {
+        return { content: [{ type: 'text' as const, text: 'No episodic graph data.' }] };
+      }
+      const text = [
+        `**Episodic Graph (local)** (${results.length} nodes)`,
+        results.slice(0, 10).map((r: any) =>
+          `- [${r.type}] ${(r.content || '').slice(0, 80)}`
+        ).join('\n'),
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/nexus/graph/${TIMPS_USER_ID}?limit=${limit || 30}`);
     const nodes = data.nodes || [];
     const edges = data.edges || [];
@@ -733,6 +804,10 @@ async function main() {
       entity: z.string().optional().describe('Primary entity identifier'),
     },
   }, async ({ content, source_module, tags, entity }) => {
+    if (!SERVER_MODE) {
+      localEngine.store({ content, type: 'fact', tags: [...(tags || []), `source:${source_module}`, entity ? `entity:${entity}` : ''].filter(Boolean) });
+      return { content: [{ type: 'text' as const, text: `✓ Node ingested (local) → tags: ${(tags || []).join(', ') || 'none'}, entity: ${entity || 'none'}` }] };
+    }
     const data = await timpsAPI('/synapse/ingest', 'POST', {
       content,
       sourceModule: source_module,
@@ -751,6 +826,17 @@ async function main() {
       limit: z.number().optional().describe('Max activated nodes to return (default 10)'),
     },
   }, async ({ query, limit }) => {
+    if (!SERVER_MODE) {
+      const results = await localEngine.recall(query, { limit: limit || 10 });
+      if (!results.length) {
+        return { content: [{ type: 'text' as const, text: 'No metabolic matches found.' }] };
+      }
+      const lines = [`**SynapseMetabolon Results (local, ${results.length} results)**\n`];
+      for (const r of results) {
+        lines.push(`- [${r.type}] ${(r.content || '').slice(0, 100)}`);
+      }
+      return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
+    }
     const data = await timpsAPI('/synapse/query', 'POST', {
       query,
       userId: TIMPS_USER_ID,
@@ -775,6 +861,17 @@ async function main() {
     description: 'Get SynapseMetabolon statistics: node counts, edge counts, layer breakdown, and average activation.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      const facts = await localEngine.recall('', { limit: 100 });
+      const text = [
+        `**SynapseMetabolon Stats (local)**`,
+        `Total nodes: ${facts.length}`,
+        `Total edges: 0`,
+        `Avg activation: 0`,
+        `Layers: local engine`,
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/synapse/stats/${TIMPS_USER_ID}`);
     const layers = data.layers || {};
     const layerLines = Object.entries(layers).map(([k, v]: [string, any]) =>
@@ -796,6 +893,19 @@ async function main() {
       limit: z.number().optional().describe('Max nodes to return (default 30)'),
     },
   }, async ({ limit }) => {
+    if (!SERVER_MODE) {
+      const results = await localEngine.recall('', { limit: limit || 30 });
+      if (!results.length) {
+        return { content: [{ type: 'text' as const, text: 'No metabolic graph data.' }] };
+      }
+      const text = [
+        `**Metabolic Graph (local)** (${results.length} nodes)`,
+        results.slice(0, 10).map((r: any) =>
+          `- [${r.type}] ${(r.content || '').slice(0, 60)}`
+        ).join('\n'),
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    }
     const data = await timpsAPI(`/synapse/graph/${TIMPS_USER_ID}?limit=${limit || 30}`);
     const nodes = data.nodes || [];
     const edges = data.edges || [];
@@ -815,6 +925,9 @@ async function main() {
     description: 'Run a metabolic consolidation cycle. Consolidates high-activation nodes, audits low-utility nodes, refreshes stale nodes, and decays inactive ones.',
     inputSchema: {},
   }, async () => {
+    if (!SERVER_MODE) {
+      return { content: [{ type: 'text' as const, text: 'Consolidation cycle (local): no-op. Full consolidation requires server mode.' }] };
+    }
     const data = await timpsAPI(`/synapse/consolidate/${TIMPS_USER_ID}`, 'POST', {
       projectId: process.env.TIMPS_PROJECT_ID || 'default',
     });
