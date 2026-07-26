@@ -1,8 +1,8 @@
-package services
+package com.intellij.timps.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import agent.TIMPSAgent
+import com.intellij.timps.agent.TIMPSAgent
 
 @Service
 class TIMPSService(private val project: Project) {

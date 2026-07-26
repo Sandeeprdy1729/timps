@@ -2,14 +2,10 @@ package com.intellij.timps
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.welcome.WelcomeScreenService
 
 class TIMPSPlugin : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        val project = e.project ?: return
-        val welcomeScreen = WelcomeScreenService.getInstance().getWelcomeScreen(project)
-        if (welcomeScreen != null) {
-        }
+        // No-op: tool window is registered via plugin.xml
     }
 
     override fun update(e: AnActionEvent) {
