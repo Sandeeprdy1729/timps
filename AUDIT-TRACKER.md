@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 80    | 9         |
+| High     | 89    | 81    | 8         |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **91** | **297** |
+| **Total**| **388** | **92** | **296** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 80 High
+## ✅ Fixed — 11 Critical + 81 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -111,8 +111,9 @@
 | H82 | `timps-code/src/utils/riskEngine.ts:243` — Security: `assessBashCommand` iterates `BASH_COMMAND_RISK` patterns and `break`s on the first match; the read-only pattern (`^(ls|cat|git status...)`) matches the start of chained commands; `cat x && rm -rf /` matches the read-only pattern, scores 0, and breaks — the destructive `rm` part is never evaluated; pipe surcharge only applies when `maxScore>0` so it's never added for safe-prefix commands; `assess('Bash',{command:'git status; rm -rf ~'})` returns `auto-approve` (score 0) | Split command on `&&`/`||`/`;` separators into segments, assess each segment independently against `BASH_COMMAND_RISK` patterns, take the maximum score across all segments; pipe surcharge now applies per-segment. Verified: `tsc --noEmit` clean. |
 | H83 | `timps-jetbrains/src/main/kotlin/TIMPSToolWindow.kt:3` — Bug: JetBrains plugin cannot compile — 8 distinct errors across 8 files: (1) `com.intellij.openapi.w.ToolWindow`/`ToolWindowFactory` → should be `com.intellij.openapi.wm.*`; (2) `com.intellij.openapi.w.ToolWindowManager` in RunTIMPSAction/MemoryBranchAction → same fix; (3) nonexistent `com.intellij.openapi.welcome.WelcomeScreenService` in TIMPSPlugin; (4) duplicate `javax.swing.BorderLayout` import shadows `java.awt.BorderLayout` in MemoryExplorer; (5) orphan `isModified`/`apply`/`reset` overrides after class closing brace in AgentConfigurable; (6) nonexistent `OSProcessHandler.startNotifiesProcessStarted()`/`.processHandler` members in TIMPSAgent; (7) `SwarmPipelineAction` extends non-open `MemoryBranchAction`; (8) missing `package` declarations in actions files; `./gradlew buildPlugin` fails — plugin is 0% functional | Fixed all 8 files: corrected `openapi.w` → `openapi.wm` imports; removed nonexistent `WelcomeScreenService`; removed duplicate `javax.swing.BorderLayout` import; deleted orphan overrides after class brace; fixed `startNotify()` (correct method) and `processHandler` → `process` (correct property); added `open` modifier to `MemoryBranchAction`; added proper `package` declarations to all action classes; updated `plugin.xml` to use fully-qualified class names. |
 | H84 | `timps-mcp/src/index.ts:586` — Bug: 13 of 69 MCP tools (`timps_chat`, `timps_chronos_ingest/query/stats`, `timps_nexus_ingest/query/stats/graph`, `timps_synapse_ingest/query/stats/graph/consolidate`) bypass the LOCAL/SERVER mode switch and unconditionally call `timpsAPI()` which fetches `http://localhost:3000/api/...`; out-of-box install without `TIMPS_URL` (LOCAL mode, the default) causes `fetch ECONNREFUSED` — 13 advertised tools are dead in the documented default configuration | Added `if (!SERVER_MODE)` checks to all 13 tools with `localEngine` fallbacks: `timps_chat` stores message + recalls context; `timps_chronos_ingest` uses `localEngine.store()`; `timps_chronos_query` uses `localEngine.recall()`; `timps_chronos_stats` returns local recall count; `timps_nexus_ingest/query/stats/graph` same pattern; `timps_synapse_ingest/query/stats/graph` same pattern; `timps_synapse_consolidate` returns no-op message. Verified: `tsc --noEmit` clean. |
+| H85 | `timps-neovim/lua/timps.lua:1` — Bug: `lua/timps.lua` contains `return require("timps")` — Lua resolves module `'timps'` to `lua/timps.lua` before `lua/timps/init.lua` via `package.path` (`?.lua` before `?/init.lua`), so the file requires itself; infinite recursion until `'loop or previous error loading module'` / stack overflow; `require('timps')` — the documented lazy.nvim setup — errors immediately on every load; no command, keymap, or `setup()` from `init.lua` is ever registered | Deleted `lua/timps.lua`; `require('timps')` now correctly resolves to `lua/timps/init.lua` per standard Lua module convention. |
 
-## 📋 Remaining — 298 Issues
+## 📋 Remaining — 297 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
