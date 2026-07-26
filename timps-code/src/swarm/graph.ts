@@ -1,9 +1,10 @@
 // TIMPS Swarm — Workflow Graph (LangGraph-style DAG)
 // Wires all 10 agents into conditional execution DAG
 
-import { createSwarm, createAgent, type SwarmAgent, type AgentRole } from './agents.js';
+import { createSwarm, createAgent, type SwarmAgent, type AgentRole, AGENT_PROMPTS } from './agents.js';
 import { createProvider } from '../models/index.js';
-import type { Message } from '../config/types.js';
+import { getTool, getToolDefinitions } from '../tools/tools.js';
+import type { Message, ToolCall, ToolDefinition } from '../config/types.js';
 
 export interface SwarmRequest {
   request: string;
@@ -30,34 +31,24 @@ export interface SwarmState {
   messages: Map<string, string[]>;
 }
 
-// Routing logic
-export function routeAfterOrchestrator(state: SwarmState): AgentRole {
-  if (state.completed.includes('product_manager') && !state.completed.includes('architect')) {
-    return 'architect';
-  }
-  if (!state.completed.includes('code_generator')) {
-    return 'code_generator';
-  }
-  if (!state.completed.includes('code_reviewer')) {
-    return 'code_reviewer';
-  }
-  if (!state.completed.includes('qa_tester')) {
-    return 'qa_tester';
-  }
-  if (!state.completed.includes('security_auditor')) {
-    return 'security_auditor';
-  }
-  return 'docs_writer';
+// Resolve agent role names to actual tool definitions the agent may call
+function resolveAgentTools(agent: SwarmAgent): ToolDefinition[] {
+  const agentToolNames = new Set(AGENT_PROMPTS[agent.role].tools.map(t => t.toLowerCase()));
+  const allDefs = getToolDefinitions();
+  return allDefs.filter(d => agentToolNames.has(d.name.toLowerCase()));
 }
 
-// Execute a single agent node — calls the agent's configured LLM with its system prompt
+// Execute a single agent node — agentic loop with real tool execution
 async function executeAgent(
   agent: SwarmAgent,
   task: string,
+  cwd: string,
   context?: Record<string, unknown>
 ): Promise<string> {
   const state = context?.state as SwarmState | undefined;
   const prevMessages: string[] = state?.messages.get(agent.role) ?? [];
+  const toolDefs = resolveAgentTools(agent);
+  const maxTurns = 5; // safety cap per agent
 
   const messages: Message[] = [
     { role: 'system', content: agent.prompt, timestamp: Date.now() },
@@ -73,23 +64,87 @@ async function executeAgent(
     return `[${agent.name}] SKIPPED (provider unavailable: ${msg}). Set the API key or run 'ollama serve'.`;
   }
 
-  let text = '';
-  try {
-    for await (const ev of provider.stream(messages, [], { maxTokens: 1024, temperature: 0.2 })) {
-      if (ev.type === 'text') text += ev.content;
-      else if (ev.type === 'error') return `[${agent.name}] ERROR: ${ev.message}`;
+  // Agentic loop: stream → accumulate tool calls → execute → feed results → repeat
+  let fullText = '';
+  for (let turn = 0; turn < maxTurns; turn++) {
+    const toolCalls: ToolCall[] = [];
+    const currentToolArgs = new Map<string, string>();
+    const currentToolNames = new Map<string, string>();
+
+    try {
+      for await (const ev of provider.stream(messages, toolDefs, { maxTokens: 2048, temperature: 0.2 })) {
+        if (ev.type === 'text') {
+          fullText += ev.content;
+        } else if (ev.type === 'tool_start') {
+          currentToolArgs.set(ev.id, '');
+          currentToolNames.set(ev.id, ev.name);
+        } else if (ev.type === 'tool_delta') {
+          currentToolArgs.set(ev.id, (currentToolArgs.get(ev.id) || '') + ev.argumentsChunk);
+        } else if (ev.type === 'tool_end') {
+          const argsStr = currentToolArgs.get(ev.id) || '{}';
+          let args: Record<string, unknown>;
+          try { args = JSON.parse(argsStr); } catch { args = { raw: argsStr }; }
+          const toolName = currentToolNames.get(ev.id) || 'unknown';
+          toolCalls.push({ id: ev.id, name: toolName, arguments: args });
+        } else if (ev.type === 'error') {
+          return `[${agent.name}] ERROR: ${ev.message}`;
+        }
+      }
+    } catch (err) {
+      if (fullText) return `[${agent.name}]: ${fullText.trim()}`;
+      return `[${agent.name}] FAILED: ${err instanceof Error ? err.message : String(err)}`;
     }
-  } catch (err) {
-    return `[${agent.name}] FAILED: ${err instanceof Error ? err.message : String(err)}`;
+
+    // No tool calls → agent is done
+    if (toolCalls.length === 0) break;
+
+    // Feed assistant message with tool calls
+    messages.push({
+      role: 'assistant',
+      content: fullText || '(tool calls only)',
+      toolCalls,
+      timestamp: Date.now(),
+    });
+    fullText = '';
+
+    // Execute each tool call
+    for (const tc of toolCalls) {
+      const tool = getTool(tc.name);
+      if (!tool) {
+        messages.push({
+          role: 'tool',
+          content: `Unknown tool: ${tc.name}. Available: ${toolDefs.map(d => d.name).join(', ')}`,
+          toolCallId: tc.id,
+          name: tc.name,
+        });
+        continue;
+      }
+
+      let result: string;
+      try {
+        const execResult = await tool.execute(tc.arguments, cwd);
+        result = execResult.content;
+      } catch (err) {
+        result = `Tool error: ${(err as Error).message}`;
+      }
+
+      messages.push({
+        role: 'tool',
+        content: result.slice(0, 4000), // cap per-call output
+        toolCallId: tc.id,
+        name: tc.name,
+      });
+    }
   }
 
-  return text.trim() || `[${agent.name}] (no response)`;
+  return fullText.trim() || `[${agent.name}] (no response)`;
 }
 
 // Run the full DAG
 export async function runSwarmDAG(request: SwarmRequest): Promise<SwarmResult> {
   const startTime = Date.now();
   const agents = createSwarm();
+  const cwd = process.cwd();
 
   const state: SwarmState = {
     currentTask: request.request,
@@ -101,22 +156,27 @@ export async function runSwarmDAG(request: SwarmRequest): Promise<SwarmResult> {
   };
 
   try {
-    const orchestrator = agents.find(a => a.role === 'orchestrator')!;
-    state.currentTask = `Analyze and plan: ${request.request}`;
-
+    // Determine which agents to run based on request keywords
     const rolesToRun: AgentRole[] = ['orchestrator', 'code_generator'];
+    const req = request.request.toLowerCase();
 
-    if (request.request.toLowerCase().includes('fix') || request.request.toLowerCase().includes('bug')) {
+    if (req.includes('fix') || req.includes('bug')) {
       rolesToRun.push('code_reviewer', 'qa_tester');
     }
-    if (request.request.toLowerCase().includes('security') || request.request.toLowerCase().includes('audit')) {
+    if (req.includes('security') || req.includes('audit')) {
       rolesToRun.push('security_auditor');
     }
-    if (request.request.toLowerCase().includes('document') || request.request.toLowerCase().includes('readme')) {
+    if (req.includes('document') || req.includes('readme')) {
       rolesToRun.push('docs_writer');
     }
-    if (request.request.toLowerCase().includes('docker') || request.request.toLowerCase().includes('deploy')) {
+    if (req.includes('docker') || req.includes('deploy')) {
       rolesToRun.push('devops');
+    }
+    if (req.includes('optim') || req.includes('performance') || req.includes('slow')) {
+      rolesToRun.push('performance_optimizer');
+    }
+    if (req.includes('test') || req.includes('spec')) {
+      rolesToRun.push('qa_tester');
     }
 
     for (const role of rolesToRun) {
@@ -130,7 +190,7 @@ export async function runSwarmDAG(request: SwarmRequest): Promise<SwarmResult> {
         ? `Original task: ${request.request}\n\n${inputFromPrev}\n\nNow produce your ${agent.name} output.`
         : `Plan the work needed for: ${request.request}\n\nList which of the 10 agents should run and in what order. Be concise.`;
 
-      const result = await executeAgent(agent, prompt, { state });
+      const result = await executeAgent(agent, prompt, cwd, { state });
       state.completed.push(role);
       state.artifacts.set(role, result);
       state.messages.set(role, [result]);
