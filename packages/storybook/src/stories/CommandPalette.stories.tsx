@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { CommandPalette } from '../src/components/CommandPalette';
+import { CommandPalette } from '../components/CommandPalette';
 
 const meta: Meta<typeof CommandPalette> = {
   title: 'Components/CommandPalette',
