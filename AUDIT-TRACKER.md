@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 75    | 14        |
+| High     | 89    | 76    | 13        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **86** | **302** |
+| **Total**| **388** | **87** | **301** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 75 High
+## ✅ Fixed — 11 Critical + 76 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -106,8 +106,9 @@
 | H77 | `timps-code/src/tools/scheduleCron/index.ts:60` — Dead code: `schedule_cron` stores tasks in a module-level Map with `nextRun` hardcoded to `Date.now() + 60000` regardless of cron expression; no timer, scheduler loop, or consumer exists; `listScheduledTasks`/`deleteScheduledTask` have zero callers repo-wide; `durable: true` reports "Persisted to disk" while writing nothing; tasks never fire and vanish on process exit | Rewrote with: proper 5-field cron parser (minutes, hours, dom, mon, dow) that computes correct next run time; `setInterval` scheduler loop (5s tick) that fires tasks at their scheduled time; disk persistence via `~/.timps/scheduled-tasks.json` for durable tasks (load on import, save on create/delete/fire); recurring tasks auto-advance to next cron slot; one-shot tasks auto-delete after firing; `listScheduledTasks`/`deleteScheduledTask` now functional and persisted. Verified: `tsc --noEmit` clean. |
 | H78 | `timps-code/src/tools/workflow/index.ts:122` — Dead code: `workflow` tool `run` action fabricates success — for each step pushes `'[n] Executed: <tool> → OK'` without invoking any tool (only `dryRun` prints honestly); tool description promises "Chain multiple tool calls together with conditional logic"; agent receives confirmation that steps executed when nothing ran; a silent-failure/fake-success pattern | Wired `run` action to actually execute each step via `getTool(step.tool).execute(step.args, cwd)` from the tool registry; captures real results (success content or error message); reports actual output (truncated to 200 chars); tracks failure state and skips subsequent steps on error; returns error exit code if any step fails. Verified: `tsc --noEmit` clean. |
 | H79 | `timps-code/src/utils/fileTracker.ts:26` — Bug: `FileTracker` constructor synchronously recursively reads every file under cwd (only skipping dotfiles) into an in-memory Map as UTF-8 via `fs.readFileSync`; `node_modules`, `dist`, binaries, and large files are all slurped; no try/catch for unreadable/binary files throws in constructor; `sessionTracker.getOrCreate(cwd)` triggers this on working directory → OOM/hang on real projects | Replaced in-memory content Map with lightweight metadata snapshot (`size` + `mtime` per file); added skip list for `node_modules`/`.git`/`dist`/`build`/`out`/`target`/`coverage`/`.next`/`__pycache__`/`.cache`/`.turbo`; skip binary extensions (images, archives, fonts, executables, wasm); skip files >1MB; wrapped `statSync`/`readdirSync` in try/catch; `diff()` reads content lazily from disk on demand instead of holding in memory. Verified: `tsc --noEmit` clean. |
+| H80 | `timps-code/src/utils/hooks.ts:66` — Bug: `HooksEngine.run()` swallows non-zero exits from `execSync` in an empty catch block, so a PreToolUse hook that exits 1 to deny an action has no effect; `run()` returns only concatenated stdout and never signals a block; the shipped `EXAMPLE_HOOKS` `'prevent-env'` (exits 1 to block writes to `.env`) is documented-but-nonfunctional; comment `'In strict mode, could throw'` confirms blocking is unimplemented | Changed `run()` return type to `HookResult` (`{ output, blocked, blockedBy? }`); non-zero exit now sets `blocked = true` and captures the hook's stdout/stderr as the block reason; first blocking hook stops processing further hooks; exported new `HookResult` type. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 303 Issues
+## 📋 Remaining — 302 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

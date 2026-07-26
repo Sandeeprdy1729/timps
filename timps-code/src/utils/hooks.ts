@@ -15,6 +15,12 @@ export interface Hook {
   enabled: boolean;
 }
 
+export interface HookResult {
+  output: string;
+  blocked: boolean;
+  blockedBy?: string;
+}
+
 const HOOKS_DIR = path.join(os.homedir(), '.timps', 'hooks');
 
 // Shell scripts as hooks
@@ -49,34 +55,44 @@ export class HooksEngine {
     }
   }
   
-  // Run a hook
-  async run(event: HookEvent, context: Record<string, unknown>): Promise<string> {
-    const results: string[] = [];
-    
+  // Run hooks for an event. Non-zero exit = block signal.
+  async run(event: HookEvent, context: Record<string, unknown>): Promise<HookResult> {
+    const outputs: string[] = [];
+    let blocked = false;
+    let blockedBy: string | undefined;
+
     for (const hook of this.hooks.values()) {
       if (hook.event !== event || !hook.enabled) continue;
-      
+
       try {
-        // Set environment variables
         const env = { ...process.env };
         for (const [key, value] of Object.entries(context)) {
           env[`TIMPS_${key.toUpperCase()}`] = String(value);
         }
-        
+
         const output = execSync(hook.command, {
           encoding: 'utf-8',
           timeout: 30000,
           env,
+          stdio: ['pipe', 'pipe', 'pipe'],
         });
-        
-        results.push(output.trim());
+
+        outputs.push(output.trim());
       } catch (err: any) {
-        // Hooks that fail are skipped
-        // In strict mode, could throw
+        // Non-zero exit code → hook is blocking this action
+        const exitCode = err.status ?? err.code ?? 1;
+        const hookOutput = (err.stdout ?? '').trim() || (err.stderr ?? '').trim()
+          || `Hook '${hook.name}' blocked action (exit ${exitCode})`;
+
+        outputs.push(hookOutput);
+        blocked = true;
+        blockedBy = hook.name;
+        // First blocking hook wins — stop processing further hooks
+        break;
       }
     }
-    
-    return results.join('\n');
+
+    return { output: outputs.join('\n'), blocked, blockedBy };
   }
   
   // List hooks
