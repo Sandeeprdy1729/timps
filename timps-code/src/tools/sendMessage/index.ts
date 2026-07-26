@@ -16,46 +16,57 @@ function resolveTimpsBinary(cwd: string): string[] {
   return ['node', '-e', ''];
 }
 
-export const agentTool: RegisteredTool = {
+export const sendMessageTool: RegisteredTool = {
   definition: {
-    name: 'agent',
-    description: 'Spawn a subagent worker with its own context to handle a task. Returns the worker ID immediately. Use task_output to check results.',
+    name: 'send_message',
+    description: 'Send a follow-up message to an existing worker to continue its task or provide a correction.',
     inputSchema: {
       type: 'object',
       properties: {
-        prompt: { type: 'string', description: 'Task for the subagent' },
-        model: { type: 'string', description: 'Model to use (optional)' },
-        description: { type: 'string', description: 'Human-readable description of the worker task' },
+        worker_id: { type: 'string', description: 'The worker ID to send a message to' },
+        message: { type: 'string', description: 'The message to send to the worker' },
       },
-      required: ['prompt'],
+      required: ['worker_id', 'message'],
     },
   },
   risk: 'medium',
   async execute(args, cwd) {
-    const prompt = String(args.prompt);
-    const description = args.description ? String(args.description) : prompt.slice(0, 120);
+    const workerId = String(args.worker_id);
+    const message = String(args.message);
     const coordinator = getCoordinatorService();
 
-    if (!coordinator.isEnabled()) {
-      coordinator.enable();
+    const worker = coordinator.getWorker(workerId);
+    if (!worker) {
+      return { content: `Worker not found: ${workerId}`, isError: true };
     }
 
-    const workerId = coordinator.createWorker(description);
+    if (worker.status === 'completed' || worker.status === 'failed' || worker.status === 'stopped') {
+      return { content: `Worker ${workerId} is already ${worker.status}. Cannot send message.`, isError: true };
+    }
+
+    coordinator.addWorkerMessage(workerId, 'user', message);
+
+    const history = coordinator.getWorkerHistory(workerId);
+    const contextMessages = history
+      ? history.messages.map(m => `${m.role}: ${m.content}`).join('\n\n')
+      : message;
+
+    const fullPrompt = `Previous context:\n${contextMessages}\n\nFollow-up instruction: ${message}`;
+
     const taskId = coordinator.submitTask({
-      description,
-      prompt,
+      description: `Follow-up for ${workerId}: ${message.slice(0, 100)}`,
+      prompt: fullPrompt,
       subagentType: 'worker',
       priority: 'normal',
       workerId,
     });
 
     coordinator.updateWorkerStatus(workerId, 'running');
-    coordinator.addWorkerMessage(workerId, 'user', prompt);
 
     const binArgs = resolveTimpsBinary(cwd);
     const bin = binArgs[0];
     const binFile = binArgs.slice(1);
-    const fullArgs = [...binFile, prompt];
+    const fullArgs = [...binFile, fullPrompt];
 
     try {
       const child = childProcess.spawn(bin, fullArgs, {
@@ -64,10 +75,10 @@ export const agentTool: RegisteredTool = {
         env: { ...process.env } as NodeJS.ProcessEnv,
       });
 
-      const worker = coordinator.getWorker(workerId);
-      if (worker) {
-        worker.abortController = new AbortController();
-        worker.abortController.signal.addEventListener('abort', () => {
+      const ctrl = coordinator.getWorker(workerId);
+      if (ctrl) {
+        ctrl.abortController = new AbortController();
+        ctrl.abortController.signal.addEventListener('abort', () => {
           child.kill('SIGTERM');
         });
       }
@@ -107,14 +118,12 @@ export const agentTool: RegisteredTool = {
       const error = err instanceof Error ? err.message : String(err);
       coordinator.updateWorkerStatus(workerId, 'failed', undefined, error);
       coordinator.failTask(taskId, error);
-      return { content: `Failed to spawn worker: ${error}`, isError: true };
+      return { content: `Failed to send message to worker: ${error}`, isError: true };
     }
 
     return {
-      content: `Worker ${workerId} spawned.\nTask: ${taskId}\nDescription: ${description}\n\nUse task_output with task_id="${workerId}" to check results when ready.`,
+      content: `Message sent to worker ${workerId}.\nTask: ${taskId}\n\nUse task_output with task_id="${workerId}" to check results.`,
       isError: false,
     };
   },
 };
-
-export const AgentTool = (args: Record<string, unknown>) => agentTool.execute(args, '.');

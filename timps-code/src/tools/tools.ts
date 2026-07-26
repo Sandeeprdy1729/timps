@@ -60,6 +60,8 @@ import { remoteTriggerTool } from './remoteTrigger/index.js';
 import { teamCreateTool } from './teamCreate/index.js';
 import { teamDeleteTool } from './teamDelete/index.js';
 import { syntheticOutputTool } from './syntheticOutput/index.js';
+import { agentTool } from './agent/index.js';
+import { sendMessageTool } from './sendMessage/index.js';
 
 export const ALL_TOOLS: RegisteredTool[] = [
   readFile, writeFile, editFile, multiEdit, listDirectory,
@@ -72,6 +74,7 @@ export const ALL_TOOLS: RegisteredTool[] = [
   sleepTool, browserTool, workflowTool,
   taskCreateTool, taskGetTool, taskListTool, taskUpdateTool,
   taskOutputTool, taskStopTool,
+  agentTool, sendMessageTool,
   skillTool, scheduleCronTool, toolSearchTool,
   webFetchTool, remoteTriggerTool, teamCreateTool, teamDeleteTool,
   syntheticOutputTool,

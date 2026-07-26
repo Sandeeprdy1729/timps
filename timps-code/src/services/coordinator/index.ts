@@ -13,6 +13,7 @@ export interface WorkerConfig {
   completedAt?: number;
   result?: string;
   error?: string;
+  abortController?: AbortController;
 }
 
 export interface CoordinatorMessage {
@@ -29,8 +30,14 @@ export interface AgentTask {
   subagentType: 'worker' | 'researcher' | 'verifier';
   priority?: 'low' | 'normal' | 'high';
   dependsOn?: string[];
+  workerId?: string;
   onComplete?: (result: string) => void;
   onError?: (error: string) => void;
+}
+
+export interface WorkerHistory {
+  workerId: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: number }>;
 }
 
 export class CoordinatorService extends EventEmitter {
@@ -39,6 +46,8 @@ export class CoordinatorService extends EventEmitter {
   private taskQueue: string[] = [];
   private isRunning = false;
   private coordinatorMode: boolean = false;
+  private workerHistory = new Map<string, WorkerHistory>();
+  private workerTasks = new Map<string, string[]>();
 
   constructor() {
     super();
@@ -64,14 +73,18 @@ export class CoordinatorService extends EventEmitter {
   }
 
   createWorker(description: string): string {
-    const id = `worker_${crypto.randomUUID().slice(0, 8)}`;
+    const id = `worker_${crypto.randomBytes(4).toString('hex')}`;
     const worker: WorkerConfig = {
       id,
       description,
       status: 'pending',
       createdAt: Date.now(),
+      abortController: new AbortController(),
     };
     this.workers.set(id, worker);
+    this.workerHistory.set(id, { workerId: id, messages: [] });
+    this.workerTasks.set(id, []);
+    this.emit('workerUpdated', worker);
     return id;
   }
 
@@ -87,6 +100,16 @@ export class CoordinatorService extends EventEmitter {
     if (error) worker.error = error;
 
     this.emit('workerUpdated', worker);
+  }
+
+  addWorkerMessage(workerId: string, role: 'user' | 'assistant', content: string): void {
+    const history = this.workerHistory.get(workerId);
+    if (!history) return;
+    history.messages.push({ role, content, timestamp: Date.now() });
+  }
+
+  getWorkerHistory(workerId: string): WorkerHistory | undefined {
+    return this.workerHistory.get(workerId);
   }
 
   getWorker(workerId: string): WorkerConfig | undefined {
@@ -107,6 +130,7 @@ export class CoordinatorService extends EventEmitter {
       return false;
     }
 
+    worker.abortController?.abort();
     this.updateWorkerStatus(workerId, 'stopped');
     this.emit('workerStopped', workerId);
     return true;
@@ -121,10 +145,15 @@ export class CoordinatorService extends EventEmitter {
   }
 
   submitTask(task: Omit<AgentTask, 'id'>): string {
-    const id = `task_${crypto.randomUUID().slice(0, 8)}`;
+    const id = `task_${crypto.randomBytes(4).toString('hex')}`;
     const fullTask: AgentTask = { ...task, id };
     this.tasks.set(id, fullTask);
     this.taskQueue.push(id);
+
+    if (task.workerId) {
+      const taskIds = this.workerTasks.get(task.workerId);
+      if (taskIds) taskIds.push(id);
+    }
 
     this.emit('taskSubmitted', fullTask);
     return id;
@@ -177,7 +206,7 @@ export class CoordinatorService extends EventEmitter {
   }
 
   getTasksByWorker(workerId: string): AgentTask[] {
-    return Array.from(this.tasks.values()).filter(t => t.id.startsWith(workerId));
+    return Array.from(this.tasks.values()).filter(t => t.workerId === workerId);
   }
 
   getPendingTaskCount(): number {
@@ -188,6 +217,8 @@ export class CoordinatorService extends EventEmitter {
     for (const [id, worker] of this.workers.entries()) {
       if (worker.status === 'completed' || worker.status === 'failed' || worker.status === 'stopped') {
         this.workers.delete(id);
+        this.workerHistory.delete(id);
+        this.workerTasks.delete(id);
       }
     }
   }
@@ -229,6 +260,8 @@ export class CoordinatorService extends EventEmitter {
     this.workers.clear();
     this.tasks.clear();
     this.taskQueue = [];
+    this.workerHistory.clear();
+    this.workerTasks.clear();
     this.emit('reset');
   }
 }
@@ -314,5 +347,5 @@ When a worker reports failure:
 
 export function isCoordinatorModeEnabled(): boolean {
   const cfg = loadConfig();
-  return cfg.thinkingEnabled === true;
+  return cfg.coordinatorMode === true;
 }
