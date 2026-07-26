@@ -5,29 +5,25 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "docker-in-docker": {
-      "version": "5",
-      "description": "Includes Docker"
+    "ghcr.io/devcontainers/features/docker-in-docker:1": {
+      "version": "latest"
     },
-    "git": {
-      "enabled": true,
-      "description": "Git build support"
-    }
+    "ghcr.io/devcontainers/features/git:1": {}
   },
-  "settings": {
-    "terminal.integrated.defaultProfile.linux": "bash",
-    "files.exclude": {
-      "**/.git':": true
+  "mounts": [
+    {
+      "source": "${localEnv:HOME}/.timps",
+      "target": "/home/node/.timps",
+      "type": "bind"
     }
-  },
-  "postCreateCommand": "npm install && echo 'TIMPS Workspace Ready'",
+  ],
+  "postCreateCommand": "npm install",
   "remoteUser": "node",
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "bradlc.vscode-eslint",
         "rust-lang.rust-analyzer",
         "seriod.trust-store",
         "ms-azuretools.vscode-docker",
@@ -35,8 +31,14 @@
         "github.copilot"
       ],
       "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.exclude": {
+          "**/.git": true
+        },
         "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": "source.fixAll.eslint",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
         "typescript.tsdk": "node_modules/typescript/lib",
         "rust-analyzer.checkOnSave.command": "clippy",
         "eslint.format.enable": true,
@@ -48,13 +50,6 @@
       }
     }
   },
-  " mounts": [
-    {
-      "source": "${env:HOME}/.timps",
-      "target": "/home/node/.timps",
-      "type": "bind"
-    }
-  ],
   "portsAttributes": {
     "3000": {
       "label": "Application",
