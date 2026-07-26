@@ -41,7 +41,7 @@ export class CoderAgent extends BaseAgent {
   async *run(task: string): AsyncGenerator<AgentEvent> {
     // Inject memory context if available
     if (this.memory) {
-      const ctx = this.memory.getContextString(task);
+      const ctx = await this.memory.getContextString(task);
       if (ctx) {
         this.messages[0] = {
           role: 'system',

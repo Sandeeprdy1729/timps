@@ -226,8 +226,10 @@ export class Agent {
       // Filter/Sandbox is best-effort; if it fails, agent runs unfiltered
     }
 
-    // Initialize with system prompt
-    this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
+    // Initialize with system prompt (async — fire and forget)
+    this.buildSystemPrompt().then(prompt => {
+      this.messages[0] = { role: 'system', content: prompt };
+    }).catch(() => {});
 
     // Async ingestion of past sessions — fire and forget
     this.ingestHistory().catch(() => {});
@@ -258,7 +260,7 @@ export class Agent {
     return this.provider.name === 'ollama' || (this.provider.name as string) === 'opencode';
   }
 
-  private buildSystemPrompt(): string {
+  private async buildSystemPrompt(): Promise<string> {
     // Use compact prompt for local/small models to avoid overwhelming them
     if (this.isLocalModel) {
       let prompt = LOCAL_SYSTEM_PROMPT;
@@ -283,7 +285,7 @@ export class Agent {
     }
 
     // ── Memory injection ──
-    const memCtx = this.memory.getContextString();
+    const memCtx = await this.memory.getContextString();
     if (memCtx) {
       prompt += `\n## Memory Context\n${memCtx}\n`;
     }
@@ -429,7 +431,7 @@ End your response with a confirmation question.`;
 
     // ── Pre-flight: MemoryEngine context injection (silent context injection) ──
     try {
-      const ctx = this.memory.engine?.getContextString(userMessage);
+      const ctx = await this.memory.engine?.getContextString(userMessage);
       if (ctx) {
         const sysIdx = this.messages.findIndex(m => m.role === 'system');
         if (sysIdx !== -1) {
@@ -1100,8 +1102,8 @@ ${historyText}`;
     this.totalUsage = { inputTokens: 0, outputTokens: 0 };
   }
 
-  updateSystemPrompt(): void {
-    this.messages[0] = { role: 'system', content: this.buildSystemPrompt() };
+  async updateSystemPrompt(): Promise<void> {
+    this.messages[0] = { role: 'system', content: await this.buildSystemPrompt() };
   }
 
   switchProvider(provider: ModelProvider): void {
@@ -1204,8 +1206,10 @@ ${historyText}`;
       if (Date.now() - (data.timestamp || 0) > 24 * 60 * 60 * 1000) return false;
       this.messages = data.messages;
       if (data.totalUsage) this.totalUsage = data.totalUsage;
-      // Refresh system prompt with latest memory/skills
-      this.messages[0] = { role: 'system', content: this.buildSystemPrompt() };
+      // Refresh system prompt with latest memory/skills (async — fire and forget)
+      this.buildSystemPrompt().then(prompt => {
+        this.messages[0] = { role: 'system', content: prompt };
+      }).catch(() => {});
       return true;
     } catch { return false; }
   }
