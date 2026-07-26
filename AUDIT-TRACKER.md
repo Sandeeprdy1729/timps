@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 86    | 3         |
+| High     | 89    | 89    | 0         |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **97** | **291** |
+| **Total**| **388** | **100** | **288** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 86 High
+## ✅ Fixed — 11 Critical + 89 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -121,10 +121,10 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 291 Issues
+## 📋 Remaining — 288 Issues
 
-### High (28)
-⏸️ All 28 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (0)
+✅ All High issues fixed.
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
