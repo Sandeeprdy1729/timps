@@ -49,6 +49,12 @@ export interface AppOptions {
   memoryUrl?: string;
   /** Auth token for remote MemoryServer */
   memoryToken?: string;
+  /** Swarm mode: run multi-agent swarm */
+  swarm?: boolean;
+  /** Swarm pipeline type */
+  swarmPipeline?: string;
+  /** Show swarm status */
+  swarmStatus?: boolean;
 }
 
 export async function startApp(opts: AppOptions): Promise<void> {
@@ -61,6 +67,54 @@ export async function startApp(opts: AppOptions): Promise<void> {
   if (opts.mineBugs) console.log(`${t.accent('🔍')} Human mistake mining enabled`);
   if (opts.warRoom) console.log(`${t.warning('🔥')} WAR ROOM MODE - 19hr sessions`);
   if (opts.binarySynth) console.log(`${t.warning('⚡')} DIRECT BINARY SYNTHESIS enabled`);
+
+  // ── Swarm mode ──
+  if (opts.swarm || opts.swarmPipeline || opts.swarmStatus) {
+    const { runSwarmMode } = await import('../swarm/cli.js');
+
+    if (opts.swarmStatus) {
+      const { createSwarm } = await import('../swarm/agents.js');
+      const agents = createSwarm();
+      console.log(`\n${t.brandBold('TIMPS Swarm Status')}\n`);
+      for (const agent of agents) {
+        const icon: Record<string, string> = { idle: '○', busy: '●', waiting: '◐', error: '✕' };
+        console.log(`  ${icon[agent.status] || '?'} ${agent.name} (${agent.model}) — ${agent.stats.tasksCompleted} tasks`);
+      }
+      console.log();
+      return;
+    }
+
+    if (opts.swarmPipeline) {
+      const { SwarmExecutor } = await import('../swarm/executor.js');
+      const { Memory } = await import('../memory/memory.js');
+      const mem = new Memory(cwd);
+      const executor = new SwarmExecutor(mem, cwd);
+      const validPipelines = ['feature', 'bugfix', 'refactor', 'docs'] as const;
+      const pipeline = opts.swarmPipeline;
+      if (!validPipelines.includes(pipeline as any)) {
+        console.log(`  Invalid pipeline: ${pipeline}. Use: ${validPipelines.join(', ')}`);
+        return;
+      }
+      console.log(`\n  Running ${t.brandBold(pipeline)} pipeline...\n`);
+      const agents = executor.getAgents();
+      for (const agent of agents) {
+        console.log(`  ${t.dim('●')} ${agent.name}`);
+      }
+      console.log();
+      const role = pipeline === 'bugfix' ? 'code_generator' : pipeline === 'docs' ? 'docs_writer' : 'code_generator';
+      const taskId = executor.submitTask(role, `Execute ${pipeline} pipeline`);
+      try {
+        const result = await executor.executeTask(taskId);
+        console.log(`✓ Task completed:\n${result}\n`);
+      } catch (err) {
+        console.log(`✗ Task failed: ${(err as Error).message}\n`);
+      }
+      return;
+    }
+
+    await runSwarmMode();
+    return;
+  }
 
   // ── Smart Provider Auto-Selection (Claude Code style: zero-friction) ──
   let providerName: ProviderName | undefined;
@@ -2249,6 +2303,82 @@ export async function handleSlashCommand(
         console.log(`  ${t.dim('Using clean Thought → Action → Observation cycle')}\n`);
       } else {
         console.log(`  ${t.dim('Using standard streaming agent loop')}\n`);
+      }
+      break;
+    }
+
+    case 'swarm': {
+      const { runSwarmMode, addSwarmCommands } = await import('../swarm/cli.js');
+      const subcmd = args.split(' ')[0];
+      const subArgs = args.slice(subcmd.length).trim();
+
+      if (subcmd === 'status' || subcmd === 's') {
+        const { createSwarm } = await import('../swarm/agents.js');
+        const agents = createSwarm();
+        console.log(`\n  ${t.brandBold('TIMPS Swarm Status')}\n`);
+        for (const agent of agents) {
+          const icon: Record<string, string> = { idle: '○', busy: '●', waiting: '◐', error: '✕' };
+          console.log(`  ${icon[agent.status] || '?'} ${agent.name} (${agent.model}) — ${agent.stats.tasksCompleted} tasks`);
+        }
+        console.log();
+      } else if (subcmd === 'run' || subcmd === 'r') {
+        if (!subArgs) {
+          console.log(`\n  Usage: /swarm run <task description>\n`);
+          break;
+        }
+        const { runSwarmDAG } = await import('../swarm/graph.js');
+        console.log(`\n  Running swarm task: ${t.brandBold(subArgs)}\n`);
+        const result = await runSwarmDAG({ request: subArgs });
+        if (result.success) {
+          console.log(`  ✓ ${result.summary || 'Task completed'}\n`);
+          if (result.artifacts?.length) {
+            console.log(`  Artifacts: ${result.artifacts.join(', ')}`);
+          }
+        } else {
+          console.log(`  ✗ ${result.error || 'Task failed'}\n`);
+        }
+      } else if (subcmd === 'agents' || subcmd === 'a') {
+        const { createSwarm } = await import('../swarm/agents.js');
+        const agents = createSwarm();
+        const roleIcon: Record<string, string> = {
+          orchestrator: '🎯', product_manager: '📋', architect: '🏗️',
+          code_generator: '💻', code_reviewer: '🔍', qa_tester: '🧪',
+          security_auditor: '🔒', performance_optimizer: '⚡',
+          docs_writer: '📝', devops: '🚀',
+        };
+        console.log(`\n  ${t.brandBold('TIMPS Swarm — 10 Specialized Agents')}\n`);
+        for (const agent of agents) {
+          console.log(`  ${roleIcon[agent.role] || '●'} ${agent.name}`);
+          console.log(`     Model: ${agent.model} | Tools: ${agent.tools.join(', ')}`);
+        }
+        console.log();
+      } else if (subcmd === 'pipeline' || subcmd === 'p') {
+        const pipeline = subArgs || 'feature';
+        const { SwarmExecutor } = await import('../swarm/executor.js');
+        const { Memory } = await import('../memory/memory.js');
+        const mem = new Memory(cwd);
+        const executor = new SwarmExecutor(mem, cwd);
+        const validPipelines = ['feature', 'bugfix', 'refactor', 'docs'] as const;
+        if (!validPipelines.includes(pipeline as any)) {
+          console.log(`\n  Invalid pipeline: ${pipeline}. Use: ${validPipelines.join(', ')}\n`);
+          break;
+        }
+        console.log(`\n  Running ${t.brandBold(pipeline)} pipeline...\n`);
+        const role = pipeline === 'bugfix' ? 'code_generator' : pipeline === 'docs' ? 'docs_writer' : 'code_generator';
+        const taskId = executor.submitTask(role, `Execute ${pipeline} pipeline`);
+        try {
+          const result = await executor.executeTask(taskId);
+          console.log(`  ✓ Task completed:\n${result}\n`);
+        } catch (err) {
+          console.log(`  ✗ Task failed: ${(err as Error).message}\n`);
+        }
+      } else {
+        console.log(`\n  ${t.brandBold('TIMPS Swarm Commands')}\n`);
+        console.log(`  /swarm run <task>      — Run a task with the swarm`);
+        console.log(`  /swarm pipeline <type> — Run pipeline: feature, bugfix, refactor, docs`);
+        console.log(`  /swarm status          — Show agent statuses`);
+        console.log(`  /swarm agents          — List all agents`);
+        console.log(`  /swarm                 — Start interactive swarm mode\n`);
       }
       break;
     }
