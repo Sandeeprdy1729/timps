@@ -131,6 +131,7 @@ export interface TimpsConfig {
   techStack?: TechStack;
   team?: TeamConfig;
   thinkingEnabled?: boolean;
+  coordinatorMode?: boolean;
   fastMode?: boolean;
   verbose?: boolean;
   disableAnalytics?: boolean;
