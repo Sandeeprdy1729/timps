@@ -3,12 +3,11 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as http from 'node:http';
-import * as https from 'node:https';
-import { AgentRole, SwarmAgent, AGENT_PROMPTS, createAgent, createSwarm } from './agents.js';
-import { createOllamaProvider } from '../models/ollama.js';
-import { getToolByName, ToolExecResult } from '../tools/tools.js';
+import { AgentRole, SwarmAgent, AGENT_PROMPTS, createSwarm } from './agents.js';
+import { createProvider } from '../models/index.js';
+import { getTool, getToolDefinitions } from '../tools/tools.js';
 import { Memory } from '../memory/memory.js';
+import type { Message, ToolCall, ToolDefinition } from '../config/types.js';
 
 export interface SwarmTask {
   id: string;
@@ -29,12 +28,18 @@ export interface SwarmResult {
   consensus?: string;
 }
 
+// Resolve agent role names to actual tool definitions the agent may call
+function resolveAgentTools(agent: SwarmAgent): ToolDefinition[] {
+  const agentToolNames = new Set(AGENT_PROMPTS[agent.role].tools.map(t => t.toLowerCase()));
+  const allDefs = getToolDefinitions();
+  return allDefs.filter(d => agentToolNames.has(d.name.toLowerCase()));
+}
+
 export class SwarmExecutor {
   private agents: SwarmAgent[];
   private tasks: Map<string, SwarmTask> = new Map();
   private memory: Memory;
   private basePath: string;
-  private messageQueue: Map<string, any[]> = new Map();
 
   constructor(memory: Memory, projectPath: string) {
     this.memory = memory;
@@ -80,31 +85,97 @@ export class SwarmExecutor {
     }
   }
 
+  // Agentic loop: stream → accumulate tool calls → execute → feed results → repeat
   private async runAgent(agent: SwarmAgent, description: string, cwd: string): Promise<string> {
-    const provider = createOllamaProvider(
-      'http://localhost:11434',
-      agent.model
-    );
+    const toolDefs = resolveAgentTools(agent);
+    const maxTurns = 5;
 
-    const systemPrompt = AGENT_PROMPTS[agent.role].prompt;
-    let fullResponse = '';
-
-    const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: description },
-    ];
-
+    let provider;
     try {
-      for await (const event of provider.stream(messages, [])) {
-        if (event.type === 'text') {
-          fullResponse += event.content;
-        }
-      }
-    } catch {
-      return `[${agent.role}] Agent execution failed — Ollama may not be running. Start with: ollama serve`;
+      provider = createProvider(agent.provider, agent.model);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `[${agent.role}] SKIPPED (provider unavailable: ${msg}). Set the API key or run 'ollama serve'.`;
     }
 
-    return fullResponse.trim();
+    const messages: Message[] = [
+      { role: 'system', content: AGENT_PROMPTS[agent.role].prompt },
+      { role: 'user', content: description },
+    ];
+
+    let fullResponse = '';
+
+    for (let turn = 0; turn < maxTurns; turn++) {
+      const toolCalls: ToolCall[] = [];
+      const currentToolArgs = new Map<string, string>();
+      const currentToolNames = new Map<string, string>();
+
+      try {
+        for await (const event of provider.stream(messages, toolDefs, { maxTokens: 2048, temperature: 0.2 })) {
+          if (event.type === 'text') {
+            fullResponse += event.content;
+          } else if (event.type === 'tool_start') {
+            currentToolArgs.set(event.id, '');
+            currentToolNames.set(event.id, event.name);
+          } else if (event.type === 'tool_delta') {
+            currentToolArgs.set(event.id, (currentToolArgs.get(event.id) || '') + event.argumentsChunk);
+          } else if (event.type === 'tool_end') {
+            const argsStr = currentToolArgs.get(event.id) || '{}';
+            let args: Record<string, unknown>;
+            try { args = JSON.parse(argsStr); } catch { args = { raw: argsStr }; }
+            const toolName = currentToolNames.get(event.id) || 'unknown';
+            toolCalls.push({ id: event.id, name: toolName, arguments: args });
+          } else if (event.type === 'error') {
+            return `[${agent.role}] ERROR: ${event.message}`;
+          }
+        }
+      } catch (err) {
+        if (fullResponse) return `[${agent.role}]: ${fullResponse.trim()}`;
+        return `[${agent.role}] Agent execution failed: ${(err as Error).message}`;
+      }
+
+      // No tool calls → agent is done
+      if (toolCalls.length === 0) break;
+
+      // Feed assistant message with tool calls
+      messages.push({
+        role: 'assistant',
+        content: fullResponse || '(tool calls only)',
+        toolCalls,
+      });
+      fullResponse = '';
+
+      // Execute each tool call
+      for (const tc of toolCalls) {
+        const tool = getTool(tc.name);
+        if (!tool) {
+          messages.push({
+            role: 'tool',
+            content: `Unknown tool: ${tc.name}. Available: ${toolDefs.map(d => d.name).join(', ')}`,
+            toolCallId: tc.id,
+            name: tc.name,
+          });
+          continue;
+        }
+
+        let result: string;
+        try {
+          const execResult = await tool.execute(tc.arguments, cwd);
+          result = execResult.content;
+        } catch (err) {
+          result = `Tool error: ${(err as Error).message}`;
+        }
+
+        messages.push({
+          role: 'tool',
+          content: result.slice(0, 4000), // cap per-call output
+          toolCallId: tc.id,
+          name: tc.name,
+        });
+      }
+    }
+
+    return fullResponse.trim() || `[${agent.role}] (no response)`;
   }
 
   async executeDAG(taskDescriptions: Array<{ role: AgentRole; description: string; dependsOn?: number[] }>): Promise<SwarmResult> {
@@ -156,11 +227,16 @@ export class SwarmExecutor {
   }
 
   private buildConsensus(outputs: Record<AgentRole, string>): string {
-    const summaries: string[] = [];
+    const lines: string[] = ['=== Swarm Consensus ===\n'];
     for (const [role, output] of Object.entries(outputs)) {
-      summaries.push(`[${role}]: ${output.slice(0, 200)}`);
+      // Extract first meaningful paragraph or summary line
+      const paragraphs = output.split('\n\n').filter(p => p.trim().length > 20);
+      const summary = paragraphs.length > 0
+        ? paragraphs[0].slice(0, 500)
+        : output.slice(0, 500);
+      lines.push(`[${role}]: ${summary}`);
     }
-    return summaries.join('\n---\n');
+    return lines.join('\n\n');
   }
 
   async runPipeline(pipelineType: 'feature' | 'bugfix' | 'refactor' | 'docs'): Promise<SwarmResult> {

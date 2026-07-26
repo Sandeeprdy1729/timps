@@ -1,5 +1,5 @@
 // TIMPS Swarm — 10 Specialized AI Agents
-// Each agent runs on its own computer, collaborates via peer-to-peer messaging
+// Each agent runs with its own LLM provider, system prompt, and tool set; coordinated via DAG execution
 
 import { generateId } from '../utils/utils.js';
 import type { ProviderName } from '../config/types.js';
