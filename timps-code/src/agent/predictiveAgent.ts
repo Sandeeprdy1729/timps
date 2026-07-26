@@ -89,11 +89,14 @@ export class PredictiveAgent {
     this.branchName = agentOpts.branchName;
     this.pluginManager = agentOpts.pluginManager;
     this.isLocalModel = agentOpts.provider.name === 'ollama';
-    this.messages.push({ role: 'system', content: this.buildSystemPrompt() });
+    this.messages.push({ role: 'system', content: '' });
+    this.buildSystemPrompt().then(prompt => {
+      this.messages[0] = { role: 'system', content: prompt };
+    }).catch(() => {});
   }
 
-  private buildSystemPrompt(): string {
-    const memoryCtx = this.memory.getContextString();
+  private async buildSystemPrompt(): Promise<string> {
+    const memoryCtx = await this.memory.getContextString();
     const teamCtx = this.teamMemory?.getContextString() || '';
     const skillCtx = getSkillContext();
 
