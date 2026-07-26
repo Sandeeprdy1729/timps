@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 67    | 22        |
+| High     | 89    | 68    | 21        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **78** | **310** |
+| **Total**| **388** | **79** | **309** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 67 High
+## ✅ Fixed — 11 Critical + 68 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -98,8 +98,9 @@
 | H70 | `timps-code/src/services/compact/index.ts:156` — `generateSummary` is a stub: sleeps 50ms then returns truncated raw JSON of first 20 messages instead of LLM summary; fabricated `compactionUsage` token counts (96-98) report `preCompactTokenCount * 0.8` as input and `summary.length / 4` as output instead of real LLM usage | Replaced stub with real LLM call via `ProviderMesh` (routes to best available provider, prefers local); added `ruleBasedSummary` fallback when no provider available; fixed `compactionUsage` to track actual token counts from LLM response `done` event. Verified: `tsc --noEmit` clean, 889 tests pass. |
 
 | H71 | `timps-code/src/services/coordinator/index.ts` — Coordinator service is a dead data model: creates workers/tasks but never spawns or executes anything; `getNextTask()` output never consumed; `isCoordinatorModeEnabled()` gates on unrelated `thinkingEnabled` field; `getTasksByWorker()` filters `t.id.startsWith(workerId)` which never matches (`task_*` vs `worker_*`); agent/send_message/task_stop tools either missing or stub-only; `COORDINATOR_SYSTEM_PROMPT` exported but never imported | Added `coordinatorMode?: boolean` to `TimpsConfig`; fixed `isCoordinatorModeEnabled()` to read dedicated config field; added `workerId` field to `AgentTask` and fixed `getTasksByWorker()` to filter by `t.workerId === workerId`; wired `AgentTool` to create workers via `CoordinatorService.createWorker()`, submit tasks, and spawn child processes that execute via `timps` CLI binary; created `SendMessageTool` for follow-up messages with full conversation history; extended `task_stop` to also stop coordinator workers; registered `agent` + `send_message` tools in `ALL_TOOLS`; added `WorkerHistory` tracking and `abortController` per worker for cancellation. Verified: `tsc --noEmit` clean. |
+| H72 | `timps-code/src/swarm/` — Dead swarm module: 6 files (agents.ts, cli.ts, graph.ts, executor.ts, dynamicOrchestrator.ts, server.ts) with 10 agent roles, DAG execution, dynamic orchestration, and Python API bridge — all unreachable: `--swarm`/`--swarm-pipeline`/`--swarm-status` CLI flags declared but never handled; `addSwarmCommands()` exported from cli.ts but never called; REPL dispatcher has no `swarm` case; no code path in the app ever imports from swarm/ | Wired `--swarm`/`--swarm-pipeline`/`--swarm-status` flag handlers in `timps.ts` action handler (runs swarm DAG, pipeline executor, or status display before REPL launch); called `addSwarmCommands()` from `src/swarm/cli.ts` to register `timps swarm start|stop|run` subcommands; added `swarm`/`swarmPipeline`/`swarmStatus` to `AppOptions`; added swarm flag handling in `app.ts startApp()` (swarm mode, pipeline execution, status display); added `/swarm` slash command to REPL dispatcher with subcommands: `/swarm run <task>`, `/swarm pipeline <type>`, `/swarm status`, `/swarm agents`, `/swarm` (interactive mode). Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 311 Issues
+## 📋 Remaining — 310 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

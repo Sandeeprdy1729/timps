@@ -8,6 +8,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as os from 'os';
 
+import { addSwarmCommands } from '../swarm/cli.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..');
 dotenv.config({ path: path.join(projectRoot, '.env') });
@@ -315,12 +317,79 @@ program
       return;
     }
 
-  // Handle version
+    // Handle version
   if (opts['show-version']) {
     console.log(`\n  TIMPS Code ${t.accent('2.0.1')}`);
     console.log(`  ${t.dim('Build: world-no-1-coder')}\n`);
     return;
   }
+
+    // Handle swarm flags
+    if (opts.swarm || opts.swarmPipeline || opts.swarmStatus) {
+      console.log(LOGO);
+      const { runSwarmMode } = await import('../swarm/cli.js');
+
+      if (opts.swarmStatus) {
+        const { createSwarm } = await import('../swarm/agents.js');
+        const agents = createSwarm();
+        console.log(`\n${t.brandBold('TIMPS Swarm Status')}\n`);
+        for (const agent of agents) {
+          const icon = { idle: '○', busy: '●', waiting: '◐', error: '✕' };
+          console.log(`  ${icon[agent.status]} ${agent.name} (${agent.model}) — ${agent.stats.tasksCompleted} tasks`);
+        }
+        console.log();
+        return;
+      }
+
+      const pipeline = opts.swarmPipeline ? String(opts.swarmPipeline) : undefined;
+      const task = messageParts.length > 0 ? messageParts.join(' ') : undefined;
+
+      if (pipeline) {
+        const { SwarmExecutor } = await import('../swarm/executor.js');
+        const { Memory } = await import('../memory/memory.js');
+        const mem = new Memory(process.cwd());
+        const executor = new SwarmExecutor(mem, process.cwd());
+        const validPipelines = ['feature', 'bugfix', 'refactor', 'docs'] as const;
+        if (!validPipelines.includes(pipeline as any)) {
+          console.log(`  ${t.error('Invalid pipeline:')} ${pipeline}. Use: ${validPipelines.join(', ')}`);
+          return;
+        }
+        console.log(`\n  ${t.accent('Running')} ${t.brandBold(pipeline)} ${t.accent('pipeline...')}\n`);
+        const agents = executor.getAgents();
+        for (const agent of agents) {
+          console.log(`  ${t.dim('●')} ${agent.name}`);
+        }
+        console.log();
+        const taskDesc = task || `Execute ${pipeline} pipeline`;
+        const role = pipeline === 'bugfix' ? 'code_generator' : pipeline === 'docs' ? 'docs_writer' : 'code_generator';
+        const taskId = executor.submitTask(role, taskDesc);
+        try {
+          const result = await executor.executeTask(taskId);
+          console.log(`${t.success('✓')} Task completed:\n${result}\n`);
+        } catch (err) {
+          console.log(`${t.error('✗')} Task failed: ${(err as Error).message}\n`);
+        }
+        return;
+      }
+
+      if (task) {
+        const { runSwarmDAG } = await import('../swarm/graph.js');
+        console.log(`\n  ${t.accent('Running swarm task:')} ${t.brandBold(task)}\n`);
+        const result = await runSwarmDAG({ request: task });
+        if (result.success) {
+          console.log(`${t.success('✓')} ${result.summary || 'Task completed'}\n`);
+          if (result.artifacts?.length) {
+            console.log(`  ${t.dim('Artifacts:')} ${result.artifacts.join(', ')}`);
+          }
+        } else {
+          console.log(`${t.error('✗')} ${result.error || 'Task failed'}\n`);
+        }
+        return;
+      }
+
+      await runSwarmMode();
+      return;
+    }
 
     // Handle models list
     if (opts.models) {
@@ -376,5 +445,7 @@ program
       memoryToken: opts.memoryToken as string | undefined,
     });
   });
+
+addSwarmCommands();
 
 program.parse();
