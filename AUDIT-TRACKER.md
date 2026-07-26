@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 83    | 6         |
+| High     | 89    | 84    | 5         |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **94** | **294** |
+| **Total**| **388** | **95** | **293** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 83 High
+## ✅ Fixed — 11 Critical + 84 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -66,6 +66,7 @@
 | H35 | `packages/plugin-git/src/index.ts:21`, `packages/plugin-shell/src/index.ts:14` | Both plugins define tools as Array with `{content}` returns, but SDK requires `manifest.tools: ToolSpec[]` + `tools: Record<string, ToolHandler>` returning `{output, error}` — `allTools()` skips them, contributing zero tools | Added `manifest.tools` (5 specs for git, 3 for shell); rewrote `tools` as Record; handlers now return `{output, error}` and accept `_ctx` param. All 8 tools now resolve via registry. |
 | H36 | `packages/server/tools/toolsDb.ts:787` | `CREATE INDEX USING GIN(gist)` on plain `TEXT` column — stock Postgres has no default GIN opclass for text; migration aborts mid-way, dropping all downstream tables | Changed to `(gist)` — default b-tree index works correctly on TEXT |
 | H37 | `packages/storybook/src/stories/Button.stories.tsx:2` | Dead code: 5 of 17 story files import components from `'../src/components/X'` which resolves to `src/src/components/X` (doubled `src`); the 12 remaining stories import from `'../X'` which resolves to `src/X` (correct); `.storybook/preview.ts` imports `'../src/index.css'` which resolves correctly | Fixed 5 broken imports: changed `'../src/components/X'` → `'../components/X'` in Alert, Badge, Button, Card, CommandPalette stories. The other 12 stories and preview.ts were already correct. |
+| H44 | `packages/timps-desktop/src/components/MemoryGraph.tsx:3` | Dependency: imports d3-force, d3-selection, d3-zoom not in package.json | **Already fixed** as part of H43 — d3 imports replaced with inline force-directed layout; package.json has no d3 dependencies. |
 | H38 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | All storage paths derived from `HOME` env var (5 locations in commands.rs, 1 in nexus_bridge.rs) — Windows GUI processes use `USERPROFILE`, not `HOME`, so memory resolves to `C:\Program Files\TIMPS\.timps` making the entire desktop app non-functional on Windows | Created `pub(crate) fn home_dir()` checking `HOME` → `USERPROFILE` → `.`; replaced all 6 direct `HOME` references |
 | H39 | `packages/timps-desktop/src-tauri/src/commands.rs:97` | Desktop memory reader triply broken: (1) `project_hash_inner` uses 31-multiply→base36 while memory-core uses SHA-256→12 hex chars so directory names never match, (2) `load_episodes` reads `episodes.jsonl` but v1→v2 migration converts to `episodes.json` and deletes `.jsonl`, (3) nexus_bridge.rs duplicates the wrong hash | Replaced `project_hash_inner` with SHA-256→12 hex chars matching memory-core; `load_episodes` now reads `episodes.json` JSON array; nexus_bridge delegates to `crate::commands::project_hash_inner`; `sha2`+`hex` deps added to Cargo.toml |
 | H40 | `packages/timps-desktop/src-tauri/src/commands.rs:613` | 4 semantic.json writers (store_memory, passive_store, delete_memory, run_background_summarizer) do bare fs::read→modify→fs::write with no locking; clipboard watcher thread races with Tauri commands and summarizer; `fs::write` truncates first so a concurrent reader parses truncated JSON as empty, then rewrites file with only its entry — silent full memory wipe | Added `SEMANTIC_LOCK: Mutex<()>` serializing all read-modify-write cycles; added `write_json_atomic()` (write to .tmp + rename); lock held only during critical section in summarizer (not during expensive episode analysis) |
@@ -118,10 +119,10 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 292 Issues
+## 📋 Remaining — 293 Issues
 
-### High (31)
-⏸️ All 31 remaining High issues are unfixed — awaiting user instruction to proceed
+### High (30)
+⏸️ All 30 remaining High issues are unfixed — awaiting user instruction to proceed
 
 ### Medium (208)
 ⏸️ Paused — awaiting user instruction to proceed
