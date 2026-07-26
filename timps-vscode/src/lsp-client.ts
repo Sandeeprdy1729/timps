@@ -29,8 +29,8 @@ export class TimpsLspClient implements vscode.Disposable {
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection('timps-lsp');
     this.enabled = vscode.workspace.getConfiguration('timps.lsp').get('enabled', true);
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    this.statusBarItem.text = '$(database) TIMPS LSP';
-    this.statusBarItem.tooltip = 'TIMPS Language Server';
+    this.statusBarItem.text = '$(database) TIMPS LSP (inactive)';
+    this.statusBarItem.tooltip = 'TIMPS Language Server — click to toggle';
     this.statusBarItem.command = 'timps.toggleLsp';
     this.statusBarItem.show();
 
@@ -73,15 +73,19 @@ export class TimpsLspClient implements vscode.Disposable {
       return;
     }
 
-    // The TIMPS LSP proxy server entry point
-    const proxyEntry = path.join(extensionPath, 'out', 'services', 'lsp', 'proxy.js');
-    if (!fs.existsSync(proxyEntry)) {
-      console.warn(`[TIMPS LSP] Proxy server not found at ${proxyEntry}`);
+    // The TIMPS LSP proxy server entry point — lives in timps-code/dist, not the extension's out/
+    const proxyEntry = path.join(rootPath, 'timps-code', 'dist', 'services', 'lsp', 'proxy-entry.js');
+    const proxyEntryFallback = path.join(extensionPath, 'out', 'services', 'lsp', 'proxy.js');
+    const proxyPath = fs.existsSync(proxyEntry) ? proxyEntry
+      : fs.existsSync(proxyEntryFallback) ? proxyEntryFallback
+      : null;
+    if (!proxyPath) {
+      console.warn(`[TIMPS LSP] Proxy server not found at ${proxyEntry} or ${proxyEntryFallback}`);
       return;
     }
 
     try {
-      this.process = spawn(process.execPath, [proxyEntry, '--stdio'], {
+      this.process = spawn(process.execPath, [proxyPath, '--stdio'], {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: rootPath,
         env: {
@@ -107,6 +111,8 @@ export class TimpsLspClient implements vscode.Disposable {
 
       this.process.on('error', (err) => {
         console.error('[TIMPS LSP] Failed to start:', err.message);
+        this.statusBarItem.text = '$(database) TIMPS LSP (error)';
+        this.statusBarItem.tooltip = `TIMPS LSP failed to start: ${err.message}`;
       });
 
       // Send initialize request
@@ -143,6 +149,8 @@ export class TimpsLspClient implements vscode.Disposable {
       }
     } catch (err) {
       console.error('[TIMPS LSP] Initialization failed:', err);
+      this.statusBarItem.text = '$(database) TIMPS LSP (error)';
+      this.statusBarItem.tooltip = `TIMPS LSP init failed: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
 
