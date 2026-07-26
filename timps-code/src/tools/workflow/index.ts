@@ -2,6 +2,7 @@
 // Chain multiple operations into reusable workflows
 
 import type { RegisteredTool } from '../../tools/tools.js';
+import { getTool } from '../tools.js';
 
 export interface WorkflowStep {
   tool: string;
@@ -114,12 +115,42 @@ export const workflowTool: RegisteredTool = {
         const dryRun = String(args.dryRun) === 'true';
 
         const results: string[] = [];
+        let failed = false;
         for (let i = 0; i < workflow.steps.length; i++) {
           const step = workflow.steps[i];
+
           if (dryRun) {
             results.push(`[${i + 1}] Would execute: ${step.tool}(${JSON.stringify(step.args)})`);
-          } else {
-            results.push(`[${i + 1}] Executed: ${step.tool} → OK`);
+            continue;
+          }
+
+          // Evaluate condition if present
+          if (step.condition) {
+            // Simple condition: skip if previous step failed
+            if (failed) {
+              results.push(`[${i + 1}] Skipped: ${step.tool} (previous step failed)`);
+              continue;
+            }
+          }
+
+          const tool = getTool(step.tool);
+          if (!tool) {
+            results.push(`[${i + 1}] Failed: ${step.tool} → unknown tool`);
+            failed = true;
+            continue;
+          }
+
+          try {
+            const result = await tool.execute(step.args, cwd);
+            if (result.isError) {
+              results.push(`[${i + 1}] Failed: ${step.tool} → ${result.content.slice(0, 200)}`);
+              failed = true;
+            } else {
+              results.push(`[${i + 1}] Executed: ${step.tool} → ${result.content.slice(0, 200)}`);
+            }
+          } catch (err) {
+            results.push(`[${i + 1}] Error: ${step.tool} → ${(err as Error).message}`);
+            failed = true;
           }
         }
 
