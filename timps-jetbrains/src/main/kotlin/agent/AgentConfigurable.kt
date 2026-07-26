@@ -1,4 +1,4 @@
-package agent
+package com.intellij.timps.agent
 
 import com.intellij.openapi.options.Configurable
 import javax.swing.JPanel
@@ -38,18 +38,10 @@ class AgentConfigurable : Configurable {
         savedModel = modelField?.text ?: savedModel
         savedAutoWarn = autoWarnCheck?.isSelected ?: savedAutoWarn
     }
-    
+
     override fun reset() {
         providerField?.selectedItem = savedProvider
         modelField?.text = savedModel
         autoWarnCheck?.isSelected = savedAutoWarn
     }
-}
-
-    override fun isModified(): Boolean {
-        return true
-    }
-
-    override fun apply() {}
-    override fun reset() {}
 }

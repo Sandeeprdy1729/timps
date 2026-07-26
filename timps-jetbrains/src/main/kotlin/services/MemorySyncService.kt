@@ -1,6 +1,5 @@
-package services
+package com.intellij.timps.services
 
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import java.net.HttpURLConnection
 import java.net.URL

@@ -1,4 +1,4 @@
-package agent
+package com.intellij.timps.agent
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
@@ -36,21 +36,23 @@ class TIMPSAgent(private val project: Project) {
                     }
                 }
             })
+            startNotify()
         }
-        processHandler?.startNotifiesProcessStarted()
     }
 
     fun sendInput(input: String) {
-        processHandler?.processHandler?.let { processInput ->
-            processInput.write(input.toByteArray())
-            processInput.flush()
+        processHandler?.process?.let { processInput ->
+            processInput.outputStream?.let { os ->
+                os.write(input.toByteArray())
+                os.flush()
+            }
         }
     }
 
     fun stop() {
-        processHandler?.processHandler?.let { processInput ->
-            if (processInput.isAlive) {
-                processInput.destroy()
+        processHandler?.process?.let { proc ->
+            if (proc.isAlive) {
+                proc.destroy()
             }
         }
     }

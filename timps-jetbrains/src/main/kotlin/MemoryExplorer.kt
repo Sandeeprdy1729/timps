@@ -5,7 +5,7 @@ import javax.swing.JTree
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.JScrollPane
-import javax.swing.BorderLayout
+import javax.swing.BorderFactory
 import java.awt.BorderLayout
 
 class MemoryExplorer {
@@ -16,7 +16,7 @@ class MemoryExplorer {
         val panel = JPanel(BorderLayout())
         tree.model = treeModel
         val scrollPane = JScrollPane(tree)
-        scrollPane.border = javax.swing.BorderFactory.createTitledBorder("Memory Explorer")
+        scrollPane.border = BorderFactory.createTitledBorder("Memory Explorer")
         panel.add(scrollPane, BorderLayout.CENTER)
         return panel
     }

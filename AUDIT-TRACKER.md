@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 78    | 11        |
+| High     | 89    | 79    | 10        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **89** | **299** |
+| **Total**| **388** | **90** | **298** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 78 High
+## ✅ Fixed — 11 Critical + 79 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -109,8 +109,9 @@
 | H80 | `timps-code/src/utils/hooks.ts:66` — Bug: `HooksEngine.run()` swallows non-zero exits from `execSync` in an empty catch block, so a PreToolUse hook that exits 1 to deny an action has no effect; `run()` returns only concatenated stdout and never signals a block; the shipped `EXAMPLE_HOOKS` `'prevent-env'` (exits 1 to block writes to `.env`) is documented-but-nonfunctional; comment `'In strict mode, could throw'` confirms blocking is unimplemented | Changed `run()` return type to `HookResult` (`{ output, blocked, blockedBy? }`); non-zero exit now sets `blocked = true` and captures the hook's stdout/stderr as the block reason; first blocking hook stops processing further hooks; exported new `HookResult` type. Verified: `tsc --noEmit` clean. |
 | H81 | `timps-code/src/utils/permissions.ts:109` — Bug: `buildPattern` reduces a Bash command to only its first token via `args.command.split(' ')[0]`, so `Bash(sudo rm -rf /)` becomes `Bash(sudo)` which does not match deny rule `Bash(sudo *)` (needs a space); consequently the entire deny list (`sudo *`, `rm -rf / *`, `curl | bash`, `wget | bash`) is inert, and bash allow rules like `Bash(git status)`/`Bash(ls *)` also never match — the safety model silently fails | Removed `.split(' ')[0]` truncation; `buildPattern` now uses the full `args.command` string so wildcard patterns in deny/allow rules can match (e.g., `Bash(sudo *)` matches `Bash(sudo rm -rf /)`); `matchPattern` wildcards (`*` → `.*`) already handle this correctly. Verified: `tsc --noEmit` clean. |
 | H82 | `timps-code/src/utils/riskEngine.ts:243` — Security: `assessBashCommand` iterates `BASH_COMMAND_RISK` patterns and `break`s on the first match; the read-only pattern (`^(ls|cat|git status...)`) matches the start of chained commands; `cat x && rm -rf /` matches the read-only pattern, scores 0, and breaks — the destructive `rm` part is never evaluated; pipe surcharge only applies when `maxScore>0` so it's never added for safe-prefix commands; `assess('Bash',{command:'git status; rm -rf ~'})` returns `auto-approve` (score 0) | Split command on `&&`/`||`/`;` separators into segments, assess each segment independently against `BASH_COMMAND_RISK` patterns, take the maximum score across all segments; pipe surcharge now applies per-segment. Verified: `tsc --noEmit` clean. |
+| H83 | `timps-jetbrains/src/main/kotlin/TIMPSToolWindow.kt:3` — Bug: JetBrains plugin cannot compile — 8 distinct errors across 8 files: (1) `com.intellij.openapi.w.ToolWindow`/`ToolWindowFactory` → should be `com.intellij.openapi.wm.*`; (2) `com.intellij.openapi.w.ToolWindowManager` in RunTIMPSAction/MemoryBranchAction → same fix; (3) nonexistent `com.intellij.openapi.welcome.WelcomeScreenService` in TIMPSPlugin; (4) duplicate `javax.swing.BorderLayout` import shadows `java.awt.BorderLayout` in MemoryExplorer; (5) orphan `isModified`/`apply`/`reset` overrides after class closing brace in AgentConfigurable; (6) nonexistent `OSProcessHandler.startNotifiesProcessStarted()`/`.processHandler` members in TIMPSAgent; (7) `SwarmPipelineAction` extends non-open `MemoryBranchAction`; (8) missing `package` declarations in actions files; `./gradlew buildPlugin` fails — plugin is 0% functional | Fixed all 8 files: corrected `openapi.w` → `openapi.wm` imports; removed nonexistent `WelcomeScreenService`; removed duplicate `javax.swing.BorderLayout` import; deleted orphan overrides after class brace; fixed `startNotify()` (correct method) and `processHandler` → `process` (correct property); added `open` modifier to `MemoryBranchAction`; added proper `package` declarations to all action classes; updated `plugin.xml` to use fully-qualified class names. |
 
-## 📋 Remaining — 300 Issues
+## 📋 Remaining — 299 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

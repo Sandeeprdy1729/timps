@@ -1,10 +1,9 @@
 package com.intellij.timps
 
-import com.intellij.openapi.w.ToolWindow
-import com.intellij.openapi.w.ToolWindowFactory
+import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import javax.swing.JPanel
-import javax.swing.JEditorPane
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import java.awt.BorderLayout
