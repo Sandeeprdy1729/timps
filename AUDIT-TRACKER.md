@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 76    | 13        |
+| High     | 89    | 77    | 12        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **87** | **301** |
+| **Total**| **388** | **88** | **300** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 76 High
+## ✅ Fixed — 11 Critical + 77 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -107,8 +107,9 @@
 | H78 | `timps-code/src/tools/workflow/index.ts:122` — Dead code: `workflow` tool `run` action fabricates success — for each step pushes `'[n] Executed: <tool> → OK'` without invoking any tool (only `dryRun` prints honestly); tool description promises "Chain multiple tool calls together with conditional logic"; agent receives confirmation that steps executed when nothing ran; a silent-failure/fake-success pattern | Wired `run` action to actually execute each step via `getTool(step.tool).execute(step.args, cwd)` from the tool registry; captures real results (success content or error message); reports actual output (truncated to 200 chars); tracks failure state and skips subsequent steps on error; returns error exit code if any step fails. Verified: `tsc --noEmit` clean. |
 | H79 | `timps-code/src/utils/fileTracker.ts:26` — Bug: `FileTracker` constructor synchronously recursively reads every file under cwd (only skipping dotfiles) into an in-memory Map as UTF-8 via `fs.readFileSync`; `node_modules`, `dist`, binaries, and large files are all slurped; no try/catch for unreadable/binary files throws in constructor; `sessionTracker.getOrCreate(cwd)` triggers this on working directory → OOM/hang on real projects | Replaced in-memory content Map with lightweight metadata snapshot (`size` + `mtime` per file); added skip list for `node_modules`/`.git`/`dist`/`build`/`out`/`target`/`coverage`/`.next`/`__pycache__`/`.cache`/`.turbo`; skip binary extensions (images, archives, fonts, executables, wasm); skip files >1MB; wrapped `statSync`/`readdirSync` in try/catch; `diff()` reads content lazily from disk on demand instead of holding in memory. Verified: `tsc --noEmit` clean. |
 | H80 | `timps-code/src/utils/hooks.ts:66` — Bug: `HooksEngine.run()` swallows non-zero exits from `execSync` in an empty catch block, so a PreToolUse hook that exits 1 to deny an action has no effect; `run()` returns only concatenated stdout and never signals a block; the shipped `EXAMPLE_HOOKS` `'prevent-env'` (exits 1 to block writes to `.env`) is documented-but-nonfunctional; comment `'In strict mode, could throw'` confirms blocking is unimplemented | Changed `run()` return type to `HookResult` (`{ output, blocked, blockedBy? }`); non-zero exit now sets `blocked = true` and captures the hook's stdout/stderr as the block reason; first blocking hook stops processing further hooks; exported new `HookResult` type. Verified: `tsc --noEmit` clean. |
+| H81 | `timps-code/src/utils/permissions.ts:109` — Bug: `buildPattern` reduces a Bash command to only its first token via `args.command.split(' ')[0]`, so `Bash(sudo rm -rf /)` becomes `Bash(sudo)` which does not match deny rule `Bash(sudo *)` (needs a space); consequently the entire deny list (`sudo *`, `rm -rf / *`, `curl | bash`, `wget | bash`) is inert, and bash allow rules like `Bash(git status)`/`Bash(ls *)` also never match — the safety model silently fails | Removed `.split(' ')[0]` truncation; `buildPattern` now uses the full `args.command` string so wildcard patterns in deny/allow rules can match (e.g., `Bash(sudo *)` matches `Bash(sudo rm -rf /)`); `matchPattern` wildcards (`*` → `.*`) already handle this correctly. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 302 Issues
+## 📋 Remaining — 301 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

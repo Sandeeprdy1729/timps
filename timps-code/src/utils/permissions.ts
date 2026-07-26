@@ -104,9 +104,9 @@ export class PermissionSystem {
   private buildPattern(toolName: string, args?: Record<string, unknown>): string {
     if (!args) return toolName;
     
-    // Add arg-based context to pattern
+    // Add arg-based context to pattern — use full value so wildcard patterns match
     if (args.command && typeof args.command === 'string') {
-      return `${toolName}(${args.command.split(' ')[0]})`;
+      return `${toolName}(${args.command})`;
     }
     if (args.path && typeof args.path === 'string') {
       return `${toolName}(${args.path})`;
