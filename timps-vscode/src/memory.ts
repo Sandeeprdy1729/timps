@@ -127,6 +127,8 @@ export class TIMPsMemory {
     this.working = { activeFiles: [], recentErrors: [], discoveredPatterns: [] };
   }
 
+  getStorageDir(): string { return this.dir; }
+
   async init(): Promise<void> {
     fs.mkdirSync(this.dir, { recursive: true });
     this.working = this.loadWorking();
