@@ -7,14 +7,14 @@
 | Severity | Total | Fixed | Remaining |
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
-| High     | 89    | 70    | 19        |
+| High     | 89    | 71    | 18        |
 | Medium   | 208   | 0     | 208       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **81** | **307** |
+| **Total**| **388** | **82** | **306** |
 
 ---
 
-## ✅ Fixed — 11 Critical + 70 High
+## ✅ Fixed — 11 Critical + 71 High
 
 | ID | File | Issue | Fix Summary |
 |----|------|-------|-------------|
@@ -101,8 +101,9 @@
 | H72 | `timps-code/src/swarm/` — Dead swarm module: 6 files (agents.ts, cli.ts, graph.ts, executor.ts, dynamicOrchestrator.ts, server.ts) with 10 agent roles, DAG execution, dynamic orchestration, and Python API bridge — all unreachable: `--swarm`/`--swarm-pipeline`/`--swarm-status` CLI flags declared but never handled; `addSwarmCommands()` exported from cli.ts but never called; REPL dispatcher has no `swarm` case; no code path in the app ever imports from swarm/ | Wired `--swarm`/`--swarm-pipeline`/`--swarm-status` flag handlers in `timps.ts` action handler (runs swarm DAG, pipeline executor, or status display before REPL launch); called `addSwarmCommands()` from `src/swarm/cli.ts` to register `timps swarm start|stop|run` subcommands; added `swarm`/`swarmPipeline`/`swarmStatus` to `AppOptions`; added swarm flag handling in `app.ts startApp()` (swarm mode, pipeline execution, status display); added `/swarm` slash command to REPL dispatcher with subcommands: `/swarm run <task>`, `/swarm pipeline <type>`, `/swarm status`, `/swarm agents`, `/swarm` (interactive mode). Verified: `tsc --noEmit` clean. |
 | H73 | `timps-code/src/swarm/graph.ts` + `executor.ts` — Dead code: agents cannot act — `executeAgent` streams LLM with empty tools array (`provider.stream(messages, [], ...)`); `executor.ts` `runAgent` likewise passes `[]` and hardcodes Ollama at `http://localhost:11434` ignoring `agent.provider`/remote config; `routeAfterOrchestrator` (graph.ts:34-51) never called; DAG routing is keyword matching on request string; agents.ts prompts promise Write/Edit/Bash/WebSearch tools but swarm agents can only produce prose — never write files, run tests, or produce real artifacts; consensus is first 200 chars of each text concatenated | Rewrote `graph.ts executeAgent` with agentic loop: resolves tool definitions from `AGENT_PROMPTS[role].tools` via `getToolDefinitions()`, passes them to `provider.stream()`, accumulates tool calls from stream events, executes them via `getTool().execute()`, feeds results back as `role: 'tool'` messages, loops until no more calls (max 5 turns). Removed dead `routeAfterOrchestrator`. Rewrote `executor.ts runAgent` with same agentic loop, replaced `createOllamaProvider` with `createProvider(agent.provider, agent.model)` to respect per-agent provider config. Fixed `buildConsensus` to extract first meaningful paragraph per role instead of truncating to 200 chars. Fixed agents.ts header: removed false "each agent runs on its own computer, collaborates via peer-to-peer messaging". Verified: `tsc --noEmit` clean. |
 | H74 | `timps-code/src/swarm/server.ts` — Bug: `runSwarmTask()` at line 105 fetches `http://localhost:8000/swarm/run` — the server's own endpoint — causing recursive self-requests; when the fetch fails it returns fabricated success payload `'Task completed via TIMPS Swarm'` with empty artifacts (lines 122-130); no actual task execution; `getAgentList()` returns hardcoded static data instead of live agent state | Replaced self-referencing fetch with direct call to `runSwarmDAG()` from graph.ts (which now has real tool execution from H73); `getAgentList()` now calls `createSwarm()` and returns live agent status including `tasksCompleted`/`tasksFailed` counts; added error handling for malformed JSON in POST body; removed unused `SWARM_PYTHON_API` constant and Python backend references. Verified: `tsc --noEmit` clean. |
+| H75 | `timps-code/src/tools/bash/index.ts:30` — Bug: primary registered bash tool hardcodes `shell: '/bin/bash'` in `execSync` options; on Windows there is no `/bin/bash` so every invocation throws `spawn /bin/bash ENOENT`; agent's most fundamental tool is broken on a mainline platform; repository README claims cross-platform CLI | Added `process.platform === 'win32'` check: uses `'cmd.exe'` on Windows (Node.js internally runs `cmd.exe /d /s /c`), keeps `'/bin/bash'` on Unix/macOS. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 308 Issues
+## 📋 Remaining — 307 Issues
 
 ### High (32)
 ⏸️ All 32 remaining High issues are unfixed — awaiting user instruction to proceed

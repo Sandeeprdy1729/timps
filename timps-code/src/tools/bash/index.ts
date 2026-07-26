@@ -27,7 +27,7 @@ export const bash: RegisteredTool = {
         encoding: 'utf-8',
         timeout,
         maxBuffer: 10 * 1024 * 1024,
-        shell: '/bin/bash',
+        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/bash',
         env: { ...process.env },
       });
       return { content: result.trim() || '(no output)', isError: false };
