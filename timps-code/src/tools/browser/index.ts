@@ -135,7 +135,7 @@ const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-  await page.goto('${url}', { timeout: 30000 });
+  await page.goto(${JSON.stringify(url)}, { timeout: 30000 });
   const title = await page.title();
   const content = await page.content();
   console.log(JSON.stringify({ title, content: content.slice(0, 10000) }));
@@ -183,8 +183,8 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   // Note: This would need a page to be open first
-  await page.screenshot({ path: '${screenshotPath}' });
-  console.log('Screenshot saved to ${screenshotPath}');
+  await page.screenshot({ path: ${JSON.stringify(screenshotPath)} });
+  console.log('Screenshot saved to ' + ${JSON.stringify(screenshotPath)});
   await browser.close();
 })();
 `;
