@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 0     | 208       |
+| Medium   | 208   | 1     | 207       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **100** | **288** |
+| **Total**| **388** | **101** | **287** |
 
 ---
 
@@ -121,12 +121,18 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## 📋 Remaining — 288 Issues
+## ✅ Fixed — 1 Medium
+
+| ID | Issue | Fix |
+|---|---|---|
+| M1 | `.devcontainer/Dockerfile:71` — Dead code: Dockerfile references nonexistent `COPY --from=dockercli` and `COPY --from=docker` stages, copies missing `devcontainer-entrypoint.sh`, uses dead Qdrant installer URL `https://get.qdrant.tech`, Ollama installer runs as non-root; `devcontainer.json` has invalid `" mounts"` key (leading space), malformed feature IDs without registry paths, broken `files.exclude` syntax | Rewrote both files: Dockerfile installs Rust/pnpm/turbo as root before switching to `USER node`, removed broken COPY/Ollama/Qdrant/entrypoint commands; devcontainer.json fixed `"mounts"` key, added `ghcr.io/devcontainers/features/docker-in-docker:1` and `git:1` registry paths, fixed `files.exclude` syntax, consolidated duplicate `settings` blocks, changed `postCreateCommand` to `npm install` |
+
+## 📋 Remaining — 287 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (208)
+### Medium (207)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
