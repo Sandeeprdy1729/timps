@@ -13,35 +13,71 @@ export interface FileChange {
   linesRemoved?: number;
 }
 
+// Directories to always skip (large / generated / irrelevant)
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', 'dist', 'build', 'out', 'target',
+  'coverage', '.next', '__pycache__', '.cache', '.turbo',
+]);
+
+// Max file size to track (1MB)
+const MAX_FILE_SIZE = 1024 * 1024;
+
+// Extensions to skip (binary / generated)
+const SKIP_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.webp',
+  '.mp3', '.mp4', '.wav', '.avi', '.mov',
+  '.zip', '.tar', '.gz', '.bz2', '.7z', '.rar',
+  '.woff', '.woff2', '.ttf', '.eot',
+  '.exe', '.dll', '.so', '.dylib',
+  '.wasm', '.node',
+  '.lock', '.sum',
+]);
+
 export class FileTracker {
   private changes: FileChange[] = [];
-  private originalContent: Map<string, string> = new Map();
+  private snapshot: Map<string, { size: number; mtime: number }> = new Map();
   private cwd: string;
-  
+
   constructor(cwd: string) {
     this.cwd = cwd;
     this.loadInitialState();
   }
-  
+
   private loadInitialState(): void {
-    // Snapshot current files
     const scanDir = (dir: string) => {
       if (!fs.existsSync(dir)) return;
-      
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+      let entries: fs.Dirent[];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return; // unreadable directory
+      }
+
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
-        
+
         const fullPath = path.join(dir, entry.name);
+
         if (entry.isDirectory()) {
-          scanDir(fullPath);
+          if (!SKIP_DIRS.has(entry.name)) {
+            scanDir(fullPath);
+          }
         } else if (entry.isFile()) {
-          const content = fs.readFileSync(fullPath, 'utf-8');
-          this.originalContent.set(fullPath, content);
+          const ext = path.extname(entry.name).toLowerCase();
+          if (SKIP_EXTENSIONS.has(ext)) continue;
+
+          try {
+            const stat = fs.statSync(fullPath);
+            if (stat.size > MAX_FILE_SIZE) continue;
+            this.snapshot.set(fullPath, { size: stat.size, mtime: stat.mtimeMs });
+          } catch {
+            // unreadable file — skip
+          }
         }
       }
     };
-    
+
     scanDir(this.cwd);
   }
   
@@ -81,30 +117,47 @@ export class FileTracker {
   
   // Generate diff (git-style)
   diff(filePath: string): string {
-    const original = this.originalContent.get(filePath);
-    if (!original) {
+    // Read original from disk lazily (not held in memory)
+    let original: string | undefined;
+    const snap = this.snapshot.get(filePath);
+    if (snap) {
+      try {
+        original = fs.readFileSync(filePath, 'utf-8');
+        // We don't have the original content anymore — report snapshot metadata
+        return `File: ${filePath}\n(last snapshot: ${snap.size} bytes, ${new Date(snap.mtime).toLocaleString()})\n`;
+      } catch {
+        // File may have been deleted
+      }
+    }
+
+    if (!snap) {
       return `File: ${filePath}\n--- /dev/null\n+++ b/${filePath}\n@@ +0,0 @@\n`;
     }
-    
-    const current = fs.readFileSync(filePath, 'utf-8');
-    
-    // Simple line-by-line diff
-    const originalLines = original.split('\n');
+
+    // File exists but wasn't snapshotted — read current
+    let current: string;
+    try {
+      current = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      return `File: ${filePath}\n(unreadable)\n`;
+    }
+
+    const originalLines = (original ?? '').split('\n');
     const currentLines = current.split('\n');
-    
+
     let diff = `File: ${filePath}\n`;
     diff += `--- a/${filePath}\n`;
     diff += `+++ b/${filePath}\n`;
-    
+
     const maxLines = Math.max(originalLines.length, currentLines.length);
     let line = 0;
-    
+
     for (line = 0; line < maxLines; line++) {
       const oldLine = originalLines[line];
       const newLine = currentLines[line];
-      
+
       if (oldLine === newLine) continue;
-      
+
       if (oldLine === undefined) {
         diff += `@@ +${line + 1},0 @@\n+${newLine}\n`;
       } else if (newLine === undefined) {
@@ -113,7 +166,7 @@ export class FileTracker {
         diff += `@@ -${line + 1},1 @@\n-${oldLine}\n+${newLine}\n`;
       }
     }
-    
+
     return diff;
   }
   
