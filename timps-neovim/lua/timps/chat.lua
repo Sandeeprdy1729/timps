@@ -20,13 +20,14 @@ function M.open(opts)
     "─────────────────────────────────────────────",
     "",
   })
-  vim.api.nvim_buf_add_keymap(chat_bufnr, "n", "<CR>", "", {
+  vim.api.nvim_buf_set_keymap(chat_bufnr, "n", "<CR>", "", {
     callback = function()
       local lines = vim.api.nvim_buf_get_lines(chat_bufnr, 0, -1, false)
       local input_line = nil
-      for i = #lines - 1, 2, -1 do
-        if lines[i]:match("^> ") then
-          input_line = lines[i]:sub(3)
+      for i = #lines, 1, -1 do
+        local line = lines[i]
+        if line ~= "" and not line:match("^─") and not line:match("^TIMPS") then
+          input_line = line
           break
         end
       end
@@ -35,13 +36,13 @@ function M.open(opts)
       end
     end
   })
-  vim.api.nvim_buf_add_keymap(chat_bufnr, "n", "q", "", {
+  vim.api.nvim_buf_set_keymap(chat_bufnr, "n", "q", "", {
     callback = function()
       vim.api.nvim_win_close(win_id, true)
       chat_bufnr = nil
     end
   })
-  vim.w[chat_bufnr] = { timps_chat = true }
+  vim.b[chat_bufnr] = { timps_chat = true }
 end
 
 function M.stream_message(msg)
