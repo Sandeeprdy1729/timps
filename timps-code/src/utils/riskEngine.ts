@@ -240,19 +240,27 @@ export class RiskEngine {
     let maxScore = 0;
     let reversible = true;
 
-    for (const entry of BASH_COMMAND_RISK) {
-      if (entry.pattern.test(cmd)) {
-        factors.push({ name: 'bash_pattern', score: entry.score, reason: entry.reason });
-        if (entry.score > maxScore) maxScore = entry.score;
-        if (!entry.reversible) reversible = false;
-        break; // Use first (most specific) match
-      }
-    }
+    // Split on command separators so each segment is assessed independently
+    const segments = cmd.split(/\s*(?:&&|\|\||;)\s*/);
 
-    // Piped commands are riskier
-    if (cmd.includes('|') && maxScore > 0) {
-      factors.push({ name: 'piped_cmd', score: 10, reason: 'piped command chain' });
-      maxScore = Math.min(100, maxScore + 10);
+    for (const segment of segments) {
+      const trimmed = segment.trim();
+      if (!trimmed) continue;
+
+      for (const entry of BASH_COMMAND_RISK) {
+        if (entry.pattern.test(trimmed)) {
+          factors.push({ name: 'bash_pattern', score: entry.score, reason: entry.reason });
+          if (entry.score > maxScore) maxScore = entry.score;
+          if (!entry.reversible) reversible = false;
+          break; // First (most specific) match per segment
+        }
+      }
+
+      // Piped sub-commands within a segment are riskier
+      if (trimmed.includes('|') && maxScore > 0) {
+        factors.push({ name: 'piped_cmd', score: 10, reason: 'piped command chain' });
+        maxScore = Math.min(100, maxScore + 10);
+      }
     }
 
     return { factors, maxScore, reversible };
