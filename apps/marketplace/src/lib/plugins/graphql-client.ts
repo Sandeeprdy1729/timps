@@ -1,4 +1,4 @@
-import { BasePlugin, PluginResult, PluginConfig } from './base';
+import { BasePlugin, PluginResult, PluginConfig, fetchWithTimeout } from './base';
 
 export class GraphQLClientPlugin extends BasePlugin {
   constructor(config?: PluginConfig) {
@@ -21,7 +21,7 @@ export class GraphQLClientPlugin extends BasePlugin {
         body.variables = JSON.parse(this.config.params.variables);
       }
 
-      const response = await fetch(endpoint, {
+      const response = await fetchWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

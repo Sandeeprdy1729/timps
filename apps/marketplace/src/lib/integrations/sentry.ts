@@ -1,4 +1,4 @@
-import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult } from './base';
+import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult, fetchWithTimeout } from './base';
 
 interface SentryIssue {
   id: string;
@@ -30,7 +30,7 @@ export class SentryIntegration extends BaseIntegration {
   }
 
   private async request<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, { headers: this.getHeaders() });
+    const response = await fetchWithTimeout(`${this.baseUrl}${path}`, { headers: this.getHeaders() });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Sentry API error: ${response.status} ${text}`);

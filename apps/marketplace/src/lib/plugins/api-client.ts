@@ -1,4 +1,4 @@
-import { BasePlugin, PluginResult, PluginConfig } from './base';
+import { BasePlugin, PluginResult, PluginConfig, fetchWithTimeout } from './base';
 
 const BLOCKED_HOSTS = [
   /^localhost$/i,
@@ -24,11 +24,8 @@ function isBlockedUrl(url: string): boolean {
 }
 
 export class ApiClientPlugin extends BasePlugin {
-  private client: typeof fetch;
-
   constructor(config?: PluginConfig) {
     super('api-client', 'API Client', config);
-    this.client = fetch;
   }
 
   getDescription(): string {
@@ -51,7 +48,7 @@ export class ApiClientPlugin extends BasePlugin {
       }
 
       const startTime = performance.now();
-      const response = await this.client(url, options);
+      const response = await fetchWithTimeout(url, options);
       const duration = performance.now() - startTime;
 
       const body = await response.text();

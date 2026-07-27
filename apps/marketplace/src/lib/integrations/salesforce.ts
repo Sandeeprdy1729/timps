@@ -1,4 +1,4 @@
-import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult } from './base';
+import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult, fetchWithTimeout } from './base';
 
 const BLOCKED_HOSTS = [
   /^localhost$/i,
@@ -61,7 +61,7 @@ export class SalesforceIntegration extends BaseIntegration {
       password: `${password || ''}${securityToken || ''}`,
     });
 
-    const response = await fetch('https://login.salesforce.com/services/oauth2/token', {
+    const response = await fetchWithTimeout('https://login.salesforce.com/services/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params,
@@ -83,7 +83,7 @@ export class SalesforceIntegration extends BaseIntegration {
 
   private async request<T>(path: string): Promise<T> {
     const auth = await this.authenticate();
-    const response = await fetch(`${auth.instanceUrl}${path}`, {
+    const response = await fetchWithTimeout(`${auth.instanceUrl}${path}`, {
       headers: {
         Authorization: `Bearer ${auth.accessToken}`,
         'Content-Type': 'application/json',

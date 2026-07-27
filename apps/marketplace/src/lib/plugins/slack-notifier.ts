@@ -1,4 +1,4 @@
-import { BasePlugin, PluginResult, PluginConfig } from './base';
+import { BasePlugin, PluginResult, PluginConfig, fetchWithTimeout } from './base';
 
 export class SlackNotifierPlugin extends BasePlugin {
   constructor(config?: PluginConfig) {
@@ -23,7 +23,7 @@ export class SlackNotifierPlugin extends BasePlugin {
       const message = this.config?.params?.message || 'Notification from TIMPS Marketplace Plugin';
       const channel = this.config?.params?.channel || '#general';
 
-      const response = await fetch(webhookUrl, {
+      const response = await fetchWithTimeout(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
