@@ -13,7 +13,8 @@ permissions:
   security-events: write
 
 jobs:
-  audit:
+  npm-audit:
+    name: npm audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,48 +29,49 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        run: npm audit --json > npm-audit.json 2>/dev/null || true
 
-      - name: Run npm audit with JSON output
-        id: npm-audit
-        continue-on-error: true
+      - name: Check for critical/high vulnerabilities
         run: |
-          npm audit --json > npm-audit.json 2>/dev/null || echo '{"AuditAdvisoryCount":0}' > npm-audit.json
-          echo "audit_failures=$(jq '.AuditAdvisoryCount // 0' npm-audit.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Check for critical vulnerabilities
-        if: steps.npm-audit.outputs.audit_failures > 0
-        run: |
-          echo "❌ Found ${{ steps.npm-audit.outputs.audit_failures }} vulnerabilities"
-          exit 1
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' npm-audit.json)
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' npm-audit.json)
+          TOTAL=$((HIGH + CRITICAL))
+          echo "High: $HIGH, Critical: $CRITICAL, Total enforcing: $TOTAL"
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "❌ Found $TOTAL high/critical vulnerabilities"
+            jq '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | "\(.key): \(.value.severity)"' npm-audit.json
+            exit 1
+          fi
+          echo "✅ No high/critical vulnerabilities"
 
   cargo-audit:
+    name: cargo audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
 
       - name: Run cargo-audit
-        continue-on-error: true
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit
 
   secrets-scan:
+    name: secrets scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: secrets-secrets-scan
-        continue-on-error: true
+      - name: Run TruffleHog
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
-          head: HEAD
-          extra_args: --only-global --no-entropy
+          extra_args: --only-verified
 
   code-scanning:
+    name: CodeQL
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
