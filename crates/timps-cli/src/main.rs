@@ -88,7 +88,9 @@ async fn main() -> Result<()> {
 
     let cwd = cli.cwd
         .clone()
-        .unwrap_or_else(|| std::env::current_dir().unwrap().to_string_lossy().to_string());
+        .unwrap_or_else(|| std::env::current_dir()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| ".".to_string()));
 
     let memory = Arc::new(MemoryStore::open(&cwd)?);
     let tools = Arc::new(ToolRegistry::with_builtins());
