@@ -23,7 +23,12 @@ impl Provider for OpenRouterProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["anthropic/claude-sonnet-4-5".into(), "openai/gpt-4o".into(),
-                "google/gemini-2.0-flash".into(), "meta-llama/llama-3.3-70b-instruct".into()])
+        let compat = OpenAICompat::new("https://openrouter.ai/api/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["anthropic/claude-sonnet-4-5".into(), "openai/gpt-4o".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

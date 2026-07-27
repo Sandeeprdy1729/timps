@@ -23,6 +23,13 @@ impl Provider for GeminiProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["gemini-2.0-flash".into(), "gemini-1.5-pro".into(), "gemini-1.5-flash".into()])
+        let url = format!("https://generativelanguage.googleapis.com/v1beta/openai");
+        let compat = OpenAICompat::new(url, &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["gemini-2.0-flash".into(), "gemini-1.5-pro".into(), "gemini-1.5-flash".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

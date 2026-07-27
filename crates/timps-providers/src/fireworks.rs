@@ -38,11 +38,12 @@ impl Provider for FireworksProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec![
-            "accounts/fireworks/models/llama-v3p3-70b-instruct".to_string(),
-            "accounts/fireworks/models/qwen2p5-72b-instruct".to_string(),
-            "accounts/fireworks/models/deepseek-r1".to_string(),
-            "accounts/fireworks/models/mixtral-8x7b-instruct".to_string(),
-        ])
+        let compat = OpenAICompat::new("https://api.fireworks.ai/inference/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["accounts/fireworks/models/llama-v3p3-70b-instruct".to_string()])
+        } else {
+            Ok(models)
+        }
     }
 }

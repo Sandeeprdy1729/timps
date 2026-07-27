@@ -133,13 +133,20 @@
 | M6 | `.github/workflows/supply-chain-audit.yml:36` — Bug: steps reference `${{ matrix.package }}` but job defines no `strategy.matrix`, so per-package audits never run; `npm audit fix` mutates runner and discards result; all audit steps `continue-on-error: true` | Added matrix strategy with 7 packages (root, timps-code, timps-mcp, timps-vscode, packages/server, packages/memory-core, packages/plugin-sdk); removed useless `npm audit fix` step; removed `continue-on-error` from audit step; kept OSV scan as supplemental |
 | M7 | `.github/workflows/test-coverage.yml:66` — Testing: coverage check reads `.total.lines.pct` from `coverage-final.json` (wrong file — key is in `coverage-summary.json`); tests run `npm run test` (no `--coverage` flag) so no coverage output produced; matrix has `event-bus`/`connection-manager` but only 4 packages tested; benchmark runs nonexistent `npm run benchmark` script | Rewrote workflow: matrix now lists 5 packages with actual vitest configs (memory-core, plugin-sdk, sdk, timps-desktop, timps-enterprise); tests run with `vitest run --coverage`; coverage gate reads `coverage-summary.json`; benchmark runs `npx tsx benchmark/index.ts --quick`; upload uses correct paths |
 | M8 | `apps/marketplace/src/components/PluginGrid.tsx:4` — Architecture: PluginGrid fetches only from hardcoded localhost:4100 API, returns `[]` on failure so Plugins tab shows empty; 27 bundled plugins in `data/plugins.ts` never rendered; `localPlugins` declared but never populated; remote typed `any[]`; mapped objects add fields not in `Plugin` interface | Imports local plugins from `data/plugins.ts`, merges with remote results (`[...localPlugins, ...remotePlugins]`); typed `RemotePlugin` interface replaces `any[]`; removed dead `localPlugins` declaration; fixed category filter to match against plugin's own category |
+| M9 | `apps/marketplace/src/lib/integrations/base.ts` — No timeout on external HTTP fetches; integrations (Vercel, Sentry, Jira, etc.) make unbounded `fetch()` calls that can hang indefinitely, blocking agent loops | Added `fetchWithTimeout()` with 10s default timeout to `integrations/base.ts` and `plugins/base.ts`; updated 7 files (vercel, sentry, jira, salesforce, slack-notifier, graphql-client, api-client) to use it; also fixed jira.ts missing `getAuth()` method |
+| M10 | `apps/mobile/src/screens/ChatScreen.tsx:23` — Hardcoded `http://10.0.2.2:3000` localhost URL in Android emulator; breaks on real devices and iOS | Created `ServerConfigProvider` with AsyncStorage-backed URL config and `useServerUrl()` hook; wrapped App.tsx in provider; updated ChatScreen, VoiceAssistantScreen, SettingsScreen to use the hook |
+| M11 | `apps/mobile/src/screens/VoiceAssistantScreen.tsx:110` — CSS animations (`pulse-bars`) don't work in React Native; mic button has no onClick handler; no text input fallback | Replaced CSS animations with RN `Animated` API; added text input + Send button fallback below mic; wired mic button flow with proper state management |
+| M12 | `benchmark/index.ts:68` — `new URL(import.meta.url).pathname` produces `/C:/...` on Windows (leading slash breaks path); `--quick` flag parsed but never consumed, benchmark always runs full 22-tool suite | Replaced `new URL().pathname` with `fileURLToPath()` from `node:url`; implemented `--quick` arg parsing that skips intel tools and scalability test |
+| M13 | `crates/timps-cli/src/main.rs` — `run_recipe` prints "not implemented"; `run_config` loads config then discards it (no get/set/list); plugin list/install/remove all print stubs; dead `RecipeRunner`/`ProviderConfig` imports | Wired `RecipeRunner` in `run_recipe`; implemented `ProviderConfig` load/save/get/set/list in `run_config`; real plugin list from `~/.timps/plugins.json`, install clones repo, remove deletes directory |
+| M14 | `crates/timps-memory/src/lib.rs` — Corrupt `semantic.json` silently erases all memory (load returns empty vec); non-atomic writes risk half-written JSON; concurrent `store` calls race on read-modify-write | `load_semantic` now errors on corrupt JSON and backs up file; `save_semantic` uses atomic write (tmp+rename); `store_semantic` uses `tokio::sync::Mutex` for serialized read-modify-write |
+| M15 | `crates/timps-providers/src/{openai,groq,gemini,deepseek,mistral,together,perplexity,cohere,fireworks,xai,openrouter}.rs` — 11 OpenAI-compatible providers return hardcoded model lists from `list_models()` instead of querying the provider's `/v1/models` endpoint; models drift out of date as providers add/remove models | Added `fetch_models()` to `OpenAICompat` that queries `{base_url}/models` endpoint; all 11 providers now call it and fall back to a minimal hardcoded list on failure; also removed unused `StreamEvent` import in ollama.rs |
 
-## 📋 Remaining — 274 Issues
+## 📋 Remaining — 273 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (194)
+### Medium (193)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
@@ -155,4 +162,4 @@ Run the following command to view the audit file and send specific issue IDs:
 cat /path/to/timps-audit.md | grep "H[0-9]"  # see high severity issues
 ```
 
-Or tell me: `fix H1`, `fix H1-H5`, etc.
+Or tell me: `fix M16`, `fix M16-M20`, etc.

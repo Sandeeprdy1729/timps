@@ -22,6 +22,12 @@ impl Provider for CohereProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["command-r-plus".into(), "command-r".into(), "command-light".into()])
+        let compat = OpenAICompat::new("https://api.cohere.ai/compatibility/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["command-r-plus".into(), "command-r".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

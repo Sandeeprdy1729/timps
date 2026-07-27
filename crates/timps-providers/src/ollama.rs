@@ -3,7 +3,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::Value;
 use tokio::sync::mpsc;
-use crate::{Message, Provider, ProviderStream, StreamEvent};
+use crate::{Message, Provider, ProviderStream};
 use crate::compat::OpenAICompat;
 
 pub struct OllamaProvider {

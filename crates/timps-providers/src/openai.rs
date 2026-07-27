@@ -31,6 +31,12 @@ impl Provider for OpenAIProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["gpt-4o".into(), "gpt-4o-mini".into(), "gpt-4-turbo".into(), "gpt-3.5-turbo".into()])
+        let compat = OpenAICompat::new("https://api.openai.com/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["gpt-4o".into(), "gpt-4o-mini".into(), "gpt-4-turbo".into()])
+        } else {
+            Ok(models)
+        }
     }
 }
