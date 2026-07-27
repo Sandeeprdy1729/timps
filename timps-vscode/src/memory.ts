@@ -172,7 +172,7 @@ export class TIMPsMemory {
       episodes.push(entry);
       if (episodes.length > 200) episodes.splice(0, episodes.length - 200);
       fs.writeFileSync(this.episodicFile, JSON.stringify(episodes, null, 2));
-    } catch { }
+    } catch (e) { console.warn('[TIMPS Memory] Failed to save episodic entry:', e); }
   }
 
   loadEpisodes(count = 10): EpisodicMemory[] {
@@ -326,7 +326,7 @@ export class TIMPsMemory {
   }
 
   private saveWorking(): void {
-    try { fs.writeFileSync(this.workingFile, JSON.stringify(this.working, null, 2)); } catch { }
+    try { fs.writeFileSync(this.workingFile, JSON.stringify(this.working, null, 2)); } catch (e) { console.warn('[TIMPS Memory] Failed to save working memory:', e); }
   }
 
   private loadSemanticEntries(): SharedSemanticEntry[] {
@@ -337,7 +337,7 @@ export class TIMPsMemory {
   }
 
   private saveSemanticEntries(entries: SharedSemanticEntry[]): void {
-    try { fs.writeFileSync(this.semanticFile, JSON.stringify(entries, null, 2)); } catch { }
+    try { fs.writeFileSync(this.semanticFile, JSON.stringify(entries, null, 2)); } catch (e) { console.warn('[TIMPS Memory] Failed to save semantic entries:', e); }
   }
 
   private loadSharedEpisodes(): SharedEpisodicEntry[] {

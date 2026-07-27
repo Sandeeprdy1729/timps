@@ -35,10 +35,12 @@ impl Tool for WebFetchTool {
         if !url.starts_with("http://") && !url.starts_with("https://") {
             return ToolResult::err("Only http:// and https:// URLs are allowed");
         }
-        let client = reqwest::Client::builder()
+        let client = match reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
-            .build()
-            .unwrap();
+            .build() {
+                Ok(c) => c,
+                Err(e) => return ToolResult::err(format!("Failed to create HTTP client: {e}")),
+            };
         match client.get(&url).send().await {
             Ok(resp) => match resp.text().await {
                 Ok(text) => {

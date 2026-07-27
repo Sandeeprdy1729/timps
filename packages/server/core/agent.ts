@@ -369,13 +369,13 @@ export class Agent {
       } catch { /* silent — vector store may be unavailable */ }
     }
     for (const goal of (Array.isArray(reflection.goals) ? reflection.goals : [])) {
-      try { await memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority); } catch { }
+      try { await memoryIndex.storeGoal(this.userId, goal.title, goal.description, goal.priority); } catch (e) { console.warn('[Agent] Failed to store goal:', e); }
     }
     for (const pref of (Array.isArray(reflection.preferences) ? reflection.preferences : [])) {
-      try { await memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category); } catch { }
+      try { await memoryIndex.storePreference(this.userId, pref.key, pref.value, pref.category); } catch (e) { console.warn('[Agent] Failed to store preference:', e); }
     }
     for (const project of (Array.isArray(reflection.projects) ? reflection.projects : [])) {
-      try { await memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack); } catch { }
+      try { await memoryIndex.storeProject(this.userId, project.name, project.description, project.techStack); } catch (e) { console.warn('[Agent] Failed to store project:', e); }
     }
   }
 
