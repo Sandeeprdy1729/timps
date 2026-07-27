@@ -6,17 +6,27 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Run every Monday at 09:00 UTC
-    - cron: "0 9 * * 1"
+    - cron: "0 9 * * 1"  # Weekly Monday 09:00 UTC
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
-  audit:
+  npm-audit:
     name: npm audit (${{ matrix.package }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - "."
+          - "timps-code"
+          - "timps-mcp"
+          - "timps-vscode"
+          - "packages/server"
+          - "packages/memory-core"
+          - "packages/plugin-sdk"
 
     steps:
       - name: Checkout
@@ -32,15 +42,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Auto-fix non-breaking vulnerabilities
-        working-directory: ${{ matrix.package }}
-        continue-on-error: true
-        run: npm audit fix
-
       - name: Run npm audit
         working-directory: ${{ matrix.package }}
-        continue-on-error: true
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high --audit-level=critical
 
   osv-scan:
     name: OSV Vulnerability Scan
@@ -52,7 +56,6 @@ jobs:
 
       - name: Run OSV Scanner
         uses: google/osv-scanner-action@v2.3.8
-        continue-on-error: true
         with:
           scan-args: |-
             --recursive
