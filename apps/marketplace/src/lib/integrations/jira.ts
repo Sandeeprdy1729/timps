@@ -1,4 +1,4 @@
-import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult } from './base';
+import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult, fetchWithTimeout } from './base';
 
 const BLOCKED_HOSTS = [
   /^localhost$/i,
@@ -40,6 +40,8 @@ export class JiraIntegration extends BaseIntegration {
       this.baseUrl = raw.replace(/\/$/, '');
     }
   }
+
+  private getAuth(): string {
     if (this.config?.apiKey) return this.config.apiKey;
     if (this.config?.accessToken) return this.config.accessToken;
     return '';
@@ -58,7 +60,7 @@ export class JiraIntegration extends BaseIntegration {
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await fetchWithTimeout(`${this.baseUrl}${path}`, {
       ...options,
       headers: { ...this.getHeaders(), ...options.headers },
     });

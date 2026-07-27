@@ -1,4 +1,4 @@
-import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult } from './base';
+import { BaseIntegration, IntegrationConfig, IntegrationStatus, IntegrationResult, fetchWithTimeout } from './base';
 
 interface VercelDeployment {
   id: string;
@@ -27,7 +27,7 @@ export class VercelIntegration extends BaseIntegration {
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await fetchWithTimeout(`${this.baseUrl}${path}`, {
       ...options,
       headers: { ...this.getHeaders(), ...options.headers },
     });
