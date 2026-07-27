@@ -6,7 +6,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use timps_agent::{Agent, AgentBuilder, AgentOptions, AgentEvent};
+use timps_agent::{Agent, AgentBuilder, AgentOptions, AgentEvent, recipes::RecipeRunner};
 use timps_memory::MemoryStore;
 use timps_providers::{ProviderConfig, ProviderRegistry};
 use timps_tools::ToolRegistry;
@@ -121,17 +121,41 @@ async fn main() -> Result<()> {
 // ── Subcommand implementations ───────────────────────────────────────────────
 
 async fn run_config() -> Result<()> {
-    println!("TIMPS Configuration Wizard");
-    println!("──────────────────────────");
+    let mut cfg = ProviderConfig::load();
+    println!("TIMPS Configuration");
+    println!("───────────────────");
     println!("Config file: ~/.timps/config.toml");
     println!();
-    println!("Set environment variables to configure providers:");
+    println!("Current settings:");
+    println!("  provider: {}", cfg.provider);
+    if let Some(model) = &cfg.model {
+        println!("  model:    {model}");
+    }
+    if let Some(url) = &cfg.base_url {
+        println!("  base_url: {url}");
+    }
+    if cfg.api_key.is_some() {
+        println!("  api_key:  ****(set)");
+    }
+    println!();
+    println!("Environment variables (override config.toml):");
     println!("  TIMPS_PROVIDER=ollama|claude|openai|gemini|groq|...");
+    println!("  TIMPS_MODEL=...");
     println!("  ANTHROPIC_API_KEY=...");
     println!("  OPENAI_API_KEY=...");
     println!("  GEMINI_API_KEY=...");
     println!("  GROQ_API_KEY=...");
     println!("  OPENROUTER_API_KEY=...");
+
+    // If provider env is set, sync it to config
+    if let Ok(provider) = std::env::var("TIMPS_PROVIDER") {
+        cfg.provider = provider;
+    }
+    if let Ok(model) = std::env::var("TIMPS_MODEL") {
+        cfg.model = Some(model);
+    }
+    cfg.save()?;
+    println!("\nConfig saved to ~/.timps/config.toml");
     Ok(())
 }
 
@@ -189,9 +213,53 @@ async fn run_recipe(
     tools: Arc<ToolRegistry>,
     providers: ProviderRegistry,
 ) -> Result<()> {
-    // Delegate to recipe runner (Phase 15)
-    println!("Loading recipe: {recipe_path}");
-    println!("(Recipe runner implemented in Phase 15 — crates/timps-agent/src/recipes.rs)");
+    let path = std::path::Path::new(recipe_path);
+    let recipe = RecipeRunner::load(path)?;
+    println!("Running recipe: {}", recipe.name);
+    if let Some(desc) = &recipe.description {
+        println!("  {desc}");
+    }
+    println!("  {} step(s)\n", recipe.steps.len());
+
+    let provider_name = std::env::var("TIMPS_PROVIDER").unwrap_or_else(|_| "ollama".to_string());
+    let runner = RecipeRunner::new(memory, tools, Arc::new(providers), provider_name);
+    let result = runner.run(&recipe, std::collections::HashMap::new(), |event| {
+        match event {
+            AgentEvent::Token(t) => print!("{t}"),
+            AgentEvent::ToolCallStart { name } => eprintln!("\n[tool: {name}]"),
+            AgentEvent::TurnComplete(r) => {
+                eprintln!("\n  ({}, {} tool calls)", r.output.len(), r.tool_calls_made);
+            }
+            _ => {}
+        }
+    }).await?;
+
+    println!("\n──────────────────────");
+    println!("Recipe: {} — {} step(s) completed", result.recipe_name, result.steps.len());
+    for s in &result.steps {
+        let status = if s.skipped { "SKIP" } else { "OK" };
+        println!("  [{status}] {}: {} chars", s.name, s.output.len());
+    }
+    Ok(())
+}
+
+fn plugins_path() -> Option<std::path::PathBuf> {
+    dirs::home_dir().map(|h| h.join(".timps").join("plugins.json"))
+}
+
+fn load_plugins() -> Vec<String> {
+    plugins_path()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|c| serde_json::from_str::<Vec<String>>(&c).ok())
+        .unwrap_or_default()
+}
+
+fn save_plugins(plugins: &[String]) -> Result<()> {
+    let path = plugins_path().ok_or_else(|| anyhow::anyhow!("cannot find home dir"))?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, serde_json::to_string_pretty(plugins)?)?;
     Ok(())
 }
 
@@ -199,15 +267,41 @@ fn run_plugin(action: PluginAction) -> Result<()> {
     match action {
         PluginAction::Install { package } => {
             println!("Installing plugin: {package}");
-            std::process::Command::new("npm")
+            let status = std::process::Command::new("npm")
                 .args(["install", "-g", &package])
                 .status()?;
+            if status.success() {
+                let mut plugins = load_plugins();
+                if !plugins.contains(&package) {
+                    plugins.push(package.clone());
+                    save_plugins(&plugins)?;
+                }
+                println!("Plugin {package} installed.");
+            } else {
+                anyhow::bail!("npm install failed with status: {status}");
+            }
         }
         PluginAction::List => {
-            println!("Installed plugins: (see ~/.timps/plugins.json)");
+            let plugins = load_plugins();
+            if plugins.is_empty() {
+                println!("No plugins installed.");
+            } else {
+                println!("Installed plugins ({}):", plugins.len());
+                for p in &plugins {
+                    println!("  - {p}");
+                }
+            }
         }
         PluginAction::Remove { name } => {
-            println!("Removing plugin: {name}");
+            let mut plugins = load_plugins();
+            let before = plugins.len();
+            plugins.retain(|p| p != &name);
+            if plugins.len() == before {
+                println!("Plugin '{name}' not found.");
+            } else {
+                save_plugins(&plugins)?;
+                println!("Plugin '{name}' removed.");
+            }
         }
     }
     Ok(())
