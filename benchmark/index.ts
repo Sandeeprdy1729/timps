@@ -10,13 +10,14 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { MemoryEngine } from '../packages/memory-core/src/MemoryEngine.js';
 
 // ── Versioned benchmark dataset ────────────────────────────────────────────────
 // Dataset files live in benchmark/dataset/ alongside this file.
 // The SHA256 of the dataset directory anchors benchmark numbers to a specific
 // corpus version so readers can independently verify reproducibility.
-const __filename = new URL(import.meta.url).pathname;
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATASET_DIR = path.join(__dirname, 'dataset');
 
@@ -584,6 +585,8 @@ export function generateHuggingFaceDataset(benchmarkResults: BenchmarkResult[]):
 // ── CLI Runner ────────────────────────────────────────────────────────────────
 
 async function main() {
+  const args = process.argv.slice(2);
+  const quick = args.includes('--quick');
   const projectPath = process.cwd();
   const runner = new BenchmarkRunner(projectPath);
 
@@ -610,16 +613,24 @@ async function main() {
   console.log(`  ${cdColor} Score: ${cd.score}% (${cd.passed}/${cd.total}) in ${cd.durationMs}ms`);
   if (cd.details) console.log(`     ${cd.details}\n`);
 
-    console.log('Running intelligence tools smoke test (25/25 tools)...');
-  const it = await runner.runIntelligenceTools();
-  const itColor = it.score >= 80 ? '🟢' : it.score >= 50 ? '🟡' : '🔴';
-  console.log(`  ${itColor} Score: ${it.score}% (${it.passed}/${it.total}) in ${it.durationMs}ms`);
-  if (it.details) console.log(`     ${it.details}\n`);
+  let it: BenchmarkResult;
+  let sc: ScalabilityResult = { sizes: [] };
 
-  console.log('Running scalability sweep (50 / 200 / 500 fact corpora)...');
-  const sc = await runner.runScalability();
-  for (const s of sc.sizes) {
-    console.log(`  ${String(s.corpus).padStart(3)} facts → mean ${s.meanLatencyMs}ms, p95 ${s.p95LatencyMs}ms`);
+  if (quick) {
+    console.log('(skipping intelligence tools and scalability in --quick mode)\n');
+    it = { name: 'Intelligence Tools', score: 0, total: 25, passed: 0, failed: 25, durationMs: 0, details: 'skipped (--quick)', timestamp: Date.now() };
+  } else {
+    console.log('Running intelligence tools smoke test (25/25 tools)...');
+    it = await runner.runIntelligenceTools();
+    const itColor = it.score >= 80 ? '🟢' : it.score >= 50 ? '🟡' : '🔴';
+    console.log(`  ${itColor} Score: ${it.score}% (${it.passed}/${it.total}) in ${it.durationMs}ms`);
+    if (it.details) console.log(`     ${it.details}\n`);
+
+    console.log('Running scalability sweep (50 / 200 / 500 fact corpora)...');
+    sc = await runner.runScalability();
+    for (const s of sc.sizes) {
+      console.log(`  ${String(s.corpus).padStart(3)} facts → mean ${s.meanLatencyMs}ms, p95 ${s.p95LatencyMs}ms`);
+    }
   }
 
   // Compose final results object and save.
