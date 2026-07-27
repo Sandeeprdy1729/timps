@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 6     | 202       |
+| Medium   | 208   | 7     | 201       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **106** | **282** |
+| **Total**| **388** | **107** | **281** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 6 Medium
+## ✅ Fixed — 7 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -131,13 +131,14 @@
 | M4 | `.github/workflows/dependencies.yml:44` — Bug: scheduled job runs `npx npm-check-updates -u` but never commits or pushes changes; PR creation references nonexistent branch `renovate/all-minor` → 422 error every night; entire dependency-update pipeline non-functional | Rewrote workflow: after `ncu -u`, checks for actual changes via `git diff --quiet`; if changes exist, creates branch `deps/update-YYYYMMDD`, commits, pushes; then creates PR from that branch; skips PR if no changes or PR already open |
 | M5 | `.github/workflows/security.yml:39` — Security: only enforcing step parses `.AuditAdvisoryCount` from npm audit JSON (nonexistent field in npm 7+, real key is `metadata.vulnerabilities.*`), so `audit_failures` always 0 and gate never fires; `cargo-audit`, `trufflehog`, npm audit all `continue-on-error: true` — workflow can never fail; trufflehog `base:main head:HEAD` scans nothing on push-to-main | Fixed npm audit: parses `metadata.vulnerabilities.high + .critical`, exits 1 if >0, lists affected packages; removed `continue-on-error` from npm-audit and cargo-audit jobs; replaced cargo-audit action with direct `cargo audit` install+run; fixed trufflehog: removed broken `base:main head:HEAD`, added `fetch-depth: 0` for full history, uses `--only-verified` |
 | M6 | `.github/workflows/supply-chain-audit.yml:36` — Bug: steps reference `${{ matrix.package }}` but job defines no `strategy.matrix`, so per-package audits never run; `npm audit fix` mutates runner and discards result; all audit steps `continue-on-error: true` | Added matrix strategy with 7 packages (root, timps-code, timps-mcp, timps-vscode, packages/server, packages/memory-core, packages/plugin-sdk); removed useless `npm audit fix` step; removed `continue-on-error` from audit step; kept OSV scan as supplemental |
+| M7 | `.github/workflows/test-coverage.yml:66` — Testing: coverage check reads `.total.lines.pct` from `coverage-final.json` (wrong file — key is in `coverage-summary.json`); tests run `npm run test` (no `--coverage` flag) so no coverage output produced; matrix has `event-bus`/`connection-manager` but only 4 packages tested; benchmark runs nonexistent `npm run benchmark` script | Rewrote workflow: matrix now lists 5 packages with actual vitest configs (memory-core, plugin-sdk, sdk, timps-desktop, timps-enterprise); tests run with `vitest run --coverage`; coverage gate reads `coverage-summary.json`; benchmark runs `npx tsx benchmark/index.ts --quick`; upload uses correct paths |
 
-## 📋 Remaining — 282 Issues
+## 📋 Remaining — 281 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (202)
+### Medium (201)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)

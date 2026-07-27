@@ -8,14 +8,17 @@ on:
 
 jobs:
   test:
+    name: test (${{ matrix.package }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         package:
-          - event-bus
-          - connection-manager
-          - timps-desktop
+          - memory-core
           - plugin-sdk
+          - sdk
+          - timps-desktop
+          - timps-enterprise
     steps:
       - uses: actions/checkout@v4
 
@@ -28,52 +31,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm run test --workspace=packages/${{ matrix.package }}
+      - name: Run tests with coverage
+        working-directory: packages/${{ matrix.package }}
+        run: npx vitest run --coverage
 
       - name: Upload coverage
+        if: hashFiles('packages/${{ matrix.package }}/coverage/coverage-summary.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.package }}
-          path: packages/${{ matrix.package }}/coverage
+          path: packages/${{ matrix.package }}/coverage/coverage-summary.json
 
-  coverage-report:
+  coverage-gate:
+    name: coverage gate
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: coverage
 
-      - name: Generate combined coverage report
-        continue-on-error: true
+      - name: Enforce 60% coverage thresholds
         run: |
-          echo "Coverage reports: "
-          ls -la coverage-*/ 2>/dev/null || echo "No coverage artifacts found"
-
-      - name: Check coverage thresholds
-        run: |
-          for dir in coverage-*/; do
-            if [ -f "$dir/coverage-final.json" ]; then
-              echo "✓ Coverage report found in $dir"
-              # Enforce minimum 60% coverage thresholds
-              LINES=$(jq '.total.lines.pct // 0' "$dir/coverage-final.json")
-              FUNCS=$(jq '.total.functions.pct // 0' "$dir/coverage-final.json")
-              BRANCHES=$(jq '.total.branches.pct // 0' "$dir/coverage-final.json")
-              echo "  Lines: ${LINES}% | Functions: ${FUNCS}% | Branches: ${BRANCHES}%"
-              FAIL=false
-              if (( $(echo "$LINES < 60" | bc -l) )); then echo "  ❌ Lines below 60% threshold"; FAIL=true; fi
-              if (( $(echo "$FUNCS < 60" | bc -l) )); then echo "  ❌ Functions below 60% threshold"; FAIL=true; fi
-              if (( $(echo "$BRANCHES < 60" | bc -l) )); then echo "  ❌ Branches below 60% threshold"; FAIL=true; fi
-              if [ "$FAIL" = true ]; then exit 1; fi
-            fi
+          FAIL=false
+          for f in coverage/coverage-*.json; do
+            [ -f "$f" ] || continue
+            pkg=$(basename "$f" .json | sed 's/coverage-//')
+            LINES=$(jq '.total.lines.pct // 0' "$f")
+            FUNCS=$(jq '.total.functions.pct // 0' "$f")
+            BRANCHES=$(jq '.total.branches.pct // 0' "$f")
+            echo "$pkg — Lines: ${LINES}% | Functions: ${FUNCS}% | Branches: ${BRANCHES}%"
+            if (( $(echo "$LINES < 60" | bc -l) )); then echo "  ❌ $pkg lines below 60%"; FAIL=true; fi
+            if (( $(echo "$FUNCS < 60" | bc -l) )); then echo "  ❌ $pkg functions below 60%"; FAIL=true; fi
+            if (( $(echo "$BRANCHES < 60" | bc -l) )); then echo "  ❌ $pkg branches below 60%"; FAIL=true; fi
           done
+          if [ "$FAIL" = true ]; then exit 1; fi
+          echo "✅ All packages meet 60% coverage thresholds"
 
   lint:
     runs-on: ubuntu-latest
@@ -108,14 +106,11 @@ jobs:
         run: npm ci
 
       - name: Run benchmarks
-        run: |
-          echo "Running benchmarks..."
-          # Run npm benchmarks
-          npm run benchmark --if-present 2>/dev/null || echo "No benchmark script"
+        run: npx tsx benchmark/index.ts --quick
 
-      - name: Store benchmark data
-        if: hashFiles('./benchmark-results.json') != ''
+      - name: Upload benchmark results
+        if: hashFiles('.timps/benchmarks/*.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: ./benchmark-results.json
+          path: .timps/benchmarks/*.json
