@@ -144,7 +144,7 @@ impl Agent {
         let _ = tx.send(AgentEvent::MemoryInjected { count: mem_count }).await;
 
         let mut messages = history;
-        messages.push(Message { role: Role::User, content: user_input.to_string() });
+        messages.push(Message { role: Role::User, content: user_input.to_string(), tool_call_id: None });
 
         let mut tool_calls_total = 0;
         let mut retries = 0u8;
@@ -195,6 +195,7 @@ impl Agent {
             messages.push(Message {
                 role: Role::Assistant,
                 content: assistant_text,
+                tool_call_id: None,
             });
 
             for tc in &pending_tool_calls {
@@ -210,6 +211,7 @@ impl Agent {
                 messages.push(Message {
                     role: Role::Tool,
                     content: serde_json::to_string(&result).unwrap_or_default(),
+                    tool_call_id: Some(tc.id.clone()),
                 });
 
                 // Store episode on tool failure (memory moat)
