@@ -41,6 +41,8 @@ pub enum Role {
 pub struct Message {
     pub role: Role,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

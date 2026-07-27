@@ -6,6 +6,13 @@ use serde_json::{json, Value};
 use tokio::sync::mpsc;
 use crate::{Message, Role, StreamEvent, ToolCall};
 
+#[derive(Default)]
+struct ToolCallDelta {
+    id: String,
+    name: String,
+    args: String,
+}
+
 pub struct OpenAICompat {
     pub client: Client,
     pub base_url: String,
@@ -44,13 +51,18 @@ impl OpenAICompat {
     fn messages_to_json(system: &str, messages: &[Message]) -> Vec<Value> {
         let mut out = vec![json!({ "role": "system", "content": system })];
         for m in messages {
-            let role = match m.role {
-                Role::User => "user",
-                Role::Assistant => "assistant",
-                Role::Tool => "tool",
-                Role::System => "system",
+            match m.role {
+                Role::User => out.push(json!({ "role": "user", "content": m.content })),
+                Role::Assistant => out.push(json!({ "role": "assistant", "content": m.content })),
+                Role::System => out.push(json!({ "role": "system", "content": m.content })),
+                Role::Tool => {
+                    let mut msg = json!({ "role": "tool", "content": m.content });
+                    if let Some(id) = &m.tool_call_id {
+                        msg["tool_call_id"] = json!(id);
+                    }
+                    out.push(msg);
+                }
             };
-            out.push(json!({ "role": role, "content": m.content }));
         }
         out
     }
@@ -121,8 +133,10 @@ impl OpenAICompat {
             return Ok(());
         }
 
-        // Parse SSE stream
+        // Parse SSE stream - accumulate tool call deltas
         let text = resp.text().await?;
+        let mut tool_calls: Vec<ToolCallDelta> = Vec::new();
+
         for line in text.lines() {
             let line = line.trim();
             if line.is_empty() || line == "data: [DONE]" { continue; }
@@ -136,18 +150,38 @@ impl OpenAICompat {
                                 let _ = tx.send(StreamEvent::Token(content.to_string())).await;
                             }
                         }
-                        // Tool calls
+                        // Tool calls - accumulate deltas by index
                         if let Some(tcs) = delta["tool_calls"].as_array() {
                             for tc in tcs {
-                                let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
-                                let args_str = tc["function"]["arguments"].as_str().unwrap_or("{}");
-                                let args: Value = serde_json::from_str(args_str).unwrap_or(json!({}));
+                                let index = tc["index"].as_u64().unwrap_or(0) as usize;
                                 let id = tc["id"].as_str().unwrap_or("").to_string();
-                                let _ = tx.send(StreamEvent::ToolCall(ToolCall { id, name, args })).await;
+                                let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
+                                let args_delta = tc["function"]["arguments"].as_str().unwrap_or("");
+
+                                if index >= tool_calls.len() {
+                                    tool_calls.resize_with(index + 1, || ToolCallDelta {
+                                        id: String::new(),
+                                        name: String::new(),
+                                        args: String::new(),
+                                    });
+                                }
+
+                                let call = &mut tool_calls[index];
+                                if !id.is_empty() { call.id = id; }
+                                if !name.is_empty() { call.name = name; }
+                                if !args_delta.is_empty() { call.args.push_str(args_delta); }
                             }
                         }
                     }
                 }
+            }
+        }
+
+        // Emit complete tool calls after stream ends
+        for call in tool_calls {
+            if !call.name.is_empty() {
+                let args: Value = serde_json::from_str(&call.args).unwrap_or(json!({}));
+                let _ = tx.send(StreamEvent::ToolCall(ToolCall { id: call.id, name: call.name, args })).await;
             }
         }
         let _ = tx.send(StreamEvent::Done).await;
