@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, TextInput, Animated } from 'react-native';
 import * as Speech from 'expo-speech';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,34 +14,42 @@ export function VoiceAssistantScreen() {
   const { serverUrl } = useServerUrl();
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [textInput, setTextInput] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
   const [response, setResponse] = useState('');
 
-  const startListening = () => {
-    setListening(true);
-    setLastTranscript('');
-  };
+  const barAnims = useRef([...Array(5)].map(() => new Animated.Value(0.3))).current;
 
-  const stopListening = () => {
-    setListening(false);
-    if (lastTranscript) {
-      processVoiceCommand(lastTranscript);
+  useEffect(() => {
+    if (listening) {
+      const loops = barAnims.map((anim, i) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, { toValue: 1, duration: 300 + i * 80, useNativeDriver: false }),
+            Animated.timing(anim, { toValue: 0.3, duration: 300 + i * 80, useNativeDriver: false }),
+          ]),
+        ),
+      );
+      Animated.parallel(loops).start();
+      return () => loops.forEach((l) => l.stop());
+    } else {
+      barAnims.forEach((a) => a.setValue(0.3));
     }
-  };
+  }, [listening, barAnims]);
 
   const processVoiceCommand = async (command: string) => {
     setSpeaking(true);
     try {
-      const response = await fetch(`${serverUrl}/api/chat`, {
+      const res = await fetch(`${serverUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: command }),
       });
-      const data = await response.json();
+      const data = await res.json();
       const text = data.response || 'I\'m ready to help.';
       setResponse(text);
       speak(text);
-    } catch (e) {
+    } catch {
       const fallback = 'I\'m here to help with your coding. Try typing your request.';
       setResponse(fallback);
       speak(fallback);
@@ -51,6 +59,7 @@ export function VoiceAssistantScreen() {
   };
 
   const speak = (text: string) => {
+    setSpeaking(true);
     Speech.speak(text, {
       language: 'en',
       pitch: 1.0,
@@ -64,6 +73,27 @@ export function VoiceAssistantScreen() {
     setSpeaking(false);
   };
 
+  const handleSend = () => {
+    const trimmed = textInput.trim();
+    if (!trimmed || speaking) return;
+    setLastTranscript(trimmed);
+    setTextInput('');
+    processVoiceCommand(trimmed);
+  };
+
+  const handleMicPress = () => {
+    if (listening) {
+      setListening(false);
+      if (lastTranscript) {
+        processVoiceCommand(lastTranscript);
+      }
+    } else {
+      setListening(true);
+      setLastTranscript('');
+      setResponse('');
+    }
+  };
+
   useEffect(() => {
     return () => {
       Speech.stop();
@@ -73,20 +103,20 @@ export function VoiceAssistantScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.visualizer}>
-        {[...Array(5)].map((_, i) => (
-          <View
+        {barAnims.map((anim, i) => (
+          <Animated.View
             key={i}
             style={[
               styles.bar,
               listening && styles.barActive,
-              { animationDelay: `${i * 0.1}s` },
+              { height: anim.interpolate({ inputRange: [0.3, 1], outputRange: [20, 80] }) },
             ]}
           />
         ))}
       </View>
 
       <Text style={styles.status}>
-        {speaking ? 'Speaking...' : listening ? 'Listening...' : 'Ready'}
+        {speaking ? 'Speaking...' : listening ? 'Listening (type below)...' : 'Ready'}
       </Text>
 
       {lastTranscript ? (
@@ -103,6 +133,25 @@ export function VoiceAssistantScreen() {
         </View>
       ) : null}
 
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.textInput}
+          value={textInput}
+          onChangeText={setTextInput}
+          placeholder="Type a message..."
+          placeholderTextColor="#64748b"
+          onSubmitEditing={handleSend}
+          returnKeyType="send"
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, (!textInput.trim() || speaking) && styles.sendBtnDisabled]}
+          onPress={handleSend}
+          disabled={!textInput.trim() || speaking}
+        >
+          <Text style={styles.sendBtnText}>Send</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.controls}>
         {speaking ? (
           <TouchableOpacity style={styles.stopButton} onPress={stopSpeaking}>
@@ -111,13 +160,9 @@ export function VoiceAssistantScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.micButton, listening && styles.micButtonActive]}
-            onPress={listening ? stopListening : startListening}
+            onPress={handleMicPress}
           >
-            {speaking || listening ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.micIcon}>🎤</Text>
-            )}
+            <Text style={styles.micIcon}>{listening ? '⏹' : '🎤'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -129,7 +174,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a', padding: 24 },
   visualizer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', height: 120, gap: 8 },
   bar: { width: 8, height: 20, backgroundColor: '#334155', borderRadius: 4 },
-  barActive: { backgroundColor: '#3b82f6', height: 80, animation: 'pulse 0.5s infinite' },
+  barActive: { backgroundColor: '#3b82f6' },
   status: { textAlign: 'center', fontSize: 16, color: '#94a3b8', marginTop: 24 },
   transcriptBox: { backgroundColor: '#1e293b', padding: 16, borderRadius: 12, marginTop: 24 },
   transcriptLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
@@ -137,6 +182,11 @@ const styles = StyleSheet.create({
   responseBox: { backgroundColor: '#1e293b', padding: 16, borderRadius: 12, marginTop: 16 },
   responseLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   responseText: { fontSize: 16, color: '#fff' },
+  inputRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  textInput: { flex: 1, padding: 12, fontSize: 16, backgroundColor: '#1e293b', borderRadius: 12, color: '#fff' },
+  sendBtn: { paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#3b82f6', borderRadius: 12, justifyContent: 'center' },
+  sendBtnDisabled: { backgroundColor: '#475569' },
+  sendBtnText: { color: '#fff', fontWeight: '600' },
   controls: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 48 },
   micButton: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
   micButtonActive: { backgroundColor: '#ef4444' },
