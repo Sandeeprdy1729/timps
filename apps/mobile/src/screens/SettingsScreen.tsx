@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, ScrollView, Alert } from 'react-native';
+import { useServerUrl } from '../context/ServerConfig';
 
 export function SettingsScreen() {
-  const [serverUrl, setServerUrl] = useState('http://localhost:3000');
+  const { serverUrl, setServerUrl } = useServerUrl();
   const [autoSync, setAutoSync] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -25,6 +26,8 @@ export function SettingsScreen() {
             value={serverUrl}
             onChangeText={setServerUrl}
             placeholder="http://localhost:3000"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
       </View>

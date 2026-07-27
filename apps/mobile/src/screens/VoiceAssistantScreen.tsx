@@ -5,11 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../App';
+import { useServerUrl } from '../context/ServerConfig';
 
 type VoiceNav = NativeStackNavigationProp<RootStackParamList, 'Voice'>;
 
 export function VoiceAssistantScreen() {
   const navigation = useNavigation<VoiceNav>();
+  const { serverUrl } = useServerUrl();
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
@@ -30,7 +32,7 @@ export function VoiceAssistantScreen() {
   const processVoiceCommand = async (command: string) => {
     setSpeaking(true);
     try {
-      const response = await fetch('http://localhost:3000/api/chat', {
+      const response = await fetch(`${serverUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: command }),
