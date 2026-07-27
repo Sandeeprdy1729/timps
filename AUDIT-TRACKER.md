@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 4     | 204       |
+| Medium   | 208   | 5     | 203       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **104** | **284** |
+| **Total**| **388** | **105** | **283** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 4 Medium
+## ✅ Fixed — 5 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -129,13 +129,14 @@
 | M2 | `.github/timps-daily-improve.agent.md:34` — Architecture: autonomous agent mandates `≥ 10,000 lines` per session as "hard floor" and `git push origin main` directly, contradicting CONTRIBUTING.md:167 (`Never commit directly to main`); volume quota incentivises plausible-looking code over working code; unreviewed machine output flows into `curl\|bash` installs (install.sh:52); duplicated in `.github/agents/daily-improve-agent.agent.md` | Rewrote both files: removed `≥ 10,000 lines` quota entirely, removed direct-to-main push mandate, added `git checkout -b` + `gh pr create` workflow requiring human review before merge; added rule "Branch for all changes — never commit or push directly to `main`"; added anti-pattern "Volume over quality — code must justify its existence, not meet a quota" |
 | M3 | `.github/workflows/ci.yml:212` — Testing: push/PR CI never compiles or tests the crates/ workspace (timps-agent, timps-cli, timps-memory, timps-providers, timps-tools, timps-server); only memory-core-rs is tested; Rust CLI is a shipped release artifact but regressions undetectable until release tags; unit tests in timps-memory and timps-agent never run in CI | Added `crates` job to ci.yml: runs `cargo build --workspace` and `cargo test --workspace` on ubuntu/macos/windows; uses root Cargo.toml workspace definition; caches Cargo registry; runs on every push/PR alongside existing jobs |
 | M4 | `.github/workflows/dependencies.yml:44` — Bug: scheduled job runs `npx npm-check-updates -u` but never commits or pushes changes; PR creation references nonexistent branch `renovate/all-minor` → 422 error every night; entire dependency-update pipeline non-functional | Rewrote workflow: after `ncu -u`, checks for actual changes via `git diff --quiet`; if changes exist, creates branch `deps/update-YYYYMMDD`, commits, pushes; then creates PR from that branch; skips PR if no changes or PR already open |
+| M5 | `.github/workflows/security.yml:39` — Security: only enforcing step parses `.AuditAdvisoryCount` from npm audit JSON (nonexistent field in npm 7+, real key is `metadata.vulnerabilities.*`), so `audit_failures` always 0 and gate never fires; `cargo-audit`, `trufflehog`, npm audit all `continue-on-error: true` — workflow can never fail; trufflehog `base:main head:HEAD` scans nothing on push-to-main | Fixed npm audit: parses `metadata.vulnerabilities.high + .critical`, exits 1 if >0, lists affected packages; removed `continue-on-error` from npm-audit and cargo-audit jobs; replaced cargo-audit action with direct `cargo audit` install+run; fixed trufflehog: removed broken `base:main head:HEAD`, added `fetch-depth: 0` for full history, uses `--only-verified` |
 
-## 📋 Remaining — 284 Issues
+## 📋 Remaining — 283 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (204)
+### Medium (203)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
