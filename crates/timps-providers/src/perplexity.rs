@@ -23,6 +23,12 @@ impl Provider for PerplexityProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["sonar-pro".into(), "sonar".into(), "sonar-reasoning".into()])
+        let compat = OpenAICompat::new("https://api.perplexity.ai", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["sonar-pro".into(), "sonar".into(), "sonar-reasoning".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

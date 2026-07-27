@@ -22,6 +22,12 @@ impl Provider for DeepSeekProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["deepseek-chat".into(), "deepseek-coder".into(), "deepseek-reasoner".into()])
+        let compat = OpenAICompat::new("https://api.deepseek.com/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["deepseek-chat".into(), "deepseek-coder".into(), "deepseek-reasoner".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

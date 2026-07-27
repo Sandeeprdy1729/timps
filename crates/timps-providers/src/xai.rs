@@ -38,11 +38,13 @@ impl Provider for XaiProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec![
-            "grok-3".to_string(),
-            "grok-3-mini".to_string(),
-            "grok-beta".to_string(),
-        ])
+        let compat = OpenAICompat::new("https://api.x.ai/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["grok-3".to_string(), "grok-3-mini".to_string()])
+        } else {
+            Ok(models)
+        }
     }
 }
 

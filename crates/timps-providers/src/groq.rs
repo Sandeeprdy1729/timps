@@ -23,7 +23,12 @@ impl Provider for GroqProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["llama-3.3-70b-versatile".into(), "llama-3.1-8b-instant".into(),
-                "mixtral-8x7b-32768".into(), "gemma2-9b-it".into()])
+        let compat = OpenAICompat::new("https://api.groq.com/openai/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["llama-3.3-70b-versatile".into(), "llama-3.1-8b-instant".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

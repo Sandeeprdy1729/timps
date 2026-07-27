@@ -22,6 +22,12 @@ impl Provider for MistralProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["mistral-large-latest".into(), "mistral-medium-latest".into(), "codestral-latest".into()])
+        let compat = OpenAICompat::new("https://api.mistral.ai/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["mistral-large-latest".into(), "mistral-medium-latest".into(), "codestral-latest".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

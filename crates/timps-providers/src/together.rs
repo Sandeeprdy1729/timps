@@ -23,8 +23,12 @@ impl Provider for TogetherProvider {
         Ok(rx)
     }
     async fn list_models(&self) -> Result<Vec<String>> {
-        Ok(vec!["meta-llama/Llama-3.3-70B-Instruct-Turbo".into(),
-                "mistralai/Mixtral-8x7B-Instruct-v0.1".into(),
-                "Qwen/Qwen2.5-Coder-32B-Instruct".into()])
+        let compat = OpenAICompat::new("https://api.together.xyz/v1", &self.api_key, &self.model);
+        let models = compat.fetch_models().await;
+        if models.is_empty() {
+            Ok(vec!["meta-llama/Llama-3.3-70B-Instruct-Turbo".into()])
+        } else {
+            Ok(models)
+        }
     }
 }

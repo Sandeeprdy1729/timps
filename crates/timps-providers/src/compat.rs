@@ -55,6 +55,34 @@ impl OpenAICompat {
         out
     }
 
+    /// Fetch available model IDs from the provider's `/models` endpoint.
+    /// Returns an empty Vec on failure so callers fall back gracefully.
+    pub async fn fetch_models(&self) -> Vec<String> {
+        let mut req = self.client.get(format!("{}/models", self.base_url));
+        if let Some(header) = &self.auth_header {
+            req = req.header(header, &self.api_key);
+        } else {
+            req = req.bearer_auth(&self.api_key);
+        }
+        if !self.query_params.is_empty() {
+            req = req.query(&self.query_params);
+        }
+        let resp = match req.send().await {
+            Ok(r) => r,
+            Err(_) => return vec![],
+        };
+        let json: Value = match resp.json().await {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+        json["data"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|m| m["id"].as_str().map(String::from))
+            .collect()
+    }
+
     pub async fn complete(
         &self,
         system: &str,
