@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../App';
+import { useServerUrl } from '../context/ServerConfig';
 
 type ChatNav = NativeStackNavigationProp<RootStackParamList, 'Chat'>;
 
@@ -16,6 +17,7 @@ interface Message {
 
 export function ChatScreen() {
   const navigation = useNavigation<ChatNav>();
+  const { serverUrl } = useServerUrl();
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -35,7 +37,7 @@ export function ChatScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/chat', {
+      const response = await fetch(`${serverUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: input, history: messages }),
