@@ -9,8 +9,12 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { parseArgs } from 'util';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -76,10 +80,10 @@ export function evalCase(
     checks.push({ name: `not_contains:"${forbidden}"`, passed, detail: passed ? undefined : `Found forbidden: "${forbidden}"` });
   }
 
-  // tool_calls checks
+  // tool_calls checks — look for [tool: name] markers in output
   for (const toolName of evCase.expected.tool_calls ?? []) {
     const passed = toolCallsMade.includes(toolName);
-    checks.push({ name: `tool_called:"${toolName}"`, passed, detail: passed ? undefined : `Tool not called: "${toolName}"` });
+    checks.push({ name: `tool_called:"${toolName}"`, passed, detail: passed ? undefined : `Tool not called: ${toolName}` });
   }
 
   // regex check
@@ -104,7 +108,60 @@ export function evalCase(
   };
 }
 
+// ── Agent invocation ──────────────────────────────────────────────────────
+
+/** Invoke the timps binary with a prompt and return stdout + tool calls detected. */
+async function invokeAgent(
+  prompt: string,
+  cwd: string,
+  timeoutMs: number,
+): Promise<{ output: string; toolCalls: string[] }> {
+  const bin = process.platform === 'win32' ? 'timps.exe' : 'timps';
+
+  // Resolve the binary — prefer local build, fall back to PATH
+  const localBin = resolve(process.cwd(), 'target', 'debug', bin);
+  const binPath = existsSync(localBin) ? localBin : bin;
+
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      binPath,
+      ['--prompt', prompt],
+      { cwd, timeout: timeoutMs, maxBuffer: 1024 * 1024 },
+    );
+
+    const combined = (stdout || '') + (stderr || '');
+
+    // Parse tool calls from [tool: name] markers emitted by the CLI
+    const toolCalls: string[] = [];
+    const toolRe = /\[tool:\s*([^\]]+)\]/g;
+    let match;
+    while ((match = toolRe.exec(combined)) !== null) {
+      toolCalls.push(match[1].trim());
+    }
+
+    return { output: combined, toolCalls };
+  } catch (err: any) {
+    // Timeout or exec error
+    const msg = err?.killed
+      ? `Timed out after ${timeoutMs}ms`
+      : err?.message || String(err);
+    return { output: msg, toolCalls: [] };
+  }
+}
+
 // ── Suite runner ──────────────────────────────────────────────────────────
+
+/** Extract an EvalSuite from a dynamically imported module. */
+function extractSuite(mod: any): EvalSuite | null {
+  // Priority: default export → named exports that look like EvalSuite
+  if (mod.default && mod.default.cases) return mod.default;
+  for (const val of Object.values(mod)) {
+    if (val && typeof val === 'object' && 'cases' in val && Array.isArray((val as any).cases)) {
+      return val as EvalSuite;
+    }
+  }
+  return null;
+}
 
 export function aggregateSuite(suiteName: string, results: EvalResult[]): SuiteResult {
   const passed = results.filter((r) => r.passed).length;
@@ -122,7 +179,7 @@ export function aggregateSuite(suiteName: string, results: EvalResult[]): SuiteR
 
 // ── CLI entry point ────────────────────────────────────────────────────────
 
-if (process.argv[1] === import.meta.url.replace('file://', '')) {
+async function main() {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
@@ -156,15 +213,63 @@ if (process.argv[1] === import.meta.url.replace('file://', '')) {
   const resultsDir = join(process.cwd(), 'evals', 'results');
   mkdirSync(resultsDir, { recursive: true });
 
-  // NOTE: In a full implementation, this would dynamically import suites
-  // and invoke a real agent. For now, we output the structure for CI.
   const allSuites: SuiteResult[] = [];
+  const cwd = process.cwd();
 
   for (const file of files) {
-    console.log(`  Suite: ${file} — [dry run in Phase 17 scaffold]`);
-    allSuites.push(aggregateSuite(file.replace(/\.\w+$/, ''), []));
+    const suiteName = file.replace(/\.\w+$/, '');
+    console.log(`\n  Suite: ${suiteName}`);
+
+    const mod = await import(join(suitesDir, file));
+    const suite = extractSuite(mod);
+
+    if (!suite) {
+      console.log(`    ⚠ No EvalSuite found in ${file}, skipping`);
+      continue;
+    }
+
+    console.log(`    ${suite.description} (${suite.cases.length} cases)`);
+
+    const results: EvalResult[] = [];
+    for (const evCase of suite.cases) {
+      const timeoutMs = evCase.timeout_ms ?? 30_000;
+      const t0 = Date.now();
+      const { output, toolCalls } = await invokeAgent(evCase.input, cwd, timeoutMs);
+      const latencyMs = Date.now() - t0;
+
+      const result = evalCase(evCase, output, toolCalls);
+      result.latency_ms = latencyMs;
+      results.push(result);
+
+      const icon = result.passed ? '✓' : '✗';
+      console.log(`    ${icon} ${evCase.id}: ${evCase.description} (${latencyMs}ms)`);
+      if (!result.passed) {
+        for (const check of result.checks.filter((c) => !c.passed)) {
+          console.log(`        FAIL: ${check.name} — ${check.detail ?? ''}`);
+        }
+      }
+    }
+
+    const suiteResult = aggregateSuite(suiteName, results);
+    allSuites.push(suiteResult);
+    console.log(`    → ${suiteResult.passed}/${suiteResult.total} passed (score: ${suiteResult.score})`);
   }
 
   writeFileSync(outputFile, JSON.stringify(allSuites, null, 2));
   console.log(`\nResults written to: ${outputFile}`);
+
+  // Exit with non-zero if any suite had failures
+  const anyFailed = allSuites.some((s) => s.failed > 0);
+  process.exit(anyFailed ? 1 : 0);
+}
+
+// Cross-platform CLI entry check (works on Windows, macOS, Linux)
+const isMainModule = process.argv[1] &&
+  resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname);
+
+if (isMainModule) {
+  main().catch((err) => {
+    console.error('Eval runner failed:', err);
+    process.exit(1);
+  });
 }

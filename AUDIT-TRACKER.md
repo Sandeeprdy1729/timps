@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 19    | 189       |
+| Medium   | 208   | 20    | 188       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **119** | **269** |
+| **Total**| **388** | **120** | **268** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 19 Medium
+## ✅ Fixed — 20 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -145,13 +145,14 @@
 | M18 | `crates/timps-server/src/main.rs:183` — Architecture: Rust server exposes `/chat`, `/memory`, `/memory/episodes`, `/tools` while `timps-mcp` SERVER-mode tools call `/api/chat`, `/api/memory/:userId`, `/api/contradiction/check`, `/api/chronos/`, `/api/nexus/`, `/api/synapse/*`; both default to port 3000 but share no endpoints — pointing `TIMPS_URL` at the Rust server makes every MCP SERVER-mode tool 404; no userId/project model, contradiction, burnout, or 22-layer routes | Added reverse proxy: Rust server now catches all `/api/*` routes and forwards them to a configurable Node.js backend (`TIMPS_BACKEND_URL` env var, e.g. `http://localhost:3001`); when no backend URL is set, returns 502 with a helpful message; added `reqwest` dependency; startup log indicates proxy status |
 | M19 | `crates/timps-tools/src/shell.rs:47` — Bug: `Command::new("sh").arg("-c")` does not exist on stock Windows (sh is a POSIX shell), while `release-cli.yml` builds and ships `timps-x86_64-windows.exe`; both `shell.rs:53` and `git.rs:11` use blocking `std::process::Command::output()` inside async `fn execute()`, stalling the tokio worker thread for every subprocess | Replaced `std::process::Command` with `tokio::process::Command` (non-blocking `.output().await`) in both `shell.rs` and `git.rs`; on Windows (`cfg!(windows)`), uses `cmd.exe /C` instead of `sh -c`; made `git()` helper async and added `.await` to all call sites |
 | M20 | `evals/python-harness/run_eval.py:130` — Bug: `evaluate()` stores ALL examples' memories in a single upfront loop (lines 96-99) but calls `adapter.clear()` after each example inside the recall loop (line 130), so examples 2..n query an empty store; recall for every example after the first is always 0 regardless of adapter | Merged the store and recall into a single per-example loop: each example's memories are stored immediately before its recall, then `adapter.clear()` runs between examples for isolation; verified with `run_eval.py --dataset multi-layer-recall` (87.5% recall, 7/8 pass) |
+| M21 | `evals/runner.ts:164` — Dead code: loop prints `[dry run in Phase 17 scaffold]` and aggregates empty results arrays; never imports or runs any suite; CLI entry check at line 125 (`process.argv[1] === import.meta.url.replace('file://', '')`) fails on Windows (different path formats); all documented `npx tsx evals/runner.ts --suite ...` commands produce zero-filled results JSON | Replaced dead scaffold with working runner: cross-platform CLI entry check using `resolve()` comparison; dynamic `import()` of each suite file with `extractSuite()` that handles both default and named exports; per-case agent invocation via `child_process.execFile` calling the `timps` binary; output parsed for `[tool: name]` markers for tool_calls checks; `evalCase()` runs all checks against real agent output; results aggregated and written; exit code 1 on any failure |
 
-## 📋 Remaining — 269 Issues
+## 📋 Remaining — 268 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (189)
+### Medium (188)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
