@@ -1,7 +1,7 @@
 //! Shell execution tool — runs arbitrary commands in the project directory.
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::process::Command;
+use tokio::process::Command;
 use crate::{Tool, ToolResult};
 
 pub struct ShellTool;
@@ -44,13 +44,22 @@ impl Tool for ShellTool {
             return ToolResult::err("Command contains dangerous shell metacharacters");
         }
 
-        let mut builder = Command::new("sh");
-        builder.arg("-c").arg(&cmd);
+        // Use cmd.exe on Windows, sh on Unix
+        let mut builder = if cfg!(windows) {
+            let mut b = Command::new("cmd.exe");
+            b.arg("/C").arg(&cmd);
+            b
+        } else {
+            let mut b = Command::new("sh");
+            b.arg("-c").arg(&cmd);
+            b
+        };
+
         if let Some(dir) = cwd {
             builder.current_dir(dir);
         }
 
-        match builder.output() {
+        match builder.output().await {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout).to_string();
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
