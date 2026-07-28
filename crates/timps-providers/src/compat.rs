@@ -1,9 +1,12 @@
 //! Shared OpenAI-compatible REST helper used by OpenAI, Groq, Mistral, Together, DeepSeek, Perplexity.
 
 use anyhow::Result;
+use futures::StreamExt;
 use reqwest::Client;
 use serde_json::{json, Value};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc;
+use tokio_util::io::StreamReader;
 use crate::{Message, Role, StreamEvent, ToolCall};
 
 #[derive(Default)]
@@ -53,7 +56,24 @@ impl OpenAICompat {
         for m in messages {
             match m.role {
                 Role::User => out.push(json!({ "role": "user", "content": m.content })),
-                Role::Assistant => out.push(json!({ "role": "assistant", "content": m.content })),
+                Role::Assistant => {
+                    let mut msg = json!({ "role": "assistant", "content": m.content });
+                    if let Some(tcs) = &m.tool_calls {
+                        if !tcs.is_empty() {
+                            msg["tool_calls"] = json!(tcs.iter().map(|tc| {
+                                json!({
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tc.name,
+                                        "arguments": tc.args.to_string(),
+                                    }
+                                })
+                            }).collect::<Vec<_>>());
+                        }
+                    }
+                    out.push(msg);
+                }
                 Role::System => out.push(json!({ "role": "system", "content": m.content })),
                 Role::Tool => {
                     let mut msg = json!({ "role": "tool", "content": m.content });
@@ -133,51 +153,67 @@ impl OpenAICompat {
             return Ok(());
         }
 
-        // Parse SSE stream - accumulate tool call deltas
-        let text = resp.text().await?;
+        // Stream SSE line-by-line for true real-time token delivery
+        let byte_stream = resp.bytes_stream().map(|r| {
+            r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        });
+        let reader = StreamReader::new(byte_stream);
+        let mut lines = BufReader::new(reader).lines();
         let mut tool_calls: Vec<ToolCallDelta> = Vec::new();
 
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line == "data: [DONE]" { continue; }
-            let data = line.strip_prefix("data: ").unwrap_or(line);
-            if let Ok(obj) = serde_json::from_str::<Value>(data) {
-                if let Some(choices) = obj["choices"].as_array() {
-                    for choice in choices {
-                        let delta = &choice["delta"];
-                        if let Some(content) = delta["content"].as_str() {
-                            if !content.is_empty() {
-                                let _ = tx.send(StreamEvent::Token(content.to_string())).await;
-                            }
-                        }
-                        // Tool calls - accumulate deltas by index
-                        if let Some(tcs) = delta["tool_calls"].as_array() {
-                            for tc in tcs {
-                                let index = tc["index"].as_u64().unwrap_or(0) as usize;
-                                let id = tc["id"].as_str().unwrap_or("").to_string();
-                                let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
-                                let args_delta = tc["function"]["arguments"].as_str().unwrap_or("");
-
-                                if index >= tool_calls.len() {
-                                    tool_calls.resize_with(index + 1, || ToolCallDelta {
-                                        id: String::new(),
-                                        name: String::new(),
-                                        args: String::new(),
-                                    });
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => {
+                    let line = line.trim();
+                    if line.is_empty() || line == "data: [DONE]" { continue; }
+                    let data = match line.strip_prefix("data: ") {
+                        Some(d) => d,
+                        None => continue,
+                    };
+                    let obj: Value = match serde_json::from_str(data) {
+                        Ok(v) => v,
+                        Err(_) => continue,
+                    };
+                    if let Some(choices) = obj["choices"].as_array() {
+                        for choice in choices {
+                            let delta = &choice["delta"];
+                            if let Some(content) = delta["content"].as_str() {
+                                if !content.is_empty() {
+                                    let _ = tx.send(StreamEvent::Token(content.to_string())).await;
                                 }
+                            }
+                            if let Some(tcs) = delta["tool_calls"].as_array() {
+                                for tc in tcs {
+                                    let index = tc["index"].as_u64().unwrap_or(0) as usize;
+                                    let id = tc["id"].as_str().unwrap_or("").to_string();
+                                    let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
+                                    let args_delta = tc["function"]["arguments"].as_str().unwrap_or("");
 
-                                let call = &mut tool_calls[index];
-                                if !id.is_empty() { call.id = id; }
-                                if !name.is_empty() { call.name = name; }
-                                if !args_delta.is_empty() { call.args.push_str(args_delta); }
+                                    if index >= tool_calls.len() {
+                                        tool_calls.resize_with(index + 1, || ToolCallDelta {
+                                            id: String::new(),
+                                            name: String::new(),
+                                            args: String::new(),
+                                        });
+                                    }
+
+                                    let call = &mut tool_calls[index];
+                                    if !id.is_empty() { call.id = id; }
+                                    if !name.is_empty() { call.name = name; }
+                                    if !args_delta.is_empty() { call.args.push_str(args_delta); }
+                                }
                             }
                         }
                     }
                 }
+                Ok(None) => break,
+                Err(e) => {
+                    let _ = tx.send(StreamEvent::Error(e.to_string())).await;
+                    break;
+                }
             }
         }
 
-        // Emit complete tool calls after stream ends
         for call in tool_calls {
             if !call.name.is_empty() {
                 let args: Value = serde_json::from_str(&call.args).unwrap_or(json!({}));
