@@ -14,7 +14,7 @@ use axum::{
     http::StatusCode,
     middleware::{self, Next},
     response::Json,
-    routing::{delete, get, post},
+    routing::{any, delete, get, post},
     Router,
 };
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,79 @@ use timps_memory::{MemoryStore, SemanticEntry};
 use timps_providers::ProviderRegistry;
 use timps_tools::ToolRegistry;
 
+/// Reverse-proxy handler: forwards /api/* requests to the Node.js backend (packages/server).
+async fn proxy_api(
+    State(state): State<AppState>,
+    req: Request,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let backend = state.backend_url.as_ref().ok_or_else(|| {
+        (
+            StatusCode::BAD_GATEWAY,
+            "TIMPS_BACKEND_URL not set — cannot proxy /api/* to Node.js server. \
+             Set TIMPS_BACKEND_URL=http://localhost:3001 or start packages/server on that port."
+                .to_string(),
+        )
+    })?;
+
+    let uri = req.uri();
+    let path_and_query = uri
+        .path_and_query()
+        .map(|pq| pq.as_str())
+        .unwrap_or(uri.path());
+
+    let client = reqwest::Client::new();
+    let url = format!("{backend}{path_and_query}");
+
+    let method = req.method().clone();
+    let headers = req.headers().clone();
+
+    let mut builder = match method {
+        axum::http::Method::GET => client.get(&url),
+        axum::http::Method::POST => {
+            let body = axum::body::to_bytes(req.into_body(), 10 * 1024 * 1024)
+                .await
+                .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+            client.post(&url).body(body)
+        }
+        axum::http::Method::PUT => {
+            let body = axum::body::to_bytes(req.into_body(), 10 * 1024 * 1024)
+                .await
+                .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+            client.put(&url).body(body)
+        }
+        axum::http::Method::DELETE => client.delete(&url),
+        _ => {
+            return Err((
+                StatusCode::METHOD_NOT_ALLOWED,
+                format!("Unsupported method for proxy: {method}"),
+            ))
+        }
+    };
+
+    for (k, v) in headers.iter() {
+        if k != axum::http::header::HOST && k != axum::http::header::CONTENT_LENGTH {
+            builder = builder.header(k, v);
+        }
+    }
+
+    let resp = builder
+        .send()
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Backend unreachable: {e}")))?;
+
+    let status = resp.status().as_u16();
+    let body: Value = resp
+        .json()
+        .await
+        .unwrap_or_else(|_| json!({ "error": "Backend returned non-JSON response" }));
+
+    // Forward non-2xx status
+    let axum_status = axum::http::StatusCode::from_u16(status)
+        .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+    Err((axum_status, body.to_string()))
+}
+
 // ── App state ───────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
@@ -37,6 +110,7 @@ struct AppState {
     providers: Arc<ProviderRegistry>,
     cwd: String,
     api_key: Option<String>,
+    backend_url: Option<String>,
 }
 
 // ── Auth middleware ─────────────────────────────────────────────────────────
@@ -204,6 +278,7 @@ async fn main() -> Result<()> {
     let api_key = std::env::var("TIMPS_API_KEY").ok().filter(|k| !k.is_empty());
     let bind_all = std::env::var("TIMPS_LISTEN_ALL").map_or(false, |v| v == "1" || v == "true");
     let allow_unauth = std::env::var("TIMPS_ALLOW_UNAUTH").map_or(false, |v| v == "1" || v == "true");
+    let backend_url = std::env::var("TIMPS_BACKEND_URL").ok().filter(|v| !v.is_empty());
 
     // Security: require auth when exposed to the network
     if bind_all && api_key.is_none() && !allow_unauth {
@@ -225,7 +300,15 @@ async fn main() -> Result<()> {
     let tools = Arc::new(ToolRegistry::with_builtins());
     let providers = Arc::new(ProviderRegistry::from_env());
 
-    let state = AppState { memory, tools, providers, cwd, api_key };
+    let host = if bind_all { "0.0.0.0" } else { "127.0.0.1" };
+    let addr = format!("{host}:{port}");
+    if backend_url.is_some() {
+        tracing::info!("TIMPS server listening on http://{addr} (proxying /api/* to {})", backend_url.as_deref().unwrap());
+    } else {
+        tracing::info!("TIMPS server listening on http://{addr} (no backend — /api/* proxy disabled. Set TIMPS_BACKEND_URL to enable.)");
+    }
+
+    let state = AppState { memory, tools, providers, cwd, api_key, backend_url };
 
     let cors = if bind_all {
         // When exposed to the network, restrict to localhost origins only
@@ -276,15 +359,17 @@ async fn main() -> Result<()> {
         .route("/tools", get(list_tools))
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 
+    let api_proxy = Router::new()
+        .route("/api/*path", any(proxy_api))
+        .with_state(state.clone());
+
     let app = Router::new()
         .route("/health", get(health))
         .merge(protected_routes)
+        .merge(api_proxy)
         .layer(cors)
         .with_state(state);
 
-    let host = if bind_all { "0.0.0.0" } else { "127.0.0.1" };
-    let addr = format!("{host}:{port}");
-    tracing::info!("TIMPS server listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
