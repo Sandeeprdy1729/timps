@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 14    | 194       |
+| Medium   | 208   | 15    | 193       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **114** | **274** |
+| **Total**| **388** | **115** | **273** |
 
 ---
 
@@ -140,13 +140,14 @@
 | M13 | `crates/timps-cli/src/main.rs` — `run_recipe` prints "not implemented"; `run_config` loads config then discards it (no get/set/list); plugin list/install/remove all print stubs; dead `RecipeRunner`/`ProviderConfig` imports | Wired `RecipeRunner` in `run_recipe`; implemented `ProviderConfig` load/save/get/set/list in `run_config`; real plugin list from `~/.timps/plugins.json`, install clones repo, remove deletes directory |
 | M14 | `crates/timps-memory/src/lib.rs` — Corrupt `semantic.json` silently erases all memory (load returns empty vec); non-atomic writes risk half-written JSON; concurrent `store` calls race on read-modify-write | `load_semantic` now errors on corrupt JSON and backs up file; `save_semantic` uses atomic write (tmp+rename); `store_semantic` uses `tokio::sync::Mutex` for serialized read-modify-write |
 | M15 | `crates/timps-providers/src/{openai,groq,gemini,deepseek,mistral,together,perplexity,cohere,fireworks,xai,openrouter}.rs` — 11 OpenAI-compatible providers return hardcoded model lists from `list_models()` instead of querying the provider's `/v1/models` endpoint; models drift out of date as providers add/remove models | Added `fetch_models()` to `OpenAICompat` that queries `{base_url}/models` endpoint; all 11 providers now call it and fall back to a minimal hardcoded list on failure; also removed unused `StreamEvent` import in ollama.rs |
+| M16 | `crates/timps-providers/src/compat.rs:86` — Streaming tool_calls deltas treated as complete tool calls (each SSE fragment emits a ToolCall event, continuation fragments produce name '' and args {}); tool-result messages sent as role 'tool' without tool_call_id, which OpenAI-compatible APIs reject with 400 | Added `tool_calls: Option<Vec<ToolCall>>` to `Message` struct for history replay; fixed `messages_to_json` to include tool_calls array in assistant messages; replaced `resp.text()` buffering with `bytes_stream()` → `StreamReader` → `BufReader::lines()` for true real-time SSE streaming; fixed Claude provider to use actual `tool_use_id` instead of placeholders and proper `tool_use` content blocks in assistant messages; agent loop now stores tool calls in assistant message history |
 
-## 📋 Remaining — 273 Issues
+## 📋 Remaining — 272 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (193)
+### Medium (192)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
