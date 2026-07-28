@@ -22,7 +22,7 @@ export function WelcomeScreen({ onDismiss }: Props) {
           </div>
           <div className="welcome-feature">
             <span className="welcome-feature-dot" />
-            <span>17 intelligence engines working for you</span>
+            <span>25 intelligence engines working for you</span>
           </div>
           <div className="welcome-feature">
             <span className="welcome-feature-dot" />

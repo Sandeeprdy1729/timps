@@ -402,7 +402,7 @@ Launch via `timps --swarm "design a microservices auth system"` or `/swarm` from
 
 ## MCP Ecosystem
 
-TIMPS exposes 61 tools as an MCP server (`timps-mcp`) so any MCP-compatible client gets persistent memory, intelligence, and velocity tracking. The provider-agnostic adapter layer routes every request through a unified interface — no matter which LLM you use (Claude, GPT, Gemini, Ollama, OpenRouter, DeepSeek, or custom endpoints), the memory system, tool execution, and agent loop behave identically:
+TIMPS exposes 70 tools as an MCP server (`timps-mcp`) so any MCP-compatible client gets persistent memory, intelligence, and velocity tracking. The provider-agnostic adapter layer routes every request through a unified interface — no matter which LLM you use (Claude, GPT, Gemini, Ollama, OpenRouter, DeepSeek, or custom endpoints), the memory system, tool execution, and agent loop behave identically:
 
 ```
                   timps CLI / MCP / VS Code
@@ -432,8 +432,8 @@ Claude Code / Cursor / Windsurf / Cline / Continue / Goose / OpenCode / any MCP 
     └────┬────┘
          │
     ┌────▼────┐
-     │ Memory  │  61 tools across 6 categories
-    │Engine   │  + 17 intelligence tools
+     │ Memory  │  70 tools across 6 categories
+    │Engine   │  + 25 intelligence tools
     └─────────┘
 ```
 

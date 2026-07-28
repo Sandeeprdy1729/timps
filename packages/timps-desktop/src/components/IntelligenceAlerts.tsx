@@ -92,7 +92,7 @@ export function IntelligenceAlerts({ projectPath }: Props) {
           id: 'stub-5',
           kind: 'suggestion',
           title: 'Suggestion: Test Coverage',
-          body: 'The memory system has 17 intelligence tools but only 60% test coverage. Add tests for the 7 untested tools.',
+          body: 'The memory system has 25 intelligence tools but only 60% test coverage. Add tests for the untested tools.',
           severity: 'ok',
           timestamp: Date.now() - 57600000,
           dismissed: false,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
-describe('@timps/sdk', () => {
+describe('@timps-ai/timps-sdk', () => {
   describe('runtime detection', () => {
     it('detects node runtime', async () => {
       const { detectRuntime } = await import('./defaults.js');

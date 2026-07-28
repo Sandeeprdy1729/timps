@@ -20,7 +20,7 @@ each <150 LOC, no LLM, no `Math.random()`:
 - **Codebase Anthropologist** — surfaces cultural norms from stored decisions
 - **Institutional Memory** — preserves departed contributors' decisions and quirks
 
-All 17 tools verified by `benchmark/index.ts` smoke test (100% pass).
+All 25 tools verified by `benchmark/index.ts` smoke test (100% pass).
 
 ### Real benchmark, real numbers
 

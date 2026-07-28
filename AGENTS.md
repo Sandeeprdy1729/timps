@@ -37,13 +37,13 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 
 ## Memory — unified implementations
 
-1. **`packages/memory-core/`** — canonical, source of truth for 17 intelligence tools.
+1. **`packages/memory-core/`** — canonical, source of truth for 25 intelligence tools.
 2. **`timps-code/src/memory/`** — thin adapter (337 lines), delegates to `MemoryEngine`.
 3. **`packages/server/memory/`** — thin adapters over `MemoryEngine`, re-export forge types from `@timps/memory-core`.
 
 22 forge layers: L1 Working → L2 Episodic → L3 Semantic → L4 Procedural → L5 ChronosForge → L6 ResonanceForge → L7 EchoForge → L8 AetherForgeERL → L9 HarmonicSheafWeaver → L10–L22 (EngramLog through BiasRevealer).
 
-All 17 intelligence tools live in `packages/memory-core/src/intelligence/`, class-based, **no `Math.random()`**.
+All 25 intelligence tools live in `packages/memory-core/src/intelligence/`, class-based, **no `Math.random()`**.
 
 ### IMemoryLayer interface
 
@@ -124,7 +124,7 @@ To add a new migration:
 - VS Code extension activation events.
 - Memory on-disk schema (backwards compat).
 - Public CLI flags, slash commands, env vars.
-- The 17-tool count and their `MemoryEngine` lazy getter names.
+- The 25-tool count and their `MemoryEngine` lazy getter names.
 - `StorageBackend` interface methods (backends must stay compatible).
 - Episodic storage format (`episodes.json` JSON array — not JSONL).
 
@@ -133,7 +133,7 @@ To add a new migration:
 - [ ] `npx tsc --noEmit` passes in affected package (`--max-old-space-size=4096` for timps-mcp).
 - [ ] Tests pass: `npm test` (root vitest run).
 - [ ] Coverage passes: `npm run test:coverage` meets 80% threshold.
-- [ ] Benchmark passes: `npx tsx benchmark/index.ts --quick` → 17/17 tools green, R@5 ≥ 90%.
+- [ ] Benchmark passes: `npx tsx benchmark/index.ts --quick` → 25/25 tools green, R@5 ≥ 90%.
 - [ ] `grep -c "Math.random" benchmark/` returns 0.
 - [ ] If you added a tool, updated `ALL_TOOLS` and added smoke test to `benchmark/index.ts`.
 - [ ] If you changed memory on-disk format, add migration in `timps-code/src/migrations/`.
@@ -931,7 +931,7 @@ VS Code                              TIMPS LSP Proxy                      Real L
 - **Debounce timers are cleared on `didClose`** — prevents phantom contradiction checks after document is closed
 - **JetBrains stub investigated — none found** — no JetBrains plugin files exist in the codebase
 
-## Phase 5d — SDK & Embedding (@timps/sdk)
+## Phase 5d — SDK & Embedding (@timps-ai/timps-sdk)
 
 New package at `packages/sdk/`:
 
@@ -949,7 +949,7 @@ New package at `packages/sdk/`:
 ### SDK architecture
 
 ```
-@timps/sdk — lightweight user-facing package (~50KB)
+@timps-ai/timps-sdk — lightweight user-facing package (~50KB)
 
   createMemory({ projectPath, provider? })
        │
@@ -983,7 +983,7 @@ New package at `packages/sdk/`:
 
 ```json
 {
-  "name": "@timps/sdk",
+  "name": "@timps-ai/timps-sdk",
   "sideEffects": false,
   "exports": {
     ".": { "import": "./dist/index.js", "require": "./dist/index.cjs" }
@@ -996,11 +996,11 @@ New package at `packages/sdk/`:
 ### Quickstart
 
 ```bash
-npm install @timps/sdk
+npm install @timps-ai/timps-sdk
 ```
 
 ```typescript
-import { createMemory } from '@timps/sdk'
+import { createMemory } from '@timps-ai/timps-sdk'
 
 const memory = createMemory({ projectPath: '.' })
 await memory.store('This project uses tRPC for type-safe APIs')

@@ -10,7 +10,7 @@
 //
 // Cross-Event Weaver: Induces connections via multi-faceted scoring
 //   - Semantic similarity + prediction-error + tool-augmented pathways
-//   - Leverages 17-tool proxies for longitudinal induction
+//   - Leverages 25-tool proxies for longitudinal induction
 //
 // Modular Self-Reflective Layers: Interaction → Reasoning → Consolidation
 //   - Audit and refine cycles for evolving coherence

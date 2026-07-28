@@ -11,7 +11,7 @@
 - **Memory-aware autocomplete** — completions informed by project history and patterns
 - **Contradiction detection** — inline warnings when edits contradict stored memories
 - **Memory panel** — view relevant memories for the current file
-- **Memory explorer** — NexusForge knowledge graph visualization, 9-layer TreeView
+- **Memory explorer** — NexusForge knowledge graph visualization, 22-layer TreeView
 - **Edit watcher** — auto-records file changes as episodic memories
 - **LSP integration** — proxy wraps real language servers, injects TIMPS diagnostics
 - **NexusForge + Chronos Veil + SynapseMetabolon** — knowledge graph exploration and causal tracking

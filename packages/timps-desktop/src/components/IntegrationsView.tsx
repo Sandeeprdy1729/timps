@@ -14,7 +14,7 @@ interface IntegrationCard {
 
 const ALL_INTEGRATIONS: IntegrationCard[] = [
   { id: 'github', name: 'GitHub', icon: '', description: 'Code repositories, PRs, issues, and actions', category: 'dev-tools', authType: 'api_key', configured: false },
-  { id: 'claude-mcp', name: 'Claude Code MCP', icon: '◈', description: '61 MCP tools — file ops, search, memory, terminal, and agent orchestration', category: 'ai-agents', authType: 'built-in', configured: false },
+  { id: 'claude-mcp', name: 'Claude Code MCP', icon: '◈', description: '70 MCP tools — file ops, search, memory, terminal, and agent orchestration', category: 'ai-agents', authType: 'built-in', configured: false },
   { id: 'openai-agents', name: 'OpenAI Agents SDK', icon: '◆', description: 'OpenAI Agent integration with code interpreter and file search', category: 'ai-agents', authType: 'api_key', configured: false },
   { id: 'telegram', name: 'Telegram Bot', icon: '', description: 'Bot messages, commands, and inline queries', category: 'messaging', authType: 'api_key', configured: false },
   { id: 'slack', name: 'Slack', icon: '', description: 'Team messaging, channels, and slash commands', category: 'messaging', authType: 'oauth2', configured: false },

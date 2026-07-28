@@ -1,0 +1,122 @@
+[
+  {
+    "suite": "memory-accuracy",
+    "timestamp": "2026-07-28T13:03:00.217Z",
+    "total": 5,
+    "passed": 1,
+    "failed": 4,
+    "score": 0.383,
+    "results": [
+      {
+        "case_id": "mem-001",
+        "passed": false,
+        "score": 0.6666666666666666,
+        "output": "Command failed: timps --prompt Remember this: the database password is stored in DB_PASSWORD env var, not in config files.\nerror: unknown option '--prompt'\n",
+        "tool_calls_made": [],
+        "checks": [
+          {
+            "name": "contains:\"remember\"",
+            "passed": true
+          },
+          {
+            "name": "contains:\"stored\"",
+            "passed": true
+          },
+          {
+            "name": "tool_called:\"store_memory\"",
+            "passed": false,
+            "detail": "Tool not called: store_memory"
+          }
+        ],
+        "latency_ms": 1398
+      },
+      {
+        "case_id": "mem-002",
+        "passed": false,
+        "score": 0,
+        "output": "Command failed: timps --prompt Where is the database password stored?\nerror: unknown option '--prompt'\n",
+        "tool_calls_made": [],
+        "checks": [
+          {
+            "name": "contains:\"DB_PASSWORD\"",
+            "passed": false,
+            "detail": "Missing: \"DB_PASSWORD\""
+          },
+          {
+            "name": "contains:\"env\"",
+            "passed": false,
+            "detail": "Missing: \"env\""
+          },
+          {
+            "name": "tool_called:\"get_memory\"",
+            "passed": false,
+            "detail": "Tool not called: get_memory"
+          }
+        ],
+        "latency_ms": 366
+      },
+      {
+        "case_id": "mem-003",
+        "passed": true,
+        "score": 1,
+        "output": "Command failed: timps --prompt What is the AWS account ID?\nerror: unknown option '--prompt'\n",
+        "tool_calls_made": [],
+        "checks": [
+          {
+            "name": "not_contains:\"123456789\"",
+            "passed": true
+          },
+          {
+            "name": "not_contains:\"000000000\"",
+            "passed": true
+          }
+        ],
+        "latency_ms": 351
+      },
+      {
+        "case_id": "mem-004",
+        "passed": false,
+        "score": 0.25,
+        "output": "Command failed: timps --prompt Fix the typo in README.md line 5 and let me know when done.\nerror: unknown option '--prompt'\n",
+        "tool_calls_made": [],
+        "checks": [
+          {
+            "name": "contains:\"fixed\"",
+            "passed": false,
+            "detail": "Missing: \"fixed\""
+          },
+          {
+            "name": "contains:\"done\"",
+            "passed": true
+          },
+          {
+            "name": "tool_called:\"read_file\"",
+            "passed": false,
+            "detail": "Tool not called: read_file"
+          },
+          {
+            "name": "tool_called:\"write_file\"",
+            "passed": false,
+            "detail": "Tool not called: write_file"
+          }
+        ],
+        "latency_ms": 361
+      },
+      {
+        "case_id": "mem-005",
+        "passed": false,
+        "score": 0,
+        "output": "Command failed: timps --prompt What do you know about our deployment process?\nerror: unknown option '--prompt'\n",
+        "tool_calls_made": [],
+        "checks": [
+          {
+            "name": "tool_called:\"get_memory\"",
+            "passed": false,
+            "detail": "Tool not called: get_memory"
+          }
+        ],
+        "latency_ms": 369
+      }
+    ]
+  }
+]

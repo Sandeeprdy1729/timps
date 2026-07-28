@@ -80,7 +80,7 @@ This document summarizes the significant improvements made to the TIMPS Desktop 
 
 ### After These Improvements:
 - TIMPS is an active **AI Intelligence Agent**
-- **Predictive**: Uses 17 intelligence tools to forecast burnout, contradictions, regrets
+- **Predictive**: Uses 25 intelligence tools to forecast burnout, contradictions, regrets
 - **Prescriptive**: Provides actionable advice based on your behavioral patterns
 - **Protective**: Alerts you before you repeat mistakes or fall into patterns
 - **Visual**: Shows you the structure and relationships in your knowledge
@@ -133,7 +133,7 @@ This document summarizes the significant improvements made to the TIMPS Desktop 
 ```
 TIMP Desktop App
 ├── Core Components
-│   ├── IntelligenceDashboard (17 intelligence engine monitoring)
+│   ├── IntelligenceDashboard (25 intelligence engine monitoring)
 │   ├── MemoryGraph (relationship visualization)
 │   └── Enhanced Memory Views
 ├── Backend Integration
