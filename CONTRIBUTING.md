@@ -55,18 +55,18 @@ timps/
 ├── timps-code/             # CLI coding agent (npm: timps-code)
 │   └── src/
 │       ├── core/           # Agent loop, planner, reflection, executor
-│       ├── memory/         # 9-layer persistent memory (working/episodic/semantic/procedural/chronos/resonance/echo/synapse/sheaf)
+│       ├── memory/         # 22-layer persistent memory (working/episodic/semantic/procedural/chronos/resonance/echo/synapse/sheaf + 13 advanced forge layers)
 │       ├── models/         # LLM adapters (Claude, OpenAI, Gemini, Ollama, OpenRouter)
 │       ├── tools/          # 25 CLI tools (file, search, shell, browser…)
 │       └── interfaces/     # CLI + TUI entry points
 ├── timps-mcp/              # MCP server (npm: timps-mcp)
-│   └── src/                # 28 MCP tools proxying to packages/server REST API
+│   └── src/                # 70 MCP tools proxying to packages/server REST API
 ├── timps-vscode/           # VS Code extension
 │   └── src/                # Sidebar panels, keybindings, webview
 ├── packages/server/             # Full server (Docker: timps-app)
 │   ├── api/                # Express REST API (routes.ts, server.ts)
 │   ├── config/             # Type-safe environment loading
-│   ├── core/               # Intelligence layer (17 tools)
+│   ├── core/               # Intelligence layer (25 tools)
 │   ├── db/                 # PostgreSQL + Qdrant adapters
 │   ├── memory/             # Short-term cache, long-term storage, embeddings
 │   └── models/             # Server-side LLM adapters

@@ -1,6 +1,6 @@
 // ForgeLink — Typed Relationship Forge with Modular Lifecycle Orchestration
 // Forges typed edges (causal, dependency, temporal, influence, contradiction, evolution)
-// between memory elements across all 17 tools + coding agent outputs.
+// between memory elements across all 25 tools + coding agent outputs.
 
 import { query, execute } from '../db/postgres';
 import { searchVectors, upsertVectors } from '../db/vector';

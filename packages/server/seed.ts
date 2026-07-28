@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 /**
  * TIMPs Demo Seeder
- * Seeds realistic data across all 17 tools so the dashboard looks alive.
+ * Seeds realistic data across all 25 tools so the dashboard looks alive.
  *
  * Usage:
  *   cd packages/server

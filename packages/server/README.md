@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@timps/server?color=brightgreen)](https://www.npmjs.com/package/@timps/server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Sandeeprdy1729/timps/blob/main/LICENSE)
 
-Express HTTP server that backs the CLI agent, MCP tools, and VS Code extension. Provides REST API for 28 forge layers, 25 intelligence tools, PostgreSQL persistence, and Qdrant vector search.
+Express HTTP server that backs the CLI agent, MCP tools, and VS Code extension. Provides REST API for 22 forge layers, 25 intelligence tools, PostgreSQL persistence, and Qdrant vector search.
 
 ## Quick Start
 

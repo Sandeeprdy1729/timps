@@ -14,7 +14,7 @@
 //   - Domain-agnostic ontology for flexible traversal
 //
 // Query-Time Multi-Tool Veil Agent:
-//   - Orchestrates 17-tool proxies + graph traversal for conflict resolution
+//   - Orchestrates 25-tool proxies + graph traversal for conflict resolution
 //   - Emits compact, coherent summaries with full provenance
 
 import * as crypto from 'crypto';

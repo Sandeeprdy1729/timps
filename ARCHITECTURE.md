@@ -19,7 +19,7 @@ Counted with: `find . -type f -name "*.ts" ! -name "*.d.ts" ! -path "*/node_modu
 | Package | TypeScript LOC | Purpose |
 |---|---|---|
 | `timps-code` | ~19,500 | CLI coding agent, agent loop, 25+ tools, TUI |
-| `packages/server` | ~20,300 | Full server, REST API, dashboard, 17 intelligence tools |
+| `packages/server` | ~20,300 | Full server, REST API, dashboard, 25 intelligence tools |
 | `timps-vscode` | ~5,200 | VS Code extension, chat panel, memory explorer |
 | `timps-mcp` | ~540 | MCP server, 20 persistent-memory tools |
 | **Total** | **~45,500** | |
@@ -35,7 +35,7 @@ timps/
 │       ├── commands/    # Slash command handlers (/memory, /skills, /branch…)
 │       ├── config/      # Provider and model configuration
 │       ├── core/        # app.ts (AgentLoop), agent.ts, toolRouter.ts
-│       ├── memory/      # 9-layer memory: snapshot.ts, memory.ts
+│       ├── memory/      # 22-layer memory: snapshot.ts, memory.ts
 │       ├── models/      # Provider adapters: Claude, GPT, Gemini, Ollama, OpenRouter
 │       ├── swarm/       # Multi-agent orchestration
 │       ├── tools/       # 25+ tools: file, git, shell, web, memory
@@ -43,7 +43,7 @@ timps/
 │
 ├── timps-mcp/           # npm install -g timps-mcp
 │   └── src/
-│       └── index.ts     # 28 MCP tool definitions (single-file server)
+│       └── index.ts     # 70 MCP tool definitions (single-file server)
 │
 ├── timps-vscode/        # VS Code Marketplace: TIMPs.timps-ai-coding-agent
 │   └── src/
@@ -56,9 +56,9 @@ timps/
 │
 └── packages/server/          # Full server (@timps/server)
     └── src/
-        ├── core/        # Agent loop, planner, executor, 17 intelligence tools
+        ├── core/        # Agent loop, planner, executor, 25 intelligence tools
         ├── memory/      # Long-term + embedding memory
-        ├── tools/       # Extended tool set (17 intelligence tools)
+        ├── tools/       # Extended tool set (25 intelligence tools)
         ├── models/      # Provider adapters
         ├── api/         # Express REST routes
         └── db/          # PostgreSQL + Qdrant vector DB
@@ -214,7 +214,7 @@ User input
 
 ## Intelligence tools (packages/server)
 
-17 tools that analyze your personal history to give advice no general LLM can:
+25 tools that analyze your personal history to give advice no general LLM can:
 
 | Tool | What it detects |
 |---|---|
@@ -257,16 +257,16 @@ See [CHANGELOG.md](../CHANGELOG.md) for recent changes.
 
 This trips up every new agent. Memory is implemented in three places that overlap and are out of sync:
 
-1. **`packages/memory-core/`** — canonical library, exports `MemoryEngine` + the advanced layers (ChronosForge, ResonanceForge, EchoForge, HarmonicSheafWeaver) + the 17 intelligence tools. Used by `timps-code` via `@timps/memory-core` import. **This is the source of truth for intelligence tool behavior.**
+1. **`packages/memory-core/`** — canonical library, exports `MemoryEngine` + the advanced layers (ChronosForge, ResonanceForge, EchoForge, HarmonicSheafWeaver) + the 25 intelligence tools. Used by `timps-code` via `@timps/memory-core` import. **This is the source of truth for intelligence tool behavior.**
 2. **`timps-code/src/memory/`** — runtime wrappers + the early-layer files (snapshot, procedural, knowledgeGraph, hybridRetriever, sqliteStore, chronosVeil, etc.) and the L8 SynapseQuench that does NOT live in memory-core.
-3. **`packages/server/memory/`** — server-side re-implementations (longTerm, shortTerm, embedding, plus its own copies of EchoForge/ResonanceForge/ChronosForge/harmonicSheafWeaver). The 17 intelligence tool logic here is a different code path that may drift from memory-core.
+3. **`packages/server/memory/`** — server-side re-implementations (longTerm, shortTerm, embedding, plus its own copies of EchoForge/ResonanceForge/ChronosForge/harmonicSheafWeaver). The 25 intelligence tool logic here is a different code path that may drift from memory-core.
 
 Layers in the active memory stack (per `timps-code/src/memory/memory.ts`):
 - L1 Working, L2 Episodic, L3 Semantic, L4 Procedural, L5 ChronosForge, L6 ResonanceForge, L7 EchoForge, L8 SynapseQuench, L9 HarmonicSheafWeaver.
 
 When changing memory behavior, identify which of the three implementations your code path uses **first**. Don't edit memory-core expecting it to affect packages/server.
 
-## 17 intelligence tools — canonical list (memory-core)
+## 25 intelligence tools — canonical list (memory-core)
 
 All 17 are in `packages/memory-core/src/intelligence/`, all are class-based with a `(dir: string)` constructor, all use file-based JSON storage under `~/.timps/memory/<hash>/`, **none of them use `Math.random()`** (verified by grep). Accessed via lazy getters on `MemoryEngine`.
 
@@ -292,9 +292,9 @@ All 17 are in `packages/memory-core/src/intelligence/`, all are class-based with
 
 ## MCP server (`timps-mcp`)
 
-- **Single file**: all 61 tools are defined inline in `src/index.ts` (~1247 lines). There is no `src/tools/` directory. Count: 61 `registerTool` calls (verified by grep).
-- 61 tools = 17 intelligence engines (39 tool wrappers: 17 read + ~22 write companions like `timps_record_mention`, `timps_log_past_decision`, `timps_complete_commitment`, etc.) + 22 memory/CRUD wrappers (`timps_chat`, `timps_get_memories`, `timps_store_memory`, `timps_chronos_*`, `timps_nexus_*`, `timps_synapse_*`, etc.).
-- All 17 intelligence tools work in LOCAL mode (no `TIMPS_URL` needed). SERVER mode proxies to `packages/server` HTTP API for the higher-level memory layers (Chronos, Nexus, Synapse).
+- **Single file**: all 70 tools are defined inline in `src/index.ts` (~1247 lines). There is no `src/tools/` directory. Count: 70 `registerTool` calls (verified by grep).
+- 70 tools = 25 intelligence engines (39 tool wrappers: 17 read + ~22 write companions like `timps_record_mention`, `timps_log_past_decision`, `timps_complete_commitment`, etc.) + 31 memory/CRUD wrappers (`timps_chat`, `timps_get_memories`, `timps_store_memory`, `timps_chronos_*`, `timps_nexus_*`, `timps_synapse_*`, etc.).
+- All 25 intelligence tools work in LOCAL mode (no `TIMPS_URL` needed). SERVER mode proxies to `packages/server` HTTP API for the higher-level memory layers (Chronos, Nexus, Synapse).
 - Built with `tsup` (CJS, no dts) because `tsc` on the full MCP SDK types OOMs. The CI workflow has a comment about this — preserve it.
 - Typecheck needs `--max-old-space-size=4096`. The script in `package.json` already does this; don't shorten it.
 
@@ -305,7 +305,7 @@ All 17 are in `packages/memory-core/src/intelligence/`, all are class-based with
 - Real numbers (run `npx tsx benchmark/index.ts --quick`):
   - Recall@1: **75%**, R@5: **95%**, R@10: **95%**, MRR: **0.82**, NDCG: **0.85**
   - Contradiction detection: **100% (10/10)**
-  - Intelligence tools: **100% (17/17)**
+  - Intelligence tools: **100% (25/25)**
   - Scalability: **0.2–0.6ms mean / 1ms p95** at 50/200/500 facts
 - Results saved to `.timps/benchmarks/run_<timestamp>.json` in cwd.
 - SWE-bench and Terminal-Bench are intentionally NOT in the suite — they require an LLM execution loop we don't have. The benchmark prints an explicit "we do not report scores we cannot verify" note.

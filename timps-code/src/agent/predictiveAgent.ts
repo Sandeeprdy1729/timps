@@ -118,7 +118,7 @@ export class PredictiveAgent {
 
 ## Core Capabilities
 - 4-layer memory: working, episodic, semantic, procedural
-- 17 intelligence tools: contradiction detection, bug pattern warnings, burnout analysis, tech debt warnings
+- 25 intelligence tools: contradiction detection, bug pattern warnings, burnout analysis, tech debt warnings
 - Self-correcting: retry on errors with revised approach
 - Git-style memory branching: /branch, /merge, /diff
 

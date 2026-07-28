@@ -1,5 +1,5 @@
 {
-  "name": "@timps/sdk",
+  "name": "@timps-ai/timps-sdk",
   "version": "1.0.0",
   "description": "TIMPS SDK — build AI agents with persistent memory. Integrates with LangChain, CrewAI, and RAG pipelines for long-term context retention.",
   "main": "dist/index.js",

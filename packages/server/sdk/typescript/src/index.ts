@@ -4,7 +4,7 @@
  * 
  * @example
  * ```typescript
- * import { TIMPs } from '@timps/sdk';
+ * import { TIMPs } from '@timps-ai/timps-sdk';
  * 
  * const timps = new TIMPs({ 
  *   apiKey: process.env.TIMPS_API_KEY,

@@ -1,7 +1,7 @@
 {
   "name": "@timps-ai/timps-mcp",
   "version": "2.0.2",
-  "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 17 more tools for Claude Code, Cursor, and Windsurf",
+  "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 70 tools for Claude Code, Cursor, and Windsurf",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
