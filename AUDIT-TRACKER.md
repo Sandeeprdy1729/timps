@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 15    | 193       |
+| Medium   | 208   | 16    | 192       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **115** | **273** |
+| **Total**| **388** | **116** | **272** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 14 Medium
+## ✅ Fixed — 16 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -141,6 +141,7 @@
 | M14 | `crates/timps-memory/src/lib.rs` — Corrupt `semantic.json` silently erases all memory (load returns empty vec); non-atomic writes risk half-written JSON; concurrent `store` calls race on read-modify-write | `load_semantic` now errors on corrupt JSON and backs up file; `save_semantic` uses atomic write (tmp+rename); `store_semantic` uses `tokio::sync::Mutex` for serialized read-modify-write |
 | M15 | `crates/timps-providers/src/{openai,groq,gemini,deepseek,mistral,together,perplexity,cohere,fireworks,xai,openrouter}.rs` — 11 OpenAI-compatible providers return hardcoded model lists from `list_models()` instead of querying the provider's `/v1/models` endpoint; models drift out of date as providers add/remove models | Added `fetch_models()` to `OpenAICompat` that queries `{base_url}/models` endpoint; all 11 providers now call it and fall back to a minimal hardcoded list on failure; also removed unused `StreamEvent` import in ollama.rs |
 | M16 | `crates/timps-providers/src/compat.rs:86` — Streaming tool_calls deltas treated as complete tool calls (each SSE fragment emits a ToolCall event, continuation fragments produce name '' and args {}); tool-result messages sent as role 'tool' without tool_call_id, which OpenAI-compatible APIs reject with 400 | Added `tool_calls: Option<Vec<ToolCall>>` to `Message` struct for history replay; fixed `messages_to_json` to include tool_calls array in assistant messages; replaced `resp.text()` buffering with `bytes_stream()` → `StreamReader` → `BufReader::lines()` for true real-time SSE streaming; fixed Claude provider to use actual `tool_use_id` instead of placeholders and proper `tool_use` content blocks in assistant messages; agent loop now stores tool calls in assistant message history |
+| M17 | `crates/timps-server/src/main.rs:178-181` — Security: `CorsLayer` uses `allow_origin(Any).allow_methods(Any).allow_headers(Any)` allowing any origin; server binds `0.0.0.0` by default exposing API to the network; `TIMPS_API_KEY` is optional — server runs completely unauthenticated by default, letting anyone on the network burn API keys and delete memories via POST /chat, DELETE /memory/:key | CORS locked to explicit localhost origins only (`http://localhost`, `http://localhost:3000`, `http://127.0.0.1`, `http://127.0.0.1:3000`); methods locked to GET/POST/DELETE/OPTIONS; headers locked to authorization+content-type; `0.0.0.0` binding now requires `TIMPS_API_KEY` or explicit `TIMPS_ALLOW_UNAUTH=1` (refuses to start otherwise); removed unused `Any` import; server defaults to `127.0.0.1` when `TIMPS_LISTEN_ALL` is unset |
 
 ## 📋 Remaining — 272 Issues
 

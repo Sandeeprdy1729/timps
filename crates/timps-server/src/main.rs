@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 use timps_agent::{Agent, AgentBuilder, AgentOptions, AgentEvent};
 use timps_memory::{MemoryStore, SemanticEntry};
@@ -202,11 +202,23 @@ async fn main() -> Result<()> {
     let cwd = std::env::current_dir()?.to_string_lossy().to_string();
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let api_key = std::env::var("TIMPS_API_KEY").ok().filter(|k| !k.is_empty());
-    // Bind to 0.0.0.0 only when TIMPS_LISTEN_ALL=1; default to 127.0.0.1
     let bind_all = std::env::var("TIMPS_LISTEN_ALL").map_or(false, |v| v == "1" || v == "true");
+    let allow_unauth = std::env::var("TIMPS_ALLOW_UNAUTH").map_or(false, |v| v == "1" || v == "true");
+
+    // Security: require auth when exposed to the network
+    if bind_all && api_key.is_none() && !allow_unauth {
+        anyhow::bail!(
+            "TIMPS_LISTEN_ALL=1 requires TIMPS_API_KEY for authentication. \
+             Set TIMPS_API_KEY or TIMPS_ALLOW_UNAUTH=1 to bypass (insecure)."
+        );
+    }
 
     if api_key.is_none() {
-        tracing::warn!("No TIMPS_API_KEY set — server is running WITHOUT authentication. Set TIMPS_API_KEY to require Bearer tokens.");
+        if allow_unauth {
+            tracing::warn!("Running WITHOUT authentication (TIMPS_ALLOW_UNAUTH=1). Do not use in production.");
+        } else {
+            tracing::warn!("No TIMPS_API_KEY set — server is running WITHOUT authentication. Set TIMPS_API_KEY to require Bearer tokens.");
+        }
     }
 
     let memory = Arc::new(MemoryStore::open(&cwd)?);
@@ -216,7 +228,7 @@ async fn main() -> Result<()> {
     let state = AppState { memory, tools, providers, cwd, api_key };
 
     let cors = if bind_all {
-        // When exposed to the network, restrict to localhost origins
+        // When exposed to the network, restrict to localhost origins only
         CorsLayer::new()
             .allow_origin([
                 "http://localhost".parse().unwrap(),
@@ -235,11 +247,24 @@ async fn main() -> Result<()> {
                 "content-type".parse().unwrap(),
             ])
     } else {
-        // Localhost-only binding: allow any origin since it's loopback
+        // Localhost-only binding: restrict methods and headers even on loopback
         CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any)
+            .allow_origin([
+                "http://localhost".parse().unwrap(),
+                "http://localhost:3000".parse().unwrap(),
+                "http://127.0.0.1".parse().unwrap(),
+                "http://127.0.0.1:3000".parse().unwrap(),
+            ])
+            .allow_methods([
+                "GET".parse().unwrap(),
+                "POST".parse().unwrap(),
+                "DELETE".parse().unwrap(),
+                "OPTIONS".parse().unwrap(),
+            ])
+            .allow_headers([
+                "authorization".parse().unwrap(),
+                "content-type".parse().unwrap(),
+            ])
     };
 
     let protected_routes = Router::new()
