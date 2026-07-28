@@ -29,22 +29,40 @@ impl ClaudeProvider {
     /// Convert internal messages to Anthropic API format.
     ///
     /// Tool results must be `user` messages with `tool_result` content blocks.
-    /// Since the `Message` type lacks `tool_use_id`, we assign sequential
-    /// placeholder IDs so the API accepts the turn.
+    /// Assistant messages with tool calls must include `tool_use` content blocks
+    /// so the API can correlate tool_result blocks by `tool_use_id`.
     fn to_claude_messages(messages: &[Message]) -> Vec<Value> {
-        let mut idx = 0u32;
         messages.iter()
             .filter(|m| m.role != Role::System)
             .map(|m| match m.role {
                 Role::User => json!({ "role": "user", "content": m.content }),
-                Role::Assistant => json!({ "role": "assistant", "content": m.content }),
+                Role::Assistant => {
+                    if let Some(tcs) = &m.tool_calls {
+                        if !tcs.is_empty() {
+                            let mut blocks: Vec<Value> = vec![];
+                            if !m.content.is_empty() {
+                                blocks.push(json!({ "type": "text", "text": m.content }));
+                            }
+                            for tc in tcs {
+                                blocks.push(json!({
+                                    "type": "tool_use",
+                                    "id": tc.id,
+                                    "name": tc.name,
+                                    "input": tc.args,
+                                }));
+                            }
+                            return json!({ "role": "assistant", "content": blocks });
+                        }
+                    }
+                    json!({ "role": "assistant", "content": m.content })
+                }
                 Role::Tool => {
-                    idx += 1;
+                    let tool_use_id = m.tool_call_id.as_deref().unwrap_or("");
                     json!({
                         "role": "user",
                         "content": [{
                             "type": "tool_result",
-                            "tool_use_id": format!("toolu_placeholder_{idx}"),
+                            "tool_use_id": tool_use_id,
                             "content": m.content,
                         }]
                     })

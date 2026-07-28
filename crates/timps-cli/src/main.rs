@@ -409,8 +409,8 @@ async fn run_interactive(
         println!();
         handle.await??;
 
-        history.push(timps_providers::Message { role: timps_providers::Role::User, content: line.to_string(), tool_call_id: None });
-        history.push(timps_providers::Message { role: timps_providers::Role::Assistant, content: output, tool_call_id: None });
+        history.push(timps_providers::Message { role: timps_providers::Role::User, content: line.to_string(), tool_call_id: None, tool_calls: None });
+        history.push(timps_providers::Message { role: timps_providers::Role::Assistant, content: output, tool_call_id: None, tool_calls: None });
     }
     Ok(())
 }

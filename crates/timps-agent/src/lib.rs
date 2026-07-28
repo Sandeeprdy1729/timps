@@ -144,7 +144,7 @@ impl Agent {
         let _ = tx.send(AgentEvent::MemoryInjected { count: mem_count }).await;
 
         let mut messages = history;
-        messages.push(Message { role: Role::User, content: user_input.to_string(), tool_call_id: None });
+        messages.push(Message { role: Role::User, content: user_input.to_string(), tool_call_id: None, tool_calls: None });
 
         let mut tool_calls_total = 0;
         let mut retries = 0u8;
@@ -192,10 +192,18 @@ impl Agent {
             }
 
             // Execute tool calls
+            let provider_tool_calls = if pending_tool_calls.is_empty() {
+                None
+            } else {
+                Some(pending_tool_calls.iter().map(|tc| {
+                    timps_providers::ToolCall { id: tc.id.clone(), name: tc.name.clone(), args: tc.args.clone() }
+                }).collect())
+            };
             messages.push(Message {
                 role: Role::Assistant,
                 content: assistant_text,
                 tool_call_id: None,
+                tool_calls: provider_tool_calls,
             });
 
             for tc in &pending_tool_calls {
@@ -212,6 +220,7 @@ impl Agent {
                     role: Role::Tool,
                     content: serde_json::to_string(&result).unwrap_or_default(),
                     tool_call_id: Some(tc.id.clone()),
+                    tool_calls: None,
                 });
 
                 // Store episode on tool failure (memory moat)
