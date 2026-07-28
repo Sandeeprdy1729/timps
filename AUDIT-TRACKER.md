@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 21    | 187       |
+| Medium   | 208   | 22    | 186       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **121** | **267** |
+| **Total**| **388** | **122** | **266** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 21 Medium
+## ✅ Fixed — 22 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -147,13 +147,14 @@
 | M20 | `evals/python-harness/run_eval.py:130` — Bug: `evaluate()` stores ALL examples' memories in a single upfront loop (lines 96-99) but calls `adapter.clear()` after each example inside the recall loop (line 130), so examples 2..n query an empty store; recall for every example after the first is always 0 regardless of adapter | Merged the store and recall into a single per-example loop: each example's memories are stored immediately before its recall, then `adapter.clear()` runs between examples for isolation; verified with `run_eval.py --dataset multi-layer-recall` (87.5% recall, 7/8 pass) |
 | M21 | `evals/runner.ts:164` — Dead code: loop prints `[dry run in Phase 17 scaffold]` and aggregates empty results arrays; never imports or runs any suite; CLI entry check at line 125 (`process.argv[1] === import.meta.url.replace('file://', '')`) fails on Windows (different path formats); all documented `npx tsx evals/runner.ts --suite ...` commands produce zero-filled results JSON | Replaced dead scaffold with working runner: cross-platform CLI entry check using `resolve()` comparison; dynamic `import()` of each suite file with `extractSuite()` that handles both default and named exports; per-case agent invocation via `child_process.execFile` calling the `timps` binary; output parsed for `[tool: name]` markers for tool_calls checks; `evalCase()` runs all checks against real agent output; results aggregated and written; exit code 1 on any failure |
 | M22 | `package.json:26` — Systematic self-contradiction across manifests: root says "9-layer/17 tools", memory-core says "9-layer/17 tools", server says "17 tools", README says "22-layer/25 tools", VS Code says "22-layer" but panel title says "3-Layer", extension.ts says "9-layer TreeView", ARCHITECTURE.md says "28 MCP tools" and "61 tools", CONTRIBUTING.md says "9-layer/28 MCP/17 tools"; actual counts are 22 forge layers, 25 intelligence tools, 70 MCP registerTool calls; SDK scope split: `@timps/sdk` vs `@timps-ai/timps-sdk` | Fixed all counts across 30+ files: package.json descriptions (6 files), AGENTS.md, ARCHITECTURE.md, CONTRIBUTING.md, timps-vscode (package.json panel title + extension.ts + README.md), timps-website (index.html + ecosystem.html), timps-code (package.json + agent.ts + renderer.ts + predictiveAgent.ts), server (seed.ts + forgeLink.ts + bindWeave.ts + veilForge.ts + public/index.html + README.md), timps-desktop (4 files), benchmark (runners/timps.ts), demo/demo.tape, .changeset/fix-m3-honesty.md, SDK scope (sdk.test.ts + server/sdk). Unified to: 22-layer, 25 intelligence tools, 70 MCP tools, @timps-ai/timps-sdk |
+| M23 | `packages/acp/package.json:2` — 12 workspace packages imported by nothing: @timps/acp, @timps/cache, @timps/connection-manager, @timps/date-utils, @timps/errors, @timps/event-bus, @timps/file-utils, @timps/i18n, @timps/logger, @timps/utils, @timps/validation, @timps/workflow-engine; additionally packages/server/mcp and packages/server/sdk/typescript are nested (not workspaces) with uninstalled deps; 6 dead desktop plugin files import these dead packages; WorkflowBuilder.tsx imports dead @timps/workflow-engine | Deleted 12 workspace package dirs, 2 nested package dirs, 6 dead desktop plugin files (datetime-plugins.ts, misc-plugins.ts, plugin-sets.ts, resilience-plugins.ts, system-plugins2.ts, web-plugins.ts), and WorkflowBuilder.tsx — none were imported by any shipping code |
 
-## 📋 Remaining — 267 Issues
+## 📋 Remaining — 266 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (187)
+### Medium (186)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
