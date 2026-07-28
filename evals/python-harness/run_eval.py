@@ -94,11 +94,10 @@ def evaluate(
     latencies = []
 
     for example in dataset.examples:
-        # Store expected memories
+        # Store this example's expected memories before recalling
         for memory in example.expected_memories:
             adapter.store(memory, tags=[dataset.name, example.context or 'general'])
 
-    for example in dataset.examples:
         t0 = time.monotonic()
         results = adapter.recall(example.query, top_k=10)
         latency_ms = (time.monotonic() - t0) * 1000
@@ -126,7 +125,7 @@ def evaluate(
             'foundCount': matched,
         })
 
-        # Clear for next example
+        # Clear between examples so each has an isolated store
         adapter.clear()
 
     total = len(per_example)

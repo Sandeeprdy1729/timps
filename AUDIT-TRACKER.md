@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 18    | 190       |
+| Medium   | 208   | 19    | 189       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **118** | **270** |
+| **Total**| **388** | **119** | **269** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 18 Medium
+## ✅ Fixed — 19 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -144,13 +144,14 @@
 | M17 | `crates/timps-server/src/main.rs:178-181` — Security: `CorsLayer` uses `allow_origin(Any).allow_methods(Any).allow_headers(Any)` allowing any origin; server binds `0.0.0.0` by default exposing API to the network; `TIMPS_API_KEY` is optional — server runs completely unauthenticated by default, letting anyone on the network burn API keys and delete memories via POST /chat, DELETE /memory/:key | CORS locked to explicit localhost origins only (`http://localhost`, `http://localhost:3000`, `http://127.0.0.1`, `http://127.0.0.1:3000`); methods locked to GET/POST/DELETE/OPTIONS; headers locked to authorization+content-type; `0.0.0.0` binding now requires `TIMPS_API_KEY` or explicit `TIMPS_ALLOW_UNAUTH=1` (refuses to start otherwise); removed unused `Any` import; server defaults to `127.0.0.1` when `TIMPS_LISTEN_ALL` is unset |
 | M18 | `crates/timps-server/src/main.rs:183` — Architecture: Rust server exposes `/chat`, `/memory`, `/memory/episodes`, `/tools` while `timps-mcp` SERVER-mode tools call `/api/chat`, `/api/memory/:userId`, `/api/contradiction/check`, `/api/chronos/`, `/api/nexus/`, `/api/synapse/*`; both default to port 3000 but share no endpoints — pointing `TIMPS_URL` at the Rust server makes every MCP SERVER-mode tool 404; no userId/project model, contradiction, burnout, or 22-layer routes | Added reverse proxy: Rust server now catches all `/api/*` routes and forwards them to a configurable Node.js backend (`TIMPS_BACKEND_URL` env var, e.g. `http://localhost:3001`); when no backend URL is set, returns 502 with a helpful message; added `reqwest` dependency; startup log indicates proxy status |
 | M19 | `crates/timps-tools/src/shell.rs:47` — Bug: `Command::new("sh").arg("-c")` does not exist on stock Windows (sh is a POSIX shell), while `release-cli.yml` builds and ships `timps-x86_64-windows.exe`; both `shell.rs:53` and `git.rs:11` use blocking `std::process::Command::output()` inside async `fn execute()`, stalling the tokio worker thread for every subprocess | Replaced `std::process::Command` with `tokio::process::Command` (non-blocking `.output().await`) in both `shell.rs` and `git.rs`; on Windows (`cfg!(windows)`), uses `cmd.exe /C` instead of `sh -c`; made `git()` helper async and added `.await` to all call sites |
+| M20 | `evals/python-harness/run_eval.py:130` — Bug: `evaluate()` stores ALL examples' memories in a single upfront loop (lines 96-99) but calls `adapter.clear()` after each example inside the recall loop (line 130), so examples 2..n query an empty store; recall for every example after the first is always 0 regardless of adapter | Merged the store and recall into a single per-example loop: each example's memories are stored immediately before its recall, then `adapter.clear()` runs between examples for isolation; verified with `run_eval.py --dataset multi-layer-recall` (87.5% recall, 7/8 pass) |
 
-## 📋 Remaining — 270 Issues
+## 📋 Remaining — 269 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (190)
+### Medium (189)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
