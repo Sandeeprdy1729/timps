@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 24    | 184       |
+| Medium   | 208   | 25    | 183       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **124** | **264** |
+| **Total**| **388** | **125** | **263** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 24 Medium
+## ✅ Fixed — 25 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -150,13 +150,14 @@
 | M23 | `packages/acp/package.json:2` — 12 workspace packages imported by nothing: @timps/acp, @timps/cache, @timps/connection-manager, @timps/date-utils, @timps/errors, @timps/event-bus, @timps/file-utils, @timps/i18n, @timps/logger, @timps/utils, @timps/validation, @timps/workflow-engine; additionally packages/server/mcp and packages/server/sdk/typescript are nested (not workspaces) with uninstalled deps; 6 dead desktop plugin files import these dead packages; WorkflowBuilder.tsx imports dead @timps/workflow-engine | Deleted 12 workspace package dirs, 2 nested package dirs, 6 dead desktop plugin files (datetime-plugins.ts, misc-plugins.ts, plugin-sets.ts, resilience-plugins.ts, system-plugins2.ts, web-plugins.ts), and WorkflowBuilder.tsx — none were imported by any shipping code |
 | M24 | `packages/acp/src/index.ts:4` — 9 packages (acp, cache, date-utils, errors, file-utils, i18n, logger, utils, validation) imported by nothing; connection-manager and event-bus had a single consumer (IntegrationSettings.tsx) but imports already cleaned up | Already fixed in M23 — all 12 packages + IntegrationSettings.tsx verified clean |
 | M25 | `packages/cache/src/index.ts:92` — DiskCache stub (get always undefined, set empty, delete false); staleWhileRevalidate never read; MultiCache wires DiskCache as persistence tier that silently loses data | Already fixed in M23 — packages/cache deleted |
+| M26 | `packages/cache/src/index.ts:165` — Sync memoize() calls async MemoryCache.get without await: `const cached = cache.get(key)` returns a Promise (always truthy), so memoized function returns `Promise<undefined>` and never executes the wrapped function | Already fixed in M23 — packages/cache deleted |
 
-## 📋 Remaining — 264 Issues
+## 📋 Remaining — 263 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (184)
+### Medium (183)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
