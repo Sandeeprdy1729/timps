@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 28    | 180       |
+| Medium   | 208   | 29    | 179       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **128** | **260** |
+| **Total**| **388** | **129** | **259** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 28 Medium
+## ✅ Fixed — 29 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -154,13 +154,14 @@
 | M27 | `packages/connection-manager/package.json:9` — connection-manager & event-bus have no tsconfig.json (can't build dist/), missing README/LICENSE in files array; their only consumer IntegrationSettings.tsx uses relative source imports bypassing package resolution | Already fixed in M23 — both packages deleted |
 | M28 | `packages/connection-manager/src/index.ts:181` — testConnection fetch has no timeout/AbortController/no retry (despite package description promising retries), mixes browser localStorage with Node Buffer, CORS-blocked in Tauri webview | Already fixed in M23 — packages/connection-manager deleted |
 | M29 | `packages/connection-manager/src/index.ts:219` — Hardcoded map of 10 health-check endpoints but desktop UI offers 16 integrations → hubspot, salesforce, zendesk, intercom, discord, telegram resolve to ''; jira maps to relative '/api/v2' | Already fixed in M23 — packages/connection-manager deleted |
+| M30 | `packages/connection-manager/src/index.ts:286` — checkAndReauth() pushes duplicate ReauthTrigger entries on every invocation for already-expired connections; completeReauth sets status without removing entries → reauthQueue grows without bound | Already fixed in M23 — packages/connection-manager deleted |
 
-## 📋 Remaining — 260 Issues
+## 📋 Remaining — 259 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (180)
+### Medium (179)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
