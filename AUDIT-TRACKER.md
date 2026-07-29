@@ -8,9 +8,9 @@
 |----------|-------|-------|-----------|
 | Critical | 11    | 11    | 0         |
 | High     | 89    | 89    | 0         |
-| Medium   | 208   | 33    | 175       |
+| Medium   | 208   | 36    | 172       |
 | Low      | 80    | 0     | 80        |
-| **Total**| **388** | **133** | **255** |
+| **Total**| **388** | **136** | **252** |
 
 ---
 
@@ -121,7 +121,7 @@
 | H88 | `timps-vscode/src/memory.ts:2` — Architecture: the README's 'one shared memory engine' does not exist — VS Code has its own `TIMPsMemory` class (JSONL episodes, separate type, storage in `context.globalStorageUri/timps-memory/`) completely disconnected from the shared `MemoryEngine` in `@timps/memory-core` (JSON array episodes, sha256 dir at `~/.timps/memory/<hash>/`); memories created in VS Code never appear in CLI/MCP/desktop; at least 7 parallel memory implementations exist across the repo | Rewrote `TIMPsMemory` as a thin adapter: computes `projectHash` the same way as `MemoryEngine` (`sha256(path).slice(0,12)`), stores in `~/.timps/memory/<hash>/semantic.json` (JSON array) and `episodes.json` (JSON array) using the same schema; uses `crypto.randomBytes` for IDs instead of `Math.random()`; existing callers unchanged. VS Code memories now visible to CLI/MCP/desktop. Verified: `tsc --noEmit` clean. |
 | H89 | `timps-vscode/src/memoryView.ts:127` — Dead code: the Memory Layers TreeView reads `TIMPsMemory` but the only writer (`chatPanel.ts:123,162`) is never imported by `extension.ts`; the active sidebar chat (`TIMPSChatViewProvider`) saves to `globalState` + HTTP, never to `TIMPsMemory`; the file watcher also watches stale paths (`episodes.jsonl`, `timps-memory/` subdir) | Wired `TIMPSChatViewProvider` to accept and write to a shared `TIMPsMemory` instance: after each message exchange, stores user message, runs reflection, records episode, tracks active file; created `memoryInstance` in `activate()` using workspace root for correct project hash; fixed file watcher in `memoryView.ts` to watch `episodes.json` (not `.jsonl`) and use `memory.getStorageDir()` for the correct shared directory; added `getStorageDir()` getter to `TIMPsMemory`. Verified: `tsc --noEmit` clean. |
 
-## ✅ Fixed — 33 Medium
+## ✅ Fixed — 36 Medium
 
 | ID | Issue | Fix |
 |---|---|---|
@@ -159,13 +159,15 @@
 | M32 | `packages/date-utils/src/index.ts:90` — startOfWeek formula wrong: `diff = (day < weekStartsOn ? 7 : 0) - weekStartsOn` missing `+ day` term, returns Thursday instead of Monday for Wednesday input; endOfWeek builds on it | Already fixed in M23 — packages/date-utils deleted |
 | M33 | `packages/errors/src/index.ts:19` — ErrorCodes key typo: `HANDshake_ERROR: 'HANDSHAKE_ERROR'` while consumer references `ErrorCodes.HANDSHAKE_ERROR` (doesn't exist → TS2339, runtime key becomes 'undefined') | Already fixed in M23 — packages/errors deleted |
 | M35 | `packages/logger/src/index.ts:100` — loggerMiddleware reassigns `res = { ...res }` dropping prototype methods; `'on' in res` is false so finish-listener never runs; everything logged at ~0ms with no statusCode | Already fixed in M23 — packages/logger deleted |
+| M36 | `packages/logger/src/index.ts:123` — createActivityLogger/createToolLogger.start/end/child() construct new winston logger with Console + 2 File transports on EVERY call; file descriptors and streams never closed → EMFILE | Already fixed in M23 — packages/logger deleted |
+| M37 | `packages/memory-core-rs/package.json:9` — napi triples only list 4 darwin/linux targets but index.js tries to require win32/win32-arm64 .node files (plus dead android/musl paths); no prebuilt .node published so native path never runs | Fixed: set `napi.triples.defaults: true` (covers all 8 standard targets including win32 x64+arm64); removed dead android case from index.js |
 
-## 📋 Remaining — 255 Issues
+## 📋 Remaining — 252 Issues
 
 ### High (0)
 ✅ All High issues fixed.
 
-### Medium (175)
+### Medium (172)
 ⏸️ Paused — awaiting user instruction to proceed
 
 ### Low (80)
