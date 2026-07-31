@@ -5,14 +5,21 @@
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "memory-core-rs",
-    "triples": {
-      "defaults": true
-    }
+    "binaryName": "memory-core-rs",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-musl",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
   },
   "scripts": {
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
+    "build": "napi build --platform --release --no-dts",
+    "build:debug": "napi build --platform --no-dts",
     "test": "cargo test",
     "typecheck": "echo 'no TS typecheck for Rust crate'",
     "clean": "cargo clean && rm -f *.node"

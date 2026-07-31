@@ -11,30 +11,64 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
+use napi::bindgen_prelude::AsyncTask;
+use napi::{Env, JsFunction, Task};
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
 // Phase 4d: Rust-native compute engine modules
 mod compute;
+mod gguf;
 mod lsh;
 
 mod basic_tokenizer {
-    // Word-level token counter — not true BPE tokenization.
-    // Returns character-hash-based token IDs for deterministic similarity.
-    // Replace with a real BPE tokenizer (e.g. tokenizers crate) for production.
-    pub fn encode(text: &str) -> Vec<i32> {
-        text.split_whitespace()
-            .map(|s| s.chars().fold(0i32, |acc, c| acc.wrapping_mul(31).wrapping_add(c as i32)))
-            .collect()
+    // Deterministic word/punctuation tokenizer. Not BPE — it splits on
+    // whitespace and punctuation boundaries, which is a reasonable
+    // approximation for English prose and code. Token IDs are FNV-1a hashes of
+    // the token bytes (stable across runs and processes).
+
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+    pub fn fnv1a(bytes: &[u8]) -> u64 {
+        let mut h = FNV_OFFSET;
+        for b in bytes {
+            h ^= *b as u64;
+            h = h.wrapping_mul(FNV_PRIME);
+        }
+        h
     }
 
-    pub fn decode(tokens: &[i32]) -> String {
-        tokens.iter().map(|t| format!("<tok_{}>", t)).collect::<Vec<_>>().join(" ")
+    fn tokenize(text: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let mut current = String::new();
+        for c in text.chars() {
+            if c.is_alphanumeric() || c == '\'' || c == '_' {
+                current.push(c);
+            } else {
+                if !current.is_empty() {
+                    tokens.push(std::mem::take(&mut current));
+                }
+                if !c.is_whitespace() {
+                    tokens.push(c.to_string());
+                }
+            }
+        }
+        if !current.is_empty() {
+            tokens.push(current);
+        }
+        tokens
+    }
+
+    /// Token text, split on whitespace/punctuation boundaries.
+    pub fn tokens(text: &str) -> Vec<String> {
+        tokenize(text)
     }
 
     pub fn count(text: &str) -> u32 {
-        text.split_whitespace().count() as u32
+        tokenize(text).len() as u32
     }
 }
 
@@ -58,11 +92,12 @@ pub struct LocalModel {
 }
 
 impl LocalModel {
-    // NOTE: vocab_size (32000), embedding_size (4096), and layers (32/40)
-    // are inferred from filename heuristics, not actual model metadata.
-    // These are reasonable defaults for common Llama-family GGUF files
-    // but will be inaccurate for other architectures (Mistral, Gemma, etc.).
-    // Replace with actual GGUF header parsing for production accuracy.
+    /// Build a `LocalModel` from a GGUF model file.
+    ///
+    /// Architecture fields (vocab_size, embedding_size, layers, context_size,
+    /// quantization) are parsed from the real GGUF header when the file is a
+    /// valid GGUF container. For non-GGUF files (or when the header is missing
+    /// those keys), documented filename heuristics are used as fallback.
     pub fn from_path(path: &str) -> Option<Self> {
         let p = Path::new(path);
         if !p.exists() {
@@ -72,40 +107,70 @@ impl LocalModel {
         let metadata = fs::metadata(p).ok()?;
         let size_mb = metadata.len() as f64 / 1_048_576.0;
         let name = p.file_stem()?.to_str()?.to_string();
-        
-        let (quantization, context_size) = if path.contains("Q2_K") {
-            ("Q2_K", 2048)
-        } else if path.contains("Q3_K") {
-            ("Q3_K", 3072)
-        } else if path.contains("Q4_0") {
-            ("Q4_0", 2048)
-        } else if path.contains("Q4_K") {
-            ("Q4_K", 4096)
-        } else if path.contains("Q5") {
-            ("Q5_K", 4096)
-        } else if path.contains("Q6") {
-            ("Q6_K", 4096)
-        } else if path.contains("Q8") {
-            ("Q8_0", 4096)
-        } else {
-            ("F16", 4096)
-        };
+
+        let gguf = gguf::read_header(p);
+        let vocab_size = gguf.as_ref().and_then(|g| g.vocab_size).unwrap_or(32000);
+        let embedding_size = gguf.as_ref().and_then(|g| g.embedding_size).unwrap_or(4096);
+        let layers = gguf.as_ref().and_then(|g| g.block_count).unwrap_or(32);
+        let context_size = gguf.as_ref().and_then(|g| g.context_length).unwrap_or(4096);
+        let quantization = gguf
+            .as_ref()
+            .and_then(|g| g.quantization())
+            .or_else(|| infer_quantization(path))
+            .unwrap_or_else(|| "F16".to_string());
+        let model_name = gguf
+            .as_ref()
+            .and_then(|g| g.name.clone())
+            .unwrap_or_else(|| name.clone());
 
         let memory_required_mb = size_mb * 1.5;
 
         Some(LocalModel {
             id: format!("model_{}", name),
-            name: name.clone(),
+            name: model_name,
             path: path.to_string(),
             size_mb: (size_mb * 100.0).round() / 100.0,
             context_size,
-            quantization: quantization.to_string(),
-            vocab_size: 32000,
-            embedding_size: 4096,
-            layers: if quantization.starts_with("Q") { 32 } else { 40 },
+            quantization,
+            vocab_size,
+            embedding_size,
+            layers,
             is_loaded: false,
             memory_required_mb: (memory_required_mb * 100.0).round() / 100.0,
         })
+    }
+}
+
+/// Filename-based quantization fallback for non-GGUF files or when the GGUF
+/// header lacks `general.file_type`. This is a heuristic and is documented as
+/// such — the GGUF header is the source of truth when available.
+fn infer_quantization(path: &str) -> Option<String> {
+    if path.contains("Q2_K") {
+        Some("Q2_K".to_string())
+    } else if path.contains("Q3_K") {
+        Some("Q3_K".to_string())
+    } else if path.contains("Q4_K") {
+        Some("Q4_K".to_string())
+    } else if path.contains("Q5_K") {
+        Some("Q5_K".to_string())
+    } else if path.contains("Q4_0") {
+        Some("Q4_0".to_string())
+    } else if path.contains("Q4_1") {
+        Some("Q4_1".to_string())
+    } else if path.contains("Q5_0") {
+        Some("Q5_0".to_string())
+    } else if path.contains("Q5_1") {
+        Some("Q5_1".to_string())
+    } else if path.contains("Q6_K") {
+        Some("Q6_K".to_string())
+    } else if path.contains("Q8_0") {
+        Some("Q8_0".to_string())
+    } else if path.contains("F16") || path.contains("fp16") {
+        Some("F16".to_string())
+    } else if path.contains("F32") || path.contains("fp32") {
+        Some("F32".to_string())
+    } else {
+        None
     }
 }
 
@@ -292,31 +357,7 @@ impl ChatContext {
 // Streaming Callback
 // ──────────────────────────────────────────────────────────────────────────────
 
-pub type StreamCallback = Box<dyn Fn(String) + Send + Sync>;
-
-pub struct StreamHandler {
-    callbacks: Vec<Arc<Mutex<Box<dyn Fn(String) + Send + Sync>>>>,
-}
-
-impl StreamHandler {
-    pub fn new() -> Self {
-        Self {
-            callbacks: Vec::new(),
-        }
-    }
-
-    pub fn add_callback(&mut self, callback: Box<dyn Fn(String) + Send + Sync>) {
-        self.callbacks.push(Arc::new(Mutex::new(callback)));
-    }
-
-    pub fn emit(&self, token: String) {
-        for cb in &self.callbacks {
-            if let Ok(callback) = cb.lock() {
-                callback(token.clone());
-            }
-        }
-    }
-}
+pub type StreamCallback = ThreadsafeFunction<String>;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Model Loader
@@ -372,6 +413,14 @@ impl ModelLoader {
             None => return InferenceResult::error("No model loaded".to_string(), ""),
         };
 
+        if !llama_cli_available() {
+            return InferenceResult::error(
+                "llama-cli not found on PATH — install llama.cpp (e.g. `brew install llama.cpp`) to use local inference"
+                    .to_string(),
+                &model.name,
+            );
+        }
+
         let mut is_busy = self.is_inferencing.lock().unwrap();
         if *is_busy {
             return InferenceResult::error("Already inferencing".to_string(), &model.name);
@@ -425,11 +474,22 @@ impl ModelLoader {
         }
     }
 
-    pub fn infer_streaming(&mut self, prompt: &str, callbacks: &StreamHandler) -> InferenceResult {
+    /// Run streaming inference against a real `llama-cli` subprocess. Each
+    /// output line is delivered to the JS thread through the threadsafe
+    /// function as it is produced, then the full result is returned.
+    pub fn infer_streaming(&mut self, prompt: &str, tsfn: &StreamCallback) -> InferenceResult {
         let model = match &self.loaded_model {
             Some(m) => m,
             None => return InferenceResult::error("No model loaded".to_string(), ""),
         };
+
+        if !llama_cli_available() {
+            return InferenceResult::error(
+                "llama-cli not found on PATH — install llama.cpp (e.g. `brew install llama.cpp`) to use local inference"
+                    .to_string(),
+                &model.name,
+            );
+        }
 
         let mut is_busy = self.is_inferencing.lock().unwrap();
         if *is_busy {
@@ -477,7 +537,9 @@ impl ModelLoader {
         for line in reader.lines() {
             match line {
                 Ok(l) => {
-                    callbacks.emit(l.clone());
+                    // Deliver each streamed line to JS as it is produced.
+                    // Queue size 0 = unbounded, so no tokens are dropped.
+                    tsfn.call(Ok(l.clone()), ThreadsafeFunctionCallMode::NonBlocking);
                     full_text.push_str(&l);
                     full_text.push('\n');
                 }
@@ -495,6 +557,13 @@ impl ModelLoader {
         self.context.add_message("assistant", &full_text.trim());
         InferenceResult::new(full_text.trim().to_string(), duration_ms, &model.name)
     }
+}
+
+/// True when a real `llama-cli`/`llama` binary is available on PATH. Local
+/// inference shells out to llama.cpp — this gates that call so failures are
+/// reported clearly instead of a confusing `No such file or directory`.
+fn llama_cli_available() -> bool {
+    which::which("llama-cli").is_ok() || which::which("llama").is_ok()
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -618,6 +687,9 @@ Include:
 // Embeddings
 // ──────────────────────────────────────────────────────────────────────────────
 
+/// Fixed embedding dimensionality for the local feature-hash embedding.
+const EMBEDDING_DIM: usize = 256;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EmbeddingResult {
     pub embeddings: Vec<f32>,
@@ -625,27 +697,68 @@ pub struct EmbeddingResult {
     pub tokens: u32,
 }
 
+/// Feature-hashing embedding over word unigrams, word bigrams, and char
+/// trigrams. Deterministic (FNV-1a), no external ML dependencies, and produces
+/// meaningful cosine similarity: text sharing words/n-grams scores higher.
+///
+/// Features are hashed into `EMBEDDING_DIM` buckets with a sign bit from a
+/// second hash position (the "hashing trick"), so unrelated texts have near-zero
+/// cosine similarity instead of the fabricated scores the previous
+/// character-bigram implementation produced.
 pub fn get_embedding(text: &str) -> EmbeddingResult {
     use std::collections::HashMap;
-    let dim = 64usize;
-    let lower: String = text.chars()
-        .map(|c| if c.is_alphanumeric() || c.is_whitespace() { c } else { ' ' })
-        .collect();
-    let chars: Vec<char> = lower.chars().collect();
 
-    let mut tf: HashMap<u32, f32> = HashMap::new();
-    for w in chars.windows(2) {
-        let h = (w[0] as u32).wrapping_mul(31).wrapping_add(w[1] as u32) % (dim as u32);
+    let mut tf: HashMap<u64, f32> = HashMap::new();
+
+    // Normalize: keep alphanumerics + apostrophes, collapse punctuation to a
+    // sentinel so punctuation-only boundaries don't merge distinct words.
+    let normalized: String = text
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '\'' || c == '_' {
+                c.to_ascii_lowercase()
+            } else if c.is_whitespace() {
+                ' '
+            } else {
+                '\n'
+            }
+        })
+        .collect();
+
+    let words: Vec<&str> = normalized.split(' ').filter(|w| !w.is_empty()).collect();
+
+    // Word unigrams
+    for w in &words {
+        let h = basic_tokenizer::fnv1a(w.as_bytes());
         *tf.entry(h).or_insert(0.0) += 1.0;
     }
-
-    let total = tf.values().sum::<f32>().max(1.0);
-    let mut embeddings = vec![0.0f32; dim];
-    for (k, v) in &tf {
-        embeddings[*k as usize] = v / total;
+    // Word bigrams
+    for pair in words.windows(2) {
+        let feat = format!("{}~{}", pair[0], pair[1]);
+        let h = basic_tokenizer::fnv1a(feat.as_bytes());
+        *tf.entry(h).or_insert(0.0) += 0.5;
+    }
+    // Char trigrams for sub-word signal
+    let joined: String = words.join(" ");
+    let chars: Vec<char> = joined.chars().collect();
+    if chars.len() >= 3 {
+        for i in 0..=chars.len() - 3 {
+            let feat: String = chars[i..i + 3].iter().collect();
+            let h = basic_tokenizer::fnv1a(feat.as_bytes());
+            *tf.entry(h).or_insert(0.0) += 0.25;
+        }
     }
 
-    let norm = embeddings.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let mut embeddings = vec![0.0f32; EMBEDDING_DIM];
+    for (h, count) in tf {
+        let idx = (h % EMBEDDING_DIM as u64) as usize;
+        // Sign hashing: bit 33 of the hash decides the sign, reducing
+        // collision noise relative to unsigned accumulation.
+        let sign = if (h >> 33) & 1 == 1 { 1.0f32 } else { -1.0f32 };
+        embeddings[idx] += sign * (1.0 + count.ln());
+    }
+
+    let norm: f32 = embeddings.iter().map(|x| x * x).sum::<f32>().sqrt();
     if norm > 0.0 {
         for x in &mut embeddings {
             *x /= norm;
@@ -654,7 +767,7 @@ pub fn get_embedding(text: &str) -> EmbeddingResult {
 
     EmbeddingResult {
         embeddings,
-        model: "local-character-n-gram".to_string(),
+        model: "local-feature-hash-256".to_string(),
         tokens: basic_tokenizer::count(text),
     }
 }
@@ -726,9 +839,7 @@ impl ContextWindow {
 
 #[napi]
 pub fn is_llama_available() -> bool {
-    which::which("llama-cli").is_ok() 
-        || which::which("llama").is_ok() 
-        || std::path::Path::new("./models").exists()
+    llama_cli_available()
 }
 
 #[napi]
@@ -786,14 +897,62 @@ pub fn run_inference(
     serde_json::to_string(&result).unwrap_or_else(|_| "{}".to_string())
 }
 
+/// Background task that runs streaming inference on the libuv threadpool,
+/// delivering each output line to JS through a threadsafe function while the
+/// promise is still pending (real streaming, not a post-hoc callback dump).
+pub struct InferenceTask {
+    model_path: String,
+    prompt: String,
+    max_tokens: u32,
+    temperature: f64,
+    tsfn: StreamCallback,
+}
+
+impl Task for InferenceTask {
+    type Output = InferenceResult;
+    type JsValue = String;
+
+    fn compute(&mut self) -> napi::Result<Self::Output> {
+        let config = InferenceConfig {
+            model_path: self.model_path.clone(),
+            max_tokens: self.max_tokens,
+            temperature: self.temperature,
+            ..Default::default()
+        };
+        let mut loader = ModelLoader::new();
+        loader.config = config;
+        if let Err(e) = loader.load_model(&self.model_path) {
+            return Ok(InferenceResult::error(e, &self.model_path));
+        }
+        Ok(loader.infer_streaming(&self.prompt, &self.tsfn))
+    }
+
+    fn resolve(&mut self, _env: Env, output: Self::Output) -> napi::Result<Self::JsValue> {
+        Ok(serde_json::to_string(&output).unwrap_or_else(|_| "{}".to_string()))
+    }
+}
+
+/// Streaming inference. Resolves a Promise<string> (JSON InferenceResult) and
+/// calls `onToken(token: string)` for every line produced by the underlying
+/// `llama-cli` subprocess as it is generated.
 #[napi]
 pub fn stream_inference(
     model_path: String,
     prompt: String,
     max_tokens: u32,
     temperature: f64,
-) -> String {
-    run_inference(model_path, prompt, max_tokens, temperature, 0.9)
+    on_token: JsFunction,
+) -> AsyncTask<InferenceTask> {
+    let tsfn: StreamCallback = on_token
+        .create_threadsafe_function(0, |ctx| Ok(vec![ctx.value]))
+        .expect("failed to create threadsafe function for streaming");
+    AsyncTask::new(InferenceTask {
+        model_path,
+        prompt,
+        max_tokens,
+        temperature,
+        tsfn,
+    })
 }
 
 #[napi]
@@ -805,32 +964,106 @@ pub fn get_model_info(model_path: String) -> String {
     }
 }
 
+/// Download a known GGUF model from Hugging Face. Performs a real download via
+/// `curl` (available on macOS/Linux) into `target_dir`, reporting the actual
+/// bytes written. When the file already exists, it is reported without a
+/// redundant re-download. Returns a JSON string.
 #[napi]
-pub fn download_model(model_id: String, _target_dir: String) -> String {
-    let models: std::collections::HashMap<String, (&str, &str)> = [
-        ("llama-3.2-1b", ("TheBloke/Llama-3.2-1B-Instruct-GGUF", "llama-3.2-1b-instruct-q4_k_m.gguf")),
-        ("phi-3.2", ("microsoft/Phi-3.2-mini-instruct-4k", "Phi-3.2-mini-instruct-4k-q4_k_m.gguf")),
-        ("qwen-2", ("Qwen/Qwen2-0.5B-Instruct-GGUF", "qwen2-0.5b-instruct-q4_k_m.gguf")),
-        ("gemma-2-2b", ("google/gemma-2-2b", "gemma-2-2b-q4_k_m.gguf")),
-    ].iter().map(|&(k, v)| (k.to_string(), v)).collect();
+pub fn download_model(model_id: String, target_dir: String) -> String {
+    const KNOWN: [(&str, &str, &str); 4] = [
+        (
+            "llama-3.2-1b",
+            "TheBloke/Llama-3.2-1B-Instruct-GGUF",
+            "llama-3.2-1b-instruct-q4_k_m.gguf",
+        ),
+        (
+            "phi-3.2",
+            "microsoft/Phi-3.2-mini-instruct-4k",
+            "Phi-3.2-mini-instruct-4k-q4_k_m.gguf",
+        ),
+        (
+            "qwen-2",
+            "Qwen/Qwen2-0.5B-Instruct-GGUF",
+            "qwen2-0.5b-instruct-q4_k_m.gguf",
+        ),
+        (
+            "gemma-2-2b",
+            "google/gemma-2-2b",
+            "gemma-2-2b-q4_k_m.gguf",
+        ),
+    ];
 
-    match models.get(&model_id) {
-        Some((repo, file)) => {
-            let url = format!(
-                "https://huggingface.co/{}/resolve/main/{}",
-                repo, file
-            );
-            serde_json::json!({
-                "model_id": model_id,
-                "url": url,
-                "download_command": format!("curl -L -o ./models/{} '{}'", file, url),
-                "size_estimate_gb": "~0.7",
-                "note": "GGUF format, compatible with llama.cpp"
-            }).to_string()
+    let Some((repo, file)) = KNOWN
+        .iter()
+        .find(|(id, _, _)| *id == model_id)
+        .map(|(_, repo, file)| (*repo, *file))
+    else {
+        return serde_json::json!({
+            "error": format!(
+                "Unknown model: {}. Supported: llama-3.2-1b, phi-3.2, qwen-2, gemma-2-2b",
+                model_id
+            )
+        })
+        .to_string();
+    };
+
+    let url = format!("https://huggingface.co/{}/resolve/main/{}", repo, file);
+    let dir = Path::new(&target_dir);
+    if let Err(e) = fs::create_dir_all(dir) {
+        return serde_json::json!({
+            "model_id": model_id, "url": url, "status": "error",
+            "error": format!("cannot create target dir {}: {}", target_dir, e),
+        })
+        .to_string();
+    }
+
+    let out_path = dir.join(file);
+    if out_path.exists() {
+        let size = fs::metadata(&out_path).map(|m| m.len()).unwrap_or(0);
+        return serde_json::json!({
+            "model_id": model_id, "url": url, "status": "already_downloaded",
+            "path": out_path.to_string_lossy(), "size_bytes": size,
+            "size_mb": ((size as f64) / 1_048_576.0 * 100.0).round() / 100.0,
+        })
+        .to_string();
+    }
+
+    #[cfg(unix)]
+    {
+        match Command::new("curl")
+            .args(["-L", "-f", "--retry", "2", "--connect-timeout", "30", "-o"])
+            .arg(&out_path)
+            .arg(&url)
+            .status()
+        {
+            Ok(status) if status.success() => {
+                let size = fs::metadata(&out_path).map(|m| m.len()).unwrap_or(0);
+                serde_json::json!({
+                    "model_id": model_id, "url": url, "status": "downloaded",
+                    "path": out_path.to_string_lossy(), "size_bytes": size,
+                    "size_mb": ((size as f64) / 1_048_576.0 * 100.0).round() / 100.0,
+                })
+                .to_string()
+            }
+            Ok(status) => serde_json::json!({
+                "model_id": model_id, "url": url, "status": "error",
+                "error": format!("curl exited with status {}", status.code().unwrap_or(-1)),
+            })
+            .to_string(),
+            Err(e) => serde_json::json!({
+                "model_id": model_id, "url": url, "status": "error",
+                "error": format!("curl not available: {}", e),
+            })
+            .to_string(),
         }
-        None => serde_json::json!({
-            "error": format!("Unknown model: {}. Supported: llama-3.2-1b, phi-3.2, qwen-2, gemma-2-2b", model_id)
-        }).to_string(),
+    }
+    #[cfg(not(unix))]
+    {
+        serde_json::json!({
+            "model_id": model_id, "url": url, "status": "error",
+            "error": "Automatic download is supported on macOS/Linux only. Download manually from the URL.",
+        })
+        .to_string()
     }
 }
 
@@ -959,13 +1192,9 @@ pub fn count_tokens(text: String) -> u32 {
 
 #[napi]
 pub fn truncate_to_tokens(text: String, max_tokens: u32) -> String {
-    basic_tokenizer::encode(&text)
-        .iter()
+    basic_tokenizer::tokens(&text)
+        .into_iter()
         .take(max_tokens as usize)
-        .enumerate()
-        .map(|(i, _)| {
-            text.split_whitespace().nth(i).unwrap_or("").to_string()
-        })
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -991,53 +1220,73 @@ pub fn cosine_similarity_scores(a: String, b: String) -> f64 {
 // System Info
 // ──────────────────────────────────────────────────────────────────────────────
 
-#[napi]
-pub fn get_system_info() -> String {
-    let memory_total_mb: u64 = if cfg!(target_os = "macos") {
-        std::process::Command::new("sysctl")
-            .args(["-n", "hw.memsize"])
+/// Read total and available physical memory in MiB from the OS. macOS uses
+/// `sysctl` for total and `vm_stat` (free + inactive pages) for available;
+/// Linux reads MemTotal/MemAvailable from /proc/meminfo. Values are real OS
+/// measurements — no fabricated constants.
+#[cfg(target_os = "macos")]
+fn read_memory_mb() -> (u64, u64) {
+    fn sysctl_u64(key: &str) -> Option<u64> {
+        Command::new("sysctl")
+            .args(["-n", key])
             .output()
             .ok()
             .and_then(|o| String::from_utf8(o.stdout).ok())
             .and_then(|s| s.trim().parse::<u64>().ok())
-            .map(|b| b / 1_048_576)
-            .unwrap_or(0)
-    } else if cfg!(target_os = "linux") {
-        std::fs::read_to_string("/proc/meminfo")
-            .ok()
-            .and_then(|s| {
-                s.lines()
-                    .find(|l| l.starts_with("MemTotal:"))
-                    .and_then(|l| l.split_whitespace().nth(1))
-                    .and_then(|v| v.parse::<u64>().ok())
-                    .map(|kb| kb / 1024)
-            })
-            .unwrap_or(0)
-    } else {
-        0
-    };
+    }
 
-    let memory_available_mb: u64 = if cfg!(target_os = "macos") {
-        std::process::Command::new("memory_pressure")
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|_| memory_total_mb.saturating_sub(1024)) // rough estimate
-            .unwrap_or(0)
-    } else if cfg!(target_os = "linux") {
+    fn vm_stat_pages() -> Option<(u64, u64)> {
+        let out = Command::new("vm_stat").output().ok()?;
+        let text = String::from_utf8(out.stdout).ok()?;
+        let mut free = 0u64;
+        let mut inactive = 0u64;
+        for line in text.lines() {
+            let trimmed = line.trim();
+            if let Some(v) = trimmed.strip_prefix("Pages free:") {
+                free = v.trim().trim_end_matches('.').parse().ok()?;
+            } else if let Some(v) = trimmed.strip_prefix("Pages inactive:") {
+                inactive = v.trim().trim_end_matches('.').parse().ok()?;
+            }
+        }
+        Some((free, inactive))
+    }
+
+    let total_mb = sysctl_u64("hw.memsize").map(|b| b / 1_048_576).unwrap_or(0);
+    let page_size = sysctl_u64("hw.pagesize").filter(|p| *p > 0).unwrap_or(4096);
+    let available_mb = vm_stat_pages()
+        .map(|(free, inactive)| ((free + inactive) * page_size) / 1_048_576)
+        .unwrap_or(0);
+    (total_mb, available_mb)
+}
+
+/// Linux: total and available memory from /proc/meminfo (kB → MiB).
+#[cfg(target_os = "linux")]
+fn read_memory_mb() -> (u64, u64) {
+    fn meminfo_kb(prefix: &str) -> Option<u64> {
         std::fs::read_to_string("/proc/meminfo")
+            .ok()?
+            .lines()
+            .find(|l| l.starts_with(prefix))?
+            .split_whitespace()
+            .nth(1)?
+            .parse()
             .ok()
-            .and_then(|s| {
-                s.lines()
-                    .find(|l| l.starts_with("MemAvailable:"))
-                    .and_then(|l| l.split_whitespace().nth(1))
-                    .and_then(|v| v.parse::<u64>().ok())
-                    .map(|kb| kb / 1024)
-            })
-            .unwrap_or(0)
-    } else {
-        0
-    };
+    }
+
+    let total_mb = meminfo_kb("MemTotal:").map(|kb| kb / 1024).unwrap_or(0);
+    let available_mb = meminfo_kb("MemAvailable:").map(|kb| kb / 1024).unwrap_or(0);
+    (total_mb, available_mb)
+}
+
+/// Other platforms: memory figures unavailable.
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn read_memory_mb() -> (u64, u64) {
+    (0, 0)
+}
+
+#[napi]
+pub fn get_system_info() -> String {
+    let (memory_total_mb, memory_available_mb) = read_memory_mb();
 
     let info = serde_json::json!({
         "llama_available": is_llama_available(),
@@ -1047,6 +1296,6 @@ pub fn get_system_info() -> String {
         "memory_total_mb": memory_total_mb,
         "memory_available_mb": memory_available_mb,
     });
-    
+
     serde_json::to_string(&info).unwrap_or_else(|_| "{}".to_string())
 }
