@@ -801,9 +801,14 @@ npx napi build --platform --release
 - **NAPI-RS Vec<f64> requires JS `Array<number>`** — NOT `Float64Array`. The `nativeKMeans()` and `nativeBatchSimilarity()` wrappers convert `Float64Array` to `Array<number>` before calling into Rust.
 - **Native addon is optional** — all callers check `getNative()` for null and fall back to TypeScript. No crash if `.node` file is missing.
 - **`index.d.ts` is manually maintained** — `napi build --no-dts` was used. Type declarations must be kept in sync with `src/compute.rs` and `src/lsh.rs`.
+- **`streamInference` streams via `AsyncTask` + `ThreadsafeFunction<String>`** — signature is `streamInference(modelPath, prompt, maxTokens, temperature, onToken) => Promise<string>`. It shells out to `llama-cli` (if installed); without llama-cli it resolves `finish_reason: "error"` JSON. Do NOT change it back to a sync string return.
+- **`get_embedding` is a 256-dim feature-hash embedding** (unigrams + bigrams + char trigrams, FNV-1a hashing trick, L2-normalized, model name `"local-feature-hash-256"`). Semantic but not a real LLM — unrelated texts score ~0, shared tokens score >0.4.
+- **`LocalModel::from_path` reads real GGUF headers** via `src/gguf.rs` (architecture, name, vocab/embedding/layers/context, quantization). Filename heuristics are only a fallback when the GGUF header is missing.
 - **k-means uses deterministic k-means++** — golden-ratio sin seeding replaces `Math.random()`. Same input always produces same clusters.
 - **RustLsh is a stateful NAPI-RS class** — maintains LSH tables on the JS heap. Each engine instance should create its own `RustLsh` instance.
 - **`jaccardSimilarity` is NOT in the Rust addon** — always uses the TypeScript implementation in `storage.ts`.
+- **`napi.targets` must stay in sync with the index.js loader** — `packages/memory-core-rs` declares 8 triples (darwin x64/arm64, linux-gnu x64/arm64, linux-musl x64/arm64, win32-msvc x64/arm64). Do NOT use `napi.triples.defaults` (it expands to only 4 targets in @napi-rs/cli v3). Use `napi.binaryName` (not deprecated `napi.name`).
+- **The loader is no-throw** — `index.js` exports `null` (not a throw) when no `.node` binary exists for the current platform, so `getNative()` degrades to TypeScript. Set `TIMPS_NATIVE_VERBOSE=1` to log why the addon didn't load.
 
 ## Phase 4e — Caching Strategy (June 2026)
 
