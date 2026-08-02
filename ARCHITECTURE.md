@@ -166,11 +166,16 @@ Layer 9 — HarmonicSheafWeaver (HSW)  → ~/.timps/memory/<project-hash>/sheaf-
   Treats the memory graph as a cellular sheaf where:
     • Nodes = local sections (data + oscillator: amplitude, frequency, phase, stalkDim)
     • Edges = restriction maps with error quantification
-    • Non-trivial H¹ (first cohomology) = algebraic contradiction detection
+    • H¹ (first cohomology) = cycle rank of the 'contradicts'-edge subgraph (E − V + C),
+      counting only irreducible contradiction cycles — a single contradictory pair or a
+      cluster of compatible memories is NOT an obstruction
+    • Contradiction classification = deterministic semantic polarity/repudiation scoring,
+      not pairwise content-hash phase interference
     • Foresight via dominant eigenmodes of the sheaf Laplacian (deterministic, no MC)
 
   Key advances over EchoForge (L7) / SynapseQuench (L8):
-    • Algebraic contradiction detection (H¹ ≠ 0 iff global section impossible)
+    • Contradiction detection via contradiction-complex H¹ (irreducible cycles) +
+      semantic polarity scoring (deterministic, no content-hash phases)
     • O(k·N) foresight via spectral decomposition (k=8 eigenpairs, sparse Laplacian)
     • Deterministic trajectories (no Monte-Carlo, no reservoir drift)
     • Phase-coherence modulated restriction maps for sheaf consistency
@@ -182,7 +187,7 @@ Layer 9 — HarmonicSheafWeaver (HSW)  → ~/.timps/memory/<project-hash>/sheaf-
 
   Key APIs:
     weave(content, opts)                   — add sheaf node, detect supersession/contradiction
-    detectContradictions(opts)             — algebraic H¹ cohomology via sheaf Laplacian
+    detectContradictions(opts)             — H¹ of the contradiction complex + spectral gap
     predict(domain, opts)                  — eigenmode-projected risk trajectory
     predictAll(opts)                       — predict all 7 domains
     query(queryText, opts)                 — cosine + amplitude retrieval + optional predictions
