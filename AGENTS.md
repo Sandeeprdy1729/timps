@@ -402,7 +402,7 @@ New files in `packages/memory-core/`:
 | `src/telemetry/instrumentation.ts` | Proxy-based wrappers for `IMemoryLayer` (9 methods) and `StorageBackend` (read/write/delete/list/exists/append); CRDT conflict recording |
 | `src/telemetry/telemetry.test.ts` | 16 tests covering metrics, spans, redaction, telemetry manager, layer/backend/CRDT instrumentation |
 | `src/server/telemetryRoutes.ts` | Express router: `GET /metrics` (Prometheus), `GET /metrics/json`, `POST /metrics/reset` |
-| `deploy/prometheus/prometheus.yml` | Prometheus scrape config for memory-server /metrics endpoint |
+| `deploy/prometheus/prometheus.yml` | Prometheus scrape config — memory-server via `dns_sd_configs` (per-replica series with `--scale memory=N`) + otel-collector Prometheus exporter on :8888 |
 | `deploy/otel/otel-collector.yml` | OTel Collector config: OTLP receiver → batch processor → Prometheus exporter + debug |
 | `deploy/grafana/dashboards.yml` | Grafana dashboard provisioning config (auto-loads from /var/lib/grafana/dashboards) |
 | `deploy/grafana/dashboard-memory-health.json` | Panel: stores by layer, contradiction rate, semantic-entries growth |
@@ -454,7 +454,7 @@ The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys p
 - **No OTel SDK dependency.** Telemetry is pure TypeScript with zero runtime dependencies. OTel Collector receives metrics via Prometheus scrape, not OTLP push (by default). For full OTLP tracing, add `@opentelemetry/sdk-node` as an optional peer dependency.
 - **Proxy-based instrumentation.** `instrumentLayer()` uses `Proxy` to intercept IMemoryLayer methods without modifying forge classes. Non-IMemoryLayer methods pass through transparently.
 - **Anonymous export runs hourly.** The `TelemetryManager` sets a `setInterval` that calls `onAnonymousExport` with the redacted payload. Wire this to an HTTP endpoint or file sink in production.
-- **Prometheus `/metrics` endpoint** is mounted at the MemoryServer when telemetry level is `local` or `anonymous`. The OTel Collector in `docker-compose` can be configured to scrape this endpoint.
+- **Prometheus `/metrics` endpoint** is mounted at the MemoryServer when telemetry level is `local` or `anonymous`. Prometheus discovers every `memory` replica individually via `dns_sd_configs` (A-record query on the compose service name, port 4100) — no round-robin interleaving when scaled with `--scale memory=N`. Prometheus also scrapes the OTel Collector's Prometheus exporter on `otel-collector:8888`, which re-exports anything pushed via OTLP (docker-compose exposes `8888:8888`).
 
 ### Gotchas
 
