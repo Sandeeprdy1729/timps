@@ -405,10 +405,10 @@ New files in `packages/memory-core/`:
 | `deploy/prometheus/prometheus.yml` | Prometheus scrape config for memory-server /metrics endpoint |
 | `deploy/otel/otel-collector.yml` | OTel Collector config: OTLP receiver → batch processor → Prometheus exporter + debug |
 | `deploy/grafana/dashboards.yml` | Grafana dashboard provisioning config (auto-loads from /var/lib/grafana/dashboards) |
-| `deploy/grafana/dashboard-memory-health.json` | Panel: stores by layer, storage growth, contradiction rate, cache hit rate |
+| `deploy/grafana/dashboard-memory-health.json` | Panel: stores by layer, contradiction rate, semantic-entries growth |
 | `deploy/grafana/dashboard-performance.json` | Panel: recall latency p50/p95/p99, store latency, backend breakdown, ops/sec |
-| `deploy/grafana/dashboard-agent-activity.json` | Panel: CRDT conflicts, merge latency, concurrent agents, events/sec |
-| `deploy/grafana/dashboard-system.json` | Panel: CPU, RSS, GC pauses, Qdrant index size, Redis memory |
+| `deploy/grafana/dashboard-agent-activity.json` | Panel: CRDT conflicts + checks, consolidation merge latency |
+| `deploy/grafana/dashboard-system.json` | Panel: backend ops/latency, error rate, guard rejections, throughput, semantic entries (no external exporters) |
 
 Updated files:
 
@@ -443,11 +443,11 @@ The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys p
 
 ### Grafana Dashboards
 
-4 pre-built dashboards at `deploy/grafana/dashboard-*.json`:
-1. **Memory Health** — stores by layer (stacked), storage growth, contradiction rate, cache hit rate
+4 pre-built dashboards at `deploy/grafana/dashboard-*.json` (all queries reference only metrics the server actually emits — verified, no `dashboard-eval.json`):
+1. **Memory Health** — stores by layer (stacked), contradiction rate, semantic-entries growth
 2. **Performance** — recall/store latency p50/p95/p99, backend breakdown, ops/sec
-3. **Multi-Agent Activity** — CRDT conflict rate, merge latency, concurrent agents, event throughput
-4. **System Resources** — CPU, RSS, GC pauses, Qdrant index size, Redis memory
+3. **Multi-Agent Activity** — conflict detections + conflict checks, consolidation merge latency
+4. **System** — backend ops/latency, error rate, guard rejections, store/recall/consolidate throughput, semantic entries (no external exporters required)
 
 ### Architecture Notes
 
@@ -461,9 +461,17 @@ The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys p
 - **Anonymous export is opt-in only.** Setting `level: 'anonymous'` enables hourly redacted export. By default (`level: 'off'`), zero telemetry is collected.
 - **Telemetry config must be set before MemoryEngine construction.** The `telemetry` field in `MemoryEngineOptions` is read during construction to wrap the backend and forge layers.
 - **Proxy wrapping is shallow.** Only the 9 IMemoryLayer methods (store, retrieve, verify, contradict, archive, getProvenance, explain, audit, decay) are instrumented. Forge-specific methods like `weave()`, `foresight()`, `predict()` are not wrapped — they appear on the forge classes but not on IMemoryLayer. Instrument them directly in MemoryEngine's store/recall methods instead.
+- **`instrumentBackend()` preserves sync/async semantics.** `wrapAsync` detects whether the underlying method returns a Promise: sync backends (FileBackend, InMemoryBackend, SQLiteBackend) stay sync, async backends (PostgresBackend, RedisBackend) stay async. This is what makes telemetry usable at all — the previous version forced every method async, which broke MemoryEngine's sync storage layer (`loadSemantic`/`saveSemantic`) and crashed at startup on pending migrations whenever telemetry was enabled.
+- **CRDT metrics are wired to real production events** (M39 fix) — not just registered for tests:
+  - `crdt.check` — incremented once per `store()` write
+  - `crdt.conflict.detected{resolution}` — `dedup` (Jaccard dedup in store), `chronos` (ChronosForge conflict), `guard_rejected` (L15 guard), `write_conflict` (REST/gRPC 409)
+  - `crdt.merge.latency` — histogram recorded per `consolidate()` run
+  - Accessible via `engine.crdtMetrics` (no-ops when telemetry off).
+- **Storage gauge:** `memory.semantic_entries` is emitted on every `store()` (no `memory.storage_size_bytes` metric exists — the dashboards use `timps_memory_semantic_entries`).
+- **No eval dashboard.** Eval runs (`timps eval:run`) are batch CLI processes that Prometheus never scrapes; there is deliberately no `dashboard-eval.json` in `deploy/grafana/` (docker-compose mounts only the four real dashboards).
 - **Histogram buckets** are fixed: `[1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms. Tune these for your latency range.
 - **CRDT metrics** are only collected when `instrumentCRDT()` is called with an active telemetry manager. The CRDT module itself is not modified.
-- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3b).
+- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3b). `chaos.test.ts` also has 2 pre-existing failures (`cross-instance test`, `concurrent-write-*` recall counts) from the documented short-string Jaccard dedup gotcha.
 
 ## Phase 3d+3e — Secure Config, Rate Limits, Auth, Billing Removal (June 2026)
 
