@@ -165,7 +165,7 @@ New files in `packages/memory-core/`:
 | `src/events/EventBus.ts` | Redis Pub/Sub with 10 typed channels, auto-skip own messages, async subscribe/unsubscribe |
 | `src/cache/CacheManager.ts` | Redis-backed cache with TTL, get-or-compute `wrap()`, pattern scan invalidation |
 | `src/backends/QdrantBackend.ts` | Vector store backend — `upsertVector/searchVectors` for embedding similarity search |
-| `docker-compose.yml` | Full stack: Postgres primary+2 replicas + PgBouncer + Redis + Qdrant + N MemoryServers |
+| `docker-compose.yml` | Full stack: Postgres primary + **2 real streaming replicas** + PgBouncer + Redis + Qdrant + N MemoryServers |
 | `Dockerfile` | Minimal node:20-alpine image, ESM dist + proto files |
 | `deploy/pgbouncer/pgbouncer.ini` | PgBouncer config (transaction pooling, 200 clients, 50 pool) |
 | `deploy/k8s/timps-memory.yaml` | K8s Deployment + HPA (2-10 pods, CPU 70%) + readiness probe |
@@ -195,6 +195,7 @@ New files in `packages/memory-core/`:
 - The `memory:recalled` event only fires for queries >10 chars to reduce noise.
 - Scale out: `docker compose up -d --scale memory=3` spins 3 server instances.
 - **Secrets:** compose uses `${POSTGRES_PASSWORD:-...}`/`${REDIS_PASSWORD:-...}`/`${GRAFANA_ADMIN_*:-...}` env substitution — override with a `.env` file (`echo "POSTGRES_PASSWORD=$(openssl rand -base64 18)" > .env`). DB/Redis/Qdrant ports are NOT published to the host (internal network only); Redis runs with `--requirepass`; Grafana anonymous access defaults to `false`.
+- **Streaming replicas (M42):** `postgres-replica-1/2` are TRUE streaming replicas, not empty standalones. Primary boot runs `deploy/postgres/init-replication.sh` (creates `replicator` REPLICATION LOGIN role + appends `host replication all 0.0.0.0/0 scram-sha-256` to `pg_hba.conf` + reload — the stock `postgres:16-alpine` image ships NO TCP replication rule, so a hand-written `primary_conninfo` command would fail with `no pg_hba.conf entry for replication`). Replicas override the entrypoint with `deploy/postgres/replica-entrypoint.sh`: on empty data dir they ensure a physical slot on the primary and `pg_basebackup -X stream -R`, then append `primary_conninfo` (with password + `application_name`) and a standalone `primary_slot_name` GUC to `postgresql.auto.conf`. **Gotchas: (1)** `primary_slot_name` is a server parameter, NOT a libpq conninfo option — putting it inside `primary_conninfo` errors with `invalid connection string syntax`; (2) replica healthcheck is `pg_isready -U timps -d timps_memory && psql ... -c "SELECT pg_is_in_recovery()" | grep -q t` — it waits for the standby to actually be in recovery, and `psql` needs `-d timps_memory` (defaulting to the username gives `database "timps" does not exist`); (3) replicas self-provision their slots so WAL is retained across brief disconnects; (4) on the FIRST boot the compose volumes must be fresh (`docker compose down -v`) or the entrypoint skips `pg_basebackup` (PG_VERSION present) and starts a non-replicating instance.
 - The 6s StreamContext polling timer remains — Phase 2c replaces it with reactive forge-layer event pushes. This is marked as the gap before Phase 2d.
 
 ## Phase 2d — Real-Time Sync (June 2026)
