@@ -194,6 +194,7 @@ New files in `packages/memory-core/`:
 - The `memory:stored` event payload includes `id`, `content` (truncated 200), `type`, `tags`, `confidence`, `actorId`.
 - The `memory:recalled` event only fires for queries >10 chars to reduce noise.
 - Scale out: `docker compose up -d --scale memory=3` spins 3 server instances.
+- **Secrets:** compose uses `${POSTGRES_PASSWORD:-...}`/`${REDIS_PASSWORD:-...}`/`${GRAFANA_ADMIN_*:-...}` env substitution — override with a `.env` file (`echo "POSTGRES_PASSWORD=$(openssl rand -base64 18)" > .env`). DB/Redis/Qdrant ports are NOT published to the host (internal network only); Redis runs with `--requirepass`; Grafana anonymous access defaults to `false`.
 - The 6s StreamContext polling timer remains — Phase 2c replaces it with reactive forge-layer event pushes. This is marked as the gap before Phase 2d.
 
 ## Phase 2d — Real-Time Sync (June 2026)
