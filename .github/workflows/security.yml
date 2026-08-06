@@ -32,6 +32,7 @@ jobs:
         run: npm audit --json > npm-audit.json 2>/dev/null || true
 
       - name: Summarize critical/high vulnerabilities
+        continue-on-error: true
         run: |
           HIGH=$(jq '.metadata.vulnerabilities.high // 0' npm-audit.json)
           CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' npm-audit.json)
@@ -41,7 +42,7 @@ jobs:
             echo "⚠️ Found $TOTAL high/critical vulnerabilities"
             jq '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | "\(.key): \(.value.severity)"' npm-audit.json
             echo "Audit is advisory in CI; remediation is tracked separately."
-            exit 0
+            exit 1
           fi
           echo "✅ No high/critical vulnerabilities"
 
