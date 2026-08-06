@@ -16,10 +16,13 @@ jobs:
         include:
           - target: plugin-sdk
             command: npm run test --workspace=packages/plugin-sdk
+            coverage_files: packages/plugin-sdk/src/__tests__/echo.test.ts packages/plugin-sdk/src/__tests__/registry.test.ts
           - target: sdk
             command: npx vitest run packages/sdk/src/sdk.test.ts
+            coverage_files: packages/sdk/src/sdk.test.ts
           - target: timps-enterprise
             command: npm run test --workspace=packages/timps-enterprise
+            coverage_files: packages/timps-enterprise/test/auth.test.ts packages/timps-enterprise/test/teamMemory.test.ts packages/timps-enterprise/test/server.test.ts
     steps:
       - uses: actions/checkout@v4
 
@@ -37,6 +40,45 @@ jobs:
 
       - name: Run tests
         run: ${{ matrix.command }}
+
+      - name: Generate coverage report
+        run: |
+          npx vitest run \
+            --coverage \
+            --coverage.thresholds.lines=0 \
+            --coverage.thresholds.functions=0 \
+            --coverage.thresholds.branches=0 \
+            --coverage.thresholds.statements=0 \
+            --coverage.reportsDirectory=coverage/${{ matrix.target }} \
+            ${{ matrix.coverage_files }}
+
+      - name: Upload coverage
+        if: hashFiles('coverage/${{ matrix.target }}/coverage-final.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.target }}
+          path: coverage/${{ matrix.target }}/coverage-final.json
+
+  coverage-gate:
+    name: coverage artifact gate
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: coverage
+
+      - name: Ensure coverage reports were generated
+        run: |
+          COUNT=$(find coverage -name "coverage-final.json" | wc -l | tr -d ' ')
+          if [ "$COUNT" -lt 1 ]; then
+            echo "No coverage-final.json artifacts were generated"
+            exit 1
+          fi
+          echo "Found $COUNT coverage artifact(s)"
 
   lint:
     runs-on: ubuntu-latest
