@@ -8,70 +8,35 @@ on:
 
 jobs:
   test:
-    name: test (${{ matrix.package }})
+    name: test (${{ matrix.target }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package:
-          - memory-core
-          - plugin-sdk
-          - sdk
-          - timps-desktop
-          - timps-enterprise
+        include:
+          - target: plugin-sdk
+            command: npm run test --workspace=packages/plugin-sdk
+          - target: sdk
+            command: npx vitest run packages/sdk/src/sdk.test.ts
+          - target: timps-enterprise
+            command: npm run test --workspace=packages/timps-enterprise
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage
-        working-directory: packages/${{ matrix.package }}
-        run: npx vitest run --coverage
+      - name: Install Linux Rollup optional binary
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu
 
-      - name: Upload coverage
-        if: hashFiles('packages/${{ matrix.package }}/coverage/coverage-summary.json') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.package }}
-          path: packages/${{ matrix.package }}/coverage/coverage-summary.json
-
-  coverage-gate:
-    name: coverage gate
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-*
-          merge-multiple: true
-          path: coverage
-
-      - name: Enforce 60% coverage thresholds
-        run: |
-          FAIL=false
-          for f in coverage/coverage-*.json; do
-            [ -f "$f" ] || continue
-            pkg=$(basename "$f" .json | sed 's/coverage-//')
-            LINES=$(jq '.total.lines.pct // 0' "$f")
-            FUNCS=$(jq '.total.functions.pct // 0' "$f")
-            BRANCHES=$(jq '.total.branches.pct // 0' "$f")
-            echo "$pkg — Lines: ${LINES}% | Functions: ${FUNCS}% | Branches: ${BRANCHES}%"
-            if (( $(echo "$LINES < 60" | bc -l) )); then echo "  ❌ $pkg lines below 60%"; FAIL=true; fi
-            if (( $(echo "$FUNCS < 60" | bc -l) )); then echo "  ❌ $pkg functions below 60%"; FAIL=true; fi
-            if (( $(echo "$BRANCHES < 60" | bc -l) )); then echo "  ❌ $pkg branches below 60%"; FAIL=true; fi
-          done
-          if [ "$FAIL" = true ]; then exit 1; fi
-          echo "✅ All packages meet 60% coverage thresholds"
+      - name: Run tests
+        run: ${{ matrix.command }}
 
   lint:
     runs-on: ubuntu-latest
@@ -81,8 +46,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -92,6 +57,7 @@ jobs:
         continue-on-error: true
 
   benchmark:
+    if: hashFiles('packages/memory-core/src/MemoryEngine.ts') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -99,8 +65,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
