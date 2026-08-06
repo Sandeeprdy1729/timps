@@ -6,12 +6,33 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  issues: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  eval-preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if [ -f packages/memory-core/src/eval/cli.ts ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping eval workflow because packages/memory-core eval CLI is not present in this repository snapshot."
+          fi
+
   eval:
+    needs: eval-preflight
+    if: needs.eval-preflight.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,11 +41,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install Linux Rollup optional binary
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu
 
       - name: Build memory-core
         run: npx tsc
@@ -125,3 +149,10 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+
+  eval-skipped:
+    needs: eval-preflight
+    if: needs.eval-preflight.outputs.enabled != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Eval suite skipped because packages/memory-core/src/eval/cli.ts is not available."

@@ -3,6 +3,18 @@ name: Release
 on:
   push:
     branches: [main]
+    paths:
+      - ".changeset/**"
+      - "package.json"
+      - "timps-code/package.json"
+      - "timps-mcp/package.json"
+      - "timps-vscode/package.json"
+      - "packages/server/package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -17,14 +29,24 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "22"
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Check for changesets
+        id: has_changesets
+        run: |
+          if compgen -G ".changeset/*.md" > /dev/null; then
+            echo "has_changesets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changesets=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── Create Release PR or publish changed packages ──────────────────────
       - name: Create Release PR or Publish
+        if: steps.has_changesets.outputs.has_changesets == 'true'
         id: changesets
         uses: changesets/action@v1
         with:
@@ -73,3 +95,7 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: No release changesets found
+        if: steps.has_changesets.outputs.has_changesets != 'true'
+        run: echo "No changesets found; skipping release."
