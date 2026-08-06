@@ -1,6 +1,5 @@
 ---
-"timps-mcp": patch
-"@timps/memory-core": patch
+"@timps-ai/timps-mcp": patch
 ---
 
 ### 12 new MCP tool wrappers (61 total, was 49)

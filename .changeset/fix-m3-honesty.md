@@ -1,6 +1,6 @@
 ---
-"timps-code": patch
-"timps-mcp": patch
+"@timps-ai/timps-code": patch
+"@timps-ai/timps-mcp": patch
 ---
 
 ### 8 new intelligence tools (17 total, all real, all benchmarked)
