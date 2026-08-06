@@ -47,6 +47,9 @@ jobs:
 
   osv-scan:
     name: OSV Vulnerability Scan
+    permissions:
+      contents: read
+      security-events: write
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.3.8
     with:
       scan-args: |-
