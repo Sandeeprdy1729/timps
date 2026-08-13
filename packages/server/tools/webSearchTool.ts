@@ -1,4 +1,5 @@
 import { BaseTool, ToolParameter } from './baseTool';
+import { fetchWithRetry, fetchWithTimeout } from '../lib/http';
 
 export class WebSearchTool extends BaseTool {
   name = 'web_search';
@@ -35,7 +36,7 @@ export class WebSearchTool extends BaseTool {
     const encodedQuery = encodeURIComponent(query);
     const url = `https://ddg-api.vercel.app/search?q=${encodedQuery}&num=${numResults}`;
     
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         'Accept': 'application/json',
       },
@@ -99,7 +100,7 @@ export class WebFetchTool extends BaseTool {
     }
     
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         headers: {
           'Accept': 'text/html, application/json, text/plain',
         },

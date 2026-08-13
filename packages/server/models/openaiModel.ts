@@ -7,6 +7,7 @@ import {
   EmbeddingResponse,
 } from './baseModel';
 import { config } from '../config/env';
+import { resolveTimeoutMs, resolveRetries } from '../lib/http';
 
 export class OpenAIModel extends BaseModel {
   private client: OpenAI;
@@ -22,6 +23,10 @@ export class OpenAIModel extends BaseModel {
     );
     this.client = new OpenAI({
       apiKey: apiKey || config.models.openai?.apiKey || process.env.OPENAI_API_KEY,
+      // Bounded timeout + retry on the underlying HTTP client so a hung or
+      // transient OpenAI API does not block the request indefinitely.
+      timeout: resolveTimeoutMs(),
+      maxRetries: resolveRetries(),
     });
   }
   

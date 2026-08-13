@@ -155,6 +155,17 @@ export interface Config {
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error';
   };
+
+  http: {
+    timeoutMs: number;
+    retries: number;
+    backoffMs: number;
+  };
+
+  agent: {
+    maxIterations: number;
+    timeLimitMs: number;
+  };
 }
 
 export function loadConfig(): Config {
@@ -284,6 +295,22 @@ export function loadConfig(): Config {
 
     logging: {
       level: readEnum('LOG_LEVEL', logLevels, 'info'),
+    },
+
+    http: {
+      // Timeout applied to all external calls (LLM providers, Qdrant, web
+      // fetch/search) so a hung dependency aborts instead of blocking the
+      // request indefinitely.
+      timeoutMs: readInt('HTTP_TIMEOUT_MS', 120000),
+      retries: readInt('HTTP_RETRIES', 2),
+      backoffMs: readInt('HTTP_BACKOFF_MS', 1000),
+    },
+
+    agent: {
+      maxIterations: readInt('AGENT_MAX_ITERATIONS', 15),
+      // Overall budget for the /chat agent loop (15 sequential model calls);
+      // a slow provider must not tie up the connection for minutes.
+      timeLimitMs: readInt('AGENT_TIME_LIMIT_MS', 300000),
     },
   };
 }

@@ -6,6 +6,7 @@ import {
   EmbeddingResponse,
 } from './baseModel';
 import { config } from '../config/env';
+import { fetchWithRetry } from '../lib/http';
 
 export class GeminiModel extends BaseModel {
   private apiKey: string;
@@ -46,7 +47,7 @@ export class GeminiModel extends BaseModel {
     
     const url = `${this.baseUrl}/models/${model}:generateContent`;
     
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,7 +98,7 @@ export class GeminiModel extends BaseModel {
   async getEmbedding(text: string): Promise<EmbeddingResponse> {
     const url = `${this.baseUrl}/models/embedding-001:embedContent?key=${this.apiKey}`;
     
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

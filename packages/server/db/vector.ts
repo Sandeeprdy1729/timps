@@ -1,5 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { config } from '../config/env';
+import { resolveTimeoutMs } from '../lib/http';
 
 export interface VectorPoint {
   id: string | number;
@@ -14,6 +15,8 @@ export function getVectorClient(): QdrantClient {
     client = new QdrantClient({
       url: config.qdrant.url,
       apiKey: config.qdrant.apiKey,
+      // Bounded timeout so a hung Qdrant does not block the request.
+      timeout: resolveTimeoutMs(),
     });
   }
   return client;

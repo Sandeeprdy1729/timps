@@ -7,6 +7,7 @@ import {
   EmbeddingResponse,
 } from './baseModel';
 import { config } from '../config/env';
+import { resolveTimeoutMs, resolveRetries } from '../lib/http';
 
 // OpenRouter is OpenAI-compatible — same SDK, different baseURL + headers
 export class OpenRouterModel extends BaseModel {
@@ -24,6 +25,10 @@ export class OpenRouterModel extends BaseModel {
         'HTTP-Referer': 'https://github.com/Sandeeprdy1729/timps',
         'X-Title': 'TIMPs',
       },
+      // Bounded timeout + retry on the underlying HTTP client so a hung or
+      // transient OpenRouter provider does not block the request indefinitely.
+      timeout: resolveTimeoutMs(),
+      maxRetries: resolveRetries(),
     });
   }
 

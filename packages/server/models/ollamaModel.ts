@@ -6,6 +6,7 @@ import {
   EmbeddingResponse,
 } from './baseModel';
 import { config } from '../config/env';
+import { fetchWithRetry } from '../lib/http';
 
 export class OllamaModel extends BaseModel {
   private baseUrl: string;
@@ -47,7 +48,7 @@ export class OllamaModel extends BaseModel {
       (requestBody.options as any).num_predict = options.max_tokens;
     }
     
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
+    const response = await fetchWithRetry(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ export class OllamaModel extends BaseModel {
   }
   
   async getEmbedding(text: string): Promise<EmbeddingResponse> {
-    const response = await fetch(`${this.baseUrl}/api/embeddings`, {
+    const response = await fetchWithRetry(`${this.baseUrl}/api/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
