@@ -20,6 +20,8 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
   const [provider, setProvider] = useState(() => 
     localStorage.getItem('timps:provider') || 'ollama'
   );
+  const [model, setModel] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
   const [version, setVersion] = useState(APP.version);
   const [autostartEnabled, setAutostartEnabled] = useState(false);
@@ -33,6 +35,13 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
     api.isAutostartEnabled()
       .then(setAutostartEnabled)
       .catch(() => {}); // not available outside Tauri
+    api.getProviderConfig()
+      .then((cfg) => {
+        setProvider(cfg.provider || 'ollama');
+        setModel(cfg.model || '');
+        setApiKey(cfg.apiKey || '');
+      })
+      .catch(() => {}); // dev-mode stub
   }, []);
 
   // Keep in sync when the tray menu "Launch at Login" toggle fires
@@ -74,9 +83,20 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
   };
 
   const handleSave = () => {
-    localStorage.setItem('timps:provider', provider);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    api.saveProviderConfig({ provider, model, baseUrl: '', apiKey })
+      .then(() => {
+        localStorage.setItem('timps:provider', provider);
+        localStorage.setItem('timps:model', model);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      })
+      .catch(() => {
+        // dev-mode stub — still reflect locally
+        localStorage.setItem('timps:provider', provider);
+        localStorage.setItem('timps:model', model);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      });
   };
 
   return (
@@ -130,9 +150,22 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
           <label>Model</label>
           <input
             type="text"
-            defaultValue={PROVIDERS.find(p => p.name === provider)?.defaultModel}
-            placeholder="model name"
+            value={model}
+            onChange={e => setModel(e.target.value)}
+            placeholder={PROVIDERS.find(p => p.name === provider)?.defaultModel || 'model name'}
           />
+        </div>
+        <div className="settings-field">
+          <label>API Key</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder="sk-... (stored in ~/.timps/desktop.json)"
+          />
+          <p className="settings-hint">
+            Required for cloud providers. Local providers (Ollama, LM Studio, Jan, vLLM) don't need a key.
+          </p>
         </div>
       </section>
 

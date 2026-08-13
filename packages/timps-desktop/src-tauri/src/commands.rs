@@ -374,7 +374,273 @@ fn score_entry(query_words: &[String], e: &serde_json::Value, now_secs: i64) -> 
     Some((combined, relevance))
 }
 
-/// Chat directly with Ollama (no proxy server needed).
+// ── Provider routing (M84) ─────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy)]
+struct ProviderDef {
+    name: &'static str,
+    label: &'static str,
+    kind: &'static str, // "ollama" | "openai" | "anthropic"
+    default_model: &'static str,
+    base_url: &'static str,
+    requires_key: bool,
+}
+
+/// The providers the desktop app actually routes chat traffic to.
+/// OpenAI-compatible providers share the /chat/completions protocol;
+/// Anthropic uses its native Messages API; Ollama uses /api/chat.
+const PROVIDERS: &[ProviderDef] = &[
+    ProviderDef { name: "ollama", label: "Ollama", kind: "ollama", default_model: "qwen2.5-coder:7b", base_url: "http://localhost:11434", requires_key: false },
+    ProviderDef { name: "openai", label: "OpenAI", kind: "openai", default_model: "gpt-4o", base_url: "https://api.openai.com/v1", requires_key: true },
+    ProviderDef { name: "anthropic", label: "Anthropic", kind: "anthropic", default_model: "claude-sonnet-4-5", base_url: "https://api.anthropic.com", requires_key: true },
+    ProviderDef { name: "xai", label: "xAI (Grok)", kind: "openai", default_model: "grok-2", base_url: "https://api.x.ai/v1", requires_key: true },
+    ProviderDef { name: "deepseek", label: "DeepSeek", kind: "openai", default_model: "deepseek-chat", base_url: "https://api.deepseek.com/v1", requires_key: true },
+    ProviderDef { name: "mistral", label: "Mistral", kind: "openai", default_model: "mistral-large-latest", base_url: "https://api.mistral.ai/v1", requires_key: true },
+    ProviderDef { name: "openrouter", label: "OpenRouter", kind: "openai", default_model: "openrouter/auto", base_url: "https://openrouter.ai/api/v1", requires_key: true },
+    ProviderDef { name: "groq", label: "Groq", kind: "openai", default_model: "llama-3.3-70b-versatile", base_url: "https://api.groq.com/openai/v1", requires_key: true },
+    ProviderDef { name: "together", label: "Together AI", kind: "openai", default_model: "meta-llama/Llama-3.3-70B-Instruct-Turbo", base_url: "https://api.together.xyz/v1", requires_key: true },
+    ProviderDef { name: "fireworks", label: "Fireworks AI", kind: "openai", default_model: "accounts/fireworks/models/llama-v3p3-70b-instruct", base_url: "https://api.fireworks.ai/inference/v1", requires_key: true },
+    ProviderDef { name: "perplexity", label: "Perplexity", kind: "openai", default_model: "sonar", base_url: "https://api.perplexity.ai", requires_key: true },
+    ProviderDef { name: "lmstudio", label: "LM Studio", kind: "openai", default_model: "local-model", base_url: "http://localhost:1234/v1", requires_key: false },
+    ProviderDef { name: "jan", label: "Jan", kind: "openai", default_model: "local-model", base_url: "http://localhost:1337/v1", requires_key: false },
+    ProviderDef { name: "vllm", label: "vLLM", kind: "openai", default_model: "local-model", base_url: "http://localhost:8000/v1", requires_key: false },
+];
+
+/// Persisted provider settings (~/.timps/desktop.json). Survives restarts.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DesktopConfig {
+    #[serde(default)]
+    provider: String,
+    #[serde(default)]
+    model: String,
+    #[serde(default, rename = "baseUrl")]
+    base_url: String,
+    #[serde(default, rename = "apiKey")]
+    api_key: String,
+}
+
+fn desktop_config_path() -> String {
+    format!("{}/.timps/desktop.json", home_dir())
+}
+
+fn load_desktop_config() -> DesktopConfig {
+    let path = desktop_config_path();
+    match std::fs::read_to_string(&path) {
+        Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+        Err(_) => DesktopConfig::default(),
+    }
+}
+
+fn save_desktop_config(cfg: &DesktopConfig) -> Result<(), String> {
+    let path = desktop_config_path();
+    let dir = Path::new(&path).parent().unwrap_or(Path::new("/"));
+    std::fs::create_dir_all(dir).map_err(|e| format!("Cannot create {}: {}", dir.display(), e))?;
+    let s = serde_json::to_string_pretty(cfg).map_err(|e| e.to_string())?;
+    let tmp = format!("{path}.tmp");
+    std::fs::write(&tmp, &s).map_err(|e| format!("Cannot write {}: {}", tmp, e))?;
+    std::fs::rename(&tmp, &path).map_err(|e| format!("Cannot save config: {}", e))?;
+    Ok(())
+}
+
+fn resolve_config_model(cfg: &DesktopConfig, def: &ProviderDef) -> String {
+    if !cfg.model.trim().is_empty() {
+        cfg.model.trim().to_string()
+    } else {
+        def.default_model.to_string()
+    }
+}
+
+fn emit_chat_done(app: &tauri::AppHandle, text: &str, input_tokens: u32, output_tokens: u32) {
+    use tauri::Emitter;
+    let _ = app.emit("chat:done", serde_json::json!({
+        "text": text,
+        "inputTokens": input_tokens,
+        "outputTokens": output_tokens,
+    }));
+}
+
+async fn chat_ollama(
+    app: &tauri::AppHandle,
+    cfg: &DesktopConfig,
+    def: &ProviderDef,
+    messages: &[serde_json::Value],
+    override_model: Option<&str>,
+) -> Result<(), String> {
+    let ollama_url = std::env::var("OLLAMA_URL")
+        .unwrap_or_else(|_| def.base_url.to_string());
+    let model = override_model
+        .filter(|m| !m.trim().is_empty())
+        .map(|m| m.trim().to_string())
+        .unwrap_or_else(|| resolve_config_model(cfg, def));
+
+    let body = serde_json::json!({
+        "model": model,
+        "messages": messages,
+        "stream": false,
+        "options": { "num_ctx": 32768 }
+    });
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("{}/api/chat", ollama_url))
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                format!("Ollama request timed out after 60s at {ollama_url}")
+            } else {
+                format!("Cannot reach Ollama at {ollama_url}. Is it running? (ollama serve)")
+            }
+        })?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("Ollama {status}: {text}"));
+    }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| format!("Failed to parse Ollama response: {e}"))?;
+    let text = j["message"]["content"].as_str().unwrap_or("").to_string();
+    let input_tokens = j["prompt_eval_count"].as_u64().unwrap_or(0) as u32;
+    let output_tokens = j["eval_count"].as_u64().unwrap_or(0) as u32;
+    emit_chat_done(app, &text, input_tokens, output_tokens);
+    Ok(())
+}
+
+async fn chat_openai_compatible(
+    app: &tauri::AppHandle,
+    cfg: &DesktopConfig,
+    def: &ProviderDef,
+    messages: &[serde_json::Value],
+) -> Result<(), String> {
+    if def.requires_key && cfg.api_key.trim().is_empty() {
+        return Err(format!("No API key set for {}. Add one in Settings.", def.label));
+    }
+    let base = if !cfg.base_url.trim().is_empty() {
+        cfg.base_url.trim().to_string()
+    } else {
+        def.base_url.to_string()
+    };
+    let model = resolve_config_model(cfg, def);
+
+    let body = serde_json::json!({
+        "model": model,
+        "messages": messages,
+        "stream": false,
+    });
+
+    let client = reqwest::Client::new();
+    let url = format!("{}/chat/completions", base.trim_end_matches('/'));
+    let resp = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", cfg.api_key.trim()))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                format!("{} request timed out after 60s at {url}", def.label)
+            } else {
+                format!("Cannot reach {} at {url}", def.label)
+            }
+        })?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("{} {status}: {text}", def.label));
+    }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| format!("Failed to parse {} response: {e}", def.label))?;
+    let text = j["choices"][0]["message"]["content"].as_str().unwrap_or("").to_string();
+    let input_tokens = j["usage"]["prompt_tokens"].as_u64().unwrap_or(0) as u32;
+    let output_tokens = j["usage"]["completion_tokens"].as_u64().unwrap_or(0) as u32;
+    emit_chat_done(app, &text, input_tokens, output_tokens);
+    Ok(())
+}
+
+async fn chat_anthropic(
+    app: &tauri::AppHandle,
+    cfg: &DesktopConfig,
+    def: &ProviderDef,
+    messages: &[serde_json::Value],
+) -> Result<(), String> {
+    if def.requires_key && cfg.api_key.trim().is_empty() {
+        return Err(format!("No API key set for {}. Add one in Settings.", def.label));
+    }
+    let base = if !cfg.base_url.trim().is_empty() {
+        cfg.base_url.trim().to_string()
+    } else {
+        def.base_url.to_string()
+    };
+    let model = resolve_config_model(cfg, def);
+
+    let mut system = String::new();
+    let api_messages: Vec<serde_json::Value> = messages
+        .iter()
+        .filter_map(|m| {
+            let role = m["role"].as_str().unwrap_or("user");
+            let content = m["content"].as_str().unwrap_or("");
+            if role == "system" {
+                if !system.is_empty() {
+                    system.push_str("\n\n");
+                }
+                system.push_str(content);
+                None
+            } else {
+                Some(serde_json::json!({ "role": role, "content": content }))
+            }
+        })
+        .collect();
+
+    let mut body = serde_json::json!({
+        "model": model,
+        "max_tokens": 2048,
+        "messages": api_messages,
+    });
+    if !system.is_empty() {
+        body["system"] = serde_json::Value::String(system);
+    }
+
+    let client = reqwest::Client::new();
+    let url = format!("{}/v1/messages", base.trim_end_matches('/'));
+    let resp = client
+        .post(&url)
+        .header("x-api-key", cfg.api_key.trim())
+        .header("anthropic-version", "2023-06-01")
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                format!("{} request timed out after 60s at {url}", def.label)
+            } else {
+                format!("Cannot reach {} at {url}", def.label)
+            }
+        })?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("{} {status}: {text}", def.label));
+    }
+
+    let j: serde_json::Value = resp.json().await.map_err(|e| format!("Failed to parse {} response: {e}", def.label))?;
+    let text = j["content"][0]["text"].as_str().unwrap_or("").to_string();
+    let input_tokens = j["usage"]["input_tokens"].as_u64().unwrap_or(0) as u32;
+    let output_tokens = j["usage"]["output_tokens"].as_u64().unwrap_or(0) as u32;
+    emit_chat_done(app, &text, input_tokens, output_tokens);
+    Ok(())
+}
+
+/// Chat directly with the configured LLM provider (Ollama, OpenAI-compatible,
+/// or Anthropic). No proxy server needed. Non-streaming.
 #[tauri::command]
 pub async fn chat(
     app: tauri::AppHandle,
@@ -383,10 +649,6 @@ pub async fn chat(
     project_path: Option<String>,
 ) -> Result<(), String> {
     use tauri::Emitter;
-
-    let ollama_url = std::env::var("OLLAMA_URL")
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
-    let model = model.unwrap_or_else(|| "llama3.2:1b".to_string());
 
     let mut messages: Vec<serde_json::Value> = Vec::new();
     let token_budget: usize = 2000;
@@ -485,59 +747,31 @@ pub async fn chat(
 
     messages.push(serde_json::json!({"role": "user", "content": prompt}));
 
-    let body = serde_json::json!({
-        "model": model,
-        "messages": messages,
-        "stream": false,
-        "options": { "num_ctx": 32768 }
-    });
-
-    let client = reqwest::Client::new();
-    let resp = match client
-        .post(format!("{}/api/chat", ollama_url))
-        .json(&body)
-        .timeout(std::time::Duration::from_secs(60))
-        .send()
-        .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            // A timeout here previously left the frontend chat promise pending
-            // forever (spinner never clears). Surface a clear error instead.
-            let msg = if e.is_timeout() {
-                format!("Ollama request timed out after 60s at {ollama_url}")
-            } else {
-                format!("Cannot reach Ollama at {ollama_url}. Is it running? (ollama serve)")
-            };
+    // ── Route to the persisted provider ──
+    let cfg = load_desktop_config();
+    let provider_name = if cfg.provider.is_empty() { "ollama" } else { cfg.provider.as_str() };
+    let def = match PROVIDERS.iter().find(|p| p.name == provider_name) {
+        Some(d) => d,
+        None => {
+            let msg = format!("Unsupported provider: {provider_name}");
             let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
             return Err(msg);
         }
     };
 
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or_default();
-        let msg = format!("Ollama {status}: {text}");
+    let result = match def.kind {
+        "ollama" => chat_ollama(&app, &cfg, def, &messages, model.as_deref()).await,
+        "openai" => chat_openai_compatible(&app, &cfg, def, &messages).await,
+        "anthropic" => chat_anthropic(&app, &cfg, def, &messages).await,
+        other => Err(format!("Provider '{}' kind '{}' is not supported", def.name, other)),
+    };
+
+    if let Err(msg) = &result {
+        // A failure here previously left the frontend chat promise pending
+        // forever (spinner never clears). Surface a clear error instead.
         let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
-        return Err(msg);
     }
-
-    let j: serde_json::Value = resp.json().await.map_err(|e| {
-        let msg = format!("Failed to parse Ollama response: {e}");
-        let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
-        msg
-    })?;
-
-    let text = j["message"]["content"].as_str().unwrap_or("").to_string();
-    let input_tokens = j["prompt_eval_count"].as_u64().unwrap_or(0) as u32;
-    let output_tokens = j["eval_count"].as_u64().unwrap_or(0) as u32;
-
-    let _ = app.emit("chat:done", serde_json::json!({
-        "text": text,
-        "inputTokens": input_tokens,
-        "outputTokens": output_tokens,
-    }));
-    Ok(())
+    result
 }
 
 /// List models available in Ollama
@@ -576,14 +810,58 @@ pub fn get_version() -> String {
 /// Get the current LLM provider
 #[tauri::command]
 pub fn get_provider() -> String {
-    std::env::var("TIMPS_PROVIDER").unwrap_or_else(|_| "ollama".to_string())
+    let cfg = load_desktop_config();
+    if cfg.provider.is_empty() { "ollama".to_string() } else { cfg.provider }
 }
 
-/// Set the LLM provider
+/// Set the LLM provider (persisted to ~/.timps/desktop.json)
 #[tauri::command]
 pub fn set_provider(provider: String) -> Result<(), String> {
-    std::env::set_var("TIMPS_PROVIDER", &provider);
-    Ok(())
+    if !PROVIDERS.iter().any(|p| p.name == provider) {
+        return Err(format!("Unknown provider: {provider}"));
+    }
+    let mut cfg = load_desktop_config();
+    cfg.provider = provider.clone();
+    if cfg.model.is_empty() {
+        cfg.model = PROVIDERS
+            .iter()
+            .find(|p| p.name == provider)
+            .map(|p| p.default_model)
+            .unwrap_or("")
+            .to_string();
+    }
+    save_desktop_config(&cfg)
+}
+
+/// Get the full provider config (provider, model, baseUrl, apiKey)
+#[tauri::command]
+pub fn get_provider_config() -> serde_json::Value {
+    let cfg = load_desktop_config();
+    serde_json::json!({
+        "provider": if cfg.provider.is_empty() { "ollama" } else { &cfg.provider },
+        "model": cfg.model,
+        "baseUrl": cfg.base_url,
+        "apiKey": cfg.api_key,
+    })
+}
+
+/// Persist the full provider config to ~/.timps/desktop.json
+#[tauri::command]
+pub fn set_provider_config(
+    provider: String,
+    model: String,
+    base_url: String,
+    api_key: String,
+) -> Result<(), String> {
+    if !PROVIDERS.iter().any(|p| p.name == provider) {
+        return Err(format!("Unknown provider: {provider}"));
+    }
+    save_desktop_config(&DesktopConfig {
+        provider,
+        model,
+        base_url,
+        api_key,
+    })
 }
 
 /// Install update (placeholder for auto-updater)
@@ -1634,5 +1912,93 @@ mod tests {
         ];
         let results = rank_semantic(entries, "beta", 2);
         assert_eq!(results.len(), 2);
+    }
+
+    // ── M84: provider routing registry ───────────────────────────────────
+
+    #[test]
+    fn provider_registry_has_only_supported_kinds() {
+        for p in PROVIDERS {
+            assert!(
+                p.kind == "ollama" || p.kind == "openai" || p.kind == "anthropic",
+                "{} has unsupported kind {}",
+                p.name,
+                p.kind
+            );
+            assert!(!p.default_model.is_empty(), "{} has no default model", p.name);
+            assert!(!p.base_url.is_empty(), "{} has no base URL", p.name);
+        }
+    }
+
+    #[test]
+    fn provider_registry_includes_ollama() {
+        assert!(PROVIDERS.iter().any(|p| p.name == "ollama"));
+    }
+
+    #[test]
+    fn provider_registry_no_duplicate_names() {
+        let mut names: Vec<&str> = PROVIDERS.iter().map(|p| p.name).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), PROVIDERS.len());
+    }
+
+    #[test]
+    fn provider_registry_local_providers_do_not_require_key() {
+        for name in ["ollama", "lmstudio", "jan", "vllm"] {
+            let def = PROVIDERS.iter().find(|p| p.name == name).unwrap();
+            assert!(!def.requires_key, "{} should not require an API key", name);
+        }
+    }
+
+    #[test]
+    fn unknown_provider_is_rejected() {
+        let result = set_provider("not-a-provider".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn config_round_trips_through_desktop_json() {
+        // Isolate from the real ~/.timps config via a temp HOME.
+        let temp = std::env::temp_dir().join(format!("timps-cfg-test-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        set_provider("openai".to_string()).expect("set_provider should persist");
+        assert_eq!(get_provider(), "openai");
+
+        let value = get_provider_config();
+        assert_eq!(value["provider"], "openai");
+        assert_eq!(value["model"], "gpt-4o", "default model should fill empty config model");
+        assert_eq!(value["baseUrl"], "");
+        assert_eq!(value["apiKey"], "");
+
+        set_provider_config(
+            "anthropic".to_string(),
+            "claude-sonnet-4-5".to_string(),
+            "https://api.anthropic.com".to_string(),
+            "sk-test".to_string(),
+        )
+        .expect("set_provider_config should persist");
+        let value = get_provider_config();
+        assert_eq!(value["provider"], "anthropic");
+        assert_eq!(value["apiKey"], "sk-test");
+        assert_eq!(get_provider(), "anthropic");
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn resolve_config_model_prefers_configured_model() {
+        let cfg = DesktopConfig {
+            provider: "openai".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            ..Default::default()
+        };
+        let def = PROVIDERS.iter().find(|p| p.name == "openai").unwrap();
+        assert_eq!(resolve_config_model(&cfg, def), "gpt-4o-mini");
+
+        let empty = DesktopConfig::default();
+        assert_eq!(resolve_config_model(&empty, def), "gpt-4o");
     }
 }
