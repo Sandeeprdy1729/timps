@@ -245,17 +245,30 @@ pub fn list_projects() -> Result<Vec<String>, String> {
 #[tauri::command]
 pub fn search_memory(project_path: String, query: String, limit: u32) -> Result<Vec<SemanticEntry>, String> {
     let entries = load_semantic(project_path)?;
+    Ok(rank_semantic(entries, &query, limit as usize))
+}
+
+/// Pure scoring used by `search_memory` (split out for testability).
+fn rank_semantic(entries: Vec<SemanticEntry>, query: &str, limit: usize) -> Vec<SemanticEntry> {
     if query.trim().is_empty() {
-        let n = limit as usize;
-        return Ok(entries.into_iter().take(n).collect());
+        return entries.into_iter().take(limit).collect();
     }
 
     let words: Vec<String> = query
         .to_lowercase()
         .split_whitespace()
-        .filter(|w| w.len() > 2)
         .map(|w| w.to_string())
         .collect();
+
+    // Short words (≤2 chars like "go", "ai", "db") are legitimate search
+    // tokens. Only drop them when the query ALSO has longer words, so a query
+    // composed entirely of short words still matches instead of producing an
+    // empty word list that silently scores every entry 0.0.
+    let words: Vec<String> = if words.iter().any(|w| w.len() > 2) {
+        words.into_iter().filter(|w| w.len() > 2).collect()
+    } else {
+        words
+    };
 
     let mut scored: Vec<(f64, SemanticEntry)> = entries
         .into_iter()
@@ -274,8 +287,7 @@ pub fn search_memory(project_path: String, query: String, limit: u32) -> Result<
         .collect();
 
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    let n = limit as usize;
-    Ok(scored.into_iter().take(n).map(|(_, e)| e).collect())
+    scored.into_iter().take(limit).map(|(_, e)| e).collect()
 }
 
 /// Store a new semantic memory entry (used by ChatPage "save as memory" action)
@@ -1522,4 +1534,97 @@ pub fn detect_project_path() -> String {
 
     // Last resort: return Desktop
     format!("{}/Desktop", home)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(id: &str, content: &str, tags: &[&str]) -> SemanticEntry {
+        SemanticEntry {
+            id: id.to_string(),
+            timestamp: 0,
+            kind: "fact".to_string(),
+            content: content.to_string(),
+            tags: tags.iter().map(|s| s.to_string()).collect(),
+            score: None,
+        }
+    }
+
+    fn ids(results: &[SemanticEntry]) -> Vec<&str> {
+        results.iter().map(|e| e.id.as_str()).collect()
+    }
+
+    #[test]
+    fn short_word_query_matches_entries() {
+        // M82: 'go' used to be filtered out → zero results.
+        let entries = vec![
+            entry("1", "Set up Go module for the project", &["golang"]),
+            entry("2", "Rust backend service", &["rust"]),
+        ];
+        let results = rank_semantic(entries, "go", 10);
+        assert_eq!(ids(&results), vec!["1"]);
+    }
+
+    #[test]
+    fn all_short_words_query_matches() {
+        // M82: 'ai db' (both ≤2 chars) previously produced an empty word list.
+        let entries = vec![
+            entry("1", "AI assistant for the db layer", &[]),
+            entry("2", "frontend components", &["react"]),
+        ];
+        let results = rank_semantic(entries, "ai db", 10);
+        assert_eq!(ids(&results), vec!["1"]);
+    }
+
+    #[test]
+    fn short_word_does_not_match_everything() {
+        // 'go' must not be treated as matching unrelated entries.
+        let entries = vec![
+            entry("1", "Rust backend service", &["rust"]),
+            entry("2", "Deploy to a Go service", &[]),
+        ];
+        let results = rank_semantic(entries, "go", 10);
+        assert_eq!(ids(&results), vec!["2"]);
+    }
+
+    #[test]
+    fn mixed_query_still_filters_short_noise_words() {
+        // Long words present → short noise words are dropped (prior behavior).
+        let entries = vec![
+            entry("1", "Postgres database tuning", &["db"]),
+            entry("2", "api design for dashboard", &["ui"]),
+        ];
+        let results = rank_semantic(entries, "db postgres", 10);
+        assert_eq!(ids(&results), vec!["1"]);
+    }
+
+    #[test]
+    fn empty_query_returns_first_n_entries() {
+        let entries = vec![
+            entry("1", "first", &[]),
+            entry("2", "second", &[]),
+            entry("3", "third", &[]),
+        ];
+        let results = rank_semantic(entries, "   ", 2);
+        assert_eq!(ids(&results), vec!["1", "2"]);
+    }
+
+    #[test]
+    fn no_match_returns_empty() {
+        let entries = vec![entry("1", "cooking recipes", &["kitchen"])];
+        let results = rank_semantic(entries, "kubernetes", 10);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn limit_is_respected() {
+        let entries = vec![
+            entry("1", "alpha beta", &[]),
+            entry("2", "beta gamma", &[]),
+            entry("3", "beta delta", &[]),
+        ];
+        let results = rank_semantic(entries, "beta", 2);
+        assert_eq!(results.len(), 2);
+    }
 }
