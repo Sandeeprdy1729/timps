@@ -1,4 +1,5 @@
 // NexusForge - Episodic Sub-Agent Trinity with Hybrid Graph Indexing, RL-Policy Delta Evolution, and Persona-Orchestrated Retrieval
+import * as crypto from 'crypto';
 import { query, execute } from '../db/postgres';
 import { config } from '../config/env';
 

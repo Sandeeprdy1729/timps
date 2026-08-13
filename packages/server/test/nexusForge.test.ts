@@ -1,5 +1,27 @@
 import { NexusForge, Signal, PolicyDecision, RetrievalResult } from '../core/nexusForge';
 
+describe('NexusForge — crypto import (M74 regression)', () => {
+  it('episodicIndexer works when globalThis.crypto is absent (Node 18 scenario)', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    try {
+      if (descriptor && descriptor.configurable) delete (globalThis as any).crypto;
+      const nf = new NexusForge();
+      const signal: Signal = {
+        userId: 1,
+        content: 'crypto import regression test',
+        tags: [],
+      };
+      // Must resolve (to a nodeId, or null if the DB is down) — never reject
+      // with `ReferenceError: crypto is not defined` from the missing import.
+      await expect(nf.episodicIndexer(signal, 'test')).resolves.toBeDefined();
+    } finally {
+      if (descriptor && descriptor.configurable) {
+        Object.defineProperty(globalThis, 'crypto', descriptor);
+      }
+    }
+  });
+});
+
 describe('NexusForge — Episodic Sub-Agent Trinity', () => {
   let nf: NexusForge;
 
