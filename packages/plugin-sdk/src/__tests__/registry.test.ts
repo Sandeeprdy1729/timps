@@ -35,6 +35,54 @@ describe('PluginRegistry', () => {
     expect(() => registry.register(makePlugin('dup'))).toThrow('already registered');
   });
 
+  it('rejects plugins declaring unknown permissions', () => {
+    const p: Plugin = {
+      manifest: {
+        name: 'bad-perms',
+        version: '0.1.0',
+        description: 'x',
+        timps: { permissions: ['root', 'process:spawn'] as any },
+      },
+    };
+    expect(() => registry.register(p)).toThrow(/unknown permissions/);
+  });
+
+  it('accepts plugins declaring known permissions', () => {
+    const p: Plugin = {
+      manifest: {
+        name: 'good-perms',
+        version: '0.1.0',
+        description: 'x',
+        timps: { permissions: ['process:spawn', 'memory:read'] },
+      },
+    };
+    expect(() => registry.register(p)).not.toThrow();
+    expect(registry.permissionsOf('good-perms')).toEqual(['process:spawn', 'memory:read']);
+  });
+
+  it('returns empty permissions for a plugin with no declaration', () => {
+    registry.register(makePlugin('no-perms'));
+    expect(registry.permissionsOf('no-perms')).toEqual([]);
+  });
+
+  it('exposes permissions on allTools() results', () => {
+    const p: Plugin = {
+      manifest: {
+        name: 'perm-tool',
+        version: '0.1.0',
+        description: 'x',
+        timps: { permissions: ['fs:read'] },
+        tools: [{ name: 'read', description: 'read', parameters: {} }],
+      },
+      tools: {
+        async read() { return { output: 'data' }; },
+      },
+    };
+    registry.register(p);
+    const tools = registry.allTools();
+    expect(tools[0].permissions).toEqual(['fs:read']);
+  });
+
   it('unregisters a plugin and returns true', () => {
     registry.register(makePlugin('plugin-b'));
     expect(registry.unregister('plugin-b')).toBe(true);

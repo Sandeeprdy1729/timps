@@ -140,6 +140,40 @@ describe('PluginManager', () => {
     expect(result.content).toContain('boom');
   });
 
+  it('derives high risk for tools from plugins declaring process:spawn', () => {
+    const spawnPlugin: Plugin = {
+      manifest: {
+        name: 'spawn-plugin',
+        version: '0.1.0',
+        description: 'runs processes',
+        timps: { permissions: ['process:spawn'] },
+        tools: [{ name: 'run', description: 'run a command', parameters: {} }],
+      },
+      tools: {
+        async run() { return { output: 'ran' }; },
+      },
+    };
+    pm.registerDirect(spawnPlugin);
+    expect(pm.getPluginTool('run')!.risk).toBe('high');
+  });
+
+  it('derives low risk for tools from plugins with memory-only permissions', () => {
+    const memPlugin: Plugin = {
+      manifest: {
+        name: 'mem-tool-plugin',
+        version: '0.1.0',
+        description: 'reads memory',
+        timps: { permissions: ['memory:read'] },
+        tools: [{ name: 'lookup', description: 'lookup memory', parameters: {} }],
+      },
+      tools: {
+        async lookup() { return { output: 'found' }; },
+      },
+    };
+    pm.registerDirect(memPlugin);
+    expect(pm.getPluginTool('lookup')!.risk).toBe('low');
+  });
+
   // ── lifecycle (setup / teardown) ──────────────────────────────────────────
 
   it('calls setup when loading a plugin via registerDirect (skipped — setup called by load())', () => {
@@ -178,7 +212,12 @@ describe('PluginManager', () => {
       { id: 'abc', timestamp: 1000, type: 'fact', content: 'hello', tags: ['t1'], confidence: 0.9 },
     ]);
     pm.registerDirect({
-      manifest: { name: 'mem-plugin', version: '0.1.0', description: 'mem' },
+      manifest: {
+        name: 'mem-plugin',
+        version: '0.1.0',
+        description: 'mem',
+        timps: { permissions: ['memory:read'] },
+      },
       commands: {
         async read(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
           const entries = await ctx.memory.loadSemantic(ctx.projectPath);
@@ -194,9 +233,34 @@ describe('PluginManager', () => {
     expect(entry.importance).toBe(0.9);
   });
 
+  it('blocks memory:read when the plugin lacks the permission', async () => {
+    pm.registerDirect({
+      manifest: { name: 'mem-noperm', version: '0.1.0', description: 'mem' },
+      commands: {
+        async read(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
+          try {
+            await ctx.memory.loadSemantic(ctx.projectPath);
+            return 'no-error';
+          } catch (e) {
+            return `blocked: ${(e as Error).message}`;
+          }
+        },
+      },
+    });
+    const result = await pm.runCommand('read', []);
+    expect(result).toContain('blocked:');
+    expect(result).toContain('memory:read');
+    expect(memory.loadSemanticEntries).not.toHaveBeenCalled();
+  });
+
   it('appendEpisode delegates to memory.storeEpisode', async () => {
     pm.registerDirect({
-      manifest: { name: 'ep-plugin', version: '0.1.0', description: 'ep' },
+      manifest: {
+        name: 'ep-plugin',
+        version: '0.1.0',
+        description: 'ep',
+        timps: { permissions: ['memory:write'] },
+      },
       commands: {
         async store(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
           await ctx.memory.appendEpisode(ctx.projectPath, {
@@ -217,5 +281,33 @@ describe('PluginManager', () => {
     const stored = memory.storeEpisode.mock.calls[0][0];
     expect(stored.summary).toBe('did stuff');
     expect(stored.outcome).toBe('success');
+  });
+
+  it('blocks memory:write when the plugin lacks the permission', async () => {
+    pm.registerDirect({
+      manifest: { name: 'ep-noperm', version: '0.1.0', description: 'ep' },
+      commands: {
+        async store(_args: string[], ctx: import('@timps-ai/plugin-sdk').PluginContext) {
+          try {
+            await ctx.memory.appendEpisode(ctx.projectPath, {
+              ts: new Date(9000).toISOString(),
+              summary: 'did stuff',
+              outcome: 'success',
+              tags: [],
+              toolsUsed: [],
+              filesChanged: [],
+              durationMs: 0,
+            });
+            return 'no-error';
+          } catch (e) {
+            return `blocked: ${(e as Error).message}`;
+          }
+        },
+      },
+    });
+    const result = await pm.runCommand('store', []);
+    expect(result).toContain('blocked:');
+    expect(result).toContain('memory:write');
+    expect(memory.storeEpisode).not.toHaveBeenCalled();
   });
 });

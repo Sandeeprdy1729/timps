@@ -1,18 +1,32 @@
-import type { Plugin, PluginManifest, ToolSpec } from './types.js';
+import type { Permission, Plugin, PluginManifest, ToolSpec } from './types.js';
+import { invalidPermissions } from './permissions.js';
 
 /** In-memory registry of loaded plugins. One instance per agent session. */
 export class PluginRegistry {
   private readonly _plugins = new Map<string, Plugin>();
 
   /**
-   * Register a plugin. Throws if a plugin with the same name is already loaded.
+   * Register a plugin. Throws if a plugin with the same name is already loaded
+   * or if it declares permissions outside the known {@link Permission} set.
    */
   register(plugin: Plugin): void {
     const { name } = plugin.manifest;
     if (this._plugins.has(name)) {
       throw new Error(`Plugin "${name}" is already registered`);
     }
+    const bad = invalidPermissions(plugin.manifest.timps?.permissions ?? []);
+    if (bad.length > 0) {
+      throw new Error(
+        `Plugin "${name}" declares unknown permissions: ${bad.join(', ')}. ` +
+          `Valid permissions: ${['network', 'memory:read', 'memory:write', 'fs:read', 'fs:write', 'env:read', 'process:spawn'].join(', ')}.`,
+      );
+    }
     this._plugins.set(name, plugin);
+  }
+
+  /** Declared permissions for a plugin, or `[]` if none are declared. */
+  permissionsOf(name: string): Permission[] {
+    return this._plugins.get(name)?.manifest.timps?.permissions ?? [];
   }
 
   /**
@@ -70,19 +84,22 @@ export class PluginRegistry {
   allTools(): Array<{
     pluginName: string;
     spec: ToolSpec;
+    permissions: Permission[];
     handler: NonNullable<Plugin['tools']>[string];
   }> {
     const results: Array<{
       pluginName: string;
       spec: ToolSpec;
+      permissions: Permission[];
       handler: NonNullable<Plugin['tools']>[string];
     }> = [];
     for (const plugin of this._plugins.values()) {
       if (!plugin.tools || !plugin.manifest.tools) continue;
+      const permissions = plugin.manifest.timps?.permissions ?? [];
       for (const spec of plugin.manifest.tools) {
         const handler = plugin.tools[spec.name];
         if (typeof handler === 'function') {
-          results.push({ pluginName: plugin.manifest.name, spec, handler });
+          results.push({ pluginName: plugin.manifest.name, spec, permissions, handler });
         }
       }
     }
