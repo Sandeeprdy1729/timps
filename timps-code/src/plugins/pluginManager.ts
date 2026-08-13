@@ -3,8 +3,9 @@
 // Plugins can add new tools, slash commands, and lifecycle hooks
 // that are automatically available in every agent session.
 
-import { PluginRegistry, loadPlugin } from '@timps-ai/plugin-sdk';
+import { PluginRegistry, loadPlugin, deriveToolRisk } from '@timps-ai/plugin-sdk';
 import type {
+  Permission,
   Plugin,
   PluginContext,
   PluginManifest,
@@ -22,10 +23,19 @@ import type { Memory } from '../memory/memory.js';
  * Build a `MemoryAPI` that delegates to the current `Memory` instance.
  * The `projectPath` argument from the plugin is ignored — the Memory
  * instance is already scoped to the active project.
+ *
+ * Memory access is gated on the plugin's declared `memory:read` / `memory:write`
+ * permissions at runtime (M68). A plugin that did not declare `memory:read`
+ * gets an error instead of the data.
  */
-function buildMemoryAPI(memory: Memory): MemoryAPI {
+function buildMemoryAPI(memory: Memory, permissions: Permission[]): MemoryAPI {
+  const has = (perm: Permission): boolean => permissions.includes(perm);
+
   return {
     async loadSemantic(_projectPath: string): Promise<SemanticEntry[]> {
+      if (!has('memory:read')) {
+        throw new Error('Plugin does not have the "memory:read" permission');
+      }
       return (await memory.loadSemanticEntries()).map((e) => ({
         key: e.id,
         value: e.content,
@@ -37,6 +47,9 @@ function buildMemoryAPI(memory: Memory): MemoryAPI {
     },
 
     async saveSemantic(_projectPath: string, entries: SemanticEntry[]): Promise<void> {
+      if (!has('memory:write')) {
+        throw new Error('Plugin does not have the "memory:write" permission');
+      }
       // Replace semantic store with the provided entries.
       // Delegate to Memory.importMemory which writes the semantic file.
       const mapped = entries.map((e) => ({
@@ -50,6 +63,9 @@ function buildMemoryAPI(memory: Memory): MemoryAPI {
     },
 
     async loadEpisodes(_projectPath: string, count = 10): Promise<any[]> {
+      if (!has('memory:read')) {
+        throw new Error('Plugin does not have the "memory:read" permission');
+      }
       return memory.loadEpisodes(count).map((ep: any) => ({
         ts: new Date(ep.timestamp).toISOString(),
         summary: ep.summary,
@@ -62,6 +78,9 @@ function buildMemoryAPI(memory: Memory): MemoryAPI {
     },
 
     async appendEpisode(_projectPath: string, entry: EpisodicEntry): Promise<void> {
+      if (!has('memory:write')) {
+        throw new Error('Plugin does not have the "memory:write" permission');
+      }
       memory.storeEpisode({
         timestamp: new Date(entry.ts).getTime() || Date.now(),
         summary: entry.summary,
@@ -89,10 +108,11 @@ export class PluginManager {
 
   // ─── Context factory ──────────────────────────────────────────────────────
 
-  private makeContext(): PluginContext {
+  private makeContext(plugin: Plugin): PluginContext {
+    const permissions = plugin.manifest.timps?.permissions ?? [];
     return {
       projectPath: this.cwd,
-      memory: buildMemoryAPI(this.memory),
+      memory: buildMemoryAPI(this.memory, permissions),
       log: this.log,
     };
   }
@@ -107,7 +127,7 @@ export class PluginManager {
     const plugin = await loadPlugin(specifier);
     this.registry.register(plugin);
     if (plugin.setup) {
-      await plugin.setup(this.makeContext());
+      await plugin.setup(this.makeContext(plugin));
     }
     this.log(`[plugin] loaded: ${plugin.manifest.name} v${plugin.manifest.version}`);
   }
@@ -119,7 +139,7 @@ export class PluginManager {
     const plugin = this.registry.get(name);
     if (!plugin) return false;
     if (plugin.teardown) {
-      await plugin.teardown(this.makeContext());
+      await plugin.teardown(this.makeContext(plugin));
     }
     this.registry.unregister(name);
     this.log(`[plugin] unloaded: ${name}`);
@@ -154,12 +174,18 @@ export class PluginManager {
   /**
    * Returns a `RegisteredTool`-compatible adapter for a plugin tool,
    * or `undefined` if no plugin has registered a tool with that name.
+   *
+   * The adapter's `risk` is derived from the plugin's declared permissions
+   * (process:spawn / network / fs:write → high) instead of a hardcoded
+   * `'low'` (M68).
    */
   getPluginTool(name: string): RegisteredTool | undefined {
     const found = this.registry.allTools().find((t: any) => t.spec.name === name);
     if (!found) return undefined;
 
-    const ctx = this.makeContext();
+    const plugin = this.registry.get(found.pluginName);
+    if (!plugin) return undefined;
+    const ctx = this.makeContext(plugin);
     return {
       definition: {
         name: found.spec.name,
@@ -171,7 +197,7 @@ export class PluginManager {
           }).properties ?? {},
         },
       },
-      risk: 'low' as const,
+      risk: deriveToolRisk(plugin.manifest.timps?.permissions),
       execute: async (args: Record<string, unknown>, _cwd: string): Promise<ToolExecResult> => {
         const result = await found.handler(args, ctx);
         return {
@@ -192,7 +218,7 @@ export class PluginManager {
     const handlers = this.registry.resolveCommand(name);
     if (handlers.length === 0) return null;
     // First-registered plugin wins
-    return handlers[0].handler(args, this.makeContext());
+    return handlers[0].handler(args, this.makeContext(handlers[0].plugin));
   }
 
   // ─── Introspection ────────────────────────────────────────────────────────

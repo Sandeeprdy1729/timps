@@ -18,6 +18,9 @@ const plugin: Plugin = {
     name: 'git',
     version: '0.1.0',
     description: 'Enhanced git tools: commit, push, branch, stash, log graph',
+    timps: {
+      permissions: ['process:spawn'],
+    },
     tools: [
       {
         name: 'git_commit',
