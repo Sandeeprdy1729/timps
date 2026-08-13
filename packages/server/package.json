@@ -24,7 +24,7 @@
     "tui": "ts-node main.ts cli --tui",
     "seed": "ts-node seed.ts",
     "seed:reset": "ts-node seed.ts --reset",
-    "test": "npx ts-node test_tool5.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "init-db": "ts-node -e \"import('./db/postgres').then(m => m.initDatabase())\""
   },
