@@ -65,6 +65,23 @@ const memory = await createMemory({ projectPath: '.' })
 // No provider → BM25 keyword search only, zero network dependencies
 ```
 
+## Storage
+
+Memory is stored in the same canonical location the TIMPS CLI and memory dashboard
+use: `~/.timps/memory/<projectHash>`. This means memories written by the SDK are
+immediately visible to the CLI (`timps`), the memory dashboard, and other surfaces,
+and vice versa.
+
+On first use, the SDK automatically migrates data from the legacy SDK store
+(`<project>/.timps/memory`) into the canonical location. The migration is
+non-destructive — existing canonical data is never overwritten.
+
+To store memory in a custom location instead, pass a `dir` option:
+
+```typescript
+const memory = await createMemory({ projectPath: '.', dir: '/var/timps/memory/my-app' })
+```
+
 ## API
 
 | Method | Description |

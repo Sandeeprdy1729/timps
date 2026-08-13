@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import * as path from 'node:path';
+import * as fs from 'node:fs';
 import type { MemoryOptions, MemoryEntry as PublicMemoryEntry, RecallOptions, MemoryStats, MemoryEventType, MemoryEventHandler } from './types.js';
 import type { ProviderConfig } from './types.js';
 import { resolveProviderConfig } from './defaults.js';
@@ -22,15 +23,24 @@ export class MemoryClient {
   }
 
   async initialize(): Promise<void> {
-    const { MemoryEngine, FileBackend } = await import('@timps-ai/memory-core');
+    const { MemoryEngine, FileBackend, memoryDir } = await import('@timps-ai/memory-core');
 
-    const projectDir = this._options.dir ?? this._options.projectPath ?? '.';
-    const backendDir = path.join(projectDir, '.timps', 'memory');
+    const projectPath = this._options.projectPath ?? '.';
+
+    // Default to the same canonical store the CLI and memory dashboard use
+    // (~/.timps/memory/<projectHash>). An explicit `dir` opts into a custom store.
+    const backendDir = this._options.dir ?? memoryDir(projectPath);
+
+    // One-time migration: SDK < 1.1 stored memory at <project>/.timps/memory.
+    if (!this._options.dir) {
+      this._migrateLegacyStore(projectPath, backendDir);
+    }
+
     const backend = new FileBackend({ baseDir: backendDir });
 
     const engineOptions: MemoryEngineOptions = {
       backend,
-      dir: this._options.dir,
+      dir: backendDir,
     };
 
     if (this._provider) {
@@ -47,7 +57,57 @@ export class MemoryClient {
       };
     }
 
-    this._engine = new MemoryEngine(this._options.projectPath, engineOptions);
+    this._engine = new MemoryEngine(projectPath, engineOptions);
+  }
+
+  /**
+   * One-time, non-destructive migration from the legacy project-local store
+   * (<project>/.timps/memory) into the canonical shared store. Skips WAL
+   * journal files and never overwrites existing data in the target.
+   */
+  private _migrateLegacyStore(projectPath: string, targetDir: string): void {
+    const legacyDir = path.join(projectPath, '.timps', 'memory');
+    if (legacyDir === targetDir) return;
+    if (!fs.existsSync(legacyDir)) return;
+
+    // If the canonical store already holds data, don't touch it.
+    if (this._hasStoreData(targetDir)) return;
+
+    const copyDir = (src: string, dest: string): void => {
+      let entries: fs.Dirent[] = [];
+      try {
+        entries = fs.readdirSync(src, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      fs.mkdirSync(dest, { recursive: true });
+      for (const entry of entries) {
+        if (entry.name.endsWith('.wal')) continue;
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if (entry.isDirectory()) {
+          copyDir(srcPath, destPath);
+        } else if (entry.isFile()) {
+          try {
+            fs.copyFileSync(srcPath, destPath);
+          } catch {
+            /* skip files that can't be copied */
+          }
+        }
+      }
+    };
+
+    copyDir(legacyDir, targetDir);
+  }
+
+  private _hasStoreData(dir: string): boolean {
+    if (!fs.existsSync(dir)) return false;
+    const dataFiles = ['semantic.json', 'episodes.json', 'working.json', 'schema-version.json'];
+    try {
+      return fs.readdirSync(dir).some((name) => dataFiles.includes(name));
+    } catch {
+      return false;
+    }
   }
 
   private get engine(): MemoryEngine {

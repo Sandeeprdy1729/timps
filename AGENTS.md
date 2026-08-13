@@ -968,7 +968,7 @@ New package at `packages/sdk/`:
 
   createMemory({ projectPath, provider? })
        │
-       ├─ MemoryEngine({ backend: FileBackend(dir) })
+       ├─ MemoryEngine({ backend: FileBackend(memoryDir(projectPath)) })
        │     ├─ store() → EchoForge → FileBackend.write()
        │     ├─ recall() → MiniSearch BM25 search → return results
        │     │     └─ (if provider set) EmbeddingService.embed()
@@ -1034,6 +1034,8 @@ console.log(results)
 - **Published size <50KB**, tree-shaken to <30KB for basic usage
 - **`Memory.dispose()`** flushes the embedding queue and stops background computation — call on shutdown
 - **`store()` is synchronous for local storage** — embedding computation is fire-and-forget, BM25 handles immediate recall
+- **SDK shares the canonical memory store** — `createMemory()` writes to `~/.timps/memory/<projectHash>` via `memoryDir(projectPath)`, the same location the CLI and memory dashboard read from. Memories written by the SDK are visible to `timps` and the dashboard, and vice versa. An explicit `MemoryOptions.dir` opts into a custom store instead.
+- **One-time legacy migration** — on first use, `MemoryClient.initialize()` copies data from the legacy project-local store (`<project>/.timps/memory`) into the canonical store when the canonical store is empty. It skips `.wal` files and never overwrites existing canonical data; it is skipped entirely when an explicit `dir` is provided. (M70)
 
 ## Phase 5e — International Team Features (June 2026)
 
