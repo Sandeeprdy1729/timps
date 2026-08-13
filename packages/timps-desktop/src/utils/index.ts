@@ -6,10 +6,18 @@
 import { SemanticEntry, EpisodicEntry, MemoryStats } from '../api';
 
 /**
+ * Normalize a timestamp to milliseconds. Values ≥ 1e11 are already ms
+ * (1e11 seconds ≈ year 5138); smaller values are seconds and get scaled.
+ */
+function toMs(timestamp: number): number {
+  return timestamp > 100000000000 ? timestamp : timestamp * 1000;
+}
+
+/**
  * Format a timestamp to a human-readable date string
  */
 export function formatDate(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
+  const date = new Date(toMs(timestamp));
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -33,7 +41,7 @@ export function formatDate(timestamp: number): string {
  * Format a relative time string (e.g., "2 hours ago")
  */
 export function formatRelativeTime(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
+  const date = new Date(toMs(timestamp));
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSeconds = Math.floor(diffMs / 1000);
