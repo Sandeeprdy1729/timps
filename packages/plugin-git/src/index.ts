@@ -1,9 +1,11 @@
 import type { Plugin, ToolResult } from '@timps-ai/plugin-sdk';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
-function git(args: string, cwd?: string): string {
+// Runs git with an argument array — no shell involved, so branch names, commit
+// messages, or paths can never be interpreted as shell commands (M67).
+function git(args: string[], cwd?: string): string {
   try {
-    return execSync(`git ${args}`, { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch (err: unknown) {
     const e = err as { stderr?: Buffer | string; message?: string };
     const msg = (e.stderr?.toString?.() ?? e.message ?? String(err)).trim();
@@ -79,8 +81,8 @@ const plugin: Plugin = {
   tools: {
     async git_commit({ message, cwd }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        git('add -A', cwd as string | undefined);
-        const out = git(`commit -m ${JSON.stringify(message)}`, cwd as string | undefined);
+        git(['add', '-A'], cwd as string | undefined);
+        const out = git(['commit', '-m', String(message)], cwd as string | undefined);
         return { output: out };
       } catch (e: any) {
         return { output: '', error: e.message };
@@ -88,8 +90,8 @@ const plugin: Plugin = {
     },
     async git_push({ branch, cwd }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        const b = (branch as string | undefined) ?? git('rev-parse --abbrev-ref HEAD', cwd as string | undefined);
-        const out = git(`push origin ${b}`, cwd as string | undefined);
+        const b = (branch as string | undefined) ?? git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd as string | undefined);
+        const out = git(['push', 'origin', b], cwd as string | undefined);
         return { output: out || `Pushed ${b}` };
       } catch (e: any) {
         return { output: '', error: e.message };
@@ -97,7 +99,7 @@ const plugin: Plugin = {
     },
     async git_branch({ name, create, cwd }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        const cmd = create ? `checkout -b ${name}` : `checkout ${name}`;
+        const cmd = create ? ['checkout', '-b', String(name)] : ['checkout', String(name)];
         const out = git(cmd, cwd as string | undefined);
         return { output: out || `Switched to ${name}` };
       } catch (e: any) {
@@ -106,10 +108,10 @@ const plugin: Plugin = {
     },
     async git_stash({ action, message, cwd }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        let cmd = 'stash';
-        if (action === 'push') cmd = message ? `stash push -m ${JSON.stringify(message)}` : 'stash push';
-        else if (action === 'pop') cmd = 'stash pop';
-        else cmd = 'stash list';
+        let cmd: string[] = ['stash'];
+        if (action === 'push') cmd = message ? ['stash', 'push', '-m', String(message)] : ['stash', 'push'];
+        else if (action === 'pop') cmd = ['stash', 'pop'];
+        else cmd = ['stash', 'list'];
         const out = git(cmd, cwd as string | undefined);
         return { output: out || 'Done' };
       } catch (e: any) {
@@ -118,7 +120,7 @@ const plugin: Plugin = {
     },
     async git_log_graph({ n = 20, cwd }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       try {
-        const out = git(`log --oneline --graph --all -${n}`, cwd as string | undefined);
+        const out = git(['log', '--oneline', '--graph', '--all', `-${n}`], cwd as string | undefined);
         return { output: out };
       } catch (e: any) {
         return { output: '', error: e.message };
