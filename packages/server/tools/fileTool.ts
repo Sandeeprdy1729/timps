@@ -3,11 +3,70 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import { BaseTool, ToolParameter } from './baseTool';
 
-const ALLOWED_BASE_DIRS = [process.cwd(), process.env.HOME || '/tmp'].filter(Boolean);
+// Sandbox for the LLM-driven file tool. Defaults to the server's working
+// directory ONLY — an allowlist that implicitly includes $HOME is not a
+// sandbox (prompt-injected output could read ~/.ssh, ~/.aws, browser profiles,
+// etc.). Operators may explicitly widen the sandbox with TIMPS_FILE_BASE_DIRS
+// (path.delimiter-separated). cwd is always allowed; everything else must be
+// opted in explicitly.
+function getAllowedBaseDirs(): string[] {
+  const explicit = (process.env.TIMPS_FILE_BASE_DIRS || '')
+    .split(path.delimiter)
+    .map(dir => dir.trim())
+    .filter(Boolean);
+  const candidates = [process.cwd(), ...explicit];
+  const canonical = new Set<string>();
+  for (const dir of candidates) {
+    const resolved = path.resolve(dir);
+    try {
+      // Resolve symlinks (e.g. /tmp -> /private/tmp on macOS) so later realpath
+      // comparisons stay consistent.
+      canonical.add(fsSync.realpathSync(resolved));
+    } catch {
+      canonical.add(resolved);
+    }
+  }
+  return [...canonical];
+}
 
-function isPathTraversalSafe(targetPath: string): boolean {
+const ALLOWED_BASE_DIRS = getAllowedBaseDirs();
+
+function isInsideBaseDir(resolved: string, base: string): boolean {
+  return resolved === base || resolved.startsWith(base + path.sep);
+}
+
+// Fully resolves symlinks (e.g. /tmp -> /private/tmp on macOS). For paths that
+// do not exist yet (write/mkdir) it walks up to the closest existing ancestor,
+// realpaths that, then re-appends the remaining suffix.
+async function canonicalize(targetPath: string): Promise<string | null> {
   const resolved = path.resolve(targetPath);
-  return ALLOWED_BASE_DIRS.some(base => resolved.startsWith(base + path.sep) || resolved === base);
+  let current = resolved;
+  const suffix: string[] = [];
+  for (;;) {
+    try {
+      const real = await fs.realpath(current);
+      return suffix.length === 0 ? real : path.join(real, ...suffix);
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        return null;
+      }
+      suffix.unshift(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+// Checks the fully canonical (symlink-resolved) path stays inside an allowed
+// base dir. A symlink that points outside the sandbox (e.g. cwd/creds ->
+// ~/.ssh) cannot escape it because the link target is resolved before the
+// containment test.
+async function isPathTraversalSafe(targetPath: string): Promise<boolean> {
+  const canonical = await canonicalize(targetPath);
+  if (!canonical) {
+    return false;
+  }
+  return ALLOWED_BASE_DIRS.some(base => isInsideBaseDir(canonical, base));
 }
 
 export class FileTool extends BaseTool {
@@ -39,7 +98,7 @@ export class FileTool extends BaseTool {
     const { operation, path: filePath, content } = params;
     const resolvedPath = path.resolve(filePath);
     
-    if (!isPathTraversalSafe(resolvedPath)) {
+    if (!(await isPathTraversalSafe(resolvedPath))) {
       return `Error: Path traversal denied: ${filePath} is outside allowed directories`;
     }
     
