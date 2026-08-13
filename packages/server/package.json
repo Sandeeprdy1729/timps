@@ -13,7 +13,7 @@
     "./sdk": "./dist/sdk/typescript/src/index.js"
   },
   "bin": {
-    "timps": "./dist/main.js"
+    "timps-server": "./dist/main.js"
   },
   "scripts": {
     "build": "tsc",
