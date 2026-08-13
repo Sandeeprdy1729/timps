@@ -1,7 +1,7 @@
 {
   "name": "@timps-plugin/shell",
   "version": "0.1.0",
-  "description": "TIMPS plugin: shell utilities (run commands, pipe, background jobs) for AI agents — execute terminal operations from LLM workflows.",
+  "description": "TIMPS plugin: shell utilities (run commands with timeout, check PATH availability, inspect environment variables) for AI agents — execute terminal operations from LLM workflows.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": ["dist/", "README.md", "LICENSE"],
