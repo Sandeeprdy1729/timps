@@ -477,6 +477,44 @@ describe('M71 — REST API integration', () => {
         memories: 3, positions: 3, commitments: 3, relationships: 3, bugs: 3, decisions: 3,
       });
     });
+
+    it.each([
+      '/api/dashboard/burnout/abc',
+      '/api/dashboard/commitments/abc',
+      '/api/dashboard/relationships/abc',
+      '/api/dashboard/bugs/abc',
+      '/api/dashboard/manifesto/abc',
+      '/api/dashboard/stats/abc',
+    ])('rejects non-numeric userId without leaking a DB error (%s)', async (path) => {
+      app = await startApp();
+      const res = await call(app, 'GET', path, authed);
+      expect(res.status).toBe(403);
+      expect(JSON.stringify(res.body)).not.toMatch(/invalid input syntax/);
+    });
+
+    it.each([
+      '/api/dashboard/burnout/42',
+      '/api/dashboard/commitments/42',
+      '/api/dashboard/relationships/42',
+      '/api/dashboard/bugs/42',
+      '/api/dashboard/manifesto/42',
+      '/api/dashboard/stats/42',
+    ])('returns 503 when DB unavailable (%s)', async (path) => {
+      dbState.available = false;
+      app = await startApp();
+      const res = await call(app, 'GET', path, authed);
+      expect(res.status).toBe(503);
+      expect(res.body.error).toMatch(/Database unavailable/);
+    });
+
+    it('does not leak raw DB errors to the client', async () => {
+      dbState.query.mockRejectedValue(new Error('invalid input syntax for integer: "NaN"'));
+      app = await startApp();
+      const res = await call(app, 'GET', '/api/dashboard/burnout/42', authed);
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('Internal server error');
+      expect(JSON.stringify(res.body)).not.toMatch(/invalid input syntax/);
+    });
   });
 
   describe('nexus endpoints', () => {
@@ -683,6 +721,47 @@ describe('M71 — REST API integration', () => {
       const res = await call(app, 'POST', '/api/chrono/consolidate', { ...authed, body: { projectId: 'p' } });
       expect(res.status).toBe(200);
       expect(res.body.consolidated).toBe(2);
+    });
+  });
+
+  describe('DB-unavailable guard (requireDb)', () => {
+    it.each([
+      ['POST', '/api/goals/42', { title: 'x' }],
+      ['PUT', '/api/goals/1', { status: 'done' }],
+      ['GET', '/api/preferences/42', undefined],
+      ['POST', '/api/preferences/42', { key: 'k', value: 'v' }],
+      ['GET', '/api/projects/42', undefined],
+      ['POST', '/api/conversations/42', {}],
+      ['POST', '/api/contradiction/check', { text: 'x' }],
+      ['POST', '/api/positions/42', { text: 'x' }],
+      ['DELETE', '/api/positions/42/1', undefined],
+      ['GET', '/api/contradiction/history/1', undefined],
+      ['GET', '/api/dashboard/burnout/42', undefined],
+      ['GET', '/api/dashboard/stats/42', undefined],
+      ['POST', '/api/nexus/ingest', { content: 'x', sourceModule: 'code' }],
+      ['POST', '/api/nexus/query', { query: 'q' }],
+      ['GET', '/api/nexus/stats/42', undefined],
+      ['GET', '/api/nexus/graph/42', undefined],
+      ['POST', '/api/chronos/ingest', { content: 'x', sourceModule: 'code' }],
+      ['POST', '/api/chronos/query', { query: 'q' }],
+      ['GET', '/api/chronos/context/42?query=q', undefined],
+      ['GET', '/api/chronos/stats/42', undefined],
+      ['GET', '/api/chronos/edges/42', undefined],
+      ['POST', '/api/synapse/ingest', { content: 'x', sourceModule: 'code' }],
+      ['POST', '/api/synapse/query', { query: 'q' }],
+      ['GET', '/api/synapse/context/42?query=q', undefined],
+      ['GET', '/api/synapse/stats/42', undefined],
+      ['GET', '/api/synapse/graph/42', undefined],
+      ['POST', '/api/synapse/consolidate/42', {}],
+      ['POST', '/api/chrono/query', { atTime: 123 }],
+      ['POST', '/api/chrono/foresight', { domain: 'code' }],
+      ['POST', '/api/chrono/consolidate', {}],
+    ] as [string, string, unknown][])('returns 503 on %s %s when DB is down', async (m, p, body) => {
+      dbState.available = false;
+      app = await startApp();
+      const res = await call(app, m as any, p, body !== undefined ? { ...authed, body } : authed);
+      expect(res.status, `${m} ${p}`).toBe(503);
+      expect(res.body.error, `${m} ${p}`).toMatch(/Database unavailable/);
     });
   });
 
