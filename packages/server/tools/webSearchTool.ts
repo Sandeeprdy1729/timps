@@ -1,5 +1,7 @@
 import { BaseTool, ToolParameter } from './baseTool';
 import { fetchWithRetry, fetchWithTimeout } from '../lib/http';
+import { lookup } from 'node:dns/promises';
+import * as net from 'node:net';
 
 export interface SearchResult {
   title: string;
@@ -155,20 +157,121 @@ export class WebSearchTool extends BaseTool {
   }
 }
 
-const BLOCKED_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
-const BLOCKED_RANGES = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.'];
+// ── web_fetch SSRF guard ──────────────────────────────────────────────
+// The previous guard only string-matched the hostname against static
+// blocklists — decimal/hex/IPv6 literals (http://2130706433, http://0x7f.1,
+// http://[::1]) and attacker-controlled DNS resolving to a private IP bypassed
+// it entirely. The guard now resolves the hostname via DNS and requires EVERY
+// resolved address (IPv4 and IPv6) to be a public address. Unresolvable
+// hostnames are denied (fail-closed). Redirects are followed manually so an
+// external → internal redirect cannot smuggle a request to a metadata/loopback
+// endpoint either.
 
-function isInternalUrl(urlStr: string): boolean {
+const BLOCKED_HOSTS = ['169.254.169.254', '127.0.0.1', '0.0.0.0', 'localhost', 'metadata.google.internal', '100.100.100.200'];
+
+function isPublicIpv4(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.some(p => Number.isNaN(p) || p < 0 || p > 255)) return false;
+  const [a, b] = parts;
+  if (a === 0) return false;                             // 0.0.0.0/8 "this network"
+  if (a === 10) return false;                            // RFC 1918
+  if (a === 100 && b >= 64 && b <= 127) return false;    // CGNAT 100.64.0.0/10
+  if (a === 127) return false;                           // loopback
+  if (a === 169 && b === 254) return false;              // link-local incl. 169.254.169.254
+  if (a === 172 && b >= 16 && b <= 31) return false;     // RFC 1918
+  if (a === 192 && b === 168) return false;              // RFC 1918
+  if (a === 192 && b === 0) return false;                // IETF protocol assignments
+  if (a === 198 && (b === 18 || b === 19)) return false; // benchmarking 198.18.0.0/15
+  if (a >= 224) return false;                            // multicast + reserved
+  return true;
+}
+
+function isPublicIpv6(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower === '::' || lower === '::1') return false;                  // unspecified / loopback
+  if (lower.startsWith('::ffff:')) return isPublicIpv4(lower.slice(7)); // IPv4-mapped
+  if (lower.startsWith('fe8') || lower.startsWith('fec')) return false; // link-local / site-local
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return false;   // unique-local fc00::/7
+  if (lower.startsWith('ff')) return false;                             // multicast
+  return true;
+}
+
+async function isSafeToFetch(urlStr: string): Promise<boolean> {
+  let parsed: URL;
   try {
-    const parsed = new URL(urlStr);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return true;
-    const hostname = parsed.hostname.toLowerCase();
-    if (BLOCKED_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) return true;
-    if (BLOCKED_RANGES.some(range => hostname.startsWith(range))) return true;
-    return false;
+    parsed = new URL(urlStr);
   } catch {
-    return true;
+    return false;
   }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+  let hostname = parsed.hostname;
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
+    hostname = hostname.slice(1, -1);
+  }
+  const lower = hostname.toLowerCase();
+  if (BLOCKED_HOSTS.some(h => lower === h || lower.endsWith('.' + h))) return false;
+
+  let addresses: string[];
+  try {
+    const records = await lookup(lower, { all: true, verbatim: true });
+    addresses = records.map(r => r.address);
+  } catch {
+    return false; // unresolvable → deny (fail-closed)
+  }
+  if (addresses.length === 0) return false;
+
+  // Every resolved address must be public. A hostname that resolves to even
+  // one private IP (DNS rebinding / attacker-controlled DNS) is denied.
+  for (let raw of addresses) {
+    raw = raw.toLowerCase();
+    if (raw.includes('%')) raw = raw.split('%')[0]; // strip IPv6 zone id
+    if (net.isIP(raw) === 4) {
+      if (!isPublicIpv4(raw)) return false;
+    } else if (net.isIP(raw) === 6) {
+      if (!isPublicIpv6(raw)) return false;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+const MAX_REDIRECTS = 5;
+
+// Follow redirects manually, re-running the SSRF guard on every hop, so a
+// public site cannot 302 us into an internal/metadata address.
+async function fetchSafely(urlStr: string, init: RequestInit = {}): Promise<Response> {
+  let current = urlStr;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    if (!(await isSafeToFetch(current))) {
+      throw new Error('Access denied — URL resolves to a private/internal address');
+    }
+
+    const response = await fetchWithTimeout(current, { ...init, redirect: 'manual' });
+    const status = response.status;
+    const location = response.headers.get('location');
+
+    if (status >= 300 && status < 400 && location) {
+      let next: URL;
+      try {
+        next = new URL(location, current);
+      } catch {
+        await response.body?.cancel().catch(() => {});
+        throw new Error('Invalid redirect location');
+      }
+      if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+        await response.body?.cancel().catch(() => {});
+        throw new Error('Access denied — redirect to unsupported protocol');
+      }
+      await response.body?.cancel().catch(() => {});
+      current = next.toString();
+      continue;
+    }
+
+    return response;
+  }
+  throw new Error('Too many redirects');
 }
 
 export class WebFetchTool extends BaseTool {
@@ -194,12 +297,8 @@ export class WebFetchTool extends BaseTool {
   async execute(params: Record<string, any>): Promise<string> {
     const { url, max_length = '5000' } = params;
 
-    if (isInternalUrl(url)) {
-      return 'Error: Access denied — URL resolves to a private/internal address';
-    }
-    
     try {
-      const response = await fetchWithTimeout(url, {
+      const response = await fetchSafely(url, {
         headers: {
           'Accept': 'text/html, application/json, text/plain',
         },
