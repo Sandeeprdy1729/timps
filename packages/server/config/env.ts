@@ -167,7 +167,9 @@ export function loadConfig(): Config {
       port: readInt('POSTGRES_PORT', 5432),
       database: process.env.POSTGRES_DB || 'timps',
       user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD || 'postgres',
+      // No hardcoded default password — fail closed if unset. Deploys must
+      // provide POSTGRES_PASSWORD (or DATABASE_URL).
+      password: process.env.POSTGRES_PASSWORD || '',
     },
     
     qdrant: {

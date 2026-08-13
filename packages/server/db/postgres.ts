@@ -1,7 +1,14 @@
 import { Pool } from 'pg';
 import { config } from '../config/env';
 
-console.log("POSTGRES CONFIG:", process.env.DATABASE_URL ? '(using DATABASE_URL)' : config.postgres);
+// Log connection details WITHOUT the password (secrets must never reach
+// stdout/log aggregators). The password is intentionally omitted.
+console.log(
+  'POSTGRES CONFIG:',
+  process.env.DATABASE_URL
+    ? '(using DATABASE_URL)'
+    : `${config.postgres.user}@${config.postgres.host}:${config.postgres.port}/${config.postgres.database} (password: ********)`,
+);
 
 // Prefer DATABASE_URL (Neon/Supabase connection string) over individual vars
 const sslConfig = process.env.POSTGRES_SSL_DISABLE === 'true'
@@ -27,6 +34,12 @@ const poolConfig = process.env.DATABASE_URL
     };
 
 export const pool = new Pool(poolConfig);
+
+if (!process.env.DATABASE_URL && !process.env.POSTGRES_PASSWORD) {
+  console.warn(
+    'WARNING: No POSTGRES_PASSWORD set and no DATABASE_URL configured — database authentication will use an empty password. Set POSTGRES_PASSWORD to protect the database.',
+  );
+}
 
 // Set to true once initDatabase() succeeds. Routes use this to return 503
 // instead of crashing when the DB is unavailable.
