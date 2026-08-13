@@ -24,6 +24,7 @@ export interface AgentConfig {
   maxIterations?: number;
   modelProvider?: 'openai' | 'gemini' | 'ollama' | 'openrouter';
   memoryMode?: 'persistent' | 'ephemeral';
+  timeLimitMs?: number;
 }
 
 export interface AgentResponse {
@@ -73,6 +74,7 @@ export class Agent {
   private systemPrompt: string;
   private model: BaseModel;
   private maxIterations: number;
+  private timeLimitMs: number;
   private allToolDefinitions: ToolDefinition[];
   private planner: Planner;
   private executor: Executor;
@@ -84,7 +86,8 @@ export class Agent {
     this.username = agentConfig.username;
     this.systemPrompt = agentConfig.systemPrompt || DEFAULT_SYSTEM_PROMPT;
     this.model = createModel(agentConfig.modelProvider || (config.models.defaultProvider as any));
-    this.maxIterations = agentConfig.maxIterations || 15;
+    this.maxIterations = agentConfig.maxIterations || config.agent.maxIterations;
+    this.timeLimitMs = agentConfig.timeLimitMs || config.agent.timeLimitMs;
     this.planner = new Planner();
     this.executor = new Executor(this.userId, this.projectId);
 
@@ -151,8 +154,20 @@ export class Agent {
     let iterations = 0;
     const toolResults: ToolResult[] = [];
     const toolsActivated: string[] = [];
+    const startTime = Date.now();
 
     while (iterations < this.maxIterations) {
+      // Overall budget: 15 sequential model calls must not tie up the request
+      // for minutes when the provider is slow.
+      if (Date.now() - startTime > this.timeLimitMs) {
+        return {
+          content: 'I hit the time limit before finishing. Here is what I found so far.',
+          toolResults,
+          iterations,
+          memoryStored: false,
+          toolsActivated,
+        };
+      }
       iterations++;
 
       const response = await this.model.generate(messages, {
