@@ -138,18 +138,38 @@ pub fn load_semantic(project_path: String) -> Result<Vec<SemanticEntry>, String>
 #[tauri::command]
 pub fn load_episodes(project_path: String, count: u32) -> Result<Vec<EpisodicEntry>, String> {
     let dir = memory_dir(&project_path);
-    let p = format!("{}/episodes.json", dir);
-    let content = match fs::read_to_string(&p) {
-        Ok(s) => s,
-        Err(_) => return Ok(vec![]),
-    };
-    let all_entries: Vec<EpisodicEntry> = match serde_json::from_str(&content) {
-        Ok(arr) => arr,
-        Err(_) => return Ok(vec![]),
-    };
+    let mut all_entries: Vec<EpisodicEntry> = Vec::new();
+
+    // Live store is episodes.jsonl (one JSON object per line); fall back to the
+    // legacy episodes.json array for older installs.
+    let live = format!("{}/episodes.jsonl", dir);
+    if let Ok(file) = std::fs::File::open(&live) {
+        all_entries = std::io::BufReader::new(file)
+            .lines()
+            .filter_map(|l| l.ok())
+            .filter(|l| !l.trim().is_empty())
+            .filter_map(|l| serde_json::from_str::<EpisodicEntry>(&l).ok())
+            .collect();
+    }
+    if all_entries.is_empty() {
+        let legacy = format!("{}/episodes.json", dir);
+        if let Ok(content) = fs::read_to_string(&legacy) {
+            if let Ok(arr) = serde_json::from_str::<Vec<EpisodicEntry>>(&content) {
+                all_entries = arr;
+            }
+        }
+    }
+
     let count_usize = count as usize;
     let start = all_entries.len().saturating_sub(count_usize);
-    Ok(all_entries[start..].to_vec())
+    Ok(all_entries[start..]
+        .iter()
+        .map(|e| {
+            let mut entry = e.clone();
+            entry.timestamp = normalize_ts(entry.timestamp);
+            entry
+        })
+        .collect())
 }
 
 /// Load working memory state for a project
@@ -342,6 +362,16 @@ pub fn delete_memory(project_path: String, key: String) -> Result<usize, String>
 }
 
 /// Rough token estimate: 1 token ≈ 4 chars for English text
+
+/// Normalize a legacy millisecond timestamp to seconds. Values ≥ 1e11 are
+/// clearly milliseconds (1e11 seconds ≈ year 5138), so divide by 1000.
+fn normalize_ts(ts: i64) -> i64 {
+    if ts >= 100_000_000_000 {
+        ts / 1000
+    } else {
+        ts
+    }
+}
 fn rough_tokens(s: &str) -> usize {
     (s.len() + 3) / 4
 }
@@ -364,7 +394,7 @@ fn score_entry(query_words: &[String], e: &serde_json::Value, now_secs: i64) -> 
     let max_possible = query_words.len() as f64;
     let relevance = if max_possible > 0.0 { matched / max_possible } else { 0.0 };
 
-    let entry_ts = e["timestamp"].as_i64().unwrap_or(0);
+    let entry_ts = normalize_ts(e["timestamp"].as_i64().unwrap_or(0));
     let days_old = (now_secs - entry_ts).max(0) as f64 / 86400.0;
     let recency = 1.0 / (1.0 + days_old * 0.05).max(0.1).min(1.0);
 
@@ -998,7 +1028,7 @@ pub fn store_episode(
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
-        .as_millis() as i64;
+        .as_secs() as i64;
 
     let entry = serde_json::json!({
         "id": id,
@@ -1826,6 +1856,10 @@ pub fn detect_project_path() -> String {
 mod tests {
     use super::*;
 
+    // Serializes tests that mutate the process-global HOME env var; without
+    // this, parallel test threads race on set_var("HOME", ...).
+    static HOME_LOCK: Mutex<()> = Mutex::new(());
+
     fn entry(id: &str, content: &str, tags: &[&str]) -> SemanticEntry {
         SemanticEntry {
             id: id.to_string(),
@@ -1960,6 +1994,7 @@ mod tests {
     #[test]
     fn config_round_trips_through_desktop_json() {
         // Isolate from the real ~/.timps config via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
         let temp = std::env::temp_dir().join(format!("timps-cfg-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
         std::env::set_var("HOME", &temp);
@@ -2000,5 +2035,74 @@ mod tests {
 
         let empty = DesktopConfig::default();
         assert_eq!(resolve_config_model(&empty, def), "gpt-4o");
+    }
+
+    // ── M85: timestamp unit consistency (seconds everywhere) ──────────────
+
+    #[test]
+    fn normalize_ts_converts_milliseconds_to_seconds() {
+        // ~1.7e12 ms (e.g. 2025-01-01) must be treated as ms, not seconds.
+        let ms = 1_735_689_600_000_i64;
+        assert_eq!(normalize_ts(ms), ms / 1000);
+    }
+
+    #[test]
+    fn normalize_ts_passes_seconds_through() {
+        assert_eq!(normalize_ts(1_735_689_600), 1_735_689_600);
+        assert_eq!(normalize_ts(0), 0);
+    }
+
+    #[test]
+    fn store_episode_writes_seconds_timestamp() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-ep-writer-test-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        store_episode("m85-proj".to_string(), "session summary".to_string(), "success".to_string(), vec![])
+            .expect("store_episode should succeed");
+
+        let dir = memory_dir("m85-proj");
+        let content = std::fs::read_to_string(format!("{}/episodes.jsonl", dir))
+            .expect("episodes.jsonl should exist");
+        let entry: serde_json::Value = serde_json::from_str(content.trim()).expect("valid JSON line");
+        let ts = entry["timestamp"].as_i64().expect("timestamp present");
+
+        assert!(ts < 100_000_000_000, "timestamp {} looks like ms, expected seconds", ts);
+        let now_secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        assert!((now_secs - ts).abs() < 5, "timestamp should be ~now in seconds");
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn load_episodes_normalizes_legacy_ms_timestamps() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-ep-reader-test-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        let dir = memory_dir("m85-proj");
+        std::fs::create_dir_all(&dir).expect("mkdir");
+        let legacy_ms = 1_735_689_600_000_i64;
+        let line = serde_json::json!({
+            "id": "ep_old",
+            "timestamp": legacy_ms,
+            "summary": "old episode",
+            "outcome": "success",
+            "tags": []
+        });
+        std::fs::write(format!("{}/episodes.jsonl", dir), format!("{}\n", line)).expect("write");
+
+        let entries = load_episodes("m85-proj".to_string(), 10).expect("load_episodes should succeed");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].timestamp, legacy_ms / 1000, "ms timestamp should be normalized to seconds");
+
+        let _ = std::fs::remove_dir_all(&temp);
     }
 }
