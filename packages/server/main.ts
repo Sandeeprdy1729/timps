@@ -7,7 +7,7 @@ function parseArgs(): { mode: 'server' | 'cli' | 'start'; options: any } {
   const args = process.argv.slice(2);
   const first = args[0];
 
-  // npx timps start  OR  npx timps (no args) → start server with setup wizard
+  // npx timps-server start  OR  npx timps-server (no args) → start server with setup wizard
   if (!first || first === 'start') {
     return { mode: 'start', options: {} };
   }

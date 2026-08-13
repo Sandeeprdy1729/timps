@@ -2,10 +2,6 @@
   "name": "timps",
   "private": true,
   "version": "2.0.4",
-  "bin": {
-    "timps": "./packages/server/dist/main.js"
-  },
-  "preferGlobal": true,
   "files": [
     "packages/server/dist/",
     "packages/server/package.json",
