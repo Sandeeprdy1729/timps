@@ -10,12 +10,12 @@ import { initVectorStore } from '../db/vector';
 import { positionStore } from '../tools/positionStore';
 import { initToolsTables } from '../tools/toolsDb';
 
-function readAllowedOrigins(): string[] | undefined {
+function readAllowedOrigins(): string[] {
   const raw = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN;
   if (raw) {
     return raw.split(',').map(origin => origin.trim()).filter(Boolean);
   }
-  return config.nodeEnv === 'production' ? [] : undefined;
+  return [];
 }
 
 export function createApp(): Express {
@@ -27,7 +27,11 @@ export function createApp(): Express {
   
   app.use(cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins === undefined || allowedOrigins.includes(origin)) {
+      // Fail closed: with no CORS_ORIGINS allowlist configured, cross-origin
+      // browser requests are rejected (no Access-Control-Allow-Origin header),
+      // so a malicious page cannot read API/SSE responses with credentials.
+      // Same-origin requests and non-browser clients (no Origin header) pass.
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
