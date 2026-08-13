@@ -496,12 +496,19 @@ pub async fn chat(
     let resp = match client
         .post(format!("{}/api/chat", ollama_url))
         .json(&body)
+        .timeout(std::time::Duration::from_secs(60))
         .send()
         .await
     {
         Ok(r) => r,
-        Err(_) => {
-            let msg = format!("Cannot reach Ollama at {ollama_url}. Is it running? (ollama serve)");
+        Err(e) => {
+            // A timeout here previously left the frontend chat promise pending
+            // forever (spinner never clears). Surface a clear error instead.
+            let msg = if e.is_timeout() {
+                format!("Ollama request timed out after 60s at {ollama_url}")
+            } else {
+                format!("Cannot reach Ollama at {ollama_url}. Is it running? (ollama serve)")
+            };
             let _ = app.emit("chat:error", serde_json::json!({ "message": msg }));
             return Err(msg);
         }
@@ -541,6 +548,7 @@ pub async fn list_ollama_models() -> Result<Vec<String>, String> {
     let client = reqwest::Client::new();
     let resp = client
         .get(format!("{}/api/tags", ollama_url))
+        .timeout(std::time::Duration::from_secs(10))
         .send()
         .await
         .map_err(|e| format!("Cannot reach Ollama: {}", e))?;
