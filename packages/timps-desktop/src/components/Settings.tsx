@@ -11,6 +11,7 @@ interface SettingsProps {
 export function Settings({ projectPath, onProjectPathChange }: SettingsProps) {
   const [provider, setProvider] = useState('ollama');
   const [model, setModel] = useState('qwen2.5-coder:7b');
+  const [apiKey, setApiKey] = useState('');
   const [serverUrl, setServerUrl] = useState('http://localhost:3000');
   const [version, setVersion] = useState('0.1.0');
   const { theme, setTheme } = useTheme();
@@ -23,22 +24,42 @@ export function Settings({ projectPath, onProjectPathChange }: SettingsProps) {
     }).catch(() => {
       // Using stub
     });
+    api.getProviderConfig().then((cfg) => {
+      setProvider(cfg.provider || 'ollama');
+      setModel(cfg.model || '');
+      setApiKey(cfg.apiKey || '');
+    }).catch(() => {
+      // Dev-mode stub
+    });
   }, []);
 
   const handleSave = () => {
+    api.saveProviderConfig({ provider, model, baseUrl: '', apiKey }).then(() => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }).catch((err: unknown) => {
+      console.error('Failed to save provider config:', err);
+    });
     localStorage.setItem('timps:provider', provider);
     localStorage.setItem('timps:model', model);
     localStorage.setItem('timps:serverUrl', serverUrl);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
   };
 
   const providers = [
-    { name: 'ollama', label: 'Ollama', defaultModel: 'qwen2.5-coder:7b' },
+    { name: 'ollama', label: 'Ollama (local)', defaultModel: 'qwen2.5-coder:7b' },
     { name: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o' },
-    { name: 'claude', label: 'Claude', defaultModel: 'claude-sonnet-4-5' },
-    { name: 'gemini', label: 'Gemini', defaultModel: 'gemini-2.0-flash' },
+    { name: 'anthropic', label: 'Anthropic Claude', defaultModel: 'claude-sonnet-4-5' },
+    { name: 'xai', label: 'xAI (Grok)', defaultModel: 'grok-2' },
     { name: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat' },
+    { name: 'mistral', label: 'Mistral', defaultModel: 'mistral-large-latest' },
+    { name: 'openrouter', label: 'OpenRouter', defaultModel: 'openrouter/auto' },
+    { name: 'groq', label: 'Groq', defaultModel: 'llama-3.3-70b-versatile' },
+    { name: 'together', label: 'Together AI', defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
+    { name: 'fireworks', label: 'Fireworks AI', defaultModel: 'accounts/fireworks/models/llama-v3p3-70b-instruct' },
+    { name: 'perplexity', label: 'Perplexity', defaultModel: 'sonar' },
+    { name: 'lmstudio', label: 'LM Studio (local)', defaultModel: 'local-model' },
+    { name: 'jan', label: 'Jan (local)', defaultModel: 'local-model' },
+    { name: 'vllm', label: 'vLLM (local)', defaultModel: 'local-model' },
   ];
 
   return (
@@ -96,6 +117,15 @@ export function Settings({ projectPath, onProjectPathChange }: SettingsProps) {
             value={model}
             onChange={e => setModel(e.target.value)}
             placeholder="model name"
+          />
+        </div>
+        <div className="settings-field">
+          <label>API Key</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder="sk-... (stored in ~/.timps/desktop.json)"
           />
         </div>
       </section>

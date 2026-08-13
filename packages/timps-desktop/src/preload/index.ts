@@ -39,6 +39,13 @@ export interface MemoryStats {
   working_goals: number;
 }
 
+export interface ProviderConfig {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+}
+
 export interface TimpsAPI {
   getVersion: () => Promise<string>;
   getMemories: (projectPath: string) => Promise<SemanticEntry[]>;
@@ -47,6 +54,8 @@ export interface TimpsAPI {
   runAgent: (prompt: string, projectPath?: string) => Promise<string>;
   getProvider: () => Promise<string>;
   setProvider: (name: string) => Promise<void>;
+  getProviderConfig: () => Promise<ProviderConfig>;
+  saveProviderConfig: (cfg: ProviderConfig) => Promise<void>;
   searchMemory: (query: string, projectPath: string, limit?: number) => Promise<SemanticEntry[]>;
   getMemoryStats: (projectPath: string) => Promise<MemoryStats>;
   getProjects: () => Promise<string[]>;
@@ -79,6 +88,15 @@ const timpsAPI: TimpsAPI = {
   getProvider: () => invoke<string>('get_provider'),
   
   setProvider: (name: string) => invoke('set_provider', { provider: name }),
+  
+  getProviderConfig: () => invoke<ProviderConfig>('get_provider_config'),
+  
+  saveProviderConfig: (cfg: ProviderConfig) => invoke('set_provider_config', {
+    provider: cfg.provider,
+    model: cfg.model,
+    baseUrl: cfg.baseUrl,
+    apiKey: cfg.apiKey,
+  }),
   
   searchMemory: (query: string, projectPath: string, limit = 20) =>
     invoke<SemanticEntry[]>('search_memory', { projectPath, query, limit }),

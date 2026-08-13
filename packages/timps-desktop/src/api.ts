@@ -177,6 +177,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     fetch_github_meta: null,
     fetch_hf_meta: null,
     analyze_lens_link: '(stub) TIMPS server not running in dev mode',
+    get_provider_config: { provider: 'ollama', model: '', baseUrl: '', apiKey: '' },
+    set_provider_config: undefined,
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -368,4 +370,17 @@ export const api = {
 
   snoozeAlert: (projectPath: string, alertId: string, until: number) =>
     invoke<void>('snooze_alert', { projectPath, alertId, until }),
+
+  // ── Provider config (persisted in ~/.timps/desktop.json) ───────────────
+
+  getProviderConfig: () =>
+    invoke<{ provider: string; model: string; baseUrl: string; apiKey: string }>('get_provider_config'),
+
+  saveProviderConfig: (cfg: { provider: string; model: string; baseUrl: string; apiKey: string }) =>
+    invoke<void>('set_provider_config', {
+      provider: cfg.provider,
+      model: cfg.model,
+      baseUrl: cfg.baseUrl,
+      apiKey: cfg.apiKey,
+    }),
 };

@@ -32,6 +32,13 @@ export interface MemoryStats {
   working_goals: number;
 }
 
+export interface ProviderConfig {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+}
+
 export interface TimpsAPI {
   getVersion: () => Promise<string>;
   getMemories: (projectPath: string) => Promise<SemanticEntry[]>;
@@ -40,6 +47,8 @@ export interface TimpsAPI {
   runAgent: (prompt: string, projectPath?: string) => Promise<string>;
   getProvider: () => Promise<string>;
   setProvider: (name: string) => Promise<void>;
+  getProviderConfig: () => Promise<ProviderConfig>;
+  saveProviderConfig: (cfg: ProviderConfig) => Promise<void>;
   searchMemory: (query: string, projectPath: string, limit?: number) => Promise<SemanticEntry[]>;
   getMemoryStats: (projectPath: string) => Promise<MemoryStats>;
   getProjects: () => Promise<string[]>;

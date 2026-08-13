@@ -20,6 +20,8 @@ export type InvokeCmd =
   | 'get_version'
   | 'get_provider'
   | 'set_provider'
+  | 'get_provider_config'
+  | 'set_provider_config'
   | 'install_update';
 
 interface InvokeOptions {
@@ -96,5 +98,8 @@ export const ipcMethods = {
   getVersion: () => ipc.invoke<string>('get_version'),
   getProvider: () => ipc.invoke<string>('get_provider'),
   setProvider: (provider: string) => ipc.invoke('set_provider', { provider }),
+  getProviderConfig: () => ipc.invoke<{ provider: string; model: string; baseUrl: string; apiKey: string }>('get_provider_config'),
+  saveProviderConfig: (cfg: { provider: string; model: string; baseUrl: string; apiKey: string }) =>
+    ipc.invoke('set_provider_config', { ...cfg }),
   installUpdate: () => ipc.invoke('install_update'),
 };

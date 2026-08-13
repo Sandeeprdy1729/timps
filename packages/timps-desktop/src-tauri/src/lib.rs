@@ -260,6 +260,8 @@ pub fn run() {
             commands::get_version,
             commands::get_provider,
             commands::set_provider,
+            commands::get_provider_config,
+            commands::set_provider_config,
             commands::install_update,
             // Passive background learning
             commands::passive_store,
