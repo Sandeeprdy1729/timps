@@ -1076,35 +1076,52 @@ pub fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-static CLIPBOARD_WATCHER_RUNNING: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+/// Clipboard watcher lifecycle state. Guarded by a Mutex so stop() → start()
+/// cannot race: stop() clears the flag AND joins the old thread while holding
+/// the lock, so a subsequent start() is guaranteed to run exactly one thread
+/// (M86).
+struct WatcherState {
+    running: Arc<AtomicBool>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
 
-/// Start watching the clipboard (opt-in). Captures copied text into passive memory.
-/// Each clip must be ≥20 chars and differ from the previous clip to be stored.
-#[tauri::command]
-pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> Result<(), String> {
-    use tauri_plugin_clipboard_manager::ClipboardExt;
+fn watcher_state() -> &'static std::sync::Mutex<WatcherState> {
+    static STATE: std::sync::OnceLock<std::sync::Mutex<WatcherState>> = std::sync::OnceLock::new();
+    STATE.get_or_init(|| {
+        std::sync::Mutex::new(WatcherState {
+            running: Arc::new(AtomicBool::new(false)),
+            thread: None,
+        })
+    })
+}
 
-    let flag = CLIPBOARD_WATCHER_RUNNING.get_or_init(|| Arc::new(AtomicBool::new(false)));
+/// Spawn the clipboard watcher loop. The poll interval and the clipboard/emit
+/// callbacks are injectable for tests.
+fn spawn_clipboard_watcher(
+    project_path: String,
+    poll_interval: std::time::Duration,
+    mut read_clipboard: impl FnMut() -> Result<String, String> + Send + 'static,
+    emit: impl Fn(&str, serde_json::Value) + Send + Sync + 'static,
+) -> Result<(), String> {
+    let mut state = watcher_state().lock().map_err(|e| e.to_string())?;
 
-    if flag.load(Ordering::SeqCst) {
+    if state.running.load(Ordering::SeqCst) {
         return Ok(()); // already running
     }
-    flag.store(true, Ordering::SeqCst);
+    state.running.store(true, Ordering::SeqCst);
 
-    let flag_clone = Arc::clone(flag);
-    let app_clone = app.clone();
+    let flag_clone = Arc::clone(&state.running);
     let path_clone = project_path.clone();
 
-    std::thread::spawn(move || {
-        use tauri::Emitter;
+    let handle = std::thread::spawn(move || {
         let mut last_clip = String::new();
-        // Poll fast for URL detection; throttle passive-store to every ~3 seconds
-        let mut passive_ticks: u32 = 0;
+        // Rate-limit passive-store to ~1 write per 3s; the first new clip is
+        // stored immediately.
+        let mut last_store: Option<std::time::Instant> = None;
         while flag_clone.load(Ordering::SeqCst) {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-            passive_ticks += 1;
+            std::thread::sleep(poll_interval);
 
-            let text = match app_clone.clipboard().read_text() {
+            let text = match read_clipboard() {
                 Ok(t) => t,
                 Err(_) => continue,
             };
@@ -1118,7 +1135,7 @@ pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> R
             // ── URL fast-path: emit event + save to lens queue ──────────
             let link_type = detect_link_type_inner(&trimmed);
             if link_type != "other" {
-                let _ = app_clone.emit(
+                emit(
                     "timps:url-detected",
                     serde_json::json!({ "url": trimmed, "link_type": link_type }),
                 );
@@ -1126,26 +1143,57 @@ pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> R
                 continue; // don't also dump URLs into passive memory
             }
 
-            // ── Regular text — only passive-store every ~3 seconds ──────
-            if passive_ticks % 6 == 0 && trimmed.len() >= 20 {
-                let _ = passive_store(
-                    path_clone.clone(),
-                    trimmed,
-                    Some("clipboard".to_string()),
-                    vec!["clipboard".to_string()],
-                );
+            // ── Regular text — rate-limit passive-store to ~1 per 3s ──────
+            if trimmed.len() >= 20 {
+                let due = last_store
+                    .map(|t| t.elapsed() >= std::time::Duration::from_secs(3))
+                    .unwrap_or(true);
+                if due {
+                    last_store = Some(std::time::Instant::now());
+                    let _ = passive_store(
+                        path_clone.clone(),
+                        trimmed,
+                        Some("clipboard".to_string()),
+                        vec!["clipboard".to_string()],
+                    );
+                }
             }
         }
     });
 
+    state.thread = Some(handle);
     Ok(())
 }
 
-/// Stop the clipboard watcher
+/// Start watching the clipboard (opt-in). Captures copied text into passive memory.
+/// Each clip must be ≥20 chars and differ from the previous clip to be stored.
+#[tauri::command]
+pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> Result<(), String> {
+    use tauri::Emitter;
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+
+    let app_clone = app.clone();
+    spawn_clipboard_watcher(
+        project_path,
+        std::time::Duration::from_millis(500),
+        move || app_clone.clipboard().read_text().map_err(|e| e.to_string()),
+        move |event, payload| {
+            let _ = app.emit(event, payload);
+        },
+    )
+}
+
+/// Stop the clipboard watcher. Blocks until the watcher thread has exited, so a
+/// subsequent start() can never leave a stale thread running (M86).
 #[tauri::command]
 pub fn stop_clipboard_watcher() -> Result<(), String> {
-    if let Some(flag) = CLIPBOARD_WATCHER_RUNNING.get() {
-        flag.store(false, Ordering::SeqCst);
+    let mut state = watcher_state().lock().map_err(|e| e.to_string())?;
+    if !state.running.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+    state.running.store(false, Ordering::SeqCst);
+    if let Some(handle) = state.thread.take() {
+        let _ = handle.join();
     }
     Ok(())
 }
@@ -2103,6 +2151,117 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].timestamp, legacy_ms / 1000, "ms timestamp should be normalized to seconds");
 
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    // ── M86: clipboard watcher lifecycle ─────────────────────────────────
+
+    fn sem_content(project: &str, needle: &str) -> bool {
+        let path = format!("{}/semantic.json", memory_dir(project));
+        std::fs::read_to_string(path)
+            .map(|s| s.contains(needle))
+            .unwrap_or(false)
+    }
+
+    fn wait_until<F: Fn() -> bool>(mut cond: F, timeout_ms: u64) -> bool {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
+        while std::time::Instant::now() < deadline {
+            if cond() {
+                return true;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        false
+    }
+
+    fn make_clip_reader(
+        clips: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    ) -> impl FnMut() -> Result<String, String> {
+        move || {
+            let q = clips.lock().unwrap();
+            Ok(q.first().cloned().unwrap_or_default())
+        }
+    }
+
+    #[test]
+    fn clipboard_watcher_restart_uses_new_project_only() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-clip-test-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
+        let noop_emit = |_event: &str, _payload: serde_json::Value| {};
+        let interval = std::time::Duration::from_millis(10);
+
+        // Phase 1: watch project A, capture "clipboard memory one".
+        spawn_clipboard_watcher("clipA".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+            .expect("first start should spawn");
+        assert!(
+            wait_until(|| sem_content("clipA", "clipboard memory one"), 3000),
+            "phase-1 clip should land in project A"
+        );
+
+        // Stop then immediately restart with a different project path.
+        stop_clipboard_watcher().expect("stop should join the watcher thread");
+        clips.lock().unwrap().clear();
+        clips.lock().unwrap().push("clipboard memory two".to_string());
+        spawn_clipboard_watcher("clipB".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+            .expect("second start should spawn");
+        assert!(
+            wait_until(|| sem_content("clipB", "clipboard memory two"), 3000),
+            "phase-2 clip should land in project B"
+        );
+
+        // The old watcher must be gone: nothing may land in project A, and the
+        // phase-1 clip must not be double-stored.
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        assert!(
+            !sem_content("clipA", "clipboard memory two"),
+            "stale watcher wrote into the old project after project switch"
+        );
+        let a = std::fs::read_to_string(format!("{}/semantic.json", memory_dir("clipA"))).unwrap_or_default();
+        assert_eq!(
+            a.matches("clipboard memory one").count(),
+            1,
+            "phase-1 clip must not be double-stored"
+        );
+
+        stop_clipboard_watcher().expect("cleanup stop");
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn clipboard_watcher_second_start_is_noop() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-clip-test-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
+        let noop_emit = |_event: &str, _payload: serde_json::Value| {};
+        let interval = std::time::Duration::from_millis(10);
+
+        spawn_clipboard_watcher("clipA".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+            .expect("first start should spawn");
+        spawn_clipboard_watcher("clipB".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+            .expect("second start while running should be a no-op");
+
+        assert!(
+            wait_until(|| sem_content("clipA", "clipboard memory one"), 3000),
+            "clip should land in the first project"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        assert!(
+            !sem_content("clipB", "clipboard memory one"),
+            "second start must not spawn a duplicate watcher"
+        );
+
+        stop_clipboard_watcher().expect("cleanup stop");
         let _ = std::fs::remove_dir_all(&temp);
     }
 }
