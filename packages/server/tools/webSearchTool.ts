@@ -1,6 +1,111 @@
 import { BaseTool, ToolParameter } from './baseTool';
 import { fetchWithRetry, fetchWithTimeout } from '../lib/http';
 
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+// web_search no longer depends on a single hardcoded third-party proxy.
+// Providers are tried in order (WEB_SEARCH_PROVIDERS, comma-separated):
+//   ddg-api    — community DDG JSON proxy (default, keeps prior behavior)
+//   duckduckgo — official DuckDuckGo instant-answer API (api.duckduckgo.com,
+//                no key, structured JSON — official fallback)
+//   custom     — operator-owned endpoint via WEB_SEARCH_URL (their own
+//                gateway/SearXNG); optional WEB_SEARCH_API_KEY → Bearer token
+async function searchDdgApi(query: string, numResults: number): Promise<SearchResult[]> {
+  const url = `https://ddg-api.vercel.app/search?q=${encodeURIComponent(query)}&num=${numResults}`;
+  const response = await fetchWithRetry(url, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`proxy returned ${response.status}`);
+  }
+  const data: any = await response.json();
+  if (!Array.isArray(data)) {
+    throw new Error('proxy returned an unexpected response shape');
+  }
+  return data.slice(0, numResults).map((item: any) => ({
+    title: item.title || '',
+    url: item.url || '',
+    snippet: item.snippet || '',
+  }));
+}
+
+// Official DuckDuckGo instant-answer API. No key, no HTML scraping — related
+// topics arrive as structured JSON (nesting flattened).
+async function searchDuckDuckGo(query: string, numResults: number): Promise<SearchResult[]> {
+  const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`;
+  const response = await fetchWithRetry(url, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`API returned ${response.status}`);
+  }
+  const data: any = await response.json();
+  const topics: any[] = Array.isArray(data?.RelatedTopics) ? data.RelatedTopics : [];
+  const results: SearchResult[] = [];
+  for (const topic of topics) {
+    if (topic.Topics) {
+      // Nested category topic (Abstract / "Related" heading) — flatten.
+      for (const sub of topic.Topics) {
+        if (sub?.Text && sub?.FirstURL) {
+          results.push({ title: sub.Text.split(' - ')[0], url: sub.FirstURL, snippet: sub.Text });
+        }
+      }
+    } else if (topic?.Text && topic?.FirstURL) {
+      results.push({ title: topic.Text.split(' - ')[0], url: topic.FirstURL, snippet: topic.Text });
+    }
+    if (results.length >= numResults) break;
+  }
+  return results.slice(0, numResults);
+}
+
+async function searchCustom(query: string, numResults: number): Promise<SearchResult[]> {
+  const baseUrl = process.env.WEB_SEARCH_URL;
+  if (!baseUrl) {
+    throw new Error('WEB_SEARCH_URL is not set for the custom provider');
+  }
+  const url = new URL(baseUrl);
+  url.searchParams.set('q', query);
+  const response = await fetchWithRetry(url.toString(), {
+    headers: {
+      Accept: 'application/json',
+      ...(process.env.WEB_SEARCH_API_KEY
+        ? { Authorization: `Bearer ${process.env.WEB_SEARCH_API_KEY}` }
+        : {}),
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`endpoint returned ${response.status}`);
+  }
+  const data: any = await response.json();
+  const list = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : null;
+  if (!list) {
+    throw new Error('endpoint returned an unexpected response shape');
+  }
+  return list.slice(0, numResults).map((item: any) => ({
+    title: item.title || item.name || '',
+    url: item.url || item.link || '',
+    snippet: item.snippet || item.description || '',
+  }));
+}
+
+const SEARCH_PROVIDERS: Record<string, (query: string, numResults: number) => Promise<SearchResult[]>> = {
+  'ddg-api': searchDdgApi,
+  'duckduckgo': searchDuckDuckGo,
+  'custom': searchCustom,
+};
+
+function configuredProviders(): string[] {
+  const raw = process.env.WEB_SEARCH_PROVIDERS || 'ddg-api,duckduckgo';
+  return raw
+    .split(',')
+    .map(name => name.trim().toLowerCase())
+    .filter(name => name.length > 0);
+}
+
 export class WebSearchTool extends BaseTool {
   name = 'web_search';
   description = 'Search the web for information. Use this tool when you need to find current information, facts, or answers to questions that require up-to-date knowledge.';
@@ -23,36 +128,30 @@ export class WebSearchTool extends BaseTool {
   
   async execute(params: Record<string, any>): Promise<string> {
     const { query, num_results = '5' } = params;
-    
-    try {
-      const results = await this.search(query, parseInt(num_results, 10));
-      return JSON.stringify(results, null, 2);
-    } catch (error: any) {
-      return `Search error: ${error.message}`;
+    const numResults = parseInt(num_results, 10) || 5;
+
+    const providers = configuredProviders().filter(name => SEARCH_PROVIDERS[name]);
+    if (providers.length === 0) {
+      const valid = Object.keys(SEARCH_PROVIDERS).join(', ');
+      return `Search error: no valid providers in WEB_SEARCH_PROVIDERS (got "${process.env.WEB_SEARCH_PROVIDERS}"). Valid options: ${valid}`;
     }
-  }
-  
-  private async search(query: string, numResults: number): Promise<any[]> {
-    const encodedQuery = encodeURIComponent(query);
-    const url = `https://ddg-api.vercel.app/search?q=${encodedQuery}&num=${numResults}`;
-    
-    const response = await fetchWithRetry(url, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Search API returned ${response.status}`);
+
+    // Fall back through the provider chain so one down/rate-limited proxy does
+    // not silently fail every search for every user.
+    const failures: string[] = [];
+    for (const name of providers) {
+      try {
+        const results = await SEARCH_PROVIDERS[name](query, numResults);
+        if (results.length > 0) {
+          return JSON.stringify(results, null, 2);
+        }
+        failures.push(`${name}: returned no results`);
+      } catch (error: any) {
+        failures.push(`${name}: ${error.message}`);
+      }
     }
-    
-    const data:any = await response.json();
-    
-    return data.map((item: any) => ({
-      title: item.title,
-      url: item.url,
-      snippet: item.snippet,
-    }));
+
+    return `Search error: all search providers failed — ${failures.join('; ')}`;
   }
 }
 
