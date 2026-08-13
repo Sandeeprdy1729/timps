@@ -1,14 +1,62 @@
 import type { Plugin, ToolResult } from '@timps-ai/plugin-sdk';
-import { execSync, exec } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
+import { accessSync, constants } from 'node:fs';
+import { delimiter, join } from 'node:path';
 
 const execAsync = promisify(exec);
+
+/**
+ * Cross-platform PATH lookup (M69). Pure Node — no `which` binary (Unix-only;
+ * it does not exist in cmd/PowerShell, so the old implementation always failed
+ * on Windows) and no shell, so a crafted command string like `x; whoami` is
+ * treated as a literal filename and can never be executed. Returns the resolved
+ * path or null.
+ */
+function findInPath(command: string): string | null {
+  const name = String(command || '').trim();
+  if (!name) return null;
+
+  // An absolute/relative path given directly (contains a separator).
+  if (name.includes('/') || name.includes('\\')) {
+    return isExecutable(name) ? name : null;
+  }
+
+  const dirs = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  const exts =
+    process.platform === 'win32'
+      ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM')
+          .split(';')
+          .map((e) => e.toLowerCase())
+          .filter(Boolean)
+      : [''];
+
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const candidate = join(dir, name + ext);
+      if (isExecutable(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+function isExecutable(p: string): boolean {
+  try {
+    accessSync(p, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const plugin: Plugin = {
   manifest: {
     name: 'shell',
     version: '0.1.0',
-    description: 'Enhanced shell tools: run commands with timeout, pipe output, background jobs',
+    description: 'Enhanced shell tools: run commands with timeout, check PATH availability, inspect environment variables',
+    timps: {
+      permissions: ['process:spawn', 'env:read', 'fs:read'],
+    },
     tools: [
       {
         name: 'shell_run',
@@ -26,7 +74,7 @@ const plugin: Plugin = {
       },
       {
         name: 'shell_which',
-        description: 'Check if a command is available in PATH.',
+        description: 'Check if a command is available in PATH (cross-platform).',
         parameters: {
           type: 'object' as const,
           properties: { command: { type: 'string' } },
@@ -60,14 +108,11 @@ const plugin: Plugin = {
       }
     },
     async shell_which({ command }: Record<string, unknown>, _ctx): Promise<ToolResult> {
-      try {
-        const cmd = String(command || '').replace(/[^a-zA-Z0-9._\-\/]/g, '');
-        if (!cmd) return { output: '', error: 'Invalid command name' };
-        const path = execSync(`which ${cmd}`, { encoding: 'utf8' }).trim();
-        return { output: `${cmd} found at: ${path}` };
-      } catch {
-        return { output: '', error: `${command} not found in PATH` };
-      }
+      const name = String(command ?? '').trim();
+      if (!name) return { output: '', error: 'Invalid command name' };
+      const path = findInPath(name);
+      if (!path) return { output: '', error: `${name} not found in PATH` };
+      return { output: `${name} found at: ${path}` };
     },
     async shell_env({ prefix }: Record<string, unknown>, _ctx): Promise<ToolResult> {
       const vars = Object.entries(process.env)

@@ -18,9 +18,11 @@ export const VALID_PERMISSIONS: readonly Permission[] = [
  * at load time (fail closed).
  */
 const PRIVILEGED_PATTERNS: Array<{ permission: Permission; pattern: RegExp }> = [
-  // Filesystem
+  // Filesystem — importing fs is read access at minimum; fs:write requires
+  // evidence of a write/delete API (M69: keeps read-only fs plugins from being
+  // forced to over-declare write capability).
   { permission: 'fs:read', pattern: /require\(['"](?:node:)?fs['"]\)|from ['"](?:node:)?fs['"]|fs\.(readFile|readFileSync|readdir|readdirSync|existsSync|statSync|lstatSync|createReadStream|openSync|readdirSync)/g },
-  { permission: 'fs:write', pattern: /require\(['"](?:node:)?fs['"]\)|from ['"](?:node:)?fs['"]|fs\.(writeFile|writeFileSync|appendFile|appendFileSync|mkdir|mkdirSync|unlink|unlinkSync|rm|rmSync|rename|renameSync|copyFile|copyFileSync|createWriteStream|truncateSync)/g },
+  { permission: 'fs:write', pattern: /fs\.(writeFile|writeFileSync|appendFile|appendFileSync|mkdir|mkdirSync|unlink|unlinkSync|rm|rmSync|rename|renameSync|copyFile|copyFileSync|createWriteStream|truncateSync)/g },
   // Process execution
   { permission: 'process:spawn', pattern: /require\(['"](?:node:)?child_process['"]\)|from ['"](?:node:)?child_process['"]|execSync|execFileSync|spawnSync|\.exec\(|\.spawn\(|\.fork\(|child_process\./g },
   // Network

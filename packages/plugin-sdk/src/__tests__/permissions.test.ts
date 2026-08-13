@@ -45,6 +45,17 @@ describe('scanForPermissions', () => {
     expect(scan.required.has('fs:write')).toBe(true);
   });
 
+  it('does not require fs:write for a read-only fs import (M69 precision)', () => {
+    const scan = scanForPermissions(`import { accessSync, constants } from 'node:fs';`);
+    expect(scan.required.has('fs:read')).toBe(true);
+    expect(scan.required.has('fs:write')).toBe(false);
+  });
+
+  it('flags fs:write when the source actually writes', () => {
+    const scan = scanForPermissions(`const fs = require('fs'); fs.appendFileSync('/tmp/x', 'y');`);
+    expect(scan.required.has('fs:write')).toBe(true);
+  });
+
   it('detects process.env as env:read', () => {
     const scan = scanForPermissions(`const token = process.env.OPENAI_API_KEY;`);
     expect(scan.required.has('env:read')).toBe(true);
