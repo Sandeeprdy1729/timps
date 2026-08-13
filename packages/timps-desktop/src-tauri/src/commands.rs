@@ -1095,11 +1095,12 @@ fn watcher_state() -> &'static std::sync::Mutex<WatcherState> {
     })
 }
 
-/// Spawn the clipboard watcher loop. The poll interval and the clipboard/emit
-/// callbacks are injectable for tests.
+/// Spawn the clipboard watcher loop. The poll interval, passive-store rate
+/// limit, and the clipboard/emit callbacks are injectable for tests.
 fn spawn_clipboard_watcher(
     project_path: String,
     poll_interval: std::time::Duration,
+    passive_interval: std::time::Duration,
     mut read_clipboard: impl FnMut() -> Result<String, String> + Send + 'static,
     emit: impl Fn(&str, serde_json::Value) + Send + Sync + 'static,
 ) -> Result<(), String> {
@@ -1115,8 +1116,10 @@ fn spawn_clipboard_watcher(
 
     let handle = std::thread::spawn(move || {
         let mut last_clip = String::new();
-        // Rate-limit passive-store to ~1 write per 3s; the first new clip is
-        // stored immediately.
+        // Rate-limit passive-store to ~1 write per passive_interval; the first
+        // new clip is stored immediately. Clips are never permanently dropped
+        // by the throttle — the next distinct clip after the window elapses is
+        // captured (M87).
         let mut last_store: Option<std::time::Instant> = None;
         while flag_clone.load(Ordering::SeqCst) {
             std::thread::sleep(poll_interval);
@@ -1143,10 +1146,10 @@ fn spawn_clipboard_watcher(
                 continue; // don't also dump URLs into passive memory
             }
 
-            // ── Regular text — rate-limit passive-store to ~1 per 3s ──────
+            // ── Regular text — rate-limit passive-store to ~1 per window ──
             if trimmed.len() >= 20 {
                 let due = last_store
-                    .map(|t| t.elapsed() >= std::time::Duration::from_secs(3))
+                    .map(|t| t.elapsed() >= passive_interval)
                     .unwrap_or(true);
                 if due {
                     last_store = Some(std::time::Instant::now());
@@ -1176,6 +1179,7 @@ pub fn start_clipboard_watcher(app: tauri::AppHandle, project_path: String) -> R
     spawn_clipboard_watcher(
         project_path,
         std::time::Duration::from_millis(500),
+        std::time::Duration::from_secs(3),
         move || app_clone.clipboard().read_text().map_err(|e| e.to_string()),
         move |event, payload| {
             let _ = app.emit(event, payload);
@@ -2195,9 +2199,10 @@ mod tests {
             std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
         let noop_emit = |_event: &str, _payload: serde_json::Value| {};
         let interval = std::time::Duration::from_millis(10);
+        let throttle = std::time::Duration::from_secs(3);
 
         // Phase 1: watch project A, capture "clipboard memory one".
-        spawn_clipboard_watcher("clipA".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+        spawn_clipboard_watcher("clipA".to_string(), interval, throttle, make_clip_reader(Arc::clone(&clips)), noop_emit)
             .expect("first start should spawn");
         assert!(
             wait_until(|| sem_content("clipA", "clipboard memory one"), 3000),
@@ -2208,7 +2213,7 @@ mod tests {
         stop_clipboard_watcher().expect("stop should join the watcher thread");
         clips.lock().unwrap().clear();
         clips.lock().unwrap().push("clipboard memory two".to_string());
-        spawn_clipboard_watcher("clipB".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+        spawn_clipboard_watcher("clipB".to_string(), interval, throttle, make_clip_reader(Arc::clone(&clips)), noop_emit)
             .expect("second start should spawn");
         assert!(
             wait_until(|| sem_content("clipB", "clipboard memory two"), 3000),
@@ -2245,10 +2250,11 @@ mod tests {
             std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
         let noop_emit = |_event: &str, _payload: serde_json::Value| {};
         let interval = std::time::Duration::from_millis(10);
+        let throttle = std::time::Duration::from_secs(3);
 
-        spawn_clipboard_watcher("clipA".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+        spawn_clipboard_watcher("clipA".to_string(), interval, throttle, make_clip_reader(Arc::clone(&clips)), noop_emit)
             .expect("first start should spawn");
-        spawn_clipboard_watcher("clipB".to_string(), interval, make_clip_reader(Arc::clone(&clips)), noop_emit)
+        spawn_clipboard_watcher("clipB".to_string(), interval, throttle, make_clip_reader(Arc::clone(&clips)), noop_emit)
             .expect("second start while running should be a no-op");
 
         assert!(
@@ -2260,6 +2266,59 @@ mod tests {
             !sem_content("clipB", "clipboard memory one"),
             "second start must not spawn a duplicate watcher"
         );
+
+        stop_clipboard_watcher().expect("cleanup stop");
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn clipboard_watcher_stores_all_distinct_clips() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-clip-throttle-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        // Six distinct snippets copied in quick succession. Under the old
+        // `passive_ticks % 6 == 0` gate only ~1 of these would ever be stored.
+        let six: Vec<String> = (1..=6)
+            .map(|i| format!("clipboard snippet number {}", i))
+            .collect();
+
+        let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+        let noop_emit = |_event: &str, _payload: serde_json::Value| {};
+        let interval = std::time::Duration::from_millis(10);
+        let throttle = std::time::Duration::from_millis(100);
+
+        spawn_clipboard_watcher("clipThrottle".to_string(), interval, throttle, make_clip_reader(Arc::clone(&clips)), noop_emit)
+            .expect("start should spawn");
+
+        // Present each clip after the throttle window has elapsed so EVERY
+        // distinct clip is stored — the throttle must delay stores, never
+        // permanently drop a clip.
+        for clip in &six {
+            clips.lock().unwrap().clear();
+            clips.lock().unwrap().push(clip.clone());
+            assert!(
+                wait_until(|| sem_content("clipThrottle", clip), 5000),
+                "clip '{}' should be stored, not permanently dropped by the throttle",
+                clip
+            );
+            std::thread::sleep(throttle + std::time::Duration::from_millis(50));
+        }
+
+        // And each exactly once (passive_store dedups on exact content).
+        let raw = std::fs::read_to_string(format!("{}/semantic.json", memory_dir("clipThrottle")))
+            .unwrap_or_default();
+        for c in &six {
+            assert_eq!(
+                raw.matches(c).count(),
+                1,
+                "clip '{}' should be stored exactly once",
+                c
+            );
+        }
 
         stop_clipboard_watcher().expect("cleanup stop");
         let _ = std::fs::remove_dir_all(&temp);
