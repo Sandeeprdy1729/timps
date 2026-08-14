@@ -929,10 +929,70 @@ fn infer_domain(content: &str) -> &'static str {
     "general"
 }
 
+// ── Secret detection (M88) ─────────────────────────────────────────────────
+
+static SECRET_PATTERNS: std::sync::OnceLock<Vec<regex::Regex>> = std::sync::OnceLock::new();
+
+/// Detect likely credentials / secrets in copied text so passive clipboard
+/// capture never persists them to disk. Focused on well-structured formats and
+/// key=value / key: value assignments; arbitrary single tokens cannot be
+/// reliably classified and are deliberately left alone (M88).
+fn looks_like_secret(content: &str) -> bool {
+    SECRET_PATTERNS
+        .get_or_init(|| {
+            let raw: &[&str] = &[
+                // AWS access key IDs (AKIA/ASIA/AIDA/AROA/AIPA/ANPA/ANVA/AGPA + 16)
+                r"\b(?:AKIA|ASIA|AIDA|AROA|AIPA|ANPA|ANVA|AGPA)[0-9A-Z]{16}\b",
+                // Standalone 40-char base64 token (e.g. AWS secret access key)
+                r"(?:^|[\W_])([A-Za-z0-9/+=]{40})(?:$|[\W_])",
+                // PEM private key blocks (RSA / EC / OPENSSH / PGP / ENCRYPTED)
+                r"-----BEGIN [A-Za-z0-9 ]*PRIVATE KEY-----",
+                // JWT (three dot-separated segments)
+                r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b",
+                // Stripe secret / test keys
+                r"\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b",
+                // OpenAI-style sk- keys
+                r"\bsk-[A-Za-z0-9_-]{16,}\b",
+                // GitHub classic PATs
+                r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b",
+                // GitHub fine-grained PATs
+                r"\bgithub_pat_[A-Za-z0-9_]{20,}\b",
+                // Slack tokens
+                r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b",
+                // Google API keys
+                r"\bAIza[0-9A-Za-z_-]{30,}\b",
+                // HuggingFace tokens
+                r"\bhf_[A-Za-z0-9]{15,}\b",
+                // GitLab PATs
+                r"\bglpat-[A-Za-z0-9_-]{15,}\b",
+                // xAI keys
+                r"\bxai-[A-Za-z0-9]{20,}\b",
+                // 64-char hex (Ed25519 / secret keys)
+                r"\b[0-9a-fA-F]{64}\b",
+                // key=value / key: value secret assignments
+                r"(?i)\b[a-z0-9_]*(?:api[_-]?key|apikey|secret|password|passwd|pwd|token|access[_-]?key|private[_-]?key|auth[_-]?token|client[_-]?secret)[a-z0-9_]*\b\s*[:=]\s*[^\s]{6,}",
+                // Authorization / x-api-key headers
+                r"(?i)\b(?:authorization|x-api-key)\b\s*:\s*[^\s]{6,}",
+                // Bearer tokens
+                r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{20,}\b",
+                // DB connection strings with embedded credentials
+                r"(?i)\b(?:postgres(?:ql)?|mysql|mariadb|redis|rediss|mongodb(?:\+srv)?|amqp|amqps|nats|clickhouse)://[^/\s@]+:[^@\s]+@",
+                // http(s) URLs with userinfo (user:pass@)
+                r"https?://[^/\s:@]+:[^@\s]+@",
+            ];
+            raw.iter()
+                .map(|p| regex::Regex::new(p).expect("valid secret pattern"))
+                .collect()
+        })
+        .iter()
+        .any(|re| re.is_match(content))
+}
+
 /// Store a passive background observation into semantic memory.
 ///
 /// Called by the passive listener in the frontend whenever the user sends
 /// a message. Content is automatically deduplicated and domain-tagged.
+/// Credentials are never persisted (M88).
 #[tauri::command]
 pub fn passive_store(
     project_path: String,
@@ -942,6 +1002,11 @@ pub fn passive_store(
 ) -> Result<String, String> {
     if content.trim().len() < 10 {
         return Ok("skip:too_short".to_string());
+    }
+
+    // Never persist credentials (M88).
+    if looks_like_secret(&content) {
+        return Ok("skip:secret".to_string());
     }
 
     let _guard = SEMANTIC_LOCK.lock().map_err(|e| e.to_string())?;
@@ -1134,6 +1199,17 @@ fn spawn_clipboard_watcher(
                 continue;
             }
             last_clip = trimmed.clone();
+
+            // ── Secrets are never persisted (M88) ────────────────────────
+            // Checked BEFORE the URL fast-path so credential-bearing URLs
+            // aren't saved to the lens queue either.
+            if looks_like_secret(&trimmed) {
+                emit(
+                    "timps:secret-detected",
+                    serde_json::json!({ "length": trimmed.len() }),
+                );
+                continue;
+            }
 
             // ── URL fast-path: emit event + save to lens queue ──────────
             let link_type = detect_link_type_inner(&trimmed);
@@ -2319,6 +2395,147 @@ mod tests {
                 c
             );
         }
+
+        stop_clipboard_watcher().expect("cleanup stop");
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    // ── M88: secrets must never be persisted ──────────────────────────────
+
+    #[test]
+    fn secret_detection_flags_known_secret_formats() {
+        // Fixtures are fabricated and assembled at runtime (concat! of fragments)
+        // so GitHub's push-protection secret scanner never sees a contiguous
+        // token literal in this source file. The detector still receives the
+        // full reconstructed string and must flag every one.
+        let secrets = [
+            concat!("AKIA", "IOSFODNN7EXAMPLE"), // AWS access key ID
+            concat!("wJalrXUtnF", "EMI/K7MDEN", "G/bPxRfiCY", "EXAMPLEKEY"), // AWS secret (40 chars, public docs sample)
+            concat!("-----BEGIN ", "RSA PRIVATE KEY-----", "\nMIIEowIBAAKCAQEA..."),
+            concat!("-----BEGIN ", "OPENSSH PRIVATE KEY-----"),
+            concat!(
+                "eyJhbGciOiJIUzI1NiJ9",
+                ".",
+                "eyJzdWIiOiJ1c2VyMTIzIn0",
+                ".",
+                "dGhpc2lzdGhlc2lnbmF0dXJlc3RyaW5nZm9yMDAx"
+            ), // JWT
+            concat!("sk-", "proj-1234567890abcdef1234567890abcdef"), // OpenAI-style
+            concat!("sk_", "live_51H4secretkeyabcdefghijklmnop"), // Stripe
+            concat!("ghp_", "123456789012345678901234567890123456"), // GitHub classic PAT
+            concat!("xox", "b-1234567890-1234567890-12345678901234"), // Slack
+            concat!("AIza", "SyD-verylonggoogleyapikeyexample1234567890"), // Google
+            concat!("hf_", "abcdefghijklmnopqrstuv"), // HuggingFace
+            concat!("glpat-", "1234567890abcdefghijklmnopqrstuv"), // GitLab
+            concat!(
+                "AWS_SECRET_ACCESS_KEY=",
+                "wJalrXUtnF",
+                "EMI/K7MDEN",
+                "G/bPxRfiCY",
+                "EXAMPLEKEY"
+            ),
+            concat!("password: ", "hunter2"),
+            concat!("db_token = ", "ghp_", "123456789012345678901234567890123456"),
+            concat!("postgres://", "timpsuser:", "supersecretpass@", "db.example.com:5432/timps"),
+            concat!("https://", "tokenuser:", "tok3np4ss@", "api.example.com/v1/data"),
+            concat!(
+                "Authorization: Bearer ",
+                "dGhpc2lzdmVyeWxvbmdiYXNl",
+                "NjR0b2tlbmZvcnRlc3Rpbmcx"
+            ),
+            concat!("x-api-key: ", "1234567890abcdef", "1234567890abcdef"),
+            concat!(
+                "9f8c7e6a5b4d3c2f",
+                "1e0d9c8b7a654321",
+                "0fedcba987654321",
+                "0123456789abcdef"
+            ), // 64-hex
+        ];
+        for s in secrets {
+            assert!(looks_like_secret(s), "should flag: {}", s);
+        }
+    }
+
+    #[test]
+    fn secret_detection_ignores_normal_content() {
+        let benign = [
+            "clipboard memory one",
+            "clipboard snippet number 1",
+            "the quick brown fox jumps over the lazy dog and keeps running",
+            "https://github.com/Sandeeprdy1729/timps/blob/main/README.md",
+            "http://localhost:11434/api/tags",
+            "mongodb://localhost:27017/timps",
+            "sandeepreddy@example.com",
+            "const MAX_RETRIES = 3; // retry policy",
+            "The project uses Postgres for storage and Redis for caching.",
+            "meeting at 3pm tomorrow in the green room",
+            "Build fails because of a missing dependency in package.json",
+        ];
+        for s in benign {
+            assert!(!looks_like_secret(s), "should NOT flag: {}", s);
+        }
+    }
+
+    #[test]
+    fn clipboard_watcher_and_passive_store_never_persist_secrets() {
+        // Isolate from the real ~/.timps memory via a temp HOME.
+        let _home_guard = HOME_LOCK.lock().unwrap();
+        let temp = std::env::temp_dir().join(format!("timps-clip-secret-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&temp);
+        std::env::set_var("HOME", &temp);
+
+        let aws = concat!("AKIA", "IOSFODNN7EXAMPLE"); // 20 chars — long enough for the watcher
+
+        // 1) Direct command path: passive_store must refuse to persist a secret.
+        let res = passive_store(
+            "secProj".to_string(),
+            aws.to_string(),
+            Some("clipboard".to_string()),
+            vec![],
+        )
+        .expect("returns an Ok skip marker");
+        assert_eq!(res, "skip:secret");
+        assert!(!sem_content("secProj", aws), "secret must not be persisted");
+
+        // 2) Watcher path: a secret on the clipboard is skipped and surfaced
+        //    via the timps:secret-detected event.
+        let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(vec![aws.to_string()]));
+        let events: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
+            std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+        let ev_clone = std::sync::Arc::clone(&events);
+        let emit = move |ev: &str, _p: serde_json::Value| {
+            if ev == "timps:secret-detected" {
+                ev_clone.lock().unwrap().push(ev.to_string());
+            }
+        };
+        spawn_clipboard_watcher(
+            "secProjWatcher".to_string(),
+            std::time::Duration::from_millis(10),
+            std::time::Duration::from_millis(100),
+            make_clip_reader(std::sync::Arc::clone(&clips)),
+            emit,
+        )
+        .expect("start should spawn");
+
+        assert!(
+            wait_until(|| !events.lock().unwrap().is_empty(), 3000),
+            "timps:secret-detected event should fire"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        assert!(
+            !std::path::Path::new(&format!("{}/semantic.json", memory_dir("secProjWatcher")))
+                .exists(),
+            "no semantic.json should be created when only a secret was copied"
+        );
+
+        // 3) Sanity: normal text through the same watcher still stores.
+        clips.lock().unwrap().clear();
+        clips.lock().unwrap().push("clipboard memory one".to_string());
+        assert!(
+            wait_until(|| sem_content("secProjWatcher", "clipboard memory one"), 3000),
+            "normal text should still be captured"
+        );
 
         stop_clipboard_watcher().expect("cleanup stop");
         let _ = std::fs::remove_dir_all(&temp);
