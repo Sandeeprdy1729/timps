@@ -145,28 +145,50 @@ async function main() {
   // ── Contradiction Detection ──────────────────────────────────────────────────
 
   registerTool('timps_check_contradiction', {
-    description: 'Check if a statement contradicts past positions. Use before any opinion or decision.',
+    description: 'Check if a statement contradicts past positions or stored memories. Use before any opinion or decision.',
     inputSchema: {
       text: z.string().describe('Statement to check'),
     },
   }, async ({ text }) => {
+    const negates = (s: string): boolean => /\b(no|not|never|doesn'?t|didn'?t|cannot|can'?t|won'?t|isn'?t|aren'?t|ain'?t|shouldn'?t|mustn'?t|without|opposite)\b/i.test(s);
     if (!SERVER_MODE) {
       const result = localEngine.contradiction.check(text, true);
       if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
-        const score = Math.round((result.contradiction_score || 0) * 100);
         const claim = result.matched_position?.extracted_claim || 'a past position';
-        return { content: [{ type: 'text' as const, text:
-          `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+        if (negates(text) !== negates(claim)) {
+          const score = Math.round((result.contradiction_score || 0) * 100);
+          return { content: [{ type: 'text' as const, text:
+            `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+        }
+        return { content: [{ type: 'text' as const, text: `✓ Consistent with a past position — no contradiction.` }] };
+      }
+      const semantic = localEngine.checkBeforeStore(text);
+      if (semantic.hasConflict && semantic.conflictingEntry) {
+        const storedContent = semantic.conflictingEntry.content;
+        const stored = storedContent.trim().toLowerCase();
+        const claim = text.trim().toLowerCase();
+        if (negates(claim) !== negates(stored)) {
+          const score = Math.round((semantic.similarity || 0) * 100);
+          return { content: [{ type: 'text' as const, text:
+            `⚠️ CONTRADICTION with stored memory (${score}%)\n\nNow: "${text}"\nStored: "${storedContent}"\n\nHave you changed your mind?` }] };
+        }
+        if (stored === claim) {
+          return { content: [{ type: 'text' as const, text: `✓ That memory is already stored — no new position.` }] };
+        }
+        return { content: [{ type: 'text' as const, text: `✓ Consistent with stored memory — no contradiction.` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
     }
     if (memoryClient) {
       const result = await memoryClient.checkContradiction(text, true);
       if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
-        const score = Math.round((result.contradiction_score || 0) * 100);
         const claim = result.matched_position?.extracted_claim || 'a past position';
-        return { content: [{ type: 'text' as const, text:
-          `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+        if (negates(text) !== negates(claim)) {
+          const score = Math.round((result.contradiction_score || 0) * 100);
+          return { content: [{ type: 'text' as const, text:
+            `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
+        }
+        return { content: [{ type: 'text' as const, text: `✓ Consistent with a past position — no contradiction.` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
     }
