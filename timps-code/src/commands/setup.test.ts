@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const reg: McpRegistration = { command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: {} };
-const serverReg: McpRegistration = { command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: { TIMPS_URL: 'http://localhost:4100' } };
+const serverReg: McpRegistration = { command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: { TIMPS_URL: 'http://localhost:4100', TIMPS_MEMORY_URL: 'http://localhost:4100' } };
 
 function target(id: string) {
   const t = targets.find((x) => x.id === id);
@@ -77,9 +77,23 @@ describe('buildRegistration', () => {
     expect(r).toEqual({ command: '/usr/local/bin/timps-mcp', args: [], env: {} });
   });
 
-  it('sets TIMPS_URL env when --server is provided', () => {
+  it('sets TIMPS_URL + TIMPS_MEMORY_URL env when --server is provided', () => {
     const r = buildRegistration({ server: 'http://localhost:4100' });
     expect(r.env.TIMPS_URL).toBe('http://localhost:4100');
+    expect(r.env.TIMPS_MEMORY_URL).toBe('http://localhost:4100');
+  });
+
+  it('TIMPS_SETUP_ENV overrides server env defaults', () => {
+    const env = process.env.TIMPS_SETUP_ENV;
+    process.env.TIMPS_SETUP_ENV = 'TIMPS_MEMORY_URL=http://other:4100';
+    try {
+      const r = buildRegistration({ server: 'http://localhost:4100' });
+      expect(r.env.TIMPS_URL).toBe('http://localhost:4100');
+      expect(r.env.TIMPS_MEMORY_URL).toBe('http://other:4100');
+    } finally {
+      if (env === undefined) delete process.env.TIMPS_SETUP_ENV;
+      else process.env.TIMPS_SETUP_ENV = env;
+    }
   });
 });
 
@@ -100,7 +114,7 @@ describe('JSON agent targets', () => {
     const config: Record<string, unknown> = {};
     t.register(serverReg, config);
     const entry = (config.mcpServers as Record<string, unknown>).timps as Record<string, unknown>;
-    expect(entry.env).toEqual({ TIMPS_URL: 'http://localhost:4100' });
+    expect(entry.env).toEqual({ TIMPS_URL: 'http://localhost:4100', TIMPS_MEMORY_URL: 'http://localhost:4100' });
   });
 
   it('opencode registers with type local + command array + enabled', () => {
