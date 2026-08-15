@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs --no-dts --out-dir dist",
+    "build:standalone": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=dist/timps-mcp.cjs --external:pg --external:ioredis --external:better-sqlite3 --external:@qdrant/js-client-rest",
     "start": "node dist/index.js",
     "typecheck": "node --max-old-space-size=4096 ../node_modules/typescript/bin/tsc --noEmit",
     "test": "vitest run"
