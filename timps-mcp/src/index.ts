@@ -8,7 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { z } from 'zod';
-import { MemoryEngine, MemoryClient } from '@timps-ai/memory-core';
+import { MemoryEngine, MemoryClient, jaccardSimilarity } from '@timps-ai/memory-core';
 
 // ── Runtime mode ────────────────────────────────────────────────────────────
 // LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use
@@ -153,14 +153,12 @@ async function main() {
     const negates = (s: string): boolean => /\b(no|not|never|doesn'?t|didn'?t|cannot|can'?t|won'?t|isn'?t|aren'?t|ain'?t|shouldn'?t|mustn'?t|without|opposite)\b/i.test(s);
     if (!SERVER_MODE) {
       const result = localEngine.contradiction.check(text, true);
-      if (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') {
+      const positionMatch = (result.verdict === 'CONTRADICTION' || result.verdict === 'PARTIAL') ? result : null;
+      if (positionMatch && negates(text) !== negates(positionMatch.matched_position?.extracted_claim || '')) {
+        const score = Math.round((result.contradiction_score || 0) * 100);
         const claim = result.matched_position?.extracted_claim || 'a past position';
-        if (negates(text) !== negates(claim)) {
-          const score = Math.round((result.contradiction_score || 0) * 100);
-          return { content: [{ type: 'text' as const, text:
-            `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
-        }
-        return { content: [{ type: 'text' as const, text: `✓ Consistent with a past position — no contradiction.` }] };
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ CONTRADICTION (${score}%)\n\nNow: "${text}"\nPast: "${claim}"\n\nHave you changed your mind?` }] };
       }
       const semantic = localEngine.checkBeforeStore(text);
       if (semantic.hasConflict && semantic.conflictingEntry) {
@@ -176,6 +174,29 @@ async function main() {
           return { content: [{ type: 'text' as const, text: `✓ That memory is already stored — no new position.` }] };
         }
         return { content: [{ type: 'text' as const, text: `✓ Consistent with stored memory — no contradiction.` }] };
+      }
+      const entries = localEngine.getSemanticEntries();
+      const stop = new Set<string>(['the','a','an','and','or','but','for','with','we','our','us','i','you','they','it','this','that','is','are','was','were','be','been','do','does','did','not','no','never','to','of','in','on','at','by','from','as','use','uses','using']);
+      const claimTokens: string[] = String(text).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      let bestEntry: { content: string } | undefined;
+      let bestShared = 0;
+      for (const e of entries) {
+        const memContent = String(e.content);
+        const sim = jaccardSimilarity(String(text), memContent);
+        if (sim < 0.1) continue;
+        const memTokens = new Set<string>(memContent.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+        let shared = 0;
+        for (const t of new Set<string>(claimTokens)) {
+          if (memTokens.has(t) && !stop.has(t)) shared++;
+        }
+        if (shared > bestShared) { bestShared = shared; bestEntry = { content: memContent }; }
+      }
+      if (bestEntry && bestShared >= 1 && negates(String(text)) !== negates(bestEntry.content)) {
+        return { content: [{ type: 'text' as const, text:
+          `⚠️ Possible contradiction with stored memory\n\nNow: "${text}"\nStored: "${bestEntry.content}"\n\nHave you changed your mind?` }] };
+      }
+      if (positionMatch) {
+        return { content: [{ type: 'text' as const, text: `✓ Consistent with a past position — no contradiction.` }] };
       }
       return { content: [{ type: 'text' as const, text: `✓ No contradiction. Position stored.` }] };
     }
