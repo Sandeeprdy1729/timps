@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import * as os from 'os';
 
 import { addSwarmCommands } from '../swarm/cli.js';
+import { addSetupCommand } from '../commands/setup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..');
@@ -447,5 +448,6 @@ program
   });
 
 addSwarmCommands();
+addSetupCommand(program);
 
 program.parse();
