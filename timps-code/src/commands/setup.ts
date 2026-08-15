@@ -348,7 +348,13 @@ export function uninstallInstructions(target: AgentTarget, dryRun = false): bool
 
 export function buildRegistration(opts: SetupOptions): McpRegistration {
   const env: Record<string, string> = {};
-  if (opts.server) env.TIMPS_URL = opts.server;
+  if (opts.server) {
+    env.TIMPS_URL = opts.server;
+    // Memory tools (store/recall/contradiction) route through the MemoryClient,
+    // which only activates when TIMPS_MEMORY_URL is also set. Override via
+    // TIMPS_SETUP_ENV if you run the legacy packages/server API separately.
+    env.TIMPS_MEMORY_URL = opts.server;
+  }
   const extraEnv = process.env.TIMPS_SETUP_ENV;
   if (extraEnv) {
     for (const pair of extraEnv.split(',')) {
@@ -370,7 +376,7 @@ export function addSetupCommand(program: Command): void {
     .description('Register TIMPS memory as an MCP server for every installed coding agent (Claude Code, Codex, OpenCode, Cursor, Windsurf, Gemini CLI)')
     .option('--list', 'Only list detected agents, do not modify anything')
     .option('--uninstall', 'Remove TIMPS MCP registrations from all detected agents')
-    .option('--server <url>', 'Point agents at a shared MemoryServer instead of local mode (e.g. http://localhost:4100)')
+    .option('--server <url>', 'Point agents at a shared MemoryServer instead of local mode (e.g. http://localhost:4100; sets TIMPS_URL + TIMPS_MEMORY_URL — see DEPLOY.md → MemoryServer)')
     .option('--binary <path>', 'Point agents at a specific timps-mcp binary or bundle path')
     .option('--no-instructions', 'Skip installing memory-usage instructions into agent rule files')
     .option('--dry-run', 'Preview changes without writing files')
@@ -399,7 +405,11 @@ export async function runSetup(opts: SetupOptions): Promise<number> {
     : registration.command;
   if (mode === 'install') {
     console.log(`  ${c.dim}Will register MCP server:${c.reset} ${c.teal}${SERVER_NAME}${c.reset} → ${c.dim}${commandLabel}${c.reset}`);
-    if (opts.server) console.log(`  ${c.dim}Mode:${c.reset} ${c.teal}server${c.reset} → ${c.dim}${opts.server}${c.reset}`);
+    if (opts.server) {
+      console.log(`  ${c.dim}Mode:${c.reset} ${c.teal}server${c.reset} → ${c.dim}${opts.server}${c.reset}`);
+      console.log(`  ${c.dim}Memory tools (store/recall/contradiction) →${c.reset} ${c.dim}${opts.server} via TIMPS_MEMORY_URL${c.reset}`);
+      console.log(`  ${c.dim}Deploy guide:${c.reset} ${c.teal}DEPLOY.md${c.reset} ${c.dim}→ Option 5: MemoryServer full stack${c.reset}`);
+    }
     else console.log(`  ${c.dim}Mode:${c.reset} ${c.teal}local${c.reset} → ${c.dim}FileBackend in the agent's project directory (no server, no API keys)${c.reset}`);
     if (!opts.noInstructions) console.log(`  ${c.dim}Will also install:${c.reset} ${c.teal}memory-usage instructions${c.reset} ${c.dim}in each agent's global rule file (auto-capture of user data)${c.reset}`);
     if (opts.dryRun) console.log(`  ${warn('Dry run — no files will be written.')}\n`);

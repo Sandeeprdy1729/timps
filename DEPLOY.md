@@ -81,6 +81,91 @@ docker push sandeeprdy1729/timps-backend
 4. Configure with Dockerfile or buildpack
 5. Add PostgreSQL database
 
+## Option 5: MemoryServer — canonical scalable memory layer 🧠
+
+The modern TIMPS memory architecture. Agents write to and read from a shared,
+horizontally-scalable `MemoryServer` (HTTP `4100` / gRPC `4101`) instead of a
+per-project file store. Data lives in Postgres (primary + **2 true streaming
+replicas**) behind PgBouncer, Redis powers cache + pub/sub + CRDT conflict
+sync, and Qdrant does hybrid vector search. Prometheus + Grafana + OTel ship in
+the same stack.
+
+```
+Agents (timps-mcp)
+  │  TIMPS_URL + TIMPS_MEMORY_URL
+  ▼
+MemoryServer ×N (stateless, scale with --scale memory=3)
+  │               │            │
+  ▼               ▼            ▼
+Postgres(primary  PgBouncer   Redis (cache+pub/sub)   Qdrant (vectors)
++ 2 replicas)         ▲
+                      └── Prometheus → Grafana (port 3000)
+```
+
+### 1. Deploy the stack
+
+```bash
+cd packages/memory-core
+
+# Generate secrets (never commit these)
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 18)" > .env
+echo "REDIS_PASSWORD=$(openssl rand -base64 18)"   >> .env
+
+docker compose up -d
+docker compose ps
+```
+
+### 2. Verify
+
+```bash
+curl http://localhost:4100/health             # liveness
+curl http://localhost:4100/health/readiness   # probes Postgres/Redis/EventBus/Cache
+curl http://localhost:4100/memory/stats       # memory stats
+```
+
+- Grafana dashboards: `http://localhost:3000` (admin / `$GRAFANA_ADMIN_PASSWORD`)
+- Prometheus: `http://localhost:9090`
+
+### 3. Point your agents at it
+
+```bash
+timps setup --server http://localhost:4100
+```
+
+This registers `timps` (MCP) with every installed agent in server mode. For the
+memory tools to hit the shared server, also export `TIMPS_MEMORY_URL` into the
+agent's environment (use the setup command's escape hatch):
+
+```bash
+TIMPS_SETUP_ENV=TIMPS_MEMORY_URL=http://localhost:4100 timps setup --server http://localhost:4100
+```
+
+Verify with `timps setup --list`, then restart your agents.
+
+### 4. Scale out
+
+```bash
+docker compose up -d --scale memory=3
+```
+
+Replicas auto-register with the shared Postgres/Redis/Qdrant — no per-instance
+state. Prometheus discovers every replica individually.
+
+### 5. Single process (no Docker)
+
+For a small team or a laptop, run the server directly with the file backend:
+
+```bash
+MEMORY_PORT=4100 node packages/memory-core/dist/server/start.js
+```
+
+### 6. Kubernetes
+
+Kustomize manifests live in `packages/memory-core/deploy/k8s/`
+(`kustomize build … | kubectl apply -f -`) with an HPA scaling 2–10 pods at 70%
+CPU. Swap `docker-compose.yml` Postgres/Redis/Qdrant for managed equivalents and
+re-point the `POSTGRES_*`, `REDIS_URL`, `QDRANT_URL` env vars.
+
 ---
 
 ## After Deployment
