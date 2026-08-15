@@ -4,8 +4,17 @@ import {
   targets,
   tomlString,
   upsertTomlSection,
+  buildInstructionBlock,
+  installInstructions,
+  uninstallInstructions,
+  INSTRUCTION_START,
+  INSTRUCTION_END,
   type McpRegistration,
+  type AgentTarget,
 } from './setup.js';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const reg: McpRegistration = { command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: {} };
 const serverReg: McpRegistration = { command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: { TIMPS_URL: 'http://localhost:4100' } };
@@ -141,5 +150,100 @@ describe('codex target (TOML)', () => {
     expect(after).not.toContain('mcp_servers.timps');
     expect(after).toContain('[mcp_servers.node_repl]');
     expect(after).toContain('[other]');
+  });
+});
+
+describe('memory instructions (auto-capture)', () => {
+  const dirs: string[] = [];
+  function tmpAgent(mdc = false): AgentTarget {
+    const dir = mkdtempSync(join(tmpdir(), 'timps-setup-instr-'));
+    dirs.push(dir);
+    const file = join(dir, mdc ? 'timps.mdc' : 'CLAUDE.md');
+    return {
+      id: 'test',
+      name: 'Test Agent',
+      detect: () => true,
+      readConfig: () => undefined,
+      writeConfig: () => {},
+      register: () => {},
+      unregister: () => {},
+      instructionFile: file,
+      instructionMdc: mdc,
+    };
+  }
+  afterAll(() => { for (const d of dirs) rmSync(d, { recursive: true, force: true }); });
+
+  it('buildInstructionBlock is fenced by the markers and mentions the tools', () => {
+    const block = buildInstructionBlock();
+    expect(block.startsWith(INSTRUCTION_START)).toBe(true);
+    expect(block.endsWith(INSTRUCTION_END)).toBe(true);
+    expect(block).toContain('timps_get_memories');
+    expect(block).toContain('timps_store_memory');
+    expect(block).toContain('timps_check_contradiction');
+  });
+
+  it('installs into a plain markdown file, preserving existing content', () => {
+    const t = tmpAgent();
+    writeFileSync(t.instructionFile!, 'My existing notes\n');
+    const status = installInstructions(t);
+    expect(status).toBe('installed');
+    const out = readFileSync(t.instructionFile!, 'utf8');
+    expect(out).toContain('My existing notes');
+    expect(out).toContain(INSTRUCTION_START);
+    expect(out).toContain(INSTRUCTION_END);
+  });
+
+  it('is idempotent — second install returns unchanged', () => {
+    const t = tmpAgent();
+    expect(installInstructions(t)).toBe('installed');
+    expect(installInstructions(t)).toBe('unchanged');
+  });
+
+  it('uninstall removes only the block, leaving surrounding content', () => {
+    const t = tmpAgent();
+    writeFileSync(t.instructionFile!, `Header\n\n${buildInstructionBlock()}\n\nFooter\n`);
+    expect(uninstallInstructions(t)).toBe(true);
+    const out = readFileSync(t.instructionFile!, 'utf8');
+    expect(out).toContain('Header');
+    expect(out).toContain('Footer');
+    expect(out).not.toContain(INSTRUCTION_START);
+    expect(out).not.toContain(INSTRUCTION_END);
+  });
+
+  it('uninstall returns false when the block is absent', () => {
+    const t = tmpAgent();
+    writeFileSync(t.instructionFile!, 'No timps here\n');
+    expect(uninstallInstructions(t)).toBe(false);
+  });
+
+  it('cursor target writes an .mdc rule with alwaysApply frontmatter', () => {
+    const t = tmpAgent(true);
+    expect(installInstructions(t)).toBe('installed');
+    const out = readFileSync(t.instructionFile!, 'utf8');
+    expect(out).toMatch(/^---\n/m);
+    expect(out).toContain('alwaysApply: true');
+    expect(out).toContain(INSTRUCTION_START);
+  });
+
+  it('cursor target uninstall deletes the managed rule file when empty', () => {
+    const t = tmpAgent(true);
+    installInstructions(t);
+    expect(uninstallInstructions(t)).toBe(true);
+    expect(existsSync(t.instructionFile!)).toBe(false);
+  });
+
+  it('respects dryRun — no file written', () => {
+    const t = tmpAgent();
+    expect(installInstructions(t, true)).toBe('installed');
+    expect(existsSync(t.instructionFile!)).toBe(false);
+    expect(installInstructions(t)).toBe('installed');
+    expect(uninstallInstructions(t, true)).toBe(true);
+    expect(readFileSync(t.instructionFile!, 'utf8')).toContain(INSTRUCTION_START);
+  });
+
+  it('skips targets without an instruction file (windsurf)', () => {
+    const t = target('windsurf');
+    expect(installInstructions(t)).toBe('skipped');
+    expect(uninstallInstructions(t)).toBe(false);
   });
 });

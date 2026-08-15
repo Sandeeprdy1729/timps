@@ -35,6 +35,16 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 - TUI: `src/ui/App.tsx` (Ink/React 19).
 - MCP client: `src/services/mcp/`, auto-discovery at `src/tools/mcpDiscovery.ts`.
 
+## Auto-capture & context-anywhere (timps setup / recall)
+
+- `timps setup` installs MCP registration **and** a marker-fenced instruction block (`<!-- timps:memory:start -->` … `<!-- timps:memory:end -->`) into each detected agent's global rule file, so agents pull context at session start and store user data proactively. Files: `~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`, Cursor `~/.cursor/rules/timps.mdc` (`alwaysApply: true` frontmatter). Windsurf has no instruction file (MCP only). See `timps-code/src/commands/setup.ts` (`installInstructions`/`uninstallInstructions`).
+- Idempotent + reversible: re-running `timps setup` is a no-op; `--uninstall` removes the block; `--no-instructions` skips it; `--dry-run` previews. `--binary <path>` points at a specific MCP binary (default is `npx -y @timps-ai/timps-mcp`, which only works once published).
+- CLI commands in `timps-code/src/commands/recall.ts` (wired in `src/bin/timps.ts`):
+  - `timps recall "<query>" [--limit N] [--project <path>]` — search the shared store from any terminal.
+  - `timps context [--project <path>]` — print the full memory context string.
+- **`projectHash()` canonicalizes with `fs.realpathSync`** so a project reachable via multiple path spellings (e.g. `/tmp/…` vs `/private/tmp/…` on macOS) maps to one store under `~/.timps/memory/<hash>/`. Keep this behavior if you touch `packages/memory-core/src/storage.ts` (that package is git-ignored/hidden here; rebuild its dist so `timps-code` picks up the change).
+- End-to-end contract: agents store via `timps_store_memory` MCP (project dir → canonical hash), terminal reads via `timps recall`/`timps context` on the same canonical hash — they always converge on one store.
+
 ## Memory — unified implementations
 
 1. **`packages/memory-core/`** — canonical, source of truth for 25 intelligence tools.
