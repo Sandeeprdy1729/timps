@@ -47,7 +47,7 @@ npx timps-code "what does this codebase do?"
 Claude Code、Cursor、またはMCPクライアントで永続メモリを使うには、MCPサーバーを追加：
 
 ```bash
-npm install -g timps-mcp
+npm install -g @timps-ai/timps-mcp
 ```
 
 MCPクライアントで設定（[MCP設定](#mcp-setup)を参照）。

@@ -47,7 +47,7 @@ Sin instalar, sin configurar, sin API key. Apunta a cualquier repo. Si tienes Ol
 Para obtener memoria persistente en Claude Code, Cursor o cualquier cliente MCP, agrega el servidor MCP:
 
 ```bash
-npm install -g timps-mcp
+npm install -g @timps-ai/timps-mcp
 ```
 
 luego configura tu cliente MCP (instrucciones en [Configuración MCP](#mcp-setup)).

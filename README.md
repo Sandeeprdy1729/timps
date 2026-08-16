@@ -47,7 +47,7 @@ No install, no config, no API key. Point it at any repo. If you have Ollama runn
 To actually get persistent memory in Claude Code, Cursor, or any MCP client, add the MCP server:
 
 ```bash
-npm install -g timps-mcp
+npm install -g @timps-ai/timps-mcp
 ```
 
 then point your MCP client at it (config instructions in [MCP Setup](#mcp-setup)).
