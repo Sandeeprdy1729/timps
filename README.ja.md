@@ -33,7 +33,7 @@
 > TIMPSはAIコーディングエージェントのための永続的メモリ層です。コードベース、決定、バグを記憶するので、Claude、Cursor、Windsurf、またはMCP互換エージェントに同じことを何度も説明する必要はありません。22層のメモリ。25のインテリジェンスツール。30秒でインストール。無料。
 
 <p align="center">
-  <video src="demo/real-demo.mp4" controls width="100%" alt="TIMPSデモ — opencodeのセッションをまたいで記憶し、思い出します"></video>
+  <video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%" alt="TIMPSデモ — opencodeのセッションをまたいで記憶し、思い出します"></video>
 </p>
 
 ---
