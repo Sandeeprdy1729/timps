@@ -47,7 +47,7 @@ npx timps-code "what does this codebase do?"
 Claude Code, Cursor या किसी MCP क्लाइंट में स्थायी मेमोरी के लिए, MCP सर्वर जोड़ें:
 
 ```bash
-npm install -g timps-mcp
+npm install -g @timps-ai/timps-mcp
 ```
 
 फिर अपने MCP क्लाइंट को कॉन्फ़िगर करें ([MCP सेटअप](#mcp-setup) देखें)।

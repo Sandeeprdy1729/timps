@@ -47,7 +47,7 @@ Keine Installation, keine Konfiguration, kein API-Schlüssel. Zeigen Sie es auf 
 Für persistenen Speicher in Claude Code, Cursor oder jedem MCP-Client, fügen Sie den MCP-Server hinzu:
 
 ```bash
-npm install -g timps-mcp
+npm install -g @timps-ai/timps-mcp
 ```
 
 dann richten Sie Ihren MCP-Client ein (Anleitung in [MCP-Einrichtung](#mcp-setup)).
