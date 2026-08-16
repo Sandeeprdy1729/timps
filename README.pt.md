@@ -33,7 +33,7 @@
 > TIMPS é uma camada de memória persistente para agentes de codificação de IA. Ele lembra do seu código, das suas decisões, dos seus bugs — para que Claude, Cursor, Windsurf ou qualquer agente compatível com MCP nunca faça você reexplicar nada. Memória de 22 camadas. 25 ferramentas de inteligência. Instalação de 30 segundos. Gratuito.
 
 <p align="center">
-  <video src="demo/real-demo.mp4" controls width="100%" alt="Demonstração do TIMPS — memoriza e recorda entre sessões do opencode"></video>
+  <video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%" alt="Demonstração do TIMPS — memoriza e recorda entre sessões do opencode"></video>
 </p>
 
 ---

@@ -33,7 +33,7 @@
 > TIMPS is a persistent memory layer for AI coding agents. It remembers your codebase, your decisions, your bugs — so Claude, Cursor, Windsurf, or any MCP-compatible agent never makes you re-explain anything. 22-layer memory. 25 intelligence tools. 30-second install. Free.
 
 <p align="center">
-  <video src="demo/real-demo.mp4" controls width="100%" alt="TIMPS real demo — cross-session memory recall across opencode sessions"></video>
+  <video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%" alt="TIMPS real demo — cross-session memory recall across opencode sessions"></video>
 </p>
 
 ---

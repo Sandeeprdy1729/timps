@@ -33,7 +33,7 @@
 > TIMPS, AI कोडिंग एजेंटों के लिए एक स्थायी मेमोरी परत है। यह आपके कोडबेस, आपके निर्णय, आपकी बग्स को याद रखता है — ताकि Claude, Cursor, Windsurf, या कोई भी MCP-संगत एजेंट आपसे कभी कुछ दोबारा समझाने को न कहे। 22-परत मेमोरी। 25 इंटेलिजेंस टूल। 30 सेकंड में इंस्टॉल। मुफ्त।
 
 <p align="center">
-  <video src="demo/real-demo.mp4" controls width="100%" alt="TIMPS डेमो — opencode सेशन के बीच याद रखें और याद करें"></video>
+  <video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%" alt="TIMPS डेमो — opencode सेशन के बीच याद रखें और याद करें"></video>
 </p>
 
 ---

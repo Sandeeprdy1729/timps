@@ -8,9 +8,16 @@ Real screen recording showing TIMPS in action across opencode sessions: a
 story is stored in one session via `timps_store_memory` and recalled in a
 brand-new session through the shared MemoryServer. Embedded in the main README.
 
+> **Note:** GitHub's `raw.githubusercontent.com` serves `.mp4` as
+> `application/octet-stream`, so browsers refuse to play a relative path. Embed
+> from a `user-attachments` asset URL (upload to an issue/comment) which serves
+> `video/mp4`:
+
 ```markdown
-<video src="demo/real-demo.mp4" controls width="100%"></video>
+<video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%"></video>
 ```
+
+The source file stays at `demo/real-demo.mp4` (also used for VS Code / local playback).
 
 ## `quick_demo.sh` — 2-minute terminal walkthrough
 
