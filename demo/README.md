@@ -2,6 +2,16 @@
 
 This folder contains runnable demos and screen-recording recipes for TIMPS.
 
+## `real-demo.mp4` — cross-session memory recall (OpenCode)
+
+Real screen recording showing TIMPS in action across opencode sessions: a
+story is stored in one session via `timps_store_memory` and recalled in a
+brand-new session through the shared MemoryServer. Embedded in the main README.
+
+```markdown
+<video src="demo/real-demo.mp4" controls width="100%"></video>
+```
+
 ## `quick_demo.sh` — 2-minute terminal walkthrough
 
 Shows the real benchmark running (no `Math.random()`), the CLI with Ollama,

@@ -33,7 +33,7 @@
 > TIMPS ist eine persistente Gedächtnisschicht für KI-Coding-Agenten. Es merkt sich deine Codebasis, deine Entscheidungen, deine Bugs — sodass Claude, Cursor, Windsurf oder jeder MCP-kompatible Agent dich nie wieder etwas erklären lassen muss. 22-Schichten-Gedächtnis. 25 Intelligenz-Tools. 30-Sekunden-Installation. Kostenlos.
 
 <p align="center">
-  <img src="demo/quick_demo.gif" alt="TIMPS Demo — frage 'Erkläre diese Codebasis' und erhalte eine umfassende, gedächtnisgestützte Antwort" width="100%">
+  <video src="demo/real-demo.mp4" controls width="100%" alt="TIMPS Demo — merkt sich Dinge und ruft sie über opencode-Sitzungen hinweg ab"></video>
 </p>
 
 ---
