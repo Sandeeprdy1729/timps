@@ -1,4 +1,4 @@
-# TIMPS — Der KI-Coding-Agent, der sich an alles erinnert
+# TIMPS — Persistenter Speicher für KI-Coding-Agenten
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/assets/banner.png" alt="TIMPS — KI-Coding-Agent" width="100%">
@@ -7,30 +7,28 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/timps-code"><img src="https://img.shields.io/npm/v/timps-code?label=timps-code&color=brightgreen&style=for-the-badge" alt="npm"></a>
   <a href="https://www.npmjs.com/package/timps-mcp"><img src="https://img.shields.io/npm/v/timps-mcp?label=timps-mcp&color=0ea5e9&style=for-the-badge" alt="npm"></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent"><img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=for-the-badge&logo=visualstudiocode" alt="VS Code"></a>
   <a href="https://github.com/Sandeeprdy1729/timps/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Sandeeprdy1729/timps/ci.yml?label=CI&style=for-the-badge" alt="CI"></a>
-  <a href="https://discord.gg/MmsTNm8WF6"><img src="https://img.shields.io/badge/Discord-Join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
 </p>
 
 <p align="center">
-  🏆 <b>Claude Code vergisst alles, wenn du es schließt. TIMPS erinnert sich — für immer.</b><br>
-  <i>100 % kostenlos mit Ollama • Open Source • Läuft vollständig lokal • Keine API-Schlüssel erforderlich</i><br>
-  <strong><a href="https://timps.ai">🌐 timps.ai</a></strong>
+  <b>Claude Code, Cursor und Windsurf vergessen alles, sobald Sie die Sitzung schließen.</b><br>
+  TIMPS ist ein MCP-Server, der Speicher gibt, der Neustarts überlebt — Architektur-Entscheidungen, vergangene Bugs, Ihre Konventionen.<br>
+  <i>Kostenlos und vollständig lokal mit Ollama. Kein API-Schlüssel zum Ausprobieren nötig.</i>
 </p>
 
 <p align="center">
-  <b>Lesen in:</b>
+  <b>Sprachen:</b>
   <a href="README.md">English</a> •
   <a href="README.ja.md">日本語</a> •
-  <a href="README.de.md"><b>Deutsch</b></a> •
+  <a href="README.de.md">Deutsch</a> •
   <a href="README.es.md">Español</a> •
   <a href="README.fr.md">Français</a> •
   <a href="README.hi.md">हिन्दी</a> •
   <a href="README.pt.md">Português</a>
 </p>
 
-> TIMPS ist eine persistente Gedächtnisschicht für KI-Coding-Agenten. Es merkt sich deine Codebasis, deine Entscheidungen, deine Bugs — sodass Claude, Cursor, Windsurf oder jeder MCP-kompatible Agent dich nie wieder etwas erklären lassen muss. 22-Schichten-Gedächtnis. 25 Intelligenz-Tools. 30-Sekunden-Installation. Kostenlos.
+> **Status:** Einzelprojekt, frühe Phase. Der MCP-Server und die CLI sind die Teile, denen ich täglich vertraue. Alles andere in diesem Repo (Desktop-App, Mobile, JetBrains, Plugin-Marktplatz) ist jünger und weniger getestet — unten gekennzeichnet. Ich würde ehrlich lieber, dass Sie den Kern ausprobieren und mir sagen, was kaputt ist, als Marketing-Text zu lesen.
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/7a3ddf8d-efd6-470a-a69b-ed5f54396eb2" controls width="100%" alt="TIMPS Demo — merkt sich Dinge und ruft sie über opencode-Sitzungen hinweg ab"></video>
@@ -38,63 +36,56 @@
 
 ---
 
-## Inhaltsverzeichnis
-
-- [Jetzt ausprobieren (30 Sekunden)](#try-it-now-30-seconds)
-- [Funktionen](#features)
-- [Wie es funktioniert](#how-it-works)
-- [Vergleich](#comparison)
-- [Anwendungsfälle](#use-cases)
-- [Leistung / Benchmarks](#performance--benchmarks)
-- [FAQ](#faq)
-- [Dokumentation](#documentation)
-- [Workflow-Rezepte](#workflow-recipes)
-- [Mitwirkende](#contributors)
-- [Sponsoren](#sponsors)
-- [Stern-Verlauf](#star-history)
-- [Community](#community)
-- [Lizenz](#license)
-
----
-
-## Jetzt ausprobieren (30 Sekunden)
+## In 30 Sekunden ausprobieren
 
 ```bash
-npx timps-code "was macht diese Codebasis?"
+npx timps-code "what does this codebase do?"
 ```
 
-Das war's. Keine Installation, keine Konfiguration, kein API-Schlüssel. TIMPS analysiert das aktuelle Verzeichnis, erstellt ein Speicherprofil und liefert eine umfassende Analyse mit Kontextpersistenz. Wenn Ollama läuft, ist alles 100 % kostenlos und lokal.
+Keine Installation, keine Konfiguration, kein API-Schlüssel. Zeigen Sie es auf jedes Repo. Wenn Ollama lokal läuft, ist das 100% kostenlos und nichts verlässt Ihren Rechner. Wenn nicht, führt es Sie durch die Auswahl eines Providers.
 
-### Einzeilige Installation (Linux / macOS)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sandeeprdy1729/timps/main/install.sh | bash
-```
-
-### CLI (nach der Installation)
-
-```bash
-npm install -g timps-code
-cd dein-projekt
-timps "was macht diese Codebasis?"
-```
-
-Erkennt Ollama automatisch, falls es läuft, oder führt dich durch die Auswahl eines Anbieters:
-
-```bash
-timps --provider claude "refaktoriere das Auth-Modul"    # Claude
-timps --provider gemini "erkläre die Architektur"        # Gemini
-timps --provider ollama "schnelle Reparatur"             # Kostenlos lokal
-timps --provider auto "analysiere diese Codebasis"       # Intelligentes Routing
-```
-
-### MCP-Server (Claude Code / Cursor / Windsurf)
+Für persistenen Speicher in Claude Code, Cursor oder jedem MCP-Client, fügen Sie den MCP-Server hinzu:
 
 ```bash
 npm install -g timps-mcp
 ```
 
-Dann füge zu `~/.claude.json` (Claude Code), `.cursor/mcp.json` (Cursor) oder `~/.config/windsurf/config.json` (Windsurf) hinzu:
+dann richten Sie Ihren MCP-Client ein (Anleitung in [MCP-Einrichtung](#mcp-setup)).
+
+---
+
+## Was es tatsächlich macht
+
+Bitten Sie Claude Code heute einen Bug zu fixen. Schließen Sie die Sitzung. Fragen Sie morgen etwas Ähnliches — es hat keine Ahnung, was Sie gestern entschieden haben, was Sie bereits versucht haben, oder warum Sie etwas so strukturiert haben. Sie erklären jede Sitzung denselben Kontext neu.
+
+TIMPS sitszt als MCP-Server zwischen Ihnen und Ihrem Agenten und speichert einen Speicherstore pro Projekt:
+
+- **Was es merkt sich** — Architektur-Entscheidungen, Muster und Konventionen, die für Ihr Codebase spezifisch sind, Bugs, die Sie bereits hatten und wie sie behoben wurden, und ein einfaches Audit-Log über das, was es geschrieben hat und warum.
+- **Wo es lebt** — Standardmäßig lokale JSON/SQLite-Dateien, pro Projekt Schlüsselgeteilt, damit verschiedene Repos nicht ineinander überlaufen. Optional Postgres/Qdrant für Teamnutzung.
+- **Was es kostet** — kostenlos mit lokalem Ollama. Optionale bezahlte Provider (Claude, GPT, Gemini) für deren Schlussfolgerungsqualität.
+
+Das ist der ganze Pitch. Es ist eine Speicherschicht, kein neuer Agent — es arbeitet neben jedem Coding-Agenten, den Sie bereits verwenden.
+
+---
+
+## Wie es funktioniert (kurze Version)
+
+Intern ist Speicher in einigen Schichten organisiert:
+
+1. **Arbeitsspeicher** — aktuelle Sitzung: aktive Dateien, kürzliche Fehler, Live-Ziele. Wird bei Beendigung gelöscht.
+2. **Episodenspeicher** — ein Log vergangener Sitzungen und deren Ergebnisse.
+3. **Semantischer Speicher** — das Dauerhafte: Muster, Konventionen, Entscheidungen, die aus Episoden befördert wurden, weil sie immer wieder wichtig waren.
+4. **Audit-Trail** — eine append-only, hash-verkettete Aufzeichnung jeder Speicher-Schreibung, damit Sie genau sehen können, was das System gelernt hat und wann.
+
+Darüber gibt es tiefere Subsysteme (Zeitmustererkennung, Widerspruchserkennung, Konfidenz-Scorecard, Importance-basiertes Pruning) — Details in [`ARCHITECTURE.md`](ARCHITECTURE.md). Die meisten brauchen die Interna nicht, um es zu nutzen.
+
+---
+
+## MCP-Einrichtung
+
+### Claude Code
+
+Zu `~/.claude.json` hinzufügen:
 
 ```json
 {
@@ -106,257 +97,66 @@ Dann füge zu `~/.claude.json` (Claude Code), `.cursor/mcp.json` (Cursor) oder `
 }
 ```
 
-### VS Code-Erweiterung
+### Cursor
 
-Installiere vom [Marketplace](https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent) oder:
+Zu `.cursor/mcp.json` hinzufügen:
 
-```bash
-code --install-extension timps-ai-coding-agent
+```json
+{
+  "mcpServers": {
+    "timps": {
+      "command": "timps-mcp"
+    }
+  }
+}
 ```
 
-### Vollständiger Server + Docker
+### Windsurf
 
-```bash
-git clone https://github.com/Sandeeprdy1729/timps
-cd timps && docker compose up -d
-npm install -g timps-mcp
+Zu `~/.config/windsurf/config.json` hinzufügen:
+
+```json
+{
+  "mcpServers": {
+    "timps": {
+      "command": "timps-mcp"
+    }
+  }
+}
 ```
 
----
+### Jeder andere MCP-Client
 
-## Funktionen
-
-- **🧠 22-schichtiges persistentes Gedächtnis** — Episodisch (Sitzungswiederruf), Semantisch (Wissensgraph), Prozedural (Workflows), plus 19 erweiterte Schmiedeschichten (ChronosForge, ResonanceForge, EchoForge, SynapseQuench, HarmonicSheafWeaver und mehr). Das Gedächtnis überdauert Sitzungen, Projekte und Agentenneustarts.
-- **🔧 25 Intelligenz-Tools** — Widerspruchserkennung, Burnout-Vorhersage, Beziehungsverfolgung, Mustererkennung, Anomaliebewertung, semantische Suche, Drift-Erkennung und mehr. Jedes Tool ist klassenbasiert, deterministisch (null `Math.random()`) und benchmarkiert.
-- **💰 100 % kostenlos mit Ollama** — Läuft vollständig lokal. Keine API-Schlüssel erforderlich. Keine Telemetrie. Keine Cloud-Abhängigkeit.
-- **🔌 MCP-nativ** — Funktioniert sofort mit Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode und jedem MCP-kompatiblen Agenten.
-- **🔄 Multi-Anbieter** — Claude, GPT, Gemini, DeepSeek, OpenRouter, Ollama und benutzerdefinierte Endpunkte. Intelligentes automatisches Routing zwischen Anbietern.
-- **🧩 VS Code-Erweiterung** — Vollständige Editor-Integration mit Speicherpanel, Skill-Composer und integrierter Intelligenz.
-- **📱 Multi-Oberfläche** — CLI-Agent, MCP-Server, VS Code-Erweiterung, Tauri-Desktop-App und React Native-Mobilapp.
-- **🔌 Plugin-System** — Erweitere TIMPS mit benutzerdefinierten Plugins. Plugin-SDK inbegriffen.
-- **🏗️ Hybrider Speicher** — SQLite für lokal/leichtgewichtig, optional PostgreSQL für Teams, Qdrant für Vektorsuche.
+Führen Sie `timps-mcp` über stdio aus. Das ist alles, was das Protokoll erfordert.
 
 ---
 
-## Wie es funktioniert
+## Was ehrlich gemessen wird
 
-```mermaid
-graph TB
-    User["🧑 Entwickler"] --> CLI["CLI-Agent timps-code"]
-    User --> VSC["VS Code-Erweiterung"]
-    User --> MCP["MCP-Server timps-mcp"]
+Selber ausführen: `npx tsx benchmark/index.ts --quick`
 
-    CLI --> Core["Speicherkern"]
-    VSC --> Core
-    MCP --> Core
-
-    subgraph Core["TIMPS-Speicherkern"]
-        L1["L1 Arbeitsgedächtnis"]
-        L2["L2 Episodisches Gedächtnis"]
-        L3["L3 Semantisches Gedächtnis"]
-        L4["L4 Prozedurales Gedächtnis"]
-        L5["L5 ChronosForge"]
-        L6["L6 ResonanceForge"]
-        L7["L7 EchoForge"]
-        L8["L8 SynapseQuench"]
-        L9["L9 HarmonicSheafWeaver"]
-        L10["L10 EngramLog"]
-        L11["L11 ConsolidationEngine"]
-        L12["L12 SynapticPruner"]
-        L13["L13 ProvenanceForge"]
-        L14["L14 SpacedRepetitionForge"]
-        L15["L15 ConstitutionalGuard"]
-        L16["L16 AuditForge"]
-        L17["L17 ProspectiveTrigger"]
-        L18["L18 BiasRevealer"]
-        L19["L19 ContextVector"]
-        L20["L20 RehearsalEngine"]
-        L21["L21 SchemaDistorter"]
-        L22["L22 ConfidenceCalibrator"]
-
-        L1 --> L2 --> L3 --> L4 --> L5 --> L6 --> L7 --> L8 --> L9 --> L10 --> L11 --> L12 --> L13 --> L14 --> L15 --> L16 --> L17 --> L18 --> L19 --> L20 --> L21 --> L22
-    end
-
-    Core --> Tools["25 Intelligenz-Tools"]
-    Tools --> Storage["Hybrider Speicher"]
-
-    Storage --> SQLite["SQLite Lokal"]
-    Storage --> PG["PostgreSQL Team"]
-    Storage --> Qdrant["Qdrant Vektor"]
-
-    subgraph Providers["LLM-Anbieter"]
-        Ollama["Ollama 🌿 Kostenlos"]
-        Claude
-        GPT
-        Gemini
-        DeepSeek
-    end
-
-    Core --> Providers
-```
-
-Wenn du TIMPS eine Frage stellst, durchläuft die Anfrage das 22-schichtige Gedächtnissystem. Jede Schicht bereichert den Kontext: Das Arbeitsgedächtnis hält die aktuelle Sitzung, das Episodische ruft vergangene Sitzungen ab, das Semantische stellt Wissensgraph-Beziehungen bereit, das Prozedurale injiziert gelernte Arbeitsabläufe, und die Schmiedeschichten (5–22) kümmern sich um Zeitreihenanalyse, Resonanzabgleich, Synthese von Mustern, assoziativen Abruf, harmonische Verwebung und mehr. Die 25 Intelligenz-Tools verarbeiten den angereicherten Kontext, bevor eine Antwort zurückgegeben wird, die auf allem basiert, was TIMPS über deine Codebasis gelernt hat.
-
----
-
-## Vergleich
-
-| Funktion | TIMPS | agentmemory | Claude Code | MemGPT/Letta | Cline | Continue | Cursor |
-|---|---|---|---|---|---|---|---|
-| Persistentes Gedächtnis | ✅ 22 Schichten | ✅ SQLite | ❌ | ✅ | ❌ | ❌ | ❌ |
-| 25 Intelligenz-Tools | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Kostenlos (Ollama) | ✅ | ✅ | ❌ | ⚠️ Teilweise | ❌ | ✅ | ❌ |
-| MCP-nativ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| VS Code-Erweiterung | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Burnout-Erkennung | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Widerspruchserkennung | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Multi-Anbieter | ✅ 7 Anbieter | ✅ | ❌ 1 Anbieter | ❌ | ✅ | ✅ | ❌ |
-| Selbst gehostet | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Mobile App | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Plugin-System | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-
----
-
-## Anwendungsfälle
-
-- **"Ich benutze Claude Code und habe es satt, meine Codebasis in jeder Sitzung neu erklären zu müssen."** TIMPS speichert alles — Architekturentscheidungen, Bug-Muster, API-Konventionen — über Sitzungen, Projekte und Neustarts hinweg.
-- **"Ich betreibe Ollama lokal und möchte einen KI-Agenten, der kein Telefonat nach Hause führt."** TIMPS ist mit Ollama 100 % lokal. Keine Telemetrie, keine API-Aufrufe, keine Cloud-Abhängigkeit.
-- **"Ich verwalte ein großes Monorepo und mein Agent vergisst ständig den Kontext."** TIMPS' 22-schichtiges Gedächtnis bewältigt Codebasen jeder Größe. Die Schmiedeschichten (ChronosForge, HarmonicSheafWeaver) sind spezialisiert auf langfristige Mustererkennung und dateiübergreifende Beziehungszuordnung.
-- **"Ich möchte, dass mein KI-Agent aus seinen Fehlern lernt."** Widerspruchserkennung, Burnout-Vorhersage und Anomaliebewertung ermöglichen es TIMPS, schlechte Ratschläge zu erkennen und Fehler nicht zu wiederholen.
-- **"Ich baue eine MCP-gestützte Toolchain und brauche ein Gedächtnis, das über mehrere Agenten hinweg funktioniert."** TIMPS ist MCP-nativ. Verbinde es mit Claude Code, Cursor, Windsurf, Cline, Continue, Goose, OpenCode — jedem MCP-Client — und teile das Gedächtnis über alle hinweg.
-
----
-
-## Leistung / Benchmarks
-
-Alle 25 Intelligenz-Tools werden kontinuierlich gegen eine standardisierte Evaluierungssuite benchmarkiert. Die Ergebnisse werden pro Commit verfolgt, um Regressionen zu verhindern.
-
-| Metrik | TIMPS | agentmemory | mem0 | Letta |
-|---|---|---|---|---|
-| **Recall@5 (LongMemEval-S)** | **95%** | 95.2% | 72% | 68% |
-| **MRR (Mean Reciprocal Rank)** | **0.82** | 0.882 | 0.71 | 0.65 |
-| **Widerspruchserkennung** | **100% (10/10)** | — | — | — |
-| **Intelligenz-Tools** | **100% (25/25)** | — | — | — |
-| **Durchschn. Latenz (Abruf)** | **17ms** | 45ms | 120ms | 200ms |
-| **Skalierbarkeit (500 Fakten)** | **0.6ms Mittel / 1ms p95** | — | — | — |
-
-Führe die Benchmark-Suite lokal aus:
-
-```bash
-npx tsx benchmark/index.ts --quick
-```
-
-Alle Tools sind deterministisch — null `Math.random()`-Aufrufe in der Intelligenzschicht.
-
----
-
-## FAQ
-
-**Funktioniert es offline?**  
-Ja. Mit Ollama wird jeder Vorgang lokal ausgeführt, ohne dass eine Internetverbindung erforderlich ist.
-
-**Welche LLMs werden unterstützt?**  
-Ollama (kostenlos, lokal), Claude, GPT-4o, Gemini, DeepSeek, OpenRouter und benutzerdefinierte OpenAI-kompatible Endpunkte.
-
-**Wie werden Daten gespeichert?**  
-Standardmäßig wird lokales SQLite verwendet. Optional PostgreSQL (Teams) und/oder Qdrant (Vektorsuche). Alle Speicher sind nur lokal, es sei denn, du konfigurierst eine entfernte Datenbank.
-
-**Gibt es eine gehostete Version?**  
-Noch nicht. TIMPS ist von Grund auf für Selbsthosting ausgelegt. Cloud-Hosting befindet sich auf der Roadmap.
-
-**Kann ich TIMPS ohne Ollama verwenden?**  
-Ja. TIMPS erkennt verfügbare Anbieter automatisch. Wenn Ollama nicht läuft, führt es dich durch den Verbindungsprozess zu Claude, GPT oder einem anderen Anbieter.
-
-**Wie schneidet TIMPS im Vergleich zu agentmemory ab?**  
-TIMPS hat 22 Gedächtnisschichten gegenüber 1, 25 Intelligenz-Tools gegenüber 0, unterstützt 7 Anbieter gegenüber 3, beinhaltet eine VS Code-Erweiterung, eine mobile App und ein Plugin-System. agentmemory ist einfacher und nur SQLite.
-
-**Kann ich eigene Intelligenz-Tools beitragen?**  
-Ja. Siehe das Plugin-SDK in `packages/plugin-sdk/` und den Mitwirkenden-Leitfaden in [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-**Gibt es eine grafische Benutzeroberfläche?**  
-Ja — VS Code-Erweiterung (nativ), Tauri-Desktop-App (`packages/timps-desktop/`) und eine React Native-Mobilapp (`apps/mobile/`).
-
----
-
-## Dokumentation
-
-| Datei | Inhalt |
+| Metrik | Ergebnis |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 22 Gedächtnisschichten, 25 Tools, Benchmark, CI, MCP-Interna |
-| [`AGENTS.md`](AGENTS.md) | KI-Agentenanweisungen für dieses Repository |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | PR-Checkliste, Skills, Changesets |
-| [`CHANGELOG.md`](CHANGELOG.md) | Versionsverlauf |
+| Recall@5 (20 Testabfragen gegen einen 50-Fakten-Synthese-Korpus) | 19/20 |
+| Widerspruchserkennung (10 bekannte Widerspruchspaare) | 10/10 |
+| Abfrage-Latenz, im Prozess, 500 Fakten | ~1ms p95 |
 
-### Paket-READMEs
-
-| README | Paket |
-|---|---|
-| [`timps-code/README.md`](timps-code/README.md) | CLI-Agent |
-| [`timps-mcp/README.md`](timps-mcp/README.md) | MCP-Server |
-| [`timps-vscode/README.md`](timps-vscode/README.md) | VS Code-Erweiterung |
-| [`packages/server/README.md`](packages/server/README.md) | Vollständiger Server + REST-API |
-| [`packages/memory-core/README.md`](packages/memory-core/README.md) | Speicher-Engine |
-| [`packages/plugin-sdk/README.md`](packages/plugin-sdk/README.md) | Plugin-SDK |
-| [`apps/mobile/README.md`](apps/mobile/README.md) | Mobile App |
+Dies sind selbst ausgeführte Benchmarks auf einem Synthese-Datensatz, nicht unabhängig verifiziert und kein Anspruch für Ihre tatsächliche Codebasis. Nehmen Sie es als „die Kernlogik funktioniert wie entworfen" und nicht als Wettbewerbsaussage.
 
 ---
 
-## Workflow-Rezepte
+## Auch in diesem Repo (früh / experimentell)
 
-Vier einsatzbereite YAML-Workflows für Claude Code und andere KI-Coding-Agenten:
-
-| Workflow | Aufgabe |
-|---|---|
-| [`code-review.yaml`](workflow_recipes/code-review.yaml) | Überprüft gestagete/Branch-Änderungen auf Bugs, Sicherheit, Stil |
-| [`debug-session.yaml`](workflow_recipes/debug-session.yaml) | Systematisches Debuggen: reproduzieren, isolieren, beheben, verifizieren |
-| [`deploy-check.yaml`](workflow_recipes/deploy-check.yaml) | Sicherheitscheckliste vor dem Deployment |
-| [`feature-plan.yaml`](workflow_recipes/feature-plan.yaml) | Plane und scaffold eine neue Funktion mit Tests |
+Das Monorepo enthält eine VS-Code-Erweiterung, eine Desktop-App (Tauri), eine Mobile-App, ein JetBrains-Plugin und einen Multi-Agent „Schwarm"-Modus zur Aufgabendekomposition. Diese existieren und funktionieren größtenteils, wurden aber viel weniger im realen Einsatz getestet als der CLI/MCP-Kern — behandeln Sie sie als „ausprobieren aus Neugier", nicht als produktionsbereit. Ich möchte lieber ehrlich sein, als dass Sie es selbst herausfinden.
 
 ---
 
-## Mitwirkende
+## Ausprobieren und sagen, was falsch ist
 
-<a href="https://github.com/Sandeeprdy1729/timps/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Sandeeprdy1729/timps" alt="Mitwirkende" />
-</a>
+Das ist mir gerade wirklich hilfreich: Führen Sie den 30-Sekunden-Befehl oben auf einem Ihrer echten Repos aus und sagen Sie mir, was kaputt ging, was verwirrend war oder was es falsch gemacht hat. Dieses Feedback ist dieses Projekt mehr wert als ein Stern.
 
-Beiträge aller Art sind willkommen — Code, Dokumentation, Übersetzungen, Plugins oder Bugmeldungen. Siehe [`CONTRIBUTING.md`](CONTRIBUTING.md) für den Einstieg.
-
-### Prämienprogramm
-
-Wir führen regelmäßig Prämienwettbewerbe für größere Funktionen durch. Schau auf [Discord](https://discord.gg/MmsTNm8WF6) nach aktuellen Prämien!
-
----
-
-## Sponsoren
-
-TIMPS ist kostenlos und Open Source. Wenn du es nützlich findest, erwäge bitte, die Entwicklung zu unterstützen:
-
-- [GitHub Sponsors](https://github.com/sponsors/Sandeeprdy1729)
-- [Ko-fi](https://ko-fi.com/timpsai)
-- [Buy Me a Coffee](https://buymeacoffee.com/timpsai)
-
----
-
-## Stern-Verlauf
-
-<a href="https://www.star-history.com/?repos=Sandeeprdy1729%2Ftimps&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Sandeeprdy1729%2Ftimps&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Sandeeprdy1729%2Ftimps&type=date&theme=light&legend=top-left" />
-    <img alt="Stern-Verlauf-Diagramm" src="https://api.star-history.com/chart?repos=Sandeeprdy1729%2Ftimps&type=date&legend=top-left" />
-  </picture>
-</a>
-
----
-
-## Community
-
-- **[Discord](https://discord.gg/MmsTNm8WF6)** — Echtzeit-Chat, Hilfe, Ankündigungen
-- **[GitHub Discussions](https://github.com/Sandeeprdy1729/timps/discussions)** — Fragen & Antworten, Ideen, Funktionsanfragen
-- **[X/Twitter](https://x.com/timpsai)** — Ankündigungen und Updates
-
----
+- Issues: [github.com/Sandeeprdy1729/timps/issues](https://github.com/Sandeeprdy1729/timps/issues)
+- Discord: [discord.gg/MmsTNm8WF6](https://discord.gg/MmsTNm8WF6)
 
 ## Lizenz
 
