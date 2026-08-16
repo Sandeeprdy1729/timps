@@ -38,7 +38,7 @@ const program = new Command();
 program
   .name('timps')
   .description('TIMPS Code — AI coding agent with persistent memory')
-  .version('2.0.1')
+  .version('2.0.2')
   .option('-p, --provider <name>', 'Model provider: claude, openai, gemini, ollama, openrouter, opencode, timps-coder, hybrid')
   .option('-m, --model <model>', 'Model name')
   .option('-d, --dir <path>', 'Working directory')
@@ -321,7 +321,7 @@ program
 
     // Handle version
   if (opts['show-version']) {
-    console.log(`\n  TIMPS Code ${t.accent('2.0.1')}`);
+    console.log(`\n  TIMPS Code ${t.accent('2.0.2')}`);
     console.log(`  ${t.dim('Build: world-no-1-coder')}\n`);
     return;
   }
