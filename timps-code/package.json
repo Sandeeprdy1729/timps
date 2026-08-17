@@ -1,6 +1,6 @@
 {
   "name": "@timps-ai/timps-code",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Open-source CLI coding agent with 22-layer persistent memory. Free with Ollama. Drop-in Claude Code alternative. Works with any model.",
   "type": "module",
   "bin": {
