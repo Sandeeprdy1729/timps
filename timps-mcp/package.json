@@ -1,7 +1,8 @@
 {
   "name": "@timps-ai/timps-mcp",
-  "version": "2.0.2",
-  "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 70 tools for Claude Code, Cursor, and Windsurf",
+  "version": "2.0.3",
+  "mcpName": "io.github.Sandeeprdy1729/timps",
+  "description": "MCP server for TIMPS — persistent memory, contradiction detection, bug patterns, burnout monitoring, and 69 tools for Claude Code, Cursor, and Windsurf",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -50,11 +51,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sandeeprdy1729/timps"
+    "url": "https://github.com/TIMPSs/timps"
   },
-  "homepage": "https://github.com/Sandeeprdy1729/timps/tree/main/timps-mcp",
+  "homepage": "https://github.com/TIMPSs/timps/tree/main/timps-mcp",
   "bugs": {
-    "url": "https://github.com/Sandeeprdy1729/timps/issues"
+    "url": "https://github.com/TIMPSs/timps/issues"
   },
   "dependencies": {
     "@timps-ai/memory-core": "*",

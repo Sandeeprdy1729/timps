@@ -1,0 +1,51 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Sandeeprdy1729/timps",
+  "description": "Persistent memory with contradiction detection, burnout monitoring, and 69 intelligence tools.",
+  "repository": {
+    "url": "https://github.com/TIMPSs/timps",
+    "source": "github",
+    "subfolder": "timps-mcp"
+  },
+  "version": "2.0.3",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@timps-ai/timps-mcp",
+      "version": "2.0.3",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "URL of the TIMPS MemoryServer (e.g. http://localhost:4100). If not set, uses local file-based memory.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "TIMPS_URL"
+        },
+        {
+          "description": "URL of the TIMPS MemoryServer for memory operations. Set to same as TIMPS_URL when using the full stack.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "TIMPS_MEMORY_URL"
+        },
+        {
+          "description": "API key for authenticating with TIMPS MemoryServer. Generate via POST /auth/key on the server.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "TIMPS_API_KEY"
+        },
+        {
+          "description": "Project path for local memory storage. Defaults to current working directory.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "TIMPS_PROJECT_PATH"
+        }
+      ]
+    }
+  ]
+}
