@@ -1,0 +1,10 @@
+name = "timps-mcp"
+main = "src/worker.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables
+[vars]
+TIMPS_MEMORY_URL = "https://turning-resume-beginners-module.trycloudflare.com"
+TIMPS_PROJECT_PATH = "."
+TIMPS_API_KEY = "timps_9c041b146b38bc1f8c047f7cbbad7e27c35ddfc8"
