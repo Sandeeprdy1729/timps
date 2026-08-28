@@ -1,0 +1,81 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — System",
+  "uid": "timps-system",
+  "version": 3,
+  "description": "MemoryServer throughput, backend health, and error rates — derived entirely from server-emitted timps_* metrics (no external exporters required)",
+  "schemaVersion": 39,
+  "tags": ["timps", "system"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "title": "Backend Operations per Second",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum(rate(timps_backend_ops_total[5m])) by (backend, operation)",
+        "legendFormat": "{{backend}} - {{operation}}",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "Backend Latency p95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, sum(rate(timps_backend_latency_bucket[5m])) by (le, backend, operation))",
+        "legendFormat": "{{backend}} - {{operation}}",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Error Rate by Operation",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "sum(rate(timps_errors_total[5m])) by (operation)",
+        "legendFormat": "{{operation}}",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "Guard-Rejected Stores",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{
+        "expr": "rate(timps_guard_rejected_store_total[5m])",
+        "legendFormat": "rejected",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "Store and Recall Throughput",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "rate(timps_store_count_total[5m])", "legendFormat": "store", "interval": "60s" },
+        { "expr": "rate(timps_recall_count_total[5m])", "legendFormat": "recall", "interval": "60s" },
+        { "expr": "rate(timps_consolidate_count_total[5m])", "legendFormat": "consolidate", "interval": "60s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "Semantic Entries",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{
+        "expr": "timps_memory_semantic_entries",
+        "legendFormat": "entries",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}

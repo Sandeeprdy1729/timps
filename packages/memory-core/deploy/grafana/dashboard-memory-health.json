@@ -1,0 +1,54 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "TIMPS — Memory Health",
+  "uid": "timps-memory-health",
+  "version": 2,
+  "description": "Memory layer distribution and contradiction rate per org",
+  "schemaVersion": 39,
+  "tags": ["timps", "memory"],
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      { "name": "layer", "type": "query", "query": "label_values(timps_store_count_total, layer)", "refresh": 1 }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Total Stores by Layer",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum(timps_store_count_total) by (layer)",
+        "legendFormat": "{{layer}}",
+        "interval": "60s"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "stacking": { "mode": "normal" } } }
+      }
+    },
+    {
+      "title": "Contradiction Rate (per 100 stores)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "rate(timps_crdt_conflict_detected_total[5m]) / rate(timps_store_count_total[5m]) * 100",
+        "legendFormat": "contradiction rate",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0 } }
+    },
+    {
+      "title": "Semantic Entries (growth)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "timps_memory_semantic_entries",
+        "legendFormat": "entries",
+        "interval": "60s"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+memory-core
+├── .DS_Store
+├── .npmignore
+├── .turbo
+│   ├── turbo-build.log
+│   └── turbo-typecheck.log
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── SUMMARY.md
+├── adr
+│   └── 001-storage-engine-abstraction.md
+├── benchmark
+│   └── grpc-vs-rest.ts
+├── deploy
+│   ├── grafana
+│   │   ├── dashboard-agent-activity.json
+│   │   ├── dashboard-eval.json
+│   │   ├── dashboard-memory-health.json
+│   │   ├── dashboard-performance.json
+│   │   ├── dashboard-system.json
+│   │   └── dashboards.yml
+│   ├── k8s
+│   │   ├── kustomization.yaml
+│   │   └── timps-memory.yaml
+│   ├── otel
+│   │   └── otel-collector.yml
+│   ├── pgbouncer
+│   │   └── pgbouncer.ini
+│   └── prometheus
+│       └── prometheus.yml
+├── dist
+│   ├── client
+│   │   ├── index.d.ts
+│   │   └── index.js
+│   ├── index-B5AERowt.d.ts
+│   ├── index-B7STM1zm.d.ts
+│   ├── index-BibBWIeA.d.ts
+│   ├── index-BxrEnECf.d.ts
+│   ├── index-Cu2-XXYT.d.ts
+│   ├── index-DgSvLW94.d.ts
+│   ├── index-cqF_3LUI.d.ts
+│   ├── index.d.ts
+│   ├── index.js
+│   ├── server
+│   │   ├── index.d.ts
+│   │   ├── index.js
+│   │   ├── start.d.ts
+│   │   └── start.js
+│   ├── types-B6KQ_2nt.d.ts
+│   ├── types-BjFhJxyf.d.ts
+│   ├── types-LYiNY8T5.d.ts
+│   └── types-kApnCiUf.d.ts
+├── docker-compose.yml
+├── evals
+│   └── datasets
+│       ├── adversarial-contradictions.json
+│       ├── long-context-retrieval.json
+│       ├── multi-agent-consistency.json
+│       ├── multi-layer-recall.json
+│       └── temporal-ordering.json
+├── 
+├── package-lock.json
+├── package.json
+├── proto
+│   └── timps
+│       └── memory
+│           └── v1
+│               └── memory.proto
+├── runtime
+│   ├── constitution.md
+│   └── safety-rules.json
+├── src
+│   ├── AetherForgeERL.test.ts
+│   ├── AetherForgeERL.ts
+│   ├── AuditForge.ts
+│   ├── BiasRevealer.ts
+│   ├── CausalSheafFlux.test.ts
+│   ├── CausalSheafFlux.ts
+│   ├── ChronosForge.ts
+│   ├── ConfidenceCalibrator.ts
+│   ├── ConsolidationEngine.ts
+│   ├── ConstitutionalGuard.ts
+│   ├── ContextVector.ts
+│   ├── EchoForge.test.ts
+│   ├── EchoForge.ts
+│   ├── EclipseForge.test.ts
+│   ├── EclipseForge.ts
+│   ├── EngramLog.ts
+│   ├── HarmonicSheafWeaver.ts
+│   ├── IMemoryLayer.ts
+│   ├── MemoryBranch.test.ts
+│   ├── MemoryBranch.ts
+│   ├── MemoryEngine.test.ts
+│   ├── MemoryEngine.ts
+│   ├── NewLayersAndTools.test.ts
+│   ├── ProspectiveTrigger.ts
+│   ├── ProvenanceForge.ts
+│   ├── QERW.test.ts
+│   ├── QERW.ts
+│   ├── QISRD.test.ts
+│   ├── QISRD.ts
+│   ├── QITRL.test.ts
+│   ├── QITRL.ts
+│   ├── QPTW.test.ts
+│   ├── QPTW.ts
+│   ├── RehearsalEngine.ts
+│   ├── ResonanceForge.test.ts
+│   ├── ResonanceForge.ts
+│   ├── SchemaDistorter.ts
+│   ├── SpacedRepetitionForge.ts
+│   ├── SupraSheaf.test.ts
+│   ├── SupraSheaf.ts
+│   ├── SynapticPruner.ts
+│   ├── TitanicForge.test.ts
+│   ├── TitanicForge.ts
+│   ├── backends
+│   │   ├── FileBackend.ts
+│   │   ├── InMemoryBackend.ts
+│   │   ├── PostgresBackend.ts
+│   │   ├── QdrantBackend.ts
+│   │   ├── RedisBackend.ts
+│   │   ├── SQLiteBackend.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── cache
+│   │   ├── CacheManager.ts
+│   │   ├── CascadeCache.ts
+│   │   ├── ForgeCache.ts
+│   │   ├── L1Cache.ts
+│   │   └── cache.test.ts
+│   ├── chaos.test.ts
+│   ├── client
+│   │   ├── MemoryClient.ts
+│   │   ├── grpc.ts
+│   │   └── index.ts
+│   ├── compaction
+│   │   ├── ArchiveBackend.ts
+│   │   ├── ClusterEngine.ts
+│   │   ├── CompactionPipeline.ts
+│   │   ├── ConstitutionalGuardrails.ts
+│   │   ├── ContentCompressor.ts
+│   │   ├── LLMConsolidationEngine.ts
+│   │   ├── MemoryClassifier.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── compaction.test.ts
+│   ├── computation
+│   │   ├── ComputationQueue.ts
+│   │   ├── LSHIndex.ts
+│   │   ├── MaterializedViews.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── crdt
+│   │   └── MemoryCRDT.ts
+│   ├── echo_forge.py
+│   ├── embedding
+│   │   ├── EmbeddingQueue.ts
+│   │   ├── EmbeddingService.ts
+│   │   ├── index.ts
+│   │   └── types.ts
+│   ├── eval
+│   │   ├── abtest.ts
+│   │   ├── baseline.ts
+│   │   ├── cli.ts
+│   │   ├── eval.test.ts
+│   │   ├── regression.ts
+│   │   ├── runner.ts
+│   │   ├── storage.ts
+│   │   └── types.ts
+│   ├── events
+│   │   └── EventBus.ts
+│   ├── index.ts
+│   ├── intelligence
+│   │   ├── BiasRevealer.ts
+│   │   ├── ConfidenceCalibrator.ts
+│   │   ├── ConflictResolver.ts
+│   │   ├── FalseMemoryDetector.ts
+│   │   ├── MemoryAuditor.ts
+│   │   ├── ProspectiveTrigger.ts
+│   │   ├── SchemaInferrer.ts
+│   │   ├── SourceAttributor.ts
+│   │   ├── apiArchaeologist.ts
+│   │   ├── architectureDrift.ts
+│   │   ├── bugPattern.ts
+│   │   ├── burnout.ts
+│   │   ├── codebaseAnthropologist.ts
+│   │   ├── contradiction.ts
+│   │   ├── curriculum.ts
+│   │   ├── deadReckoning.ts
+│   │   ├── index.ts
+│   │   ├── institutionalMemory.ts
+│   │   ├── livingManifesto.ts
+│   │   ├── meetingGhost.ts
+│   │   ├── patternLearner.ts
+│   │   ├── regretOracle.ts
+│   │   ├── relationship.ts
+│   │   ├── skillShadow.ts
+│   │   ├── techDebt.ts
+│   │   └── velocityTracker.ts
+│   ├── marketplace
+│   │   ├── registry.ts
+│   │   ├── resolver.ts
+│   │   ├── scanner.ts
+│   │   └── types.ts
+│   ├── marketplace.test.ts
+│   ├── memory-unified.test.ts
+│   ├── migrations
+│   │   ├── MigrationEngine.ts
+│   │   ├── index.ts
+│   │   ├── migrations.test.ts
+│   │   ├── types.ts
+│   │   ├── v1_to_v2.ts
+│   │   ├── v2_to_v3.ts
+│   │   └── v3_to_v4.ts
+│   ├── native.ts
+│   ├── rateLimiter.ts
+│   ├── safety
+│   │   ├── ConstitutionalFilter.test.ts
+│   │   └── ConstitutionalFilter.ts
+│   ├── sandbox
+│   │   ├── ConstitutionalSandbox.ts
+│   │   ├── Sandbox.test.ts
+│   │   ├── Sandbox.ts
+│   │   └── WasmSandbox.ts
+│   ├── search
+│   │   ├── hybridRetriever.ts
+│   │   └── rrf.ts
+│   ├── search.ts
+│   ├── server
+│   │   ├── MemoryServer.ts
+│   │   ├── ProjectRoom.ts
+│   │   ├── auth.ts
+│   │   ├── evalRoutes.ts
+│   │   ├── grpc.ts
+│   │   ├── index.ts
+│   │   ├── marketplaceRoutes.ts
+│   │   ├── routes.ts
+│   │   ├── start.ts
+│   │   ├── telemetryRoutes.ts
+│   │   └── websocket.ts
+│   ├── storage.ts
+│   ├── telemetry
+│   │   ├── MetricsRegistry.ts
+│   │   ├── RedactionPipeline.ts
+│   │   ├── TelemetryManager.ts
+│   │   ├── TracerProvider.ts
+│   │   ├── index.ts
+│   │   ├── instrumentation.ts
+│   │   ├── telemetry.test.ts
+│   │   └── types.ts
+│   ├── tenantIsolation.test.ts
+│   └── types.ts
+└── tsconfig.json
