@@ -1,0 +1,106 @@
+{
+  "name": "long-context-retrieval",
+  "version": "1.1.0",
+  "description": "Tests recall quality with 50+ distractor entries that are semantically unrelated to the queries. The system must retrieve the relevant expected memories from a pool of ~75 total entries without false positives from distractor content.",
+  "examples": [
+    {
+      "query": "What is the logging configuration?",
+      "expectedMemories": ["Pino logger with structured JSON output", "Log level defaults to 'info', 'debug' in development", "Error logs include stack traces and request IDs"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are environment variables managed?",
+      "expectedMemories": ["dotenv package loads .env files", "Production secrets in 1Password vault", "Validation via zod schema on startup"],
+      "context": "long-context"
+    },
+    {
+      "query": "What test framework is configured?",
+      "expectedMemories": ["Vitest with happy-dom environment", "Playwright for E2E tests", "80% coverage threshold enforced"],
+      "context": "long-context"
+    },
+    {
+      "query": "Which package manager is used and how?",
+      "expectedMemories": ["pnpm with workspaces", "Lockfile committed to version control", "pnpm-lock.yaml updated via pre-commit hook"],
+      "context": "long-context"
+    },
+    {
+      "query": "What is the API versioning strategy?",
+      "expectedMemories": ["URL-prefix versioning with /api/v1/, /api/v2/", "Deprecated versions maintained for 6 months", "Version negotiation via Accept header"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are background jobs processed?",
+      "expectedMemories": ["BullMQ with Redis backend", "Job queues: default, email, export, cleanup", "Failed jobs retry 3 times with exponential backoff"],
+      "context": "long-context"
+    },
+    {
+      "query": "What is the search infrastructure?",
+      "expectedMemories": ["Meilisearch for full-text search", "Meilisearch index updated via webhook", "Fallback to PostgreSQL full-text search"],
+      "context": "long-context"
+    },
+    {
+      "query": "How are secrets managed?",
+      "expectedMemories": ["1Password for team secrets", "AWS Secrets Manager for production", "Local .env files with example.env template"],
+      "context": "long-context"
+    }
+  ],
+  "distractors": [
+    "ESLint configured with TypeScript strict rules",
+    "Prettier for consistent code formatting",
+    "Husky runs lint-staged on commit",
+    "Commitlint enforces conventional commits",
+    "Sentry for error tracking in production",
+    "Datadog APM for distributed tracing",
+    "S3 bucket for static asset storage",
+    "CloudFront CDN for global asset delivery",
+    "Nginx reverse proxy in front of Node.js server",
+    "Let's Encrypt for automatic TLS certificate renewal",
+    "GitHub Actions cache node_modules for faster CI",
+    "Prisma ORM for database access layer",
+    "Zod schemas validated at service boundary",
+    "tRPC for type-safe API calls between frontend and backend",
+    "NextAuth.js for authentication with multiple providers",
+    "Resend for transactional email delivery",
+    "Tailwind CSS with custom design tokens",
+    "Framer Motion for page transitions and animations",
+    "Radix UI primitives for accessible components",
+    "Storybook for component development and documentation",
+    "Playwright component tests for critical UI",
+    "Lighthouse CI for performance budget enforcement",
+    "Changesets for automated versioning and changelogs",
+    "Renovate bot for automated dependency updates",
+    "Dependabot for security vulnerability alerts",
+    "OpenAPI 3.1 spec generated from tRPC router",
+    "Postman collection exported for API consumers",
+    "HTTP/2 enabled on production load balancer",
+    "gzip compression for all API responses",
+    "Rate limiting at 100 requests per minute per IP",
+    "CORS whitelist configured for frontend domains",
+    "Helmet middleware for security headers",
+    "CSRF protection via double-submit cookie pattern",
+    "bcrypt password hashing with cost factor 12",
+    "Session tokens expire after 24 hours",
+    "Refresh tokens with 7-day expiry and rotation",
+    "Feature flags via LaunchDarkly SDK",
+    "A/B testing framework with GrowthBook integration",
+    "Heap dump analysis for memory leak detection",
+    "Winston logger configured for file transport rotation",
+    "Grafana Loki for log aggregation and querying",
+    "Jaeger for distributed trace visualization",
+    "K6 load testing in CI pipeline",
+    "Artillery for smoke tests on staging deploy",
+    "Terraform for infrastructure as code",
+    "Vault for dynamic database credential rotation",
+    "pgBouncer connection pooling configured at 50 max",
+    "Read replica lag monitored at sub-second threshold",
+    "Weekly backup to S3 Glacier with 30-day retention",
+    "Disaster recovery drill executed quarterly",
+    "Incident response runbook published in wiki",
+    "Kibana dashboard for real-time log monitoring",
+    "Cypress for integration testing of critical flows",
+    "WebSocket connections managed via uWebSockets.js",
+    "Redis cache eviction policy set to allkeys-lru",
+    "PostgreSQL vacuum configured for weekly run",
+    "Node.js cluster mode with worker count equal to CPU cores"
+  ]
+}
