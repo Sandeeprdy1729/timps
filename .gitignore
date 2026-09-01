@@ -122,7 +122,7 @@ packages/memory-core/runtime/safety-log.jsonl
 # memory-core
 
 
-/.research
+/research
 README-full.md
 # Cloudflare Worker config (contains API keys)
 timps-mcp/wrangler.toml

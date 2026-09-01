@@ -911,7 +911,7 @@ export class MemoryEngine {
     // partial "stored semantic but no audit trail" state.
 
     // Layer 5: weave into ChronosForge temporal graph
-    this.chronosForge.weave(content, { tags });
+    this.chronosForge.weave(content, { tags, entryId: id });
     // Layer 6: weave into ResonanceForge causal resonance fields (fire-and-forget)
     void this.resonanceForge.weave(content, { tags });
     // Layer 7: weave into EchoForge causal propagation graph (fire-and-forget)
@@ -1119,6 +1119,11 @@ export class MemoryEngine {
         }
       }
 
+      // Governed forgetting: check ChronosForge supersession status
+      const chronosStatus = useIntel
+        ? this.chronosForge.getStatusByEntryId(entry.id)
+        : 'unknown';
+
       // Composite score: calibrated confidence × context boost × rehearsal boost
       let finalScore = calibratedConfidence * contextBoost * rehearsalBoost;
       // Penalize high false-memory risk (>60%)
@@ -1133,6 +1138,7 @@ export class MemoryEngine {
         sourceKind: prov?.sourceKind ?? 'unknown',
         contextBoost,
         rehearsalBoost,
+        chronosStatus,
       };
     });
 
@@ -1144,6 +1150,12 @@ export class MemoryEngine {
       }
       if (options?.maxFalseMemoryRisk !== undefined) {
         filtered = filtered.filter(e => e.falseMemoryRisk <= options.maxFalseMemoryRisk!);
+      }
+      // Governed forgetting: exclude ChronosForge-superseded entries from
+      // recall by default. 'unknown' entries pass through unaffected — this
+      // only ever removes entries ChronosForge has affirmatively superseded.
+      if (!options?.includeSuperseded) {
+        filtered = filtered.filter(e => e.chronosStatus !== 'superseded');
       }
     }
 
@@ -1162,7 +1174,7 @@ export class MemoryEngine {
    * read `{prefix}:recall:{q}:{type ?? 'all'}:{limit}:{minConf}:{maxRisk}`.
    */
   private _recallCacheKey(query: string, options?: SearchOptions): string {
-    const optSuffix = `${options?.type ?? 'all'}:${options?.limit ?? 10}:${options?.minConfidence ?? 0}:${options?.maxFalseMemoryRisk ?? 1}`;
+    const optSuffix = `${options?.type ?? 'all'}:${options?.limit ?? 10}:${options?.minConfidence ?? 0}:${options?.maxFalseMemoryRisk ?? 1}:${options?.includeSuperseded ? 1 : 0}`;
     const currentScope = typeof (this._backend as any).getScope === 'function'
       ? (this._backend as any).getScope()
       : this.orgScope;
@@ -1617,9 +1629,30 @@ export class MemoryEngine {
     return this.consolidationEngine.run(opts);
   }
 
-  /** L12: Run synaptic pruning sweep. */
+  /** L12: Run synaptic pruning sweep. Manually triggered only — there is no
+   *  scheduler. Each archive/delete decision is written to EngramLog with
+   *  its justification before this returns, so forgetting is auditable:
+   *  the log records which entry, which policy thresholds it crossed, when,
+   *  and under which actor's sweep. */
   runPruneSweep() {
-    return this.synapticPruner.sweep();
+    const result = this.synapticPruner.sweep();
+    const timestamp = Date.now();
+    const actor = this.actorId;
+    for (const e of result.archivedEntries) {
+      this.engramLog.append({
+        timestamp, op: 'archive', layerId: 'L12', entryId: e.id, actorId: actor,
+        payload: { policy: this.synapticPruner.getPolicy() },
+        justification: e.justification,
+      });
+    }
+    for (const e of result.deletedEntries) {
+      this.engramLog.append({
+        timestamp, op: 'delete', layerId: 'L12', entryId: e.id, actorId: actor,
+        payload: { policy: this.synapticPruner.getPolicy() },
+        justification: e.justification,
+      });
+    }
+    return result;
   }
 
   /** L13: Get provenance explanation for a memory. */

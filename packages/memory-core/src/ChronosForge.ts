@@ -38,6 +38,11 @@ export type EdgeType = 'causes' | 'supersedes' | 'contradicts' | 'correlates';
 /** A single bi-temporal memory atom. */
 export interface ChronosNode {
   id: string;
+  /** Id of the semantic memory entry this node was woven from, if any.
+   *  Nullable for backward compatibility with nodes written before this
+   *  field existed, and for callers that weave content with no semantic
+   *  entry of record. */
+  entryId: string | null;
   content: string;
   domain: SignalDomain;
   /** Unix epoch ms — when this fact became true */
@@ -275,6 +280,9 @@ export class ChronosForge implements IMemoryLayer {
       baseImportance?: number;
       validFrom?: number;
       validTo?: number;
+      /** Semantic memory entry id this node corresponds to, if any.
+       *  Enables recall-time lookup of this node's supersession status. */
+      entryId?: string;
     } = {}
   ): WeaveResult {
     const now = nowMs();
@@ -283,6 +291,7 @@ export class ChronosForge implements IMemoryLayer {
     const baseImportance = opts.baseImportance ?? 0.8;
 
     const nodes = this._loadNodes();
+    const newValidFrom = opts.validFrom ?? now;
 
     // ── Step 1: Supersession / contradiction detection ─────────────────
     const supersededIds: string[] = [];
@@ -296,12 +305,28 @@ export class ChronosForge implements IMemoryLayer {
     for (const cand of candidates) {
       const overlap = trigramJaccard(content, cand.content);
       if (overlap >= SUPERSESSION_THRESHOLD) {
-        cand.invalidAt = now;
-        supersededIds.push(cand.id);
-        this._persistEdge({
-          fromId: nodeId, toId: cand.id,
-          weight: overlap, edgeType: 'supersedes', createdAt: now,
-        });
+        // Bi-temporal check: content overlap alone isn't enough to supersede.
+        // A new write describing an EARLIER validity window than an existing
+        // node must not invalidate that node just because the wording is
+        // similar — that would let a late-arriving backfill fact silently
+        // erase a more current one. Only supersede when the new fact's
+        // validFrom is at or after the candidate's; otherwise this is a
+        // genuine bi-temporal conflict (two similar-worded facts about
+        // different periods), recorded as a contradiction instead.
+        if (newValidFrom >= cand.validFrom) {
+          cand.invalidAt = now;
+          supersededIds.push(cand.id);
+          this._persistEdge({
+            fromId: nodeId, toId: cand.id,
+            weight: overlap, edgeType: 'supersedes', createdAt: now,
+          });
+        } else {
+          detectedContradictions.push(cand.id);
+          this._persistEdge({
+            fromId: nodeId, toId: cand.id,
+            weight: overlap, edgeType: 'contradicts', createdAt: now,
+          });
+        }
       } else if (overlap >= CONTRADICTION_LOWER) {
         detectedContradictions.push(cand.id);
         this._persistEdge({
@@ -314,6 +339,7 @@ export class ChronosForge implements IMemoryLayer {
     // ── Step 2: Insert new node ────────────────────────────────────────
     const newNode: ChronosNode = {
       id: nodeId,
+      entryId: opts.entryId ?? null,
       content,
       domain,
       validFrom: opts.validFrom ?? now,
@@ -337,6 +363,33 @@ export class ChronosForge implements IMemoryLayer {
     }
 
     return { nodeId, supersededIds, detectedContradictions };
+  }
+
+  // ── Core: getStatusByEntryId() ──────────────────────────────────────────
+
+  /**
+   * Look up the current ChronosForge status of a semantic memory entry by
+   * its entryId, for use at recall time.
+   *
+   * Returns 'unknown' if no woven node carries this entryId (e.g. it was
+   * stored before entryId linking existed, or with skipGuard/no weave).
+   * Returns 'superseded' if the most recent node for this entryId has been
+   * invalidated (invalidAt !== null) or its validTo window has expired.
+   * Returns 'valid' otherwise.
+   *
+   * If entryId was reused across multiple weaves (should not normally
+   * happen), the most recently created node wins.
+   */
+  getStatusByEntryId(entryId: string): 'valid' | 'superseded' | 'unknown' {
+    const now = nowMs();
+    const nodes = this._loadNodes()
+      .filter(n => n.entryId === entryId)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    const node = nodes[0];
+    if (!node) return 'unknown';
+    if (node.invalidAt !== null) return 'superseded';
+    if (node.validTo !== null && node.validTo <= now) return 'superseded';
+    return 'valid';
   }
 
   // ── Core: queryAt() ────────────────────────────────────────────────────
