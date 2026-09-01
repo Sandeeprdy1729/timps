@@ -27,10 +27,10 @@ jobs:
             command: npm run test --workspace=packages/timps-enterprise
             coverage_files: packages/timps-enterprise/test/auth.test.ts packages/timps-enterprise/test/teamMemory.test.ts packages/timps-enterprise/test/server.test.ts
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload coverage
         if: hashFiles('coverage/${{ matrix.target }}/coverage-final.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.target }}
           path: coverage/${{ matrix.target }}/coverage-final.json
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-*
           merge-multiple: true
@@ -86,10 +86,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -105,10 +105,10 @@ jobs:
     if: hashFiles('packages/memory-core/src/MemoryEngine.ts') != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload benchmark results
         if: hashFiles('.timps/benchmarks/*.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: .timps/benchmarks/*.json
