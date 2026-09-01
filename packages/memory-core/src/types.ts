@@ -60,6 +60,11 @@ export interface SearchOptions {
   platform?: string;
   /** Phase 5e: minimum importance threshold (0-1). Used for digest filtering. */
   importance?: number;
+  /** Governed forgetting: include entries ChronosForge has marked superseded
+   *  (invalidAt set, or validTo window expired). Default false — superseded
+   *  entries are excluded from recall. Set true for audit/debug tooling that
+   *  needs to inspect what was superseded and why. */
+  includeSuperseded?: boolean;
 }
 
 export interface ScoredMemoryEntry extends MemoryEntry {
@@ -69,6 +74,10 @@ export interface ScoredMemoryEntry extends MemoryEntry {
   sourceKind: string;
   contextBoost: number;
   rehearsalBoost: number;
+  /** ChronosForge supersession status for this entry at recall time.
+   *  'unknown' means no woven node is linked to this entryId (e.g. entries
+   *  stored before entryId linking existed, or written with skipGuard). */
+  chronosStatus: 'valid' | 'superseded' | 'unknown';
 }
 
 /** Portable memory snapshot — the "memory pack" format for export/import */

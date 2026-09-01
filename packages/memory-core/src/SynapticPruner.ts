@@ -52,19 +52,45 @@ export class SynapticPruner {
     return 'keep';
   }
 
-  sweep(): { kept: number; archived: number; deleted: number } {
+  /** Human-readable justification for a non-'keep' verdict — states which
+   *  measured values crossed which policy thresholds, so an audit-log entry
+   *  built from this is self-explanatory without re-reading the policy. */
+  private _justify(meta: MemoryMeta, ageDays: number): string {
+    return (
+      `cold ${ageDays.toFixed(1)}d > ${this.policy.coldThresholdDays}d, ` +
+      `importance ${meta.importance.toFixed(2)} < ${this.policy.minImportance}, ` +
+      `confidence ${meta.confidence.toFixed(2)} < ${this.policy.minConfidence}`
+    );
+  }
+
+  sweep(): {
+    kept: number;
+    archived: number;
+    deleted: number;
+    archivedEntries: Array<{ id: string; justification: string }>;
+    deletedEntries: Array<{ id: string; justification: string }>;
+  } {
     const all: MemoryMeta[] = this._readJSON('memory-meta.json', []);
-    if (!Array.isArray(all) || all.length === 0) return { kept: 0, archived: 0, deleted: 0 };
+    if (!Array.isArray(all) || all.length === 0) {
+      return { kept: 0, archived: 0, deleted: 0, archivedEntries: [], deletedEntries: [] };
+    }
 
     const kept: MemoryMeta[] = [];
     const archived: MemoryMeta[] = [];
-    const deleted: string[] = [];
+    const archivedEntries: Array<{ id: string; justification: string }> = [];
+    const deletedEntries: Array<{ id: string; justification: string }> = [];
 
     for (const m of all) {
       const verdict = this.evaluate(m);
-      if (verdict === 'keep') kept.push(m);
-      else if (verdict === 'archive') archived.push(m);
-      else deleted.push(m.id);
+      const ageDays = (Date.now() - m.lastAccess) / (24 * 60 * 60 * 1000);
+      if (verdict === 'keep') {
+        kept.push(m);
+      } else if (verdict === 'archive') {
+        archived.push(m);
+        archivedEntries.push({ id: m.id, justification: this._justify(m, ageDays) });
+      } else {
+        deletedEntries.push({ id: m.id, justification: this._justify(m, ageDays) });
+      }
     }
 
     this._writeJSON('memory-meta.json', kept);
@@ -73,7 +99,13 @@ export class SynapticPruner {
       this._writeJSON('archived-meta.json', [...existing, ...archived]);
     }
 
-    return { kept: kept.length, archived: archived.length, deleted: deleted.length };
+    return {
+      kept: kept.length,
+      archived: archivedEntries.length,
+      deleted: deletedEntries.length,
+      archivedEntries,
+      deletedEntries,
+    };
   }
 
   /** Read a JSON value via the backend when configured, else raw fs. */
