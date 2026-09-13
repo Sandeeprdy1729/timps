@@ -9,148 +9,33 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
   <link rel="stylesheet" href="css/styles.css">
-  <style>
-    .memory-main {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-    .memory-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin: 28px 0 24px;
-    }
-    .mem-stat {
-      background: var(--paper-2, #f4f1e9);
-      border: 1px solid var(--border, rgba(0,0,0,0.08));
-      border-radius: 12px;
-      padding: 16px;
-    }
-    .mem-stat-value {
-      font-size: 26px;
-      font-weight: 700;
-      font-family: "Space Grotesk", sans-serif;
-      color: #2D5A4F;
-    }
-    .mem-stat-label {
-      font-size: 12px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
-    .mem-search {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.14);
-      font-size: 15px;
-      font-family: inherit;
-      background: #fff;
-      margin-bottom: 22px;
-    }
-    .mem-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .mem-card {
-      background: #fff;
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: 12px;
-      padding: 16px 18px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    }
-    .mem-card-head {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .mem-subject {
-      font-weight: 600;
-      font-size: 15px;
-      color: #111827;
-    }
-    .mem-from {
-      font-size: 12.5px;
-      color: #2D5A4F;
-      font-weight: 600;
-    }
-    .mem-date {
-      font-size: 12px;
-      color: #9ca3af;
-      margin-left: auto;
-    }
-    .mem-facts {
-      margin: 10px 0 0;
-      padding-left: 18px;
-    }
-    .mem-facts li {
-      font-size: 13.5px;
-      line-height: 1.55;
-      color: #374151;
-      margin-bottom: 4px;
-    }
-    .mem-empty {
-      color: #6b7280;
-      text-align: center;
-      padding: 40px 0;
-    }
-    .mem-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: #9ca3af;
-      margin-bottom: 24px;
-    }
-    .mem-pill {
-      background: #eef3ef;
-      color: #2D5A4F;
-      border: 1px solid #d4e2da;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .mem-error {
-      color: #b91c1c;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin: 20px 0;
-    }
-  </style>
+  <link rel="stylesheet" href="css/timps.css">
 </head>
 <body>
 
 <nav>
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box" title="TIMPS Robot Mascot">
+      <div class="logo-box" title="TIMPS">
         <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
-          <rect x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
-          <rect x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
-          <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
-          <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
-          <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
-          <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
+          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
+          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
+          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
+          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
+          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
         </svg>
       </div>
       TIMPS
     </a>
     <ul class="nav-links">
-      <li><a href="ecosystem.html">Ecosystem</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="gmail.html">Connectors</a></li>
       <li><a href="memory.html" class="active">Memory</a></li>
-      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
-      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
-      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+      <li><a href="gmail.html">Connectors</a></li>
+      <li><a href="docs.html">Docs</a></li>
+      <li><a href="ecosystem.html">Ecosystem</a></li>
     </ul>
     <div class="nav-cta">
       <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
@@ -160,14 +45,14 @@
 </nav>
 
 <main class="memory-main">
-  <h1 style="font-size: 30px;">TIMPS Memory <span style="color:#2D5A4F;">· Live</span></h1>
-  <p style="color:#374151; max-width: 640px; margin: 12px 0 0;">
+  <h1>TIMPS Memory <span>&middot; live</span></h1>
+  <p class="mem-intro">
     The <a href="gmail.html">Gmail connector</a> distills every synced email into
     knowledge facts and stores them in TIMPS long-term memory. This page renders
     the live store — refreshed every time the sync runs.
   </p>
 
-  <div class="mem-meta" id="mem-meta" style="margin-top: 22px;"></div>
+  <div class="mem-meta" id="mem-meta" style="margin-top: 34px;"></div>
 
   <div class="memory-stats" id="mem-stats"></div>
 
@@ -175,7 +60,24 @@
 
   <div class="mem-list" id="mem-list"></div>
   <div class="mem-empty" id="mem-empty" style="display:none;">No matching memories.</div>
+
+  <div class="callout" style="margin-top:56px;">
+    <strong>Connect yours</strong> — hand the site off to TIMPS on this machine and
+    this page starts filling with your own inbox. <a href="gmail.html#connect">Connect Gmail &rarr;</a>
+  </div>
 </main>
+
+<footer>
+  <div class="footer-inner">
+    <small>TIMPS &mdash; persistent memory for AI coding agents.</small>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="gmail.html">Connectors</a>
+      <a href="docs.html">Docs</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank">GitHub</a>
+    </div>
+  </div>
+</footer>
 
 <script>
 (function () {

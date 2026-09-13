@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/timps.css">
 </head>
 <body>
 
@@ -16,32 +17,29 @@
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
       <div class="logo-box" title="TIMPS Robot Mascot">
-        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
-          <rect x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
-          <rect x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
-          <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
-          <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
-          <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
-          <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+<svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
+          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
+          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
+          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
+          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
+          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
         </svg>
       </div>
       TIMPS
     </a>
     <ul class="nav-links">
-      <li><a href="ecosystem.html">Ecosystem</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="gmail.html" class="active">Connectors</a></li>
       <li><a href="memory.html">Memory</a></li>
-      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
-      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
-      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+      <li><a href="gmail.html" class="active">Connectors</a></li>
+      <li><a href="docs.html">Docs</a></li>
+      <li><a href="ecosystem.html">Ecosystem</a></li>
     </ul>
     <div class="nav-cta">
       <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
-      <a href="memory.html" class="btn btn-primary btn-sm">Live Memory</a>
+      <a href="gmail.html#connect" class="btn btn-primary btn-sm">Connect</a>
     </div>
   </div>
 </nav>
@@ -50,7 +48,8 @@
   <aside class="docs-sidebar">
     <div class="sidebar-group">
       <div class="sidebar-group-label">Connectors</div>
-      <a href="#gmail-overview" class="sidebar-link active">Gmail Overview</a>
+      <a href="#connect" class="sidebar-link active">Connect Gmail</a>
+      <a href="#gmail-overview" class="sidebar-link">Overview</a>
       <a href="#how-it-works" class="sidebar-link">How it works</a>
       <a href="#data-store" class="sidebar-link">Data store</a>
     </div>
@@ -75,6 +74,31 @@
     <h1>Gmail Connector</h1>
     <p style="margin-bottom: 40px;">Turn your inbox into a memory. One OAuth connect, then every synced email is distilled into knowledge facts your agent can recall forever.</p>
     <hr class="divider" style="margin-bottom: 40px;">
+
+    <h2 id="connect">Connect Gmail</h2>
+    <p>One click hands this page off to TIMPS running on this machine — a browser
+    consent screen opens, tokens land in <code>~/.timps/gmail/</code>, and nothing touches any server.</p>
+    <div class="connector" style="max-width: 560px;">
+      <div class="connector-top">
+        <div class="connector-name"><span class="connector-icon">@</span>Gmail</div>
+        <span class="connector-status"><span class="conn-dot" id="gmail-dot"></span><span id="gmail-state">checking&hellip;</span></span>
+      </div>
+      <div class="connector-body">
+        Read-only scope. Distills every synced email into knowledge facts stored in
+        TIMPS memory. Never sends, drafts, or deletes.
+      </div>
+      <div class="connector-stats">
+        <div><span id="gmail-memories">—</span><span>memories</span></div>
+        <div><span id="gmail-facts">—</span><span>facts</span></div>
+        <div><span id="gmail-synced">—</span><span>emails</span></div>
+      </div>
+      <div class="connector-actions">
+        <a href="#connect" class="btn btn-primary btn-sm" data-connect="gmail">Connect Gmail</a>
+        <button class="btn btn-ghost btn-sm" type="button" id="gmail-copy">Copy command</button>
+      </div>
+    </div>
+    <p style="font-size: 0.85rem; margin-top: 14px;">No app installed? Run <code>timps gmail:connect</code> after
+      installing TIMPS, then this page can sync with <code>timps gmail:sync</code>.</p>
 
     <h2 id="gmail-overview">Overview</h2>
     <p>The Gmail connector is a <strong>read-only</strong> integration. It never sends, drafts, or deletes anything.</p>
@@ -158,6 +182,7 @@ timps gmail:cron --remove # remove it</div>
 </div>
 
 <script src="js/main.js"></script>
+<script src="js/connect.js"></script>
 <script>
 const headings = document.querySelectorAll('.docs-content h2[id]');
 const links = document.querySelectorAll('.sidebar-link');
