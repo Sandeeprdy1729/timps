@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TIMPS Memory — live store rendered from the Gmail connector. Distilled email facts synced straight into TIMPS long-term memory.">
+  <title>TIMPS Memory — Live Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/timps-fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .memory-main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .memory-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 28px 0 24px;
+    }
+    .mem-stat {
+      background: var(--paper-2, #f4f1e9);
+      border: 1px solid var(--border, rgba(0,0,0,0.08));
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .mem-stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: "Space Grotesk", sans-serif;
+      color: #2D5A4F;
+    }
+    .mem-stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    .mem-search {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.14);
+      font-size: 15px;
+      font-family: inherit;
+      background: #fff;
+      margin-bottom: 22px;
+    }
+    .mem-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .mem-card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .mem-card-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .mem-subject {
+      font-weight: 600;
+      font-size: 15px;
+      color: #111827;
+    }
+    .mem-from {
+      font-size: 12.5px;
+      color: #2D5A4F;
+      font-weight: 600;
+    }
+    .mem-date {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-left: auto;
+    }
+    .mem-facts {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+    .mem-facts li {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    .mem-empty {
+      color: #6b7280;
+      text-align: center;
+      padding: 40px 0;
+    }
+    .mem-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 24px;
+    }
+    .mem-pill {
+      background: #eef3ef;
+      color: #2D5A4F;
+      border: 1px solid #d4e2da;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .mem-error {
+      color: #b91c1c;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-box" title="TIMPS Robot Mascot">
+        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
+          <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
+          <rect x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
+          <rect x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
+          <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
+          <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
+          <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
+          <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
+          <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+        </svg>
+      </div>
+      TIMPS
+    </a>
+    <ul class="nav-links">
+      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li><a href="docs.html">Docs</a></li>
+      <li><a href="gmail.html">Connectors</a></li>
+      <li><a href="memory.html" class="active">Memory</a></li>
+      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
+      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
+      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
+      <a href="index.html" class="btn btn-primary btn-sm">Home</a>
+    </div>
+  </div>
+</nav>
+
+<main class="memory-main">
+  <h1 style="font-size: 30px;">TIMPS Memory <span style="color:#2D5A4F;">· Live</span></h1>
+  <p style="color:#374151; max-width: 640px; margin: 12px 0 0;">
+    The <a href="gmail.html">Gmail connector</a> distills every synced email into
+    knowledge facts and stores them in TIMPS long-term memory. This page renders
+    the live store — refreshed every time the sync runs.
+  </p>
+
+  <div class="mem-meta" id="mem-meta" style="margin-top: 22px;"></div>
+
+  <div class="memory-stats" id="mem-stats"></div>
+
+  <input id="mem-search" class="mem-search" type="search" placeholder="Filter memory by subject, sender, or fact…" autocomplete="off">
+
+  <div class="mem-list" id="mem-list"></div>
+  <div class="mem-empty" id="mem-empty" style="display:none;">No matching memories.</div>
+</main>
+
+<script>
+(function () {
+  var state = null;
+  var emails = [];
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' \u00b7 ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderStats() {
+    var statsEl = document.getElementById('mem-stats');
+    if (!state) { statsEl.innerHTML = ''; return; }
+    var s = state.store || {};
+    var cells = [
+      ['memories', s.summaryCount],
+      ['facts', s.totalFacts],
+      ['emails synced', s.messagesSynced],
+      ['last sync', fmtDate(s.lastRun) || 'never']
+    ];
+    statsEl.innerHTML = cells.map(function (c) {
+      return '<div class="mem-stat"><div class="mem-stat-value">' + esc(c[1]) + '</div><div class="mem-stat-label">' + esc(c[0]) + '</div></div>';
+    }).join('');
+    document.getElementById('mem-meta').innerHTML =
+      '<span class="mem-pill">' + esc((s.summaryCount || 0)) + ' memories \u00b7 auto-synced</span>' +
+      '<span>generated ' + fmtDate(state.generatedAt) + '</span>' +
+      '<span>source: ' + esc(state.source || '') + '</span>';
+  }
+
+  function renderList(filter) {
+    var listEl = document.getElementById('mem-list');
+    var emptyEl = document.getElementById('mem-empty');
+    filter = (filter || '').trim().toLowerCase();
+
+    var rows = emails;
+    if (filter) {
+      rows = emails.filter(function (e) {
+        var hay = [e.subject, e.from, (e.facts || []).join(' ')].join(' ').toLowerCase();
+        return hay.indexOf(filter) !== -1;
+      });
+    }
+
+    emptyEl.style.display = rows.length ? 'none' : 'block';
+    listEl.innerHTML = rows.slice(0, 200).map(function (e) {
+      var facts = (e.facts || []).slice(0, 6).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('');
+      return '<div class="mem-card">' +
+        '<div class="mem-card-head">' +
+          '<span class="mem-subject">' + esc(e.subject || '(no subject)') + '</span>' +
+          '<span class="mem-from">' + esc(e.from || '') + '</span>' +
+          '<span class="mem-date">' + esc(fmtDate(e.syncedAt || e.date)) + '</span>' +
+        '</div>' +
+        (facts ? '<ul class="mem-facts">' + facts + '</ul>' : '') +
+      '</div>';
+    }).join('');
+
+    if (!rows.length) listEl.innerHTML = '';
+  }
+
+  fetch('data/gmail-memory.json')
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      state = data;
+      emails = data.emails || [];
+      renderStats();
+      renderList('');
+    })
+    .catch(function (err) {
+      document.getElementById('mem-list').innerHTML =
+        '<div class="mem-error">Could not load memory data: ' + esc(err.message) + '. ' +
+        'Regenerate it with <code>node timps-website/tools/build-gmail-memory.mjs</code> and redeploy.</div>';
+    });
+
+  document.getElementById('mem-search').addEventListener('input', function (e) {
+    renderList(e.target.value);
+  });
+})();
+</script>
+</body>
+</html>

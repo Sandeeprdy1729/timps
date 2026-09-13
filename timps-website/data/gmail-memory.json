@@ -1,0 +1,2576 @@
+{
+  "generatedAt": "2026-09-13T19:24:47.511Z",
+  "source": "~/.timps/gmail",
+  "store": {
+    "lastRun": "2026-09-13T18:58:56.611Z",
+    "messagesSynced": 154,
+    "summaryCount": 197,
+    "totalFacts": 591
+  },
+  "emails": [
+    {
+      "emailId": "19e98d2b9300a0c8",
+      "subject": "Security alert",
+      "from": "Google <no-reply@accounts.google.com>",
+      "date": "Fri, 05 Jun 2026 17:26:46 GMT",
+      "facts": [
+        "Email from Google <no-reply@accounts.google.com>: \"Security alert\"",
+        "[image: Google] New passkey added to your account timps.",
+        "com If you didn’t add a passkey, someone might be using your account."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:54.810Z"
+    },
+    {
+      "emailId": "19e98d2c5aa20f7c",
+      "subject": "Your Google Account was recovered successfully",
+      "from": "Google <no-reply@accounts.google.com>",
+      "date": "Fri, 05 Jun 2026 17:26:48 GMT",
+      "facts": [
+        "Email from Google <no-reply@accounts.google.com>: \"Your Google Account was recovered successfully\"",
+        "[image: Google] Account recovered successfully timps.",
+        "com Welcome back to your accountIf you suspect you were locked out of your account because of changes made by someone else, you should review & protect your account."
+      ],
+      "method": "heuristic",
+      "error": "fetch failed",
+      "syncedAt": "2026-09-13T18:49:53.550Z"
+    },
+    {
+      "emailId": "19e9a2012572abe5",
+      "subject": "Your week with Kit",
+      "from": "Kit <help@convertkit.com>",
+      "date": "Fri, 05 Jun 2026 23:30:51 +0000 (UTC)",
+      "facts": [
+        "Email from Kit <help@convertkit.com>: \"Your week with Kit\"",
+        "Kit Company Email 96 TIMPs | 29 MAY - 5 JUNE Subscribers Grow your email list We’ve collected years of information from successful creators on how to grow your list.",
+        "If you’re unsure about where to start or how to grow your list, Check out these ideas on how to grow your email list for free ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:52.924Z"
+    },
+    {
+      "emailId": "19e9ba9480ed25da",
+      "subject": "Your free trial has expired",
+      "from": "Shiv at Kit <help@convertkit.com>",
+      "date": "Sat, 06 Jun 2026 06:40:22 +0000 (UTC)",
+      "facts": [
+        "Email from Shiv at Kit <help@convertkit.com>: \"Your free trial has expired\"",
+        "Kit Company Email 96 Hey TIMPs, We wanted to let you know that your free trial has expired, so you no longer have access to Creator Plan features.",
+        "Add a payment card today to regain access to all the powerful features you explored on your trial."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:51.900Z"
+    },
+    {
+      "emailId": "19e9daf3bd683c9b",
+      "subject": "“Get your Splenda and go”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 6 Jun 2026 13:01:14 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“Get your Splenda and go”\"",
+        "View this post on the web at https://post.",
+        "com/p/get-your-splenda-and-go This week, we’re learning about weird medieval guys, making eye contact with strangers, and getting lost in the Backrooms."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:50.879Z"
+    },
+    {
+      "emailId": "19ea1171bc0fda3e",
+      "subject": "Our CEO is too available",
+      "from": "\"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>",
+      "date": "Sun, 07 Jun 2026 07:58:24 +0000 (UTC)",
+      "facts": [
+        "Email from \"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>: \"Our CEO is too available\"",
+        "There’s another part of beehiiv that’s just as important as the tech: the people.",
+        "Summer Release 2026: What's the future look like at beehiiv?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:49.750Z"
+    },
+    {
+      "emailId": "19eab63dbc2c0bb0",
+      "subject": "Meet our support team",
+      "from": "\"Bea @ beehiiv 🐝\" <bea@cx.beehiiv.com>",
+      "date": "Tue, 09 Jun 2026 07:58:27 +0000 (UTC)",
+      "facts": [
+        "Email from \"Bea @ beehiiv 🐝\" <bea@cx.beehiiv.com>: \"Meet our support team\"",
+        "I know I’ve been talking about my colleagues on the customer support team quite a bit, but it’s time to zoom in on just how incredibly helpful they can be.",
+        "Summer Release 2026: What's the future look like at beehiiv?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:48.727Z"
+    },
+    {
+      "emailId": "19eac88fd9310c64",
+      "subject": "Watch live as we unveil Kit's biggest product release of the year",
+      "from": "Caitlin at Kit <help@mail.kit.com>",
+      "date": "Tue, 09 Jun 2026 13:18:37 +0000 (UTC)",
+      "facts": [
+        "Email from Caitlin at Kit <help@mail.kit.com>: \"Watch live as we unveil Kit's biggest product release of the year\"",
+        "com/38uo43k935ukh25xn50frh4me3xl0u7hxk/wnh2h6uqp2gpx4clu3/aHR0cHM6Ly9hcHAua2l0LmNvbS9kYXNoYm9hcmQ_dXRtX2NhbXBhaWduPW5ld3NsZXR0ZXImdXRtX3NvdXJjZT1jb252ZXJ0a2l0JnV0bV9tZWRpdW09ZW1haWwmdXRtX2NvbnRlbnQ9aGVhZGVyX2xvZ28= ) -->Log in ( https://a3c65c29.",
+        "com/38uo43k935ukh25xn50frh4me3xl0u7hxk/reh8h9umrlxrwvi6u7/aHR0cHM6Ly9hcHAua2l0LmNvbS9kYXNoYm9hcmQ_dXRtX2NhbXBhaWduPW5ld3NsZXR0ZXImdXRtX3NvdXJjZT1jb252ZXJ0a2l0JnV0bV9tZWRpdW09ZW1haWwmdXRtX2NvbnRlbnQ9aGVhZGVy ) Log in ( https://app."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:47.702Z"
+    },
+    {
+      "emailId": "19ead45496505a93",
+      "subject": "🔴 Shoot for the moon",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 9 Jun 2026 16:44:19 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 Shoot for the moon\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:46.678Z"
+    },
+    {
+      "emailId": "19eb11611ca39b4b",
+      "subject": "New privacy settings for Search services",
+      "from": "Google <google-noreply@google.com>",
+      "date": "Wed, 10 Jun 2026 03:31:13 -0700",
+      "facts": [
+        "Email from Google <google-noreply@google.com>: \"New privacy settings for Search services\"",
+        "com Hello Sandeep, We’re updating our settings to give you even more control over saved history and personalized recommendations across Google Search services, including Search, Maps, Shopping, Hotels, Flights, Translate, and News.",
+        "You’ll see this change in your Google Account in the next few days."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:45.404Z"
+    },
+    {
+      "emailId": "19eb1a9950263b62",
+      "subject": "Easy self-care you can start today",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Wed, 10 Jun 2026 13:12:19 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Easy self-care you can start today\"",
+        "Generate, refine, and export in minutes Just tap a chat to start Try these ideas for fitting in more wellness.",
+        "Make a no-equipment, 20-minute home workout I want to eat more protein."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:44.335Z"
+    },
+    {
+      "emailId": "19eb3362e0b58c8b",
+      "subject": "\"How To Talk To Anyone, At Any Time: The art of Extroversion\" and 3 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 10 Jun 2026 20:25:32 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"How To Talk To Anyone, At Any Time: The art of Extroversion\" and 3 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "Gabriel's Archive How To Talk To Anyone, At Any Time: The art of Extroversion Jazz on low."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:43.444Z"
+    },
+    {
+      "emailId": "19eb7ac8b9be3ecc",
+      "subject": "Open Tab: Lachlan Cartwright",
+      "from": "Substack <on+open-tab@substack.com>",
+      "date": "Thu, 11 Jun 2026 16:01:21 +0000",
+      "facts": [
+        "Email from Substack <on+open-tab@substack.com>: \"Open Tab: Lachlan Cartwright\"",
+        "com/p/open-tab-lachlan-cartwright In this week’s Open Tab, Australian-born, New York–based muckraker Lachlan Cartwright sat down with Substack co-founder Hamish McKenzie to walk through two decades covering media, money, and power—from The Sun and the New York Post to executive editor of the National Enquirer, where he went from breaking news to becoming an anonymous source in one of the biggest p…",
+        "His New York Times Magazine cover story on the catch-and-kill operation that protected Donald Trump and Harvey Weinstein took a year to write and earned him multimillion-dollar legal threats in the process."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:42.265Z"
+    },
+    {
+      "emailId": "19ebad6eea70018e",
+      "subject": "Been there, still doing that",
+      "from": "\"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>",
+      "date": "Fri, 12 Jun 2026 07:58:27 +0000 (UTC)",
+      "facts": [
+        "Email from \"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>: \"Been there, still doing that\"",
+        "I imagine there’s one question we’ve left unanswered: Why choose beehiiv?",
+        "Summer Release 2026: What's the future look like at beehiiv?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:41.181Z"
+    },
+    {
+      "emailId": "19ebc9d5322df764",
+      "subject": "🔴 Interviewing couples for millions of views",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 12 Jun 2026 16:14:47 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 Interviewing couples for millions of views\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/ebd8a72e-67a6-4e0c-86d0-702435a73b55/unnamed__1_.",
+        "t=1749215493) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:39.772Z"
+    },
+    {
+      "emailId": "19ebed6be021d984",
+      "subject": "You shared some Google Account data with MiniMax-AI",
+      "from": "Google <noreply-accounts@google.com>",
+      "date": "Fri, 12 Jun 2026 19:36:44 -0700",
+      "facts": [
+        "Email from Google <noreply-accounts@google.com>: \"You shared some Google Account data with MiniMax-AI\"",
+        "Keep track of your Google Account data timps.",
+        "com You're receiving this email because you used Sign in with Google to sign in to MiniMax-AI on June 13 at 8:06 AM ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:38.934Z"
+    },
+    {
+      "emailId": "19ec1be2d13078a2",
+      "subject": "“Make the art, then secure the bag”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 13 Jun 2026 13:03:42 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“Make the art, then secure the bag”\"",
+        "View this post on the web at https://post.",
+        "com/p/make-the-art-then-secure-the-bag This week, we’re re-familiarizing ourselves with DJ Khaled, committing to curiosity, and splurging within reason."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:37.774Z"
+    },
+    {
+      "emailId": "19ec64bc659f75ba",
+      "subject": "Use ChatGPT to make life easier",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Sun, 14 Jun 2026 13:21:54 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Use ChatGPT to make life easier\"",
+        "Generate, refine, and export in minutes Just tap a chat to start See everything ChatGPT can do for you.",
+        "Turn the photo into a recipe I can try I can’t make a meeting anymore."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:35.785Z"
+    },
+    {
+      "emailId": "19ed04ac488a8c67",
+      "subject": "Security alert",
+      "from": "Google <no-reply@accounts.google.com>",
+      "date": "Tue, 16 Jun 2026 11:57:00 GMT",
+      "facts": [
+        "Email from Google <no-reply@accounts.google.com>: \"Security alert\"",
+        "[image: Google] You allowed Google Drive for desktop access to some of your Google Account data timps.",
+        "com If you didn’t allow Google Drive for desktop access to some of your Google Account data, someone else may be trying to access your Google Account data."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:34.800Z"
+    },
+    {
+      "emailId": "19ed08a0624371cc",
+      "subject": "Write Access is here",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Tue, 16 Jun 2026 13:05:38 +0000",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"Write Access is here\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- Back in March, we were the first newsletter platform to introduce an MCP."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:33.859Z"
+    },
+    {
+      "emailId": "19ed09781d1fbe18",
+      "subject": "Kit Studios NYC is here",
+      "from": "Caitlin at Kit <help@mail.kit.com>",
+      "date": "Tue, 16 Jun 2026 13:20:49 +0000 (UTC)",
+      "facts": [
+        "Email from Caitlin at Kit <help@mail.kit.com>: \"Kit Studios NYC is here\"",
+        "com/d0u7xo8no2b0ho9l584amhz96vdzoilhg9/25h2h9u3z56d4va8u0/aHR0cHM6Ly9hcHAua2l0LmNvbS9kYXNoYm9hcmQ_dXRtX2NhbXBhaWduPW5ld3NsZXR0ZXImdXRtX3NvdXJjZT1jb252ZXJ0a2l0JnV0bV9tZWRpdW09ZW1haWwmdXRtX2NvbnRlbnQ9aGVhZGVyX2xvZ28= ) -->Log in ( https://a3c65c29.",
+        "com/d0u7xo8no2b0ho9l584amhz96vdzoilhg9/qvh8h8ud5xzno4igul/aHR0cHM6Ly9hcHAua2l0LmNvbS9kYXNoYm9hcmQ_dXRtX2NhbXBhaWduPW5ld3NsZXR0ZXImdXRtX3NvdXJjZT1jb252ZXJ0a2l0JnV0bV9tZWRpdW09ZW1haWwmdXRtX2NvbnRlbnQ9aGVhZGVy ) Log in ( https://app."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:32.816Z"
+    },
+    {
+      "emailId": "19ed13358088c387",
+      "subject": "🔴 The creator who planned his own obsolescence",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 16 Jun 2026 16:07:11 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 The creator who planned his own obsolescence\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:31.783Z"
+    },
+    {
+      "emailId": "19ed18ca9b9a4998",
+      "subject": "Sandeep, new Google Flow features have arrived",
+      "from": "Google Flow <flow-email-noreply@google.com>",
+      "date": "Tue, 16 Jun 2026 10:48:36 -0700",
+      "facts": [
+        "Email from Google Flow <flow-email-noreply@google.com>: \"Sandeep, new Google Flow features have arrived\"",
+        "Our latest feature drop at Google I/O brings you a new multimodal model, an agentic experience, and Google Flow Tools to amplify your vision and help unlock your best work.",
+        "Create with Google Flow Transform videos with Gemini Omni."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:30.669Z"
+    },
+    {
+      "emailId": "19ed499c2af7f4b2",
+      "subject": "You shared some Google Account data with Kaggle",
+      "from": "Google <noreply-accounts@google.com>",
+      "date": "Wed, 17 Jun 2026 01:01:46 -0700",
+      "facts": [
+        "Email from Google <noreply-accounts@google.com>: \"You shared some Google Account data with Kaggle\"",
+        "Keep track of your Google Account data timps.",
+        "com You're receiving this email because you used Sign in with Google to sign in to Kaggle on June 17 at 1:31 PM ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:29.884Z"
+    },
+    {
+      "emailId": "19ed4a8c2dc4c3c1",
+      "subject": "Multiple Accounts Alert",
+      "from": "Kaggle <kaggle-noreply@google.com>",
+      "date": "Wed, 17 Jun 2026 01:18:09 -0700",
+      "facts": [
+        "Email from Kaggle <kaggle-noreply@google.com>: \"Multiple Accounts Alert\"",
+        "Multiple Accounts Alert Kaggle TIMPSAI Wednesday, June 17, 8:13 AM Multiple Accounts Alert You recently attempted to verify this Kaggle account with a phone number that's associated with another Kaggle account.",
+        "If this was done without your authorization, please contact Kaggle support right away."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:28.649Z"
+    },
+    {
+      "emailId": "19ed69653e7015e0",
+      "subject": "Don’t miss out: AWS Summit India Online on-demand",
+      "from": "Amazon Web Services <aws-marketing-email-replies@amazon.com>",
+      "date": "Wed, 17 Jun 2026 17:17:15 +0000",
+      "facts": [
+        "Email from Amazon Web Services <aws-marketing-email-replies@amazon.com>: \"Don’t miss out: AWS Summit India Online on-demand\"",
+        "The keynote and 50+ sessions are available to watch on-demand now.",
+        "com/MTEyLVRaTS03NjYAAAGicvDdL5Kvs-aAd_EOoyFcYhkaIyk_VvQ8STm_uD7IaPihJLTRrO4OnzEOD0As56DxMd4MLWo= Everything you need to know about AWS Summit India Online on-demand ----------------------- Unable to join Amazon Web Services (AWS) Summit India Online?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:27.794Z"
+    },
+    {
+      "emailId": "19ed7401599a5a83",
+      "subject": "\"I Am Niche And I Do Not Consume Mainstream Things\" and 3 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 17 Jun 2026 20:22:40 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"I Am Niche And I Do Not Consume Mainstream Things\" and 3 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "Charu Gautam I Am Niche And I Do Not Consume Mainstream Things I have noticed that people love discovering things...."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:26.871Z"
+    },
+    {
+      "emailId": "19ed967a0d1afad7",
+      "subject": "Your Headliner video is ready - 'Free_Cinematic_AI_Video_In_Google_Vids'",
+      "from": "Headliner Notifications <notifications@headliner.app>",
+      "date": "Thu, 18 Jun 2026 06:25:07 +0000",
+      "facts": [
+        "Email from Headliner Notifications <notifications@headliner.app>: \"Your Headliner video is ready - 'Free_Cinematic_AI_Video_In_Google_Vids'\"",
+        "Your video for 'Free_Cinematic_AI_Video_In_Google_Vids' is ready.",
+        "The time has come, click the link below to see your creation."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:25.937Z"
+    },
+    {
+      "emailId": "19ed967a41e04007",
+      "subject": "Heads up for a Headliner watermark!",
+      "from": "Headliner <notifications@headliner.app>",
+      "date": "Thu, 18 Jun 2026 06:25:08 +0000",
+      "facts": [
+        "Email from Headliner <notifications@headliner.app>: \"Heads up for a Headliner watermark!\"",
+        "you're out of unwatermarked videos for this month, so we'll start adding our watermark to each new video until July 18, 2026.",
+        "UPGRADE YOUR PLAN These watermarks help us spread the word about Headliner so we can continue to grow our service and provide even more value to customers like you, so thanks for your help :) &copy; Copyright 2021 SpareMin &bull; 261 Madison Ave New York, N."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:24.921Z"
+    },
+    {
+      "emailId": "19ed96cfa879df8b",
+      "subject": "Welcome to Headliner!",
+      "from": "Headliner <hello@headliner.app>",
+      "date": "Thu, 18 Jun 2026 06:30:58 +0000",
+      "facts": [
+        "Email from Headliner <hello@headliner.app>: \"Welcome to Headliner!\"",
+        "96 Learn how to make the most out of your account!",
+        "Let's make something amazing ✨ Welcome to Headliner!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:24.046Z"
+    },
+    {
+      "emailId": "19edbe76669914ac",
+      "subject": "Open Tab: Hunter Harris",
+      "from": "Substack <on+open-tab@substack.com>",
+      "date": "Thu, 18 Jun 2026 16:57:43 +0000",
+      "facts": [
+        "Email from Substack <on+open-tab@substack.com>: \"Open Tab: Hunter Harris\"",
+        "com/p/open-tab-hunter-harris Hunter Harris is the creator of Hung Up , the twice-weekly Substack newsletter where she takes a forensic lens to our culture’s obsessions and her own.",
+        "She says she and her audience of nearly 200,000 subscribers share the same “disease”—insatiability—and that they’re bonded by a specific tunnel vision: her willingness to write a dozen pieces about A Star Is Born or spend time tracking down the marriage license of Taylor Swift’s publicist, if that’s what curiosity demands."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:23.024Z"
+    },
+    {
+      "emailId": "19edca92b6ff2966",
+      "subject": "You’re now using Gemini on web",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Thu, 18 Jun 2026 14:35:34 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"You’re now using Gemini on web\"",
+        "Get the most out of Gemini on web Welcome to Gemini, an AI assistant from Google that can help you supercharge your creativity and productivity.",
+        "With the Gemini web app, you can get help writing, creating, learning, and more at gemini."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:22.001Z"
+    },
+    {
+      "emailId": "19edddbe046696a8",
+      "subject": "Hey Sandeep, welcome to Gemini",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Thu, 18 Jun 2026 20:10:34 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Hey Sandeep, welcome to Gemini\"",
+        "Welcome to Gemini Supercharge your creativity and productivity with Gemini, an AI assistant from Google.",
+        "Write, plan, learn, create, edit, and more."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:20.900Z"
+    },
+    {
+      "emailId": "19edffe5c4faf8cc",
+      "subject": "Learn more about our updated Terms of Service",
+      "from": "Google <google-noreply@google.com>",
+      "date": "Fri, 19 Jun 2026 06:07:29 -0700",
+      "facts": [
+        "Email from Google <google-noreply@google.com>: \"Learn more about our updated Terms of Service\"",
+        "com Every couple of years, we update our Terms of Service.",
+        "We wanted to let you know ahead of time that the next update will be on July 30, 2026."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:19.694Z"
+    },
+    {
+      "emailId": "19ee094a2b227f2f",
+      "subject": "🔴 An internet without teenagers is a dead internet",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 19 Jun 2026 15:51:37 +0000 (UTC)",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 An internet without teenagers is a dead internet\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1d7112b3-f1ea-4ab1-b660-c8d0a45f3464/unnamed__1_.",
+        "t=1781811996) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:18.827Z"
+    },
+    {
+      "emailId": "19ee3ba08fe11110",
+      "subject": "Make the most out of Headliner!",
+      "from": "Headliner <hello@headliner.app>",
+      "date": "Sat, 20 Jun 2026 06:31:20 +0000",
+      "facts": [
+        "Email from Headliner <hello@headliner.app>: \"Make the most out of Headliner!\"",
+        "96 Edit, transcribe, clip, caption, & more!",
+        "Learn how to make the most out of your account."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:17.803Z"
+    },
+    {
+      "emailId": "19ee5cb2955bb424",
+      "subject": "“I have never felt very comfortable with the stance that writing, as an undertaking, is both very difficult and em…",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 20 Jun 2026 13:02:46 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“I have never felt very comfortable with the stance that writing, as an undertaking, is both very difficult and em…\"",
+        "View this post on the web at https://post.",
+        "com/p/i-have-never-felt-very-comfortable This week, we’re injecting fun back into the writing process, discarding outdated personal opinions, and watching Adele (the singer) become a Dell (the computer)."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:16.472Z"
+    },
+    {
+      "emailId": "19ee6e7b119960a8",
+      "subject": "Welcome to Gemini",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Sat, 20 Jun 2026 14:20:03 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Welcome to Gemini\"",
+        "Meet Gemini, your new AI assistant With Gemini on your Android device, you can get help writing, learning, creating, and getting more done—even complex tasks.",
+        "Go hands-free and have a natural, free-flowing voice conversation with Gemini Live1 to brainstorm ideas or talk things out."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:15.361Z"
+    },
+    {
+      "emailId": "19ee8bd38676748b",
+      "subject": "Edit your favorite photos",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Sun, 21 Jun 2026 05:52:53 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Edit your favorite photos\"",
+        "Make the edit you pictured Change the background, remove distractions, or try a new look.",
+        "Start editing Start editing ChatGPT can help you edit a favorite photo with plain-language directions."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:14.612Z"
+    },
+    {
+      "emailId": "19ee933e90da1b17",
+      "subject": "TIMPS PostCards: You’re missing out on free growth",
+      "from": "\"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>",
+      "date": "Sun, 21 Jun 2026 08:02:32 +0000 (UTC)",
+      "facts": [
+        "Email from \"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>: \"TIMPS PostCards: You’re missing out on free growth\"",
+        "You've been with beehiiv for a month now (🎉), but we noticed that your Top 4 recommendations are still looking a little...",
+        "Your Top 4 is prime real estate that showcases newsletters your audience will love."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:13.603Z"
+    },
+    {
+      "emailId": "19eedd307865eacb",
+      "subject": "We're updating our Privacy Policy",
+      "from": "Anthropic Team <notice@email.anthropic.com>",
+      "date": "Mon, 22 Jun 2026 05:34:50 +0000",
+      "facts": [
+        "Email from Anthropic Team <notice@email.anthropic.com>: \"We're updating our Privacy Policy\"",
+        "These changes only affect consumer accounts (Claude Free, Pro, and Max plans).",
+        "If you use Claude Team, Claude Enterprise, the Claude Platform, or other services under our Commercial Terms or other agreements, then these changes don't apply to you."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:12.578Z"
+    },
+    {
+      "emailId": "19eefac15b148e5b",
+      "subject": "Inside $35M of Paid Newsletter Revenue",
+      "from": "Tyler Denk <beehiivblog@mail.beehiiv.com>",
+      "date": "Mon, 22 Jun 2026 14:07:40 +0000",
+      "facts": [
+        "Email from Tyler Denk <beehiivblog@mail.beehiiv.com>: \"Inside $35M of Paid Newsletter Revenue\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/048ebce2-5754-4d4b-9a34-2050cdd2ac61/image.",
+        "t=1781768903) Caption: Paid subscription revenue on beehiiv hit $19 million in 2025, up 138% year over year, while the number of creators earning through subscriptions doubled."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:11.524Z"
+    },
+    {
+      "emailId": "19ef2103a03021b5",
+      "subject": "168574 is your Instagram code",
+      "from": "Instagram <no-reply@mail.instagram.com>",
+      "date": "Mon, 22 Jun 2026 18:20:09 -0700",
+      "facts": [
+        "Email from Instagram <no-reply@mail.instagram.com>: \"168574 is your Instagram code\"",
+        "Facebook Hi, Someone tried to sign up for an Instagram account with timps.",
+        "If it was you, enter this confirmation code in the app: 168574 © Instagram."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:10.532Z"
+    },
+    {
+      "emailId": "19ef25c603e928d3",
+      "subject": "Sandeep, get more out of Gemini",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Mon, 22 Jun 2026 19:43:20 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Sandeep, get more out of Gemini\"",
+        "💬 Import chats and memories from your other AI apps > » Supercharge your ideas with Gemini Gemini helps you learn in new ways and boosts your productivity.",
+        "Try making plans with Google Maps, uploading a picture, or using your camera to get information."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:09.404Z"
+    },
+    {
+      "emailId": "19ef5408a7c05911",
+      "subject": "🔴 Building a premium tech newsletter business",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 23 Jun 2026 16:10:10 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 Building a premium tech newsletter business\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:08.382Z"
+    },
+    {
+      "emailId": "19efb41d35d33fa0",
+      "subject": "\"Why Do Bad People Win and Good People Lose?\" and 2 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 24 Jun 2026 20:10:54 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"Why Do Bad People Win and Good People Lose?\" and 2 more\"",
+        "\"Why Do Bad People Win and Good People Lose?",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:07.282Z"
+    },
+    {
+      "emailId": "19efc5acfc024971",
+      "subject": "Studio ready, from a selfie",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Thu, 25 Jun 2026 01:17:49 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Studio ready, from a selfie\"",
+        "Turn a selfie into a studio-ready headshot with ChatGPT Images.",
+        "A better headshot starts here Turn a selfie into a studio-ready headshot with ChatGPT Images."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:06.332Z"
+    },
+    {
+      "emailId": "19efced276e1a8d4",
+      "subject": "Sandeep, you have access to daily help from Gemini",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Wed, 24 Jun 2026 20:57:40 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Sandeep, you have access to daily help from Gemini\"",
+        "Reimagine your day Gemini can help you complete your daily to-do list faster and make life easier and more fun at home, work, school, and even on the go.",
+        "Go to Gemini > AI that fits perfectly into your schedule Start your day stronger No more switching back and forth between apps like Maps and your Calendar, Gemini pulls together everything you need all in one chat."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:05.170Z"
+    },
+    {
+      "emailId": "19efedc28efee5ca",
+      "subject": "put it on the company card",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Thu, 25 Jun 2026 12:58:21 +0000 (UTC)",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"put it on the company card\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- Today, we’re introducing one of our most requested features to date: Group Subscriptions."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:04.163Z"
+    },
+    {
+      "emailId": "19eff689b16b5e15",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Thu, 25 Jun 2026 08:31:40 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "Facebook leahkateb , brysondechambeau and others posted something new.",
+        "Catch up on Instagram leahkateb , brysondechambeau and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:03.087Z"
+    },
+    {
+      "emailId": "19f0016d26433a8b",
+      "subject": "timps_ai, see lv_aub, emqiowp and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Thu, 25 Jun 2026 11:42:01 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see lv_aub, emqiowp and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: lv_aub , emqiowp , and 4 others.",
+        "Open Instagram Suggested for you See all 👸🏻👸🏻 lv_aub View profile emqiowp View profile 🤫 resell."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:02.033Z"
+    },
+    {
+      "emailId": "19f04b7970140f7d",
+      "subject": "🔴 In defense of content",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 26 Jun 2026 16:14:55 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 In defense of content\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1d7112b3-f1ea-4ab1-b660-c8d0a45f3464/unnamed__1_.",
+        "t=1781811996) Follow image link: (https://www."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:49:01.009Z"
+    },
+    {
+      "emailId": "19f04ee5006cad72",
+      "subject": "Headliner Weekly Newsletter 🎙️ Apple Podcasts x Headliner",
+      "from": "\"Elissa @ Headliner\" <info@headliner.app>",
+      "date": "Fri, 26 Jun 2026 17:15:53 +0000",
+      "facts": [
+        "Email from \"Elissa @ Headliner\" <info@headliner.app>: \"Headliner Weekly Newsletter 🎙️ Apple Podcasts x Headliner\"",
+        "Make free video and audiogram clips with Apple Podcasts x Headliner ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] MAKE CLIPS WITH APPLE PODCASTS X HEADLINER Headliner now features Apple Podcasts templates to make promoting your show easier than ever.",
+        "Learn how to make clips with Apple Podcasts x Headliner: [Headliner X Apple Podcasts: Create Free Video Clips and Audiograms] [2] LEARN HOW [3] MAKE CLIPS [4] MEET THE APPLE PODCASTS TEMPLATES Apple Podcasts and Headliner teamed up to produce 5 NEW templates."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:59.983Z"
+    },
+    {
+      "emailId": "19f09c1df7ab297a",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Sat, 27 Jun 2026 08:45:28 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "nyc , shoponaskin and others posted something new.",
+        "nyc , shoponaskin and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:58.959Z"
+    },
+    {
+      "emailId": "19f09d8ec74bbffc",
+      "subject": "“My uncle used Claude to write my Nana’s obituary”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 27 Jun 2026 13:03:05 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“My uncle used Claude to write my Nana’s obituary”\"",
+        "View this post on the web at https://post.",
+        "com/p/my-uncle-used-claude-to-write-my This week, we’re writing obituaries on our own terms, taking leaps of faith, and learning from betrayal."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:57.841Z"
+    },
+    {
+      "emailId": "19f0a6e8661192c0",
+      "subject": "timps_ai, see priv_mariles, analog.peachveil and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Sat, 27 Jun 2026 11:53:54 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see priv_mariles, analog.peachveil and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: priv_mariles , analog.",
+        "Open Instagram Suggested for you See all priv_mariles View profile hope !!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:56.870Z"
+    },
+    {
+      "emailId": "19f14a68cc482a4a",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Mon, 29 Jun 2026 11:31:21 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "Facebook tourdekalos , camile_zz1 and others posted something new.",
+        "Catch up on Instagram tourdekalos , camile_zz1 and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:56.134Z"
+    },
+    {
+      "emailId": "19f158315531bce2",
+      "subject": "timps_ai, see hisprettypartyfavor, rebe_ccasupersecret and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Mon, 29 Jun 2026 15:32:14 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see hisprettypartyfavor, rebe_ccasupersecret and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: hisprettypartyfavor , rebe_ccasupersecret , and 4 others.",
+        "Open Instagram Suggested for you See all ⋆‧°𓏲ּ𝄢 𝑦𝑎𝑟𝑒𝑙𝑖 🪽 hisprettypartyfavor View profile Rebecca 😼😼 rebe_ccasupersecret View profile jay2."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:55.275Z"
+    },
+    {
+      "emailId": "19f19448ad8a8fcf",
+      "subject": "Match a style from a photo",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Tue, 30 Jun 2026 16:02:29 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Match a style from a photo\"",
+        "Share a photo of an outfit to find similar pieces.",
+        "Recreate a style you like Share an outfit you like to get ideas on how to recreate the style."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:54.264Z"
+    },
+    {
+      "emailId": "19f194fe77fb8381",
+      "subject": "Introducing country leaderboards and post translations",
+      "from": "Substack <on+news@substack.com>",
+      "date": "Tue, 30 Jun 2026 15:02:31 +0000",
+      "facts": [
+        "Email from Substack <on+news@substack.com>: \"Introducing country leaderboards and post translations\"",
+        "com/p/introducing-country-leaderboards It can be hard to put your finger on what makes a Substack get-together so memorable.",
+        "But mainly I think it’s the fact that Substack writers and creators have the same shared notion that culture thrives when everyone is allowed to put their ideas out into the world."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:53.137Z"
+    },
+    {
+      "emailId": "19f195213ecf3133",
+      "subject": "🔴 Building an eight-figure B2B creator agency",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 30 Jun 2026 16:14:21 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 Building an eight-figure B2B creator agency\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:52.099Z"
+    },
+    {
+      "emailId": "19f1f4b837511d9f",
+      "subject": "\"Why China got rich and India didn't\" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 1 Jul 2026 20:07:49 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"Why China got rich and India didn't\" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "David Oks Why China got rich and India didn't Here is a question that I think about a lot...."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:50.768Z"
+    },
+    {
+      "emailId": "19f1fca66b2651fd",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Wed, 1 Jul 2026 15:26:20 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "Facebook kissesforyouuntiltheend , viktora_sweaty and others posted something new.",
+        "Catch up on Instagram kissesforyouuntiltheend , viktora_sweaty and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:49.845Z"
+    },
+    {
+      "emailId": "19f20b8064da60d5",
+      "subject": "timps_ai, see mmariidead, nawfchito527 and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Wed, 1 Jul 2026 19:45:45 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see mmariidead, nawfchito527 and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: mmariidead , nawfchito527 , and 4 others.",
+        "Open Instagram Suggested for you See all trick mmariidead View profile t4k nawfchito527 View profile Rebecca 😼😼 rebe_ccasupersecret View profile thechillinggecko View profile jay2."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:48.413Z"
+    },
+    {
+      "emailId": "19f2392ee357683b",
+      "subject": "Get Pro Free for 30 Days",
+      "from": "Headliner X Apple Podcasts <info@headliner.app>",
+      "date": "Thu, 02 Jul 2026 16:04:18 +0000",
+      "facts": [
+        "Email from Headliner X Apple Podcasts <info@headliner.app>: \"Get Pro Free for 30 Days\"",
+        "Headliner now features Apple Podcasts Templates!",
+        "Create clips with Headliner x Apple Podcasts and get Pro on us."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:47.348Z"
+    },
+    {
+      "emailId": "19f23c17fd304d5f",
+      "subject": "Headliner Weekly Newsletter 🎙️ Take a Pod-Break!",
+      "from": "\"Elissa @ Headliner\" <info@headliner.app>",
+      "date": "Thu, 02 Jul 2026 16:55:10 +0000",
+      "facts": [
+        "Email from \"Elissa @ Headliner\" <info@headliner.app>: \"Headliner Weekly Newsletter 🎙️ Take a Pod-Break!\"",
+        "Get tips for productive prep to keep growing even while on break.",
+        "🏝️ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] TIPS FOR TAKING A POD-BREAK For the summer, Headliner is taking a mini break from podcasting..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:46.392Z"
+    },
+    {
+      "emailId": "19f23cf4b256ad1c",
+      "subject": "Who’s with W. Kamau Bell?",
+      "from": "Substack <on+stories@substack.com>",
+      "date": "Thu, 2 Jul 2026 16:02:22 +0000",
+      "facts": [
+        "Email from Substack <on+stories@substack.com>: \"Who’s with W. Kamau Bell?\"",
+        "Kamau Bell has lived many different lives as a host and comedian: one of them centered on the singular conviction that Denzel Washington Is the Greatest Actor of All Time Period [ https://substack.",
+        "com/redirect/f9660e81-f33d-45aa-9c24-f6a7340ccb67?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:45.351Z"
+    },
+    {
+      "emailId": "19f28c3cc9ede8ab",
+      "subject": "🔴  How much does your audience trust you?",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 3 Jul 2026 16:15:48 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴  How much does your audience trust you?\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:43.683Z"
+    },
+    {
+      "emailId": "19f2ad8d595658a3",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Fri, 3 Jul 2026 18:57:59 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "Facebook minaskiin , houseofkallistos and others posted something new.",
+        "Catch up on Instagram minaskiin , houseofkallistos and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:42.167Z"
+    },
+    {
+      "emailId": "19f2bcfcbfbb1eed",
+      "subject": "Edit your favorite photos",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Sat, 04 Jul 2026 06:27:44 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Edit your favorite photos\"",
+        "Make the edit you pictured Change the background, remove distractions, or try a new look.",
+        "Start editing Start editing ChatGPT can help you edit a favorite photo with plain-language directions."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:41.055Z"
+    },
+    {
+      "emailId": "19f2d7cfc608ae93",
+      "subject": "timps_ai, see urfav_eli6, minaskiin and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Sat, 4 Jul 2026 07:16:29 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see urfav_eli6, minaskiin and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: urfav_eli6 , minaskiin , and 4 others.",
+        "Open Instagram Suggested for you See all Eli 💋 urfav_eli6 View profile minaskiin minaskiin View profile Kallistos | Photography & Film houseofkallistos View profile TRAIN•BATTLE•DOMINATE tbdapparrel View profile FSY in Wilmington, NC wilmingtonfsy View profile noonie n."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:40.220Z"
+    },
+    {
+      "emailId": "19f2ddf0694c7990",
+      "subject": "“As a writer, I often felt like I was trying to enter various clubs that didn’t want me”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 4 Jul 2026 13:02:14 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“As a writer, I often felt like I was trying to enter various clubs that didn’t want me”\"",
+        "View this post on the web at https://post.",
+        "com/p/as-a-writer-i-often-felt-like-i-was This week, we’re picking unexpected books, renewing creative vows, and contending with unfinished projects."
+      ],
+      "method": "heuristic",
+      "error": "fetch failed",
+      "syncedAt": "2026-09-13T18:48:38.715Z"
+    },
+    {
+      "emailId": "19f386c360cc1c0a",
+      "subject": "New on Substack: Subscriber Perks, saved Notes, scheduled Chats, MCP, redesigned podcast player, and more",
+      "from": "Substack <on+product@substack.com>",
+      "date": "Mon, 6 Jul 2026 16:04:34 +0000",
+      "facts": [
+        "Email from Substack <on+product@substack.com>: \"New on Substack: Subscriber Perks, saved Notes, scheduled Chats, MCP, redesigned podcast player, and more\"",
+        "com/p/new-on-substack-subscriber-perks Whether you’re spending your Substack summer tinkering with your existing newsletter or podcast or launching your first one, we’re shipping features that make it easier to publish, customize, and distribute your work, and engage with your audience.",
+        "We look forward to hearing what’s most useful and what you want more of."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:37.455Z"
+    },
+    {
+      "emailId": "19f3890eacf85739",
+      "subject": "timps_ai, catch up on moments you've missed",
+      "from": "Instagram <notification@priority.instagram.com>",
+      "date": "Mon, 6 Jul 2026 10:54:05 -0700",
+      "facts": [
+        "Email from Instagram <notification@priority.instagram.com>: \"timps_ai, catch up on moments you've missed\"",
+        "mimi , alina_creativestudio and others posted something new.",
+        "mimi , alina_creativestudio and others posted something new."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:36.227Z"
+    },
+    {
+      "emailId": "19f396b4efbb5026",
+      "subject": "timps_ai, see tu.fav.mimi, anissss_caballero and more in your feed",
+      "from": "Instagram <follow-suggestions@mail.instagram.com>",
+      "date": "Mon, 6 Jul 2026 14:52:36 -0700",
+      "facts": [
+        "Email from Instagram <follow-suggestions@mail.instagram.com>: \"timps_ai, see tu.fav.mimi, anissss_caballero and more in your feed\"",
+        "Facebook New people to discover Suggested accounts based on your interests: tu.",
+        "Open Instagram Suggested for you See all Mimi Gomez tu."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:35.198Z"
+    },
+    {
+      "emailId": "19f3ce9039c7d062",
+      "subject": "\"What's your main message?\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Tue, 7 Jul 2026 14:08:50 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"What's your main message?\"\"",
+        "96 Reddit r/podcasting: What's your main message?",
+        "What are you ultimately shouting from rooftops with your podcast?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:34.238Z"
+    },
+    {
+      "emailId": "19f3cf066937755d",
+      "subject": "🔴 A $1.5M business built around an 85k-subscriber newsletter",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 7 Jul 2026 14:12:36 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 A $1.5M business built around an 85k-subscriber newsletter\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:32.751Z"
+    },
+    {
+      "emailId": "19f4206143770882",
+      "subject": "\"Hii Everyone\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Wed, 8 Jul 2026 13:58:42 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Hii Everyone\"\"",
+        "96 Reddit r/NewMods: Hii Everyone I am new here.",
+        "Read More 3 upvotes &bull; 3 comments Hide r/NewMods r/podcasting u/yk_bravo &bull; 1d ago Should I Just Give Up ?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:31.620Z"
+    },
+    {
+      "emailId": "19f435a062bc948a",
+      "subject": "\"A Lack Of Purpose Leads To Romantic Obsessions\" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 8 Jul 2026 20:09:59 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"A Lack Of Purpose Leads To Romantic Obsessions\" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "The Forbidden Files A Lack Of Purpose Leads To Romantic Obsessions i&#8217;ve noticed something strange...."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:30.082Z"
+    },
+    {
+      "emailId": "19f4686846737d22",
+      "subject": "Find similar products from a photo",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Thu, 09 Jul 2026 10:57:27 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Find similar products from a photo\"",
+        "Take a photo of something you like and compare similar options.",
+        "Shop what caught your eye Saw something you like?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:29.058Z"
+    },
+    {
+      "emailId": "19f472601025ad93",
+      "subject": "15M newsletter recommendations",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Thu, 09 Jul 2026 13:51:39 +0000 (UTC)",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"15M newsletter recommendations\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- Back at Morning Brew, I built a growth engine that scaled the newsletter to over **3,000,000 **subscribers."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:27.952Z"
+    },
+    {
+      "emailId": "19f4733a482d2007",
+      "subject": "\"I'm thinking about starting a podcast\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Thu, 9 Jul 2026 14:06:34 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"I'm thinking about starting a podcast\"\"",
+        "96 Reddit r/podcasting: I'm thinking about starting a podcast ​ Okay so I made a podcast years ago as a joke with my cousin and my friend, but it only came out with 2 or 3 episodes and well we kinda just forgot about it, however I was thinking about my free tim...",
+        "Read More 1 upvotes &bull; 6 comments Hide r/podcasting r/NewMods u/therealdeskchair &bull; 3d ago can someone help?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:27.114Z"
+    },
+    {
+      "emailId": "19f479d7e361b188",
+      "subject": "Headliner Weekly Newsletter 🎙️ Updates Inside!",
+      "from": "\"Elissa @ Headliner\" <info@headliner.app>",
+      "date": "Thu, 09 Jul 2026 16:02:08 +0000",
+      "facts": [
+        "Email from \"Elissa @ Headliner\" <info@headliner.app>: \"Headliner Weekly Newsletter 🎙️ Updates Inside!\"",
+        "Learn how to add and edit captions on the go with Headliner's mobile app...",
+        "PLUS more caption animations ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] ADD AND EDIT CAPTIONS ON THE GO Did you know Headiner has a mobile app?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:25.410Z"
+    },
+    {
+      "emailId": "19f4b04c802ced43",
+      "subject": "Secure link to log in to Claude.ai |  2026-07-10 13:23:51",
+      "from": "Anthropic <no-reply-3qjI67dQzrJq4FTcnu6Rdg@mail.anthropic.com>",
+      "date": "Fri, 10 Jul 2026 07:53:52 +0000 (UTC)",
+      "facts": [
+        "Email from Anthropic <no-reply-3qjI67dQzrJq4FTcnu6Rdg@mail.anthropic.com>: \"Secure link to log in to Claude.ai |  2026-07-10 13:23:51\"",
+        "96 Let's get you signed in Sign in with the secure link below Sign in to Claude.",
+        "ai If you didn't request this email, you can safely ignore it."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:23.869Z"
+    },
+    {
+      "emailId": "19f4b0546d461633",
+      "subject": "Secure link to log in to Claude.ai |  2026-07-10 13:24:23",
+      "from": "Anthropic <no-reply-LV97jSgkHla0nc4GJbpw7A@mail.anthropic.com>",
+      "date": "Fri, 10 Jul 2026 07:54:23 +0000 (UTC)",
+      "facts": [
+        "Email from Anthropic <no-reply-LV97jSgkHla0nc4GJbpw7A@mail.anthropic.com>: \"Secure link to log in to Claude.ai |  2026-07-10 13:24:23\"",
+        "96 Let's get you signed in Sign in with the secure link below Sign in to Claude.",
+        "ai If you didn't request this email, you can safely ignore it."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:22.914Z"
+    },
+    {
+      "emailId": "19f4c52b833626bc",
+      "subject": "\"Hey thinking about joining or starting a wwe wrestling themed podcast and ...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Fri, 10 Jul 2026 13:58:37 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Hey thinking about joining or starting a wwe wrestling themed podcast and ...\"\"",
+        "They are yet sure if the restock will be slapped with new prices that are 15k higher but they have an idea about ...",
+        "Read More 4 upvotes &bull; 21 comments Hide r/PS5restock r/Real_teenindia u/Night-hawk033 &bull; 2d ago OP(M) got a new Friend(F) by taking casual stand against a creep."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:21.175Z"
+    },
+    {
+      "emailId": "19f4cd46fc3b7c90",
+      "subject": "🔴 beehiiv's paid subscription insights",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 10 Jul 2026 16:16:18 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 beehiiv's paid subscription insights\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:19.983Z"
+    },
+    {
+      "emailId": "19f518c750cbd10b",
+      "subject": "\"Panel of guests in an episode\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sat, 11 Jul 2026 14:19:46 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Panel of guests in an episode\"\"",
+        "96 Reddit r/podcasting: Panel of guests in an episode What is the best way to go about preparing and recording an episode with a panel of 2 or more guests?",
+        "Read More 2 upvotes &bull; 5 comments Hide r/podcasting r/NewMods u/YesPlantsCanTalk &bull; 1d ago Introduction and Invite Hey everyone!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:19.035Z"
+    },
+    {
+      "emailId": "19f51eecec566bae",
+      "subject": "“I had become haunted by the simplest question: What did I care about?”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 11 Jul 2026 13:01:59 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“I had become haunted by the simplest question: What did I care about?”\"",
+        "View this post on the web at https://post.",
+        "com/p/i-had-become-haunted-by-the-simplest This week, we’re quitting our jobs, making peace with where we call home, and tagging along for the NBA summer league."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:18.035Z"
+    },
+    {
+      "emailId": "19f56b76a3c4a84e",
+      "subject": "\"Microphone recommendations\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sun, 12 Jul 2026 14:24:48 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Microphone recommendations\"\"",
+        "96 Reddit r/podcasting: Microphone recommendations I don’t know if this is the right sub, so I apologize if not, but I’m hoping someone can help!",
+        "Me and my friends are starting a podcast and need mic rec’s."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:17.077Z"
+    },
+    {
+      "emailId": "19f5bd7f9f9a5173",
+      "subject": "\"We are literally cooked!!\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 13 Jul 2026 14:18:27 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"We are literally cooked!!\"\"",
+        "96 Reddit r/Visakhapatnam: We are literally cooked!!",
+        "I remember getting only 3 good and long rains till now......."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:15.388Z"
+    },
+    {
+      "emailId": "19f5d2bcfed4a0c4",
+      "subject": "You have a new chat request",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 13 Jul 2026 20:29:39 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"You have a new chat request\"",
+        "96 Email Template theTIMPS You have a new chat request u/mod_lab wants to chat with you Hey mods!",
+        "com/r/modnews/comments/1uvjqkj/mod_monthly_your_july_2026_newsletter_is_here/) is out now in r/modnews."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:13.863Z"
+    },
+    {
+      "emailId": "19f5d584af27e4ae",
+      "subject": "New message from u/mod_lab",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 13 Jul 2026 21:18:14 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"New message from u/mod_lab\"",
+        "96 Email Template theTIMPS You have a new message from u/mod_lab u/mod_lab Mod Monthly: Your July 2026 newsletter is here Hey mods!",
+        "Your July newsletter is out now in r/modnews ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:12.388Z"
+    },
+    {
+      "emailId": "19f60f632125d6f5",
+      "subject": "\"Intro music editing help\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Tue, 14 Jul 2026 14:09:35 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Intro music editing help\"\"",
+        "96 Reddit r/podcasting: Intro music editing help Hello!",
+        "This is my first time creating a podcast, and am struggling with editing in intro and outro music (royalty free)."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:11.540Z"
+    },
+    {
+      "emailId": "19f61733c80062db",
+      "subject": "🔴 A creator with $670K/year in newsletter subscriptions alone",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 14 Jul 2026 16:14:12 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 A creator with $670K/year in newsletter subscriptions alone\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:10.816Z"
+    },
+    {
+      "emailId": "19f662622cdd9fb3",
+      "subject": "\"Introduction to podcasting\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Wed, 15 Jul 2026 14:20:02 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Introduction to podcasting\"\"",
+        "96 Reddit r/podcasting: Introduction to podcasting I am an experienced Video Editor and I want to focus on Podcast Editing.",
+        "I hope I can connect with someone willing to teach me!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:09.254Z"
+    },
+    {
+      "emailId": "19f675e1e2a7eaa3",
+      "subject": "\"What Barbie and Draupadi Have in Common\" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 15 Jul 2026 20:00:48 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"What Barbie and Draupadi Have in Common\" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "swarna's mumblecore &#129483; What Barbie and Draupadi Have in Common Barbie and Draupadi have no business sharing an essay...."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:08.440Z"
+    },
+    {
+      "emailId": "19f6b435d7709df9",
+      "subject": "\"Is there anyone else seeking people to start a podcast with?\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Thu, 16 Jul 2026 14:10:04 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Is there anyone else seeking people to start a podcast with?\"\"",
+        "96 Reddit r/podcasting: Is there anyone else seeking people to start a podcast with?",
+        "i dont mind the topic but if anyone is intrested for any topic and is searching for people please message me!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:07.558Z"
+    },
+    {
+      "emailId": "19f6c153bd7cd44f",
+      "subject": "Inside our biggest release yet",
+      "from": "\"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>",
+      "date": "Thu, 16 Jul 2026 17:59:17 +0000 (UTC)",
+      "facts": [
+        "Email from \"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>: \"Inside our biggest release yet\"",
+        "utm_campaign=Post+SRE+Recap+Email+-+Offer+%287%2F16%2F26%29&utm_content=Post+SRE+Recap+Email+-+Offer+%287%2F16%2F26%29&utm_medium=email&utm_source=customer.",
+        "io&utm_term=email_action ) We just changed what beehiiv can do."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:05.642Z"
+    },
+    {
+      "emailId": "19f6c4b1702f8549",
+      "subject": "Headliner Weekly Newsletter 🎙️ 3 Awesome Tips for Podcasts",
+      "from": "\"Elissa @ Headliner\" <info@headliner.app>",
+      "date": "Thu, 16 Jul 2026 18:58:07 +0000",
+      "facts": [
+        "Email from \"Elissa @ Headliner\" <info@headliner.app>: \"Headliner Weekly Newsletter 🎙️ 3 Awesome Tips for Podcasts\"",
+        "Get 3 (but really 30) awesome tips for podcast growth!",
+        "Learn how to be a student for your show to help it grow."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:04.725Z"
+    },
+    {
+      "emailId": "19f6c4f6467cc251",
+      "subject": "Regret, superstition, and trauma-bonding: two champions on what it’s really like to play in the World Cup",
+      "from": "The Substack Post <post+unstacked@substack.com>",
+      "date": "Thu, 16 Jul 2026 16:02:11 +0000",
+      "facts": [
+        "Email from The Substack Post <post+unstacked@substack.com>: \"Regret, superstition, and trauma-bonding: two champions on what it’s really like to play in the World Cup\"",
+        "View this post on the web at https://post.",
+        "com/p/regret-superstition-and-trauma-bonding The 2026 World Cup matches have been watched nearly 12 billion times worldwide thus far."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:03.706Z"
+    },
+    {
+      "emailId": "19f6f3cf577da918",
+      "subject": "Edit your favorite photos",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Fri, 17 Jul 2026 08:41:32 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Edit your favorite photos\"",
+        "Start editing Start editing ChatGPT can help you edit a favorite photo with plain-language directions.",
+        "Start with one change, then refine the background, details, or style."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:02.689Z"
+    },
+    {
+      "emailId": "19f700e3073e1e80",
+      "subject": "Get the most out of beehiiv 🐝",
+      "from": "\"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>",
+      "date": "Fri, 17 Jul 2026 12:30:04 +0000 (UTC)",
+      "facts": [
+        "Email from \"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>: \"Get the most out of beehiiv 🐝\"",
+        "beehiiv logo Hey Sandeep, I am reaching out personally to thank you for choosing our platform to grow your newsletter.",
+        "It's users like you who inspire us to keep improving and innovating."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:48:01.021Z"
+    },
+    {
+      "emailId": "19f7027971b8aaea",
+      "subject": "let's talk about yesterday",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Fri, 17 Jul 2026 12:57:48 +0000 (UTC)",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"let's talk about yesterday\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/7fd758a5-7097-4ea9-87d1-d826bb0c9894/Screenshot_2026-07-14_at_11.",
+        "t=1784055036) Caption: -------------------- This product update looks and feels a bit different than usual, because it is."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:59.363Z"
+    },
+    {
+      "emailId": "19f706adb7d7fa49",
+      "subject": "\"Podcast Growth Ideas\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Fri, 17 Jul 2026 14:11:18 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Podcast Growth Ideas\"\"",
+        "96 Reddit r/podcasting: Podcast Growth Ideas What are some of the best ways to grow a podcast?",
+        "We've been getting more downloads lately, but I want more!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:57.620Z"
+    },
+    {
+      "emailId": "19f70e16fb95c33e",
+      "subject": "🔴 beehiiv's latest bet",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 17 Jul 2026 16:19:28 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 beehiiv's latest bet\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:55.963Z"
+    },
+    {
+      "emailId": "19f74066ed0c1ef2",
+      "subject": "🎉 No more watermarks, the wait is over!",
+      "from": "Headliner <notifications@headliner.app>",
+      "date": "Sat, 18 Jul 2026 07:00:05 +0000",
+      "facts": [
+        "Email from Headliner <notifications@headliner.app>: \"🎉 No more watermarks, the wait is over!\"",
+        "It’s time to enjoy another round of videos without a Headliner watermark for free .",
+        "Let’s start creating: OPEN HEADLINER These watermarks help us spread the word about Headliner so we can continue to grow our service and provide even more value to customers like you, so thanks for your help :) Want to remove our watermarks?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:54.242Z"
+    },
+    {
+      "emailId": "19f75838de2ac556",
+      "subject": "\"19 podcast genres: mapping supply vs demand (June 2026 data)\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sat, 18 Jul 2026 13:56:22 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"19 podcast genres: mapping supply vs demand (June 2026 data)\"\"",
+        "96 Reddit r/podcasting: 19 podcast genres: mapping supply vs demand (June 2026 data) 1.",
+        "**Kids & Family** has the largest supply gap on the map: a demand score of **74** against a supply index of just **27**."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:53.187Z"
+    },
+    {
+      "emailId": "19f75ff57c68d35c",
+      "subject": "“Could I really claim these hallmarks of adulthood if the only thing making them possible is my father’s generosit…",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 18 Jul 2026 13:02:28 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“Could I really claim these hallmarks of adulthood if the only thing making them possible is my father’s generosit…\"",
+        "View this post on the web at https://post.",
+        "com/p/could-i-really-claim-these-hallmarks This week, we’re asking questions about sales on BookTok, what happens next for Phoebe Gates, and dads with disposable income."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:51.580Z"
+    },
+    {
+      "emailId": "19f7632f9e5a857d",
+      "subject": "Jonathan Wilson’s World Cup Diary",
+      "from": "Substack <on+stories@substack.com>",
+      "date": "Sat, 18 Jul 2026 16:01:05 +0000",
+      "facts": [
+        "Email from Substack <on+stories@substack.com>: \"Jonathan Wilson’s World Cup Diary\"",
+        "com/p/jonathan-wilsons-world-cup-diary We caught up with veteran British soccer writer, podcaster, and historian of the game Jonathan Wilson on the eve of his sixth World Cup final.",
+        "Over the past six weeks, he’s been all over the map, filing from Mexico City, Guadalajara, Houston, and Boston for The Guardian, Bloomberg, the Paris Review, and more, while bringing literary dispatches and wry analysis to his own newsletter Wilson’s World (of football) [ https://substack."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:49.742Z"
+    },
+    {
+      "emailId": "19f7ac27bd50cb0b",
+      "subject": "\"Looking for podcast community & learning!\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sun, 19 Jul 2026 14:23:12 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Looking for podcast community & learning!\"\"",
+        "96 Reddit r/podcasting: Looking for podcast community & learning!",
+        "I’ve released three episodes of my podcast (Let A Bitch Live) and I’m looking for advice on communities I can join for learning and accountability."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:48.106Z"
+    },
+    {
+      "emailId": "19f7fe1016077d3c",
+      "subject": "\"Qwen 3.6 27B + Opencode: what am i doing wrong?\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 20 Jul 2026 14:14:39 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Qwen 3.6 27B + Opencode: what am i doing wrong?\"\"",
+        "6 27B &#43; Opencode: what am i doing wrong?",
+        "6 27B locally at Q8\\_K\\_XL and with only \\~105k CTX at q8\\_0."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:46.353Z"
+    },
+    {
+      "emailId": "19f8506027b602e8",
+      "subject": "\"Any tea on tillu anna\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Tue, 21 Jul 2026 14:13:11 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Any tea on tillu anna\"\"",
+        "Read more about tech on [Github](https://github.",
+        "Read More 39 upvotes &bull; 11 comments Hide r/LocalLLaMA r/telugu u/hyderabad795 &bull; 7h ago చిన్న చూపు Placements kosam vachina company requirements \\*\\*Students should have completed their schooling in an English medium institution\\*\\* Aa company offer chesedhi 3 lpa Read More 34 upvotes &bull; 8 comments Hide r/telugu Hide r/telugu r/InstagramShops u/aashix1xx &bull; 5h ago Scammed by an ins…"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:45.350Z"
+    },
+    {
+      "emailId": "19f8579f432b500f",
+      "subject": "🔴 $100k revenue, $0 salary",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 21 Jul 2026 16:14:25 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 $100k revenue, $0 salary\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:44.519Z"
+    },
+    {
+      "emailId": "19f85b2579e14e11",
+      "subject": "20% off everything we just launched",
+      "from": "\"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>",
+      "date": "Tue, 21 Jul 2026 17:21:24 +0000 (UTC)",
+      "facts": [
+        "Email from \"Tyler @ beehiiv 🐝\" <tyler@cx.beehiiv.com>: \"20% off everything we just launched\"",
+        "Explore Community, Copilot, Podcasts, and more.",
+        "utm_campaign=%5BNon+Opener+Resend%5D+Post+SRE+Recap+Email+-+Offer+%287%2F21%2F26%29&utm_content=Post+SRE+Recap+Email+-+Offer+%287%2F16%2F26%29&utm_medium=email&utm_source=customer."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:43.225Z"
+    },
+    {
+      "emailId": "19f86139e81a4056",
+      "subject": "Against Claudefishing",
+      "from": "The Substack Post <post+news-and-views@substack.com>",
+      "date": "Tue, 21 Jul 2026 16:02:34 +0000",
+      "facts": [
+        "Email from The Substack Post <post+news-and-views@substack.com>: \"Against Claudefishing\"",
+        "View this post on the web at https://post.",
+        "com/p/against-claudefishing It’s getting harder to tell what’s real on the internet."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:41.528Z"
+    },
+    {
+      "emailId": "19f8a32a022a5b79",
+      "subject": "\"any tea on her?? (heard she's super stingy)\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Wed, 22 Jul 2026 14:20:01 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"any tea on her?? (heard she's super stingy)\"\"",
+        "96 Reddit r/TollywoodGossips: any tea on her??",
+        "(heard she's super stingy) 167 upvotes &bull; 106 comments Hide r/TollywoodGossips Hide r/TollywoodGossips r/vijayawada u/likhiviper &bull; 5h ago Anyone?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:39.932Z"
+    },
+    {
+      "emailId": "19f8b6f7ff1d537c",
+      "subject": "\"how to crave doing hard things\" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 22 Jul 2026 20:06:07 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"how to crave doing hard things\" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "La Vie en Bleu how to crave doing hard things if you&#8217;ve been hard on yourself for not wanting the hard things yet, i hope this gives you a little relief."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:38.143Z"
+    },
+    {
+      "emailId": "19f8d52143d5c5da",
+      "subject": "Edit your favorite photos",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Thu, 23 Jul 2026 04:53:14 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Edit your favorite photos\"",
+        "Start editing Start editing ChatGPT can help you edit a favorite photo with plain-language directions.",
+        "Start with one change, then refine the background, details, or style."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:36.716Z"
+    },
+    {
+      "emailId": "19f8f47023cdb7b8",
+      "subject": "\"Is this real?\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Thu, 23 Jul 2026 14:00:22 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Is this real?\"\"",
+        "447 upvotes &bull; 66 comments Hide r/tollywood Hide r/tollywood r/podcasting u/Cocoisafatcat &bull; 13h ago Lookign for possible guests for my podcast.",
+        "Hi everyone, I am the host of a podcast on technology and politics launching this September and have so far interviewed lawyers, academics, and politicians across North America."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:35.778Z"
+    },
+    {
+      "emailId": "19f9045694cc178d",
+      "subject": "Headliner Weekly Newsletter 🎙️ How to make the MOST out of video",
+      "from": "\"Elissa @ Headliner\" <info@headliner.app>",
+      "date": "Thu, 23 Jul 2026 18:38:15 +0000",
+      "facts": [
+        "Email from \"Elissa @ Headliner\" <info@headliner.app>: \"Headliner Weekly Newsletter 🎙️ How to make the MOST out of video\"",
+        "Did you know podcasters that add captions to their videos see higher views, watch times, and engagement?",
+        "‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] ADDING CAPTIONS MAKES FOR BETTER VIDEO In a not-so-long-ago survey, we talked to 250 podcasters about their video/YouTube/captioning experience."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:34.835Z"
+    },
+    {
+      "emailId": "19f941ae0fbd3cee",
+      "subject": "Unlock the full potential of your newsletter",
+      "from": "\"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>",
+      "date": "Fri, 24 Jul 2026 12:30:16 +0000 (UTC)",
+      "facts": [
+        "Email from \"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>: \"Unlock the full potential of your newsletter\"",
+        "beehiiv logo Hey Sandeep, It's been a while since you last logged in, and I wanted to check in to see how you're doing.",
+        "Running a successful newsletter can be challenging."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:33.960Z"
+    },
+    {
+      "emailId": "19f948607f2ce6c5",
+      "subject": "\"swiss-ai/Apertus-v1.5 70B/8B\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Fri, 24 Jul 2026 14:27:18 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"swiss-ai/Apertus-v1.5 70B/8B\"\"",
+        "96 Reddit r/LocalLLaMA: swiss-ai/Apertus-v1.",
+        "Read More 146 upvotes &bull; 76 comments Hide r/LocalLLaMA r/podcasting u/zeventine &bull; 3d ago Podcasts pirated again I’ve barely written on Reddit before but a couple of months ago I was made aware of a person in the UK selling AI modified podcasts (using AI to remove commercial breaks) on his site ([https://www."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:32.231Z"
+    },
+    {
+      "emailId": "19f94ebf66980610",
+      "subject": "🔴 How smaller, concentrated audiences build stronger businesses",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 24 Jul 2026 16:18:40 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 How smaller, concentrated audiences build stronger businesses\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:31.485Z"
+    },
+    {
+      "emailId": "19f951c678c78773",
+      "subject": "How writers are reacting to Substack’s AI transparency tools",
+      "from": "Substack <on+news@substack.com>",
+      "date": "Fri, 24 Jul 2026 16:00:34 +0000",
+      "facts": [
+        "Email from Substack <on+news@substack.com>: \"How writers are reacting to Substack’s AI transparency tools\"",
+        "com/p/how-writers-are-reacting-to-substacks Earlier this week, we announced a feature [ https://substack.",
+        "com/redirect/cf8cbc4d-81f7-4c22-9120-b8b0d4154256?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:29.754Z"
+    },
+    {
+      "emailId": "19f999ca32bb1b4e",
+      "subject": "\"3x3090 on msi 700\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sat, 25 Jul 2026 14:10:06 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"3x3090 on msi 700\"\"",
+        "I’m a bookish content creator based in NYC and have an opportunity to do an interview with an author in a few months.",
+        "Outside of Instagram and TikTok I don’t have an official podcast or YouTube..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:28.804Z"
+    },
+    {
+      "emailId": "19f9a045869bc419",
+      "subject": "“My husband had wrangled the cat into his crate before the firefighters chopped their way up to our floor”",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 25 Jul 2026 13:03:22 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“My husband had wrangled the cat into his crate before the firefighters chopped their way up to our floor”\"",
+        "View this post on the web at https://post.",
+        "com/p/my-husband-had-wrangled-the-cat-into This week, we’re breaking teeth, writing books, and going on our own odysseys."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:27.875Z"
+    },
+    {
+      "emailId": "19f9ecae9e446055",
+      "subject": "\"I released Inflect v2: two ultra-tiny complete TTS models under 4M and 10M...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sun, 26 Jul 2026 14:18:45 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"I released Inflect v2: two ultra-tiny complete TTS models under 4M and 10M...\"\"",
+        "96 Reddit r/LocalLLaMA: I released Inflect v2: two ultra-tiny complete TTS models under 4M and 10M parameters I’ve spent the past month trying to find the point where an extremely small TTS model stops feeling like a size experiment and starts feeling genuinely useful.",
+        "Today I’m releasing **Inflect v2**, wit..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:26.697Z"
+    },
+    {
+      "emailId": "19fa3e8644fd353a",
+      "subject": "\"A quick coding capability test:4 Qwen 3.6-35B GGUF Variants\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 27 Jul 2026 14:09:03 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"A quick coding capability test:4 Qwen 3.6-35B GGUF Variants\"\"",
+        "96 Reddit r/LocalLLaMA: A quick coding capability test:4 Qwen 3.",
+        "Algorithm & Logic (10 pts): &#34;Write a function in Python that finds the contiguous subarray with the largest sum (Kadane's algorithm)."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:25.742Z"
+    },
+    {
+      "emailId": "19fa91407a05ebb2",
+      "subject": "\"A user has managed to run Kimi K3 on 80xRTX 5090, via 25GbE Ethernet.\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Tue, 28 Jul 2026 14:14:49 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"A user has managed to run Kimi K3 on 80xRTX 5090, via 25GbE Ethernet.\"\"",
+        "96 Reddit r/LocalLLaMA: A user has managed to run Kimi K3 on 80xRTX 5090, via 25GbE Ethernet.",
+        "597 upvotes &bull; 152 comments Hide r/LocalLLaMA Hide r/LocalLLaMA r/podcasting u/Spare-Attitude3202 &bull; 2h ago Spent $500 on a microphone."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:24.897Z"
+    },
+    {
+      "emailId": "19fa981b80049351",
+      "subject": "🔴 A $7K Instagram acquisition to a $2.5M fundraise",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 28 Jul 2026 16:14:38 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 A $7K Instagram acquisition to a $2.5M fundraise\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "error": "fetch failed",
+      "syncedAt": "2026-09-13T18:47:23.781Z"
+    },
+    {
+      "emailId": "19fae4185c82eb05",
+      "subject": "\"A.X-K2 released\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Wed, 29 Jul 2026 14:22:36 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"A.X-K2 released\"\"",
+        "Read More 125 upvotes &bull; 46 comments Hide r/LocalLLaMA Hide r/LocalLLaMA r/NewMods u/DachshundLover197 &bull; 6h ago Made this this morning!!!",
+        "Read More 1 upvotes &bull; 0 comments Hide r/NewMods Hide r/NewMods r/podcasting u/vasoandvibes &bull; 1d ago How to Gain Organic Reach?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:22.542Z"
+    },
+    {
+      "emailId": "19faf447bb34e151",
+      "subject": "Model Behavior: Taylor Lorenz",
+      "from": "Substack <on+stories@substack.com>",
+      "date": "Wed, 29 Jul 2026 17:58:58 +0000",
+      "facts": [
+        "Email from Substack <on+stories@substack.com>: \"Model Behavior: Taylor Lorenz\"",
+        "com/p/model-behavior-taylor-lorenz We want to have an honest conversation about how publishers are feeling about and using AI.",
+        "These tools are in their infancy, and while the norms around their use and disclosure are evolving rapidly, we think it’s important to ask top writers, creators, and thinkers about their work, their businesses, and how they intersect with where AI stands today."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:21.593Z"
+    },
+    {
+      "emailId": "19faf8244cfe28c6",
+      "subject": "\"Why most young people don’t know what they want to do with their lives.\" and 1 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 29 Jul 2026 20:12:44 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"Why most young people don’t know what they want to do with their lives.\" and 1 more\"",
+        "\"Why most young people don&#8217;t know what they want to do with their lives.",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:20.039Z"
+    },
+    {
+      "emailId": "19fb255780d1b299",
+      "subject": "Vercel Email Verification",
+      "from": "Vercel <system@vercel.com>",
+      "date": "Thu, 30 Jul 2026 09:22:52 +0000",
+      "facts": [
+        "Email from Vercel <system@vercel.com>: \"Vercel Email Verification\"",
+        "An email was added to your Vercel account Hello sandeeprdy1729, The following email has been added to your account.",
+        "Verify this email belongs to you to use it with your Vercel account."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:19.264Z"
+    },
+    {
+      "emailId": "19fb255c0d93d5ce",
+      "subject": "Vercel Email Verification",
+      "from": "Vercel <system@vercel.com>",
+      "date": "Thu, 30 Jul 2026 09:23:12 +0000",
+      "facts": [
+        "Email from Vercel <system@vercel.com>: \"Vercel Email Verification\"",
+        "Email Verified Hello sandeeprdy1729, Your email has been verified in your account.",
+        "To view emails associated with your account, or to change your primary email, visit https://vercel."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:18.301Z"
+    },
+    {
+      "emailId": "19fb35fbfdc5ac76",
+      "subject": "\"I built an open source AI workspace that can code, control your computer, ...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Thu, 30 Jul 2026 14:13:44 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"I built an open source AI workspace that can code, control your computer, ...\"\"",
+        "96 Reddit r/LocalLLaMA: I built an open source AI workspace that can code, control your computer, browse the web, and analyze thousands of PDFs I've been building **Everfern AI**, an open source alternative to Claude's AI workspace.",
+        "Instead of being just another chatbot, Everfern can: * Write and edit code across your projects * Build compl..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:17.081Z"
+    },
+    {
+      "emailId": "19fb3b3b567fbc40",
+      "subject": "showtime, baby",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Thu, 30 Jul 2026 15:45:21 +0000",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"showtime, baby\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- Back in April, we launched Podcasts."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:16.148Z"
+    },
+    {
+      "emailId": "19fb48d39da2d5b3",
+      "subject": "We added video to mobile!",
+      "from": "Headliner Weekly Newsletter <info@headliner.app>",
+      "date": "Thu, 30 Jul 2026 19:43:01 +0000",
+      "facts": [
+        "Email from Headliner Weekly Newsletter <info@headliner.app>: \"We added video to mobile!\"",
+        "Learn how to make video clips on the go with the Headliner Mobile App.",
+        "‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] VIDEO ADDED TO MOBILE Learn how to make video clips on the go with the Headliner Mobile App [How to Make Video Clips of the Headliner Mobile App] [2] IOS [3] GOOGLE PLAY [4] MORE UPDATES WORTH TALKING ABOUT We've been awfully busy this month!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:15.124Z"
+    },
+    {
+      "emailId": "19fb88a85475cac7",
+      "subject": "\"K-EXAONE 2.0 released\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Fri, 31 Jul 2026 14:18:32 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"K-EXAONE 2.0 released\"\"",
+        "Read More 10 upvotes &bull; 6 comments Hide r/LocalLLaMA Hide r/LocalLLaMA r/NewMods u/FairMod &bull; 5h ago What does this 'removed' icon under a comment mean?",
+        "The comment is not available to the public."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:13.360Z"
+    },
+    {
+      "emailId": "19fb8f53bb35d4a9",
+      "subject": "🔴 11 creators made TIME's 100 Creators list twice",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 31 Jul 2026 16:15:06 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 11 creators made TIME's 100 Creators list twice\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:12.464Z"
+    },
+    {
+      "emailId": "19fb9281a9997645",
+      "subject": "Hi from Headliner! Just Checking In",
+      "from": "Headliner <info@headliner.app>",
+      "date": "Fri, 31 Jul 2026 17:10:40 +0000",
+      "facts": [
+        "Email from Headliner <info@headliner.app>: \"Hi from Headliner! Just Checking In\"",
+        "We want to make sure you get what you need.",
+        ":) ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] ARE YOU STILL THERE?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:11.433Z"
+    },
+    {
+      "emailId": "19fb9ed0c3ac8155",
+      "subject": "Here's everything you need to know from the month of July",
+      "from": "Headliner Monthly Recap <info@headliner.app>",
+      "date": "Fri, 31 Jul 2026 20:45:47 +0000",
+      "facts": [
+        "Email from Headliner Monthly Recap <info@headliner.app>: \"Here's everything you need to know from the month of July\"",
+        "Apple Podcasts Template, Video on Mobile, More Styling Options...",
+        "‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] EVERYTHING WE ADDED IN JULY This month, we're trying something a little new (SO IF YOU DON'T LIKE IT, PLEASE LET US KNOW!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:10.415Z"
+    },
+    {
+      "emailId": "19fbc46c93d9d965",
+      "subject": "We need your help...",
+      "from": "\"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>",
+      "date": "Sat, 01 Aug 2026 07:43:02 +0000 (UTC)",
+      "facts": [
+        "Email from \"Preeya from beehiiv 🐝\" <preeya@cx.beehiiv.com>: \"We need your help...\"",
+        "1+-+NPS+Request+-+Onboarding+%5BRebrand%5D&utm_content=NPS+Surve+-+Onboarding+-+Email+1&utm_medium=email&utm_source=customer.",
+        "io&utm_term=email_action ) Hey Sandeep, As a user of our platform, your feedback is pivotal in determining our future product features and enhancements."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:08.648Z"
+    },
+    {
+      "emailId": "19fbdacaeffbdf02",
+      "subject": "\"Minimum VRAM GPU to run DeepSeek-V4-Flash-0731 Q4_K_XL  at around 30 t/s ?\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sat, 1 Aug 2026 14:13:58 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Minimum VRAM GPU to run DeepSeek-V4-Flash-0731 Q4_K_XL  at around 30 t/s ?\"\"",
+        "96 Reddit r/LocalLLaMA: Minimum VRAM GPU to run DeepSeek-V4-Flash-0731 Q4_K_XL at around 30 t/s ?",
+        "Hello guys, I'm curious about running **DeepSeek-V4-Flash-0731** locally."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:07.753Z"
+    },
+    {
+      "emailId": "19fbe11e02ae0085",
+      "subject": "“You can’t transform the world unless you can understand it, and you can’t understand the world unless you can mea…",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 1 Aug 2026 13:03:15 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“You can’t transform the world unless you can understand it, and you can’t understand the world unless you can mea…\"",
+        "View this post on the web at https://post.",
+        "com/p/you-cant-transform-the-world-unless This week, we’re cherishing Jimothy, translating The Odyssey, and getting advice from 10-year-olds."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:06.796Z"
+    },
+    {
+      "emailId": "19fc2cba52b9689f",
+      "subject": "\"DeepSeek-V4-Flash-0731 UD-Q8_K_XL 17.20~ t/s on A6000 + 256GB DDR4\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Sun, 2 Aug 2026 14:05:53 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"DeepSeek-V4-Flash-0731 UD-Q8_K_XL 17.20~ t/s on A6000 + 256GB DDR4\"\"",
+        "96 Reddit r/LocalLLaMA: DeepSeek-V4-Flash-0731 UD-Q8_K_XL 17.",
+        "20~ t/s on A6000 &#43; 256GB DDR4 Hello everyone I want to join the hype of posting specs."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:05.781Z"
+    },
+    {
+      "emailId": "19fc8044c0c7b4d7",
+      "subject": "\"Qwen3.8-27B announced alongside Qwen3.8-Max\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 3 Aug 2026 14:25:51 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Qwen3.8-27B announced alongside Qwen3.8-Max\"\"",
+        "com/Alibaba\\_Qwen/status/2084100707423289643](https://x.",
+        "com/Alibaba\\_Qwen/status/2084100707423289643](https://x."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:04.312Z"
+    },
+    {
+      "emailId": "19fcd195d3992857",
+      "subject": "\"I CANNOT believe I've got DeepSeek-V4-Flash-0731, a frontier model, runnin...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Tue, 4 Aug 2026 14:06:58 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"I CANNOT believe I've got DeepSeek-V4-Flash-0731, a frontier model, runnin...\"\"",
+        "96 Reddit r/LocalLLaMA: I CANNOT believe I've got DeepSeek-V4-Flash-0731, a frontier model, running on my home PC.",
+        "So this is the stuff of absolute insanity."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:03.392Z"
+    },
+    {
+      "emailId": "19fcd8e6694372ad",
+      "subject": "🔴 The newsletter industry keeps changing. What's next?",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 4 Aug 2026 16:14:49 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 The newsletter industry keeps changing. What's next?\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:02.531Z"
+    },
+    {
+      "emailId": "19fce25b789bcd32",
+      "subject": "“The old-media era of journalists really wanted to be powerful. And I think now it’s about being interesting.”",
+      "from": "The Substack Post <post+someone-on-film@substack.com>",
+      "date": "Tue, 4 Aug 2026 16:00:34 +0000",
+      "facts": [
+        "Email from The Substack Post <post+someone-on-film@substack.com>: \"“The old-media era of journalists really wanted to be powerful. And I think now it’s about being interesting.”\"",
+        "View this post on the web at https://post.",
+        "com/p/the-old-media-era-of-journalists Richard Rushfield has had a storied career as an entertainment journalist, covering Hollywood deals, shake-ups, and scandals since the ’90s."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:01.449Z"
+    },
+    {
+      "emailId": "19fe2f786e3aea7e",
+      "subject": "You shared some Google Account data with Product Hunt",
+      "from": "Google <noreply-accounts@google.com>",
+      "date": "Sat, 08 Aug 2026 13:01:39 -0700",
+      "facts": [
+        "Email from Google <noreply-accounts@google.com>: \"You shared some Google Account data with Product Hunt\"",
+        "Keep track of your Google Account data timps.",
+        "com You're receiving this email because you used Sign in with Google to sign in to Product Hunt on August 8 at 9:20 PM ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:47:00.449Z"
+    },
+    {
+      "emailId": "19ffd979b6dd6d78",
+      "subject": "In this economy? 😱🎙️",
+      "from": "Headliner Weekly Newsletter <info@headliner.app>",
+      "date": "Fri, 14 Aug 2026 00:06:38 +0000",
+      "facts": [
+        "Email from Headliner Weekly Newsletter <info@headliner.app>: \"In this economy? 😱🎙️\"",
+        "Freebies that help grow podcasts ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] ACCOUNT FREEBIES FOR POD-GROWTH As the youths say...",
+        ") We've gathered one or two podcast tools that are actually free for you to use."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:58.855Z"
+    },
+    {
+      "emailId": "1a0010c5980f5f3f",
+      "subject": "🔴 These platforms just made it harder to get paid",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 14 Aug 2026 16:13:01 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 These platforms just made it harder to get paid\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:57.976Z"
+    },
+    {
+      "emailId": "19fd238da160b683",
+      "subject": "\"Gemma 4 on 500MB\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Wed, 5 Aug 2026 13:59:28 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Gemma 4 on 500MB\"\"",
+        "96 Reddit r/LocalLLaMA: Gemma 4 on 500MB https://x.",
+        "com/i/status/2084656348617392261 https://www."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:34.706Z"
+    },
+    {
+      "emailId": "19fd397148ea3667",
+      "subject": "\"What Barbie and Draupadi Have in Common\" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 5 Aug 2026 20:22:01 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"What Barbie and Draupadi Have in Common\" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "swarna's mumblecore &#129483; What Barbie and Draupadi Have in Common Barbie and Draupadi have no business sharing an essay...."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:33.542Z"
+    },
+    {
+      "emailId": "19fd72a6387e63af",
+      "subject": "payment link generated",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Thu, 6 Aug 2026 13:01:46 +0000",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"payment link generated\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- Sure, the last few months have been packed with new releases, with podcasts, Community, Copilot, and more."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:32.636Z"
+    },
+    {
+      "emailId": "19fd7789616cf4d3",
+      "subject": "\"Kimi K3 full model running on 16x GB10 cluster at 20+tps\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Thu, 6 Aug 2026 14:27:11 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Kimi K3 full model running on 16x GB10 cluster at 20+tps\"\"",
+        "96 Reddit r/LocalLLaMA: Kimi K3 full model running on 16x GB10 cluster at 20&#43;tps Kimi K3 full model running on 16x GB10 cluster at 20&#43;tps average (llama-benchy coherent corpus) 38tps peak, 750tps prefill.",
+        "This is the first run of full k3 with dspark on my cluster."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:31.563Z"
+    },
+    {
+      "emailId": "19fd8a6a634e8109",
+      "subject": "Optimize Podcast and YouTube Uploads",
+      "from": "Headliner Weekly Newsletter <info@headliner.app>",
+      "date": "Thu, 06 Aug 2026 19:57:06 +0000",
+      "facts": [
+        "Email from Headliner Weekly Newsletter <info@headliner.app>: \"Optimize Podcast and YouTube Uploads\"",
+        "Free tools to help make your uploads better for search and YouTube!",
+        "‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] MAKE BETTER UPLOADS Ever wonder how you can make 'better' uploads?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:30.517Z"
+    },
+    {
+      "emailId": "19fd99315db47197",
+      "subject": "An author’s $2 million book deal was pulled over suspected AI use. Where does publishing go from here?",
+      "from": "The Substack Post <post+unstacked@substack.com>",
+      "date": "Thu, 6 Aug 2026 21:01:04 +0000",
+      "facts": [
+        "Email from The Substack Post <post+unstacked@substack.com>: \"An author’s $2 million book deal was pulled over suspected AI use. Where does publishing go from here?\"",
+        "View this post on the web at https://post.",
+        "com/p/an-authors-2-million-book-deal-was Last week, news broke that Jerry Falade’s debut crime novel, which had reportedly sold for $2 million after a 14-way bidding auction, had been pulled from publication by the author’s own agents over suspected AI use."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:29.563Z"
+    },
+    {
+      "emailId": "19fdc90678d513ad",
+      "subject": "\"🟩 NVIDIA's whole speech stack just went local. ASR + TTS + codec, quantize...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Fri, 7 Aug 2026 14:11:18 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"🟩 NVIDIA's whole speech stack just went local. ASR + TTS + codec, quantize...\"\"",
+        "96 Reddit r/LocalLLaMA: 🟩 NVIDIA's whole speech stack just went local.",
+        "ASR &#43; TTS &#43; codec, quantized to GGUF, running on-device via NeMo-Speech."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:28.116Z"
+    },
+    {
+      "emailId": "19fdd043013860d9",
+      "subject": "🔴 I paid $19 to see how the slop is made",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Fri, 7 Aug 2026 16:17:46 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 I paid $19 to see how the slop is made\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/1fb00cf4-5d66-4896-83ce-90f035e373aa/CS_Logo_Wide.",
+        "t=1705502632) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:27.207Z"
+    },
+    {
+      "emailId": "19fdd6c42f842b8d",
+      "subject": "A career journalist covering spies and national security was hit with a $1 million defamation lawsuit. He turned t…",
+      "from": "Substack <on+stories@substack.com>",
+      "date": "Fri, 7 Aug 2026 17:03:03 +0000",
+      "facts": [
+        "Email from Substack <on+stories@substack.com>: \"A career journalist covering spies and national security was hit with a $1 million defamation lawsuit. He turned t…\"",
+        "com/p/a-career-journalist-covering-spies Earlier this year, veteran national security reporter Jeff Stein was served with an eye-watering $1 million defamation lawsuit after publishing a scoop about an incoming Trump administration official in his publication, SpyTalk [ https://substack.",
+        "com/redirect/f84965e0-1ce4-421d-a0b1-c4600f77624b?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:25.419Z"
+    },
+    {
+      "emailId": "19fe2200ab76a7ba",
+      "subject": "“It was 5 hours into the trip when I realized my hostess might be annoyed. 33 hours when I thought she hated me. 5…",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 8 Aug 2026 13:01:07 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“It was 5 hours into the trip when I realized my hostess might be annoyed. 33 hours when I thought she hated me. 5…\"",
+        "View this post on the web at https://post.",
+        "com/p/it-was-5-hours-into-the-trip-when This week, we’re piercing our navels, visiting Nantucket as unwanted guests, and remembering friends and family in the ways we know how."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:24.462Z"
+    },
+    {
+      "emailId": "19fe248d486cff49",
+      "subject": "Welcome to Product Hunt 😺",
+      "from": "Product Hunt <hello@team.producthunt.com>",
+      "date": "Sat, 8 Aug 2026 16:50:50 +0000",
+      "facts": [
+        "Email from Product Hunt <hello@team.producthunt.com>: \"Welcome to Product Hunt 😺\"",
+        "utm_campaign=email-notification&utm_medium=email&utm_source=onboarding_ ) Saturday, August 8 ************************ Welcome to Product Hunt!",
+        "************************ Every day 100s of new startups launch on Product Hunt."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:23.413Z"
+    },
+    {
+      "emailId": "19fe590dfee4852b",
+      "subject": "Get upvotes for vaak — Speak. It types. on Product Hunt today",
+      "from": "\"Upvotes @ LaunchPact\" <ammar@launchpact.io>",
+      "date": "Sun, 9 Aug 2026 08:08:24 +0000",
+      "facts": [
+        "Email from \"Upvotes @ LaunchPact\" <ammar@launchpact.io>: \"Get upvotes for vaak — Speak. It types. on Product Hunt today\"",
+        "👋 You're live on Product Hunt right now — so I'll keep this short, you're busy.",
+        "There's a network of founders whose whole thing is supporting each other's launches: LaunchPact."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:22.239Z"
+    },
+    {
+      "emailId": "19fe5bc27b3f606b",
+      "subject": "network capacity for vaak launch",
+      "from": "Upvote Network <hello@upvote.network>",
+      "date": "Sun, 09 Aug 2026 08:55:41 +0000 (UTC)",
+      "facts": [
+        "Email from Upvote Network <hello@upvote.network>: \"network capacity for vaak launch\"",
+        "Hi Sandeep, vaak as a free open-source voice dictation tool — OS projects with clear utility have a built-in PH audience.",
+        "500 PH profiles in our network, 5+ years old, real humans."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:21.364Z"
+    },
+    {
+      "emailId": "19fe5ee86abd00f7",
+      "subject": "Quick SEO gap for vaak",
+      "from": "Simon from Auspia <simon@getauspia.ai>",
+      "date": "Sun, 9 Aug 2026 09:50:41 +0000",
+      "facts": [
+        "Email from Simon from Auspia <simon@getauspia.ai>: \"Quick SEO gap for vaak\"",
+        "Hi there, Congrats on launching vaak — Speak.",
+        "The local-first dictation approach is a strong differentiator."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:20.443Z"
+    },
+    {
+      "emailId": "19fe604d834df83a",
+      "subject": "Just upvoted your launch - vaak — Speak. It types.",
+      "from": "David from KrispiTech <david@krispitech.com>",
+      "date": "Sun, 09 Aug 2026 03:15:04 -0700 (PDT)",
+      "facts": [
+        "Email from David from KrispiTech <david@krispitech.com>: \"Just upvoted your launch - vaak — Speak. It types.\"",
+        "Hey there, Just dropped an upvote on your Product Hunt launch - congrats, looks like a solid product.",
+        "We run KrispiTech, a tech blog that's been around since 2016."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:19.502Z"
+    },
+    {
+      "emailId": "19fe63b46a78ba15",
+      "subject": "rankings stabilized — 450 profiles remaining",
+      "from": "Upvote Network <hello@upvote.network>",
+      "date": "Sun, 09 Aug 2026 11:14:31 +0000 (UTC)",
+      "facts": [
+        "Email from Upvote Network <hello@upvote.network>: \"rankings stabilized — 450 profiles remaining\"",
+        "Hi Sandeep, PH rankings stabilized — Omniwork leads at 135 upvotes.",
+        "That traction came from network support, not organic discovery alone."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:18.556Z"
+    },
+    {
+      "emailId": "19feb430ae3ee6d1",
+      "subject": "vaak — Speak. It types. got my upvote",
+      "from": "\"Rob @ NextGen Tools\" <robertg@connect.nxgntools.com>",
+      "date": "Mon, 10 Aug 2026 10:41:02 +0000",
+      "facts": [
+        "Email from \"Rob @ NextGen Tools\" <robertg@connect.nxgntools.com>: \"vaak — Speak. It types. got my upvote\"",
+        "Hey, just left an upvote for vaak — Speak.",
+        "one quiet suggestion: NextGen Tools [https://www."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:17.635Z"
+    },
+    {
+      "emailId": "19fec0d719200324",
+      "subject": "Launch Your Product on SaasHunt & DevHub",
+      "from": "SaasHunt <saashunt@focusapps.app>",
+      "date": "Mon, 10 Aug 2026 14:22:11 +0000",
+      "facts": [
+        "Email from SaasHunt <saashunt@focusapps.app>: \"Launch Your Product on SaasHunt & DevHub\"",
+        "Launch Your Product on SaasHunt & DevHub Hi there!",
+        "👋 I came across your product and thought it might be a great fit for one of our product: SaasHunt : A community driven platform for showcasing SaaS products (alternative to Product Hunt)."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:16.694Z"
+    },
+    {
+      "emailId": "19fec16fe68b7a74",
+      "subject": "\"Mark Zuckerberg on releases\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 10 Aug 2026 14:32:37 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"Mark Zuckerberg on releases\"\"",
+        "96 Reddit r/LocalLLaMA: Mark Zuckerberg on releases https://x.",
+        "com/i/status/2086755195535413696 Read More 619 upvotes &bull; 124 comments Hide r/LocalLLaMA Hide r/LocalLLaMA r/SamayRaina u/FranzKafka22-6 &bull; 3h ago Samay is Samay 😭 1659 upvotes &bull; 24 comments Hide r/SamayRaina Hide r/SamayRaina r/NewMods u/SuchAd7808 &bull; 3h ago I figured it out!!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:15.837Z"
+    },
+    {
+      "emailId": "19ff104cb24ba02f",
+      "subject": "Your competitors are already in the room",
+      "from": "InsightScout <hello@go.insightscout.co>",
+      "date": "Tue, 11 Aug 2026 13:30:50 +0000",
+      "facts": [
+        "Email from InsightScout <hello@go.insightscout.co>: \"Your competitors are already in the room\"",
+        "Hey there, Bad news: your competitors do not need to outrank you on Google to steal your customers.",
+        "A founder asks in Reddit: \"Anyone know a good way to find leads & sales opportunities?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:14.918Z"
+    },
+    {
+      "emailId": "19ff161176a9b2d7",
+      "subject": "🔴 One creator's guide to booking and renewing brand deals",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 11 Aug 2026 15:11:38 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 One creator's guide to booking and renewing brand deals\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:14.152Z"
+    },
+    {
+      "emailId": "19ff79d11142801f",
+      "subject": "Early access to Velork",
+      "from": "ali@velork.com",
+      "date": "Wed, 12 Aug 2026 20:14:53 +0000",
+      "facts": [
+        "Email from ali@velork.com: \"Early access to Velork\"",
+        "I'm building an AI IDE that helps solo founders and indie hackers create beautiful UIs faster.",
+        "Just drop in a Figma design, UI component, or website you like, and it helps turn that inspiration into production-ready code."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:13.073Z"
+    },
+    {
+      "emailId": "19ff7a7017f9a344",
+      "subject": "\"Hey baby, let's talk \" and 4 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 12 Aug 2026 20:25:43 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"Hey baby, let's talk \" and 4 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "Keabetsoe Mqwati Hey baby, let's talk ..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:12.215Z"
+    },
+    {
+      "emailId": "19ffc499e77f1156",
+      "subject": "Updates to OpenAI’s Privacy Policy",
+      "from": "OpenAI <noreply@email.openai.com>",
+      "date": "Thu, 13 Aug 2026 18:01:50 +0000 (UTC)",
+      "facts": [
+        "Email from OpenAI <noreply@email.openai.com>: \"Updates to OpenAI’s Privacy Policy\"",
+        "Updates to OpenAI’s Privacy Policy Hi Sandeep Thummala, We’re updating our Privacy Policy to include information about ads in ChatGPT, including how they work and how you can control your experience.",
+        "Plus, Pro, Enterprise, Business and Education plans do not have ads."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:11.300Z"
+    },
+    {
+      "emailId": "1a0062e19be66351",
+      "subject": "“At some point in the future, something that is currently considered a high-level skill will be the baseline for e…",
+      "from": "The Substack Post <post+the-weekender@substack.com>",
+      "date": "Sat, 15 Aug 2026 13:03:03 +0000",
+      "facts": [
+        "Email from The Substack Post <post+the-weekender@substack.com>: \"“At some point in the future, something that is currently considered a high-level skill will be the baseline for e…\"",
+        "View this post on the web at https://post.",
+        "com/p/at-some-point-in-the-future-something This week, we’re eating our seaweed, throwing tech to the wind, and sculpting rocks in our own image."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:09.562Z"
+    },
+    {
+      "emailId": "1a00853de86b7c8e",
+      "subject": "Sandeep, it’s been a while. Check out what’s new with Gemini",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Sat, 15 Aug 2026 19:08:28 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Sandeep, it’s been a while. Check out what’s new with Gemini\"",
+        "Let’s get back together Since you’ve been gone, we’ve been up to a lot.",
+        "Try some of our new and improved features and see for yourself."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:08.571Z"
+    },
+    {
+      "emailId": "1a00dd3b28aff2f6",
+      "subject": "We've updated our Privacy Policy",
+      "from": "Fathom <notifications@fathom.video>",
+      "date": "Sun, 16 Aug 2026 20:44:23 -0700",
+      "facts": [
+        "Email from Fathom <notifications@fathom.video>: \"We've updated our Privacy Policy\"",
+        "Access the complete policy to review your data rights and options.",
+        "Hi there, We've made updates to our Privacy Policy."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:07.337Z"
+    },
+    {
+      "emailId": "1a010153dd872d3d",
+      "subject": "\"After pushing 1M+ tokens through Qwen 3.8 27B, here is my optimal llama.cp...\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 17 Aug 2026 14:17:01 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"After pushing 1M+ tokens through Qwen 3.8 27B, here is my optimal llama.cp...\"\"",
+        "96 Reddit r/LocalLLaMA: After pushing 1M&#43; tokens through Qwen 3.",
+        "cpp config for 16GB VRAM (73k Context, Agentic Coding) Following up on my previous post about my budget server setup (Intel N100 &#43; RTX 5060 Ti 16GB), a few of you asked for a deeper dive into my actual inference config and real-world agentic performance."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:06.221Z"
+    },
+    {
+      "emailId": "1a015aa02776fadd",
+      "subject": "🔴 Inside one of X's most viral entertainment accounts",
+      "from": "Creator Spotlight <creator-spotlight@mail.beehiiv.com>",
+      "date": "Tue, 18 Aug 2026 16:17:38 +0000",
+      "facts": [
+        "Email from Creator Spotlight <creator-spotlight@mail.beehiiv.com>: \"🔴 Inside one of X's most viral entertainment accounts\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/3d56938f-f7ce-4784-919e-dab3c8df5287/image__39_.",
+        "t=1748354774) Follow image link: (https://creatorspotlight."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:05.360Z"
+    },
+    {
+      "emailId": "1a01bc874e899069",
+      "subject": "\"How to Read Anyone\" and 1 more",
+      "from": "Substack <no-reply@substack.com>",
+      "date": "Wed, 19 Aug 2026 20:48:36 +0000",
+      "facts": [
+        "Email from Substack <no-reply@substack.com>: \"\"How to Read Anyone\" and 1 more\"",
+        "Explore this week&#8217;s personalized recommendations, selected with your interests and subscriptions in mind.",
+        "The Thinking Shelf How to Read Anyone Introduction..."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:04.300Z"
+    },
+    {
+      "emailId": "1a01f3cf85a93e94",
+      "subject": "get cited",
+      "from": "Tyler from beehiiv <product@mail.beehiiv.com>",
+      "date": "Thu, 20 Aug 2026 12:54:44 +0000",
+      "facts": [
+        "Email from Tyler from beehiiv <product@mail.beehiiv.com>: \"get cited\"",
+        "com/cdn-cgi/image/fit=scale-down,format=auto,onerror=redirect,quality=80/uploads/asset/file/b95a0b35-82ee-4c63-89ab-5438b82a808b/PU.",
+        "t=1742336000) Caption: -------------------- For the past few decades, SEO was the name of the game: get indexed by Google, rank on page one, capture the traffic."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:03.251Z"
+    },
+    {
+      "emailId": "1a021a45201e4a75",
+      "subject": "How to build podcast engagement",
+      "from": "Headliner Weekly Newsletter <info@headliner.app>",
+      "date": "Fri, 21 Aug 2026 00:06:51 +0000",
+      "facts": [
+        "Email from Headliner Weekly Newsletter <info@headliner.app>: \"How to build podcast engagement\"",
+        "YouTube's changing what a view means, here's how to build engagement that lasts (across platforms) ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ [Headliner logo] [1] THE CREATOR SHAKE-UP If you live in or partly live in creator land, you may have heard some rumblings about YouTube changing how views are measured.",
+        "STARTING AUGUST 24TH, YOUTUBE WILL BE MOVING TO AN EXPOSURE-BASED MODEL ACROSS ALL FORMATS [2] (including Podcasts)."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:02.219Z"
+    },
+    {
+      "emailId": "1a034269b620330a",
+      "subject": "\"DeepSeek Harness is Insanely Good\"",
+      "from": "Reddit <noreply@redditmail.com>",
+      "date": "Mon, 24 Aug 2026 14:22:19 +0000",
+      "facts": [
+        "Email from Reddit <noreply@redditmail.com>: \"\"DeepSeek Harness is Insanely Good\"\"",
+        "96 Reddit r/LocalLLaMA: I don't know about you guys, but Deep-seek harness is insane.",
+        "It's not focused on being a coder agent, it's webUI made it very easy to just checkin from time to time, and the best part?"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:01.213Z"
+    },
+    {
+      "emailId": "1a034d7d6375232a",
+      "subject": "Updates to our terms of use",
+      "from": "Microsoft <msa@communication.microsoft.com>",
+      "date": "Mon, 24 Aug 2026 17:35:54 +0000",
+      "facts": [
+        "Email from Microsoft <msa@communication.microsoft.com>: \"Updates to our terms of use\"",
+        "*Your Services Agreement made clearer* Hello, You’re receiving this email because we are updating the Microsoft Services Agreement, which applies to one or more Microsoft products or services you use.",
+        "We’re making these updates to clarify our terms and ensure that they remain transparent for you, as well as to cover new Microsoft products, services and features."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:46:00.276Z"
+    },
+    {
+      "emailId": "1a0353ad6d5f32b4",
+      "subject": "You now have exclusive access to AI features",
+      "from": "The Google Workspace Team <workspace-noreply@google.com>",
+      "date": "Mon, 24 Aug 2026 12:24:03 -0700",
+      "facts": [
+        "Email from The Google Workspace Team <workspace-noreply@google.com>: \"You now have exclusive access to AI features\"",
+        "Google Workspace You've been selected to try new AI features For a limited time, your account is eligible to try AI features typically reserved for paid accounts*.",
+        "Try them today to help save time and boost creativity."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:59.349Z"
+    },
+    {
+      "emailId": "1a03a2d172a9867e",
+      "subject": "New on Substack: Creator match, audience-specific content blocks, global reply rules, advanced podcast transcript …",
+      "from": "Substack <on+product@substack.com>",
+      "date": "Tue, 25 Aug 2026 17:17:56 +0000",
+      "facts": [
+        "Email from Substack <on+product@substack.com>: \"New on Substack: Creator match, audience-specific content blocks, global reply rules, advanced podcast transcript …\"",
+        "com/p/new-on-substack-creator-match-audience We know that finding the right audience and then giving them compelling reasons to continue to support your work is core to being successful on Substack.",
+        "The features we launched this month allow you to do both these things: reach new subscribers and create richer experiences for your existing ones."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:58.276Z"
+    },
+    {
+      "emailId": "1a03b81f521475c5",
+      "subject": "Match a style from a photo",
+      "from": "ChatGPT <noreply@email.openai.com>",
+      "date": "Wed, 26 Aug 2026 00:39:27 +0000 (UTC)",
+      "facts": [
+        "Email from ChatGPT <noreply@email.openai.com>: \"Match a style from a photo\"",
+        "Share a photo of an outfit to find similar pieces.",
+        "Try it now Try it now ChatGPT can help name the style, pull out useful details, and suggest products for you to explore."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:57.253Z"
+    },
+    {
+      "emailId": "1a045279867d4efb",
+      "subject": "The power of captions 💪",
+      "from": "Headliner Weekly Newsletter <info@headliner.app>",
+      "date": "Thu, 27 Aug 2026 21:36:57 +0000",
+      "facts": [
+        "Email from Headliner Weekly Newsletter <info@headliner.app>: \"The power of captions 💪\"",
+        "Captions not only look pretty, but they actually make better uploads.",
+        "Learn how to caption audiograms and videos!"
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:55.655Z"
+    },
+    {
+      "emailId": "1a05372708f4259d",
+      "subject": "Verify your profile",
+      "from": "Instagram <security@mail.instagram.com>",
+      "date": "Sun, 30 Aug 2026 09:13:22 -0700",
+      "facts": [
+        "Email from Instagram <security@mail.instagram.com>: \"Verify your profile\"",
+        "Facebook Hi timps_ai, Someone tried to log in to your Instagram profile.",
+        "If this was you, please use the following code to confirm your identity: 255235 If this wasn&#039;t you, please reset your password to secure your account."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:54.548Z"
+    },
+    {
+      "emailId": "1a063314ed831934",
+      "subject": "New login to your SpaceXAI account",
+      "from": "SpaceXAI <noreply@x.ai>",
+      "date": "Wed, 02 Sep 2026 17:36:10 +0000 (UTC)",
+      "facts": [
+        "Email from SpaceXAI <noreply@x.ai>: \"New login to your SpaceXAI account\"",
+        "96 Your SpaceXAI account has been accessed from a new IP address We've noticed a new login Hi Sandeep, We're notifying you by email of a new login to your SpaceXAI account: Time: Wed, 2 Sep 2026 17:36:10 +0000 IP address: 139.",
+        "166 Location: Hyderabad, IN Browser: Mozilla/5."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:53.436Z"
+    },
+    {
+      "emailId": "1a063316d09d05dd",
+      "subject": "You shared some Google Account data with xAI",
+      "from": "Google <noreply-accounts@google.com>",
+      "date": "Wed, 02 Sep 2026 10:36:17 -0700",
+      "facts": [
+        "Email from Google <noreply-accounts@google.com>: \"You shared some Google Account data with xAI\"",
+        "Keep track of your Google Account data timps.",
+        "com You're receiving this email because you used Sign in with Google to sign in to xAI on September 2 at 11:06 PM ."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:52.469Z"
+    },
+    {
+      "emailId": "1a06cb752ae52bba",
+      "subject": "Expert answers to your newsletter questions",
+      "from": "\"Conor @ beehiiv 🐝\" <conor@beehiiv.com>",
+      "date": "Fri, 04 Sep 2026 13:59:08 +0000 (UTC)",
+      "facts": [
+        "Email from \"Conor @ beehiiv 🐝\" <conor@beehiiv.com>: \"Expert answers to your newsletter questions\"",
+        "Six live sessions this month — plus two free playbooks for attendees beehiiv Login ( https://app.",
+        "utm_campaign=Monthly+Upcoming+Webinars+-+September+%2726+%289%2F4%2F26%29&utm_content=Monthly+Upcoming+Webinars+-+September+%2726+%289%2F4%2F26%29&utm_medium=email&utm_source=customer."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:51.193Z"
+    },
+    {
+      "emailId": "1a083e423bbe16a1",
+      "subject": "Sandeep, claim your student offer for 1 year, at no cost 🎓",
+      "from": "Google Gemini <google-gemini-noreply@google.com>",
+      "date": "Tue, 08 Sep 2026 18:59:21 -0700",
+      "facts": [
+        "Email from Google Gemini <google-gemini-noreply@google.com>: \"Sandeep, claim your student offer for 1 year, at no cost 🎓\"",
+        "Follow us Instagram > Discord > X > CLAIM YOUR STUDENT PLAN FOR 1 YEAR AT NO COST With Google Gemini, you get unlimited uploads, study notebooks, and interactive visualizations.",
+        "Plus, with the student plan, you can unlock higher usage limits, 400 GB of storage,1 and video generation with Omni."
+      ],
+      "method": "heuristic",
+      "syncedAt": "2026-09-13T18:45:50.149Z"
+    }
+  ]
+}

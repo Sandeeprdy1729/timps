@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TIMPS Gmail Connector — connect your inbox, auto-sync distilled facts into long-term memory, and search them from anywhere.">
+  <title>Gmail Connector — TIMPS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/timps-fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-box" title="TIMPS Robot Mascot">
+        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+          <rect x="3" y="5" width="10" height="7" rx="1" fill="#2D5A4F"/>
+          <rect x="4" y="6" width="8" height="5" fill="#3D7A6A"/>
+          <rect x="5" y="7" width="2" height="2" fill="#C8BF8C"/>
+          <rect x="9" y="7" width="2" height="2" fill="#C8BF8C"/>
+          <rect x="5" y="10" width="6" height="1" fill="#C8BF8C"/>
+          <rect x="3" y="12" width="10" height="5" rx="1" fill="#C8BF8C"/>
+          <rect x="4" y="17" width="3" height="1" fill="#C8BF8C"/>
+          <rect x="9" y="17" width="3" height="1" fill="#C8BF8C"/>
+          <rect x="7" y="3" width="2" height="2" fill="#4A8C7A"/>
+        </svg>
+      </div>
+      TIMPS
+    </a>
+    <ul class="nav-links">
+      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li><a href="docs.html">Docs</a></li>
+      <li><a href="gmail.html" class="active">Connectors</a></li>
+      <li><a href="memory.html">Memory</a></li>
+      <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
+      <li><a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank">Swarm</a></li>
+      <li><a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank">Model</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
+      <a href="memory.html" class="btn btn-primary btn-sm">Live Memory</a>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Connectors</div>
+      <a href="#gmail-overview" class="sidebar-link active">Gmail Overview</a>
+      <a href="#how-it-works" class="sidebar-link">How it works</a>
+      <a href="#data-store" class="sidebar-link">Data store</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">CLI</div>
+      <a href="#cli-sync" class="sidebar-link">Sync now</a>
+      <a href="#cli-cron" class="sidebar-link">Auto-sync (cron)</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Desktop App</div>
+      <a href="#desktop" class="sidebar-link">Connectors tab</a>
+      <a href="#chat-commands" class="sidebar-link">/email commands</a>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Memory</div>
+      <a href="memory.html" class="sidebar-link">Live Memory →</a>
+    </div>
+    <a href="#privacy" class="sidebar-link" style="margin-top: 8px;">Privacy</a>
+  </aside>
+
+  <main class="docs-content">
+    <h1>Gmail Connector</h1>
+    <p style="margin-bottom: 40px;">Turn your inbox into a memory. One OAuth connect, then every synced email is distilled into knowledge facts your agent can recall forever.</p>
+    <hr class="divider" style="margin-bottom: 40px;">
+
+    <h2 id="gmail-overview">Overview</h2>
+    <p>The Gmail connector is a <strong>read-only</strong> integration. It never sends, drafts, or deletes anything.</p>
+    <ul>
+      <li>Connect with a Google OAuth consent screen (Desktop / installed-app client)</li>
+      <li>Every sync scans the inbox and <strong>distills each email into 1–3 knowledge facts</strong></li>
+      <li>Facts are stored in TIMPS long-term memory with tags <code>email</code>, <code>gmail</code>, <code>knowledge</code>, <code>sender:&lt;address&gt;</code></li>
+      <li>Searchable with <code>timps recall</code>, in the desktop app, and on the <a href="memory.html">live memory page</a></li>
+    </ul>
+    <div class="callout callout-info">First sync backfills the inbox (capped for speed). Later syncs only pull mail newer than the last run. The raw emails stay in your local store — nothing is uploaded.</div>
+
+    <h2 id="how-it-works">How it works</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 24px 0;">
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">sync</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Sync</strong><p style="margin-top: 8px; font-size: 0.8rem;">Fetches new inbox mail with a refresh token, matches the previous run, and stores raw JSON per message.</p></div>
+      </div>
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">distill</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Distill</strong><p style="margin-top: 8px; font-size: 0.8rem;">Summarizes each message — subject, sender, date, and the key facts worth remembering.</p></div>
+      </div>
+      <div class="window">
+        <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">remember</span></div>
+        <div class="window-body" style="font-size: 0.82rem;"><strong>Remember</strong><p style="margin-top: 8px; font-size: 0.8rem;">Facts enter semantic memory and show up in <code>timps recall</code> and the memory graph.</p></div>
+      </div>
+    </div>
+
+    <h2 id="data-store">Data store</h2>
+    <p>Everything lives locally in <code>~/.timps/gmail/</code> — shared by the CLI, the desktop app, and the launchd job:</p>
+    <div class="code-block">~/.timps/gmail/
+├── client.json        # Google OAuth client id + secret (chmod 600)
+├── tokens.json        # refresh + access tokens (chmod 600)
+├── state.json         # lastRun, lastMessageId, messagesSynced
+├── summaries.jsonl    # distilled facts (one JSON object per email)
+└── raw/YYYY-MM-DD/    # raw per-message copies
+<id>.json</div>
+    <div class="callout callout-warn">Tokens are never committed. The <a href="memory.html">memory page</a> only renders the distilled summaries, never raw message or token data.</div>
+
+    <h2 id="cli-sync">CLI — sync now</h2>
+    <div class="code-block">timps gmail:sync           # one-shot sync from the terminal
+timps gmail:recent 10      # show 10 latest distilled facts
+timps gmail:search "aws"   # search facts by subject / sender / content</div>
+
+    <h2 id="cli-cron">CLI — auto-sync (cron)</h2>
+    <p>Register a daily job (09:00) with the built-in cron helper:</p>
+    <div class="code-block">timps gmail:cron           # install the daily sync job
+timps gmail:cron --remove # remove it</div>
+    <p>On macOS this installs a launchd agent (<code>ai.timps.gmail.sync</code>). Logs land in <code>~/.timps/gmail/logs/</code>.</p>
+
+    <h2 id="desktop">Desktop app — Connectors tab</h2>
+    <ul>
+      <li>Open <strong>Connectors</strong> in the sidebar, then <strong>Connect</strong> — the consent screen opens in your browser and the desktop app completes OAuth locally</li>
+      <li><strong>Import credentials</strong> points at a downloaded Google client JSON (no secrets cross the renderer)</li>
+      <li><strong>Sync now</strong> runs the same pipeline as the CLI</li>
+      <li><strong>Auto-sync</strong> installs/removes the daily job</li>
+      <li><strong>Search</strong> filters the distilled email memories right in the tab</li>
+    </ul>
+    <div class="callout callout-tip">The desktop OAuth flow runs entirely in Rust — the renderer stays network-free so the app CSP stays locked.</div>
+
+    <h2 id="chat-commands">Chat commands</h2>
+    <p>Type these in the desktop Chat to query the inbox without an LLM round-trip:</p>
+    <div class="table-wrap">
+      <table class="table-simple">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>/email recent 5</code></td><td>Latest distilled email memories</td></tr>
+          <tr><td><code>/email search &lt;query&gt;</code></td><td>Search by subject, sender, or fact</td></tr>
+          <tr><td><code>/email sync</code></td><td>Run a sync from chat</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="privacy">Privacy</h2>
+    <ul>
+      <li><strong>Read-only scopes only</strong> — no send, draft, or delete permissions</li>
+      <li>Raw copies and tokens stay on your machine</li>
+      <li>Only distilled facts (subject + sender + key facts) enter the memory store you control</li>
+      <li>Disconnect anytime with <code>timps gmail:reset</code> or the app's Disconnect button</li>
+    </ul>
+  </main>
+</div>
+
+<script src="js/main.js"></script>
+<script>
+const headings = document.querySelectorAll('.docs-content h2[id]');
+const links = document.querySelectorAll('.sidebar-link');
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector('.sidebar-link[href="#' + e.target.id + '"]');
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-52px 0px -60% 0px' });
+headings.forEach(h => obs.observe(h));
+</script>
+</body>
+</html>
