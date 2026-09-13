@@ -258,7 +258,7 @@
     .catch(function (err) {
       document.getElementById('mem-list').innerHTML =
         '<div class="mem-error">Could not load memory data: ' + esc(err.message) + '. ' +
-        'Regenerate it with <code>node timps-website/tools/build-gmail-memory.mjs</code> and redeploy.</div>';
+        'Regenerate it with <code>node docs/tools/build-gmail-memory.mjs</code> and redeploy.</div>';
     });
 
   document.getElementById('mem-search').addEventListener('input', function (e) {
