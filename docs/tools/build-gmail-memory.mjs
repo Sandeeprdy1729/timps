@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * build-gmail-memory.mjs
- * Rebuilds timps-website/data/gmail-memory.json from the live TIMPS Gmail store
+ * Rebuilds docs/data/gmail-memory.json from the live TIMPS Gmail store
  * (~/.timps/gmail/summaries.jsonl + state.json). Run after each sync:
  *
- *   node timps-website/tools/build-gmail-memory.mjs
+ *   node docs/tools/build-gmail-memory.mjs
  *
  * Only distilled, schema-shaped email facts are exported — never tokens or
  * credential files.
