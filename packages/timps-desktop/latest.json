@@ -1,0 +1,11 @@
+{
+  "version": "0.1.1",
+  "notes": "This release adds a full desktop refactor:\n\nCHANGED\n- Aggregate all stores: Overview, Lens, Stats and Nexus now operate across every store in ~/.timps/memory/<hash>/.\n- Lens is now memory search: debounced full-text search across all stores with highlighting, tags, scores and store chips.\n- Stats rewritten: aggregate breakdown with per-store table and a no-data empty state.\n- Nexus simplified: static whole-graph view, no physics loop, no polling, manual refresh.\n- Settings cleaned up: removed AI Provider and Server URL sections, project path selection removed.\n\nADDED\n- Memory view: file/folder browser over ~/.timps with sizes and a content preview pane.\n- Connectors guided setup: open developer console, register callback, paste client_id/client_secret inline.\n\nFIXED\n- Fixed-port OAuth listener (binds 127.0.0.1:12849 first, falls back to ephemeral port).\n- Fixed latent trim_label panic on multi-byte characters in the Nexus graph.\n\nSee the changelog for the full list.",
+  "pub_date": "2026-09-14T12:52:31Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/Sandeeprdy1729/timps/releases/download/v0.1.1/TIMPS_0.1.1_aarch64.dmg"
+    }
+  }
+}
