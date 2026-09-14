@@ -118,3 +118,31 @@ if (hamburger && mobileMenu) {
     mobileMenu.classList.toggle('open');
   });
 }
+
+/* ── Connector + toggle (local, per-browser) ── */
+document.querySelectorAll('.connector-plus').forEach(btn => {
+  const connector = btn.dataset.connector;
+  const key = 'timps.connector.' + connector;
+  const card = btn.closest('.connector');
+  const status = card.querySelector('.connector-status');
+  const dotEl = card.querySelector('.conn-dot');
+
+  const render = () => {
+    const connected = localStorage.getItem(key) === '1';
+    card.classList.toggle('connected', connected);
+    if (status) {
+      dotEl.style.background = connected ? 'var(--green)' : 'var(--faint)';
+      status.lastChild.textContent = connected ? ' Connected' : (status.lastChild.textContent.trim() === 'Available' ? ' Available' : status.lastChild.textContent);
+    }
+    btn.setAttribute('aria-label', connected ? 'Disconnect ' + connector : 'Connect ' + connector);
+    btn.title = connected ? 'Disconnect' : 'Connect';
+  };
+
+  btn.addEventListener('click', () => {
+    localStorage.setItem(key, card.classList.contains('connected') ? '0' : '1');
+    render();
+    if (card.classList.contains('connected')) window.location.href = 'gmail.html';
+  });
+
+  render();
+});
