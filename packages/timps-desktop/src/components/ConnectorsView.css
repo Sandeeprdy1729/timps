@@ -1,0 +1,317 @@
+/* TIMPS Connectors — ConnectorsView (Gmail) */
+
+.connectors-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 0;
+}
+
+.connectors-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.connectors-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connectors-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.connectors-badge {
+  background: var(--accent, #4a8c7a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  line-height: 1.6;
+}
+
+.connectors-header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.connector-loading {
+  padding: 24px;
+  color: var(--text-secondary, #8b92a8);
+  font-size: 12px;
+}
+
+.connector-card {
+  margin: 12px 14px;
+  background: var(--surface, #1a1d28);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.connector-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.connector-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-2, #222634);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #4a8c7a);
+  flex-shrink: 0;
+}
+
+.connector-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.connector-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.on {
+  background: #4ade80;
+}
+
+.status-dot.off {
+  background: #6b7280;
+}
+
+.status-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.connector-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+  color: var(--text-primary, #e0e4f0);
+  background: transparent;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+}
+
+.connector-btn:hover:not(.disabled) {
+  filter: brightness(1.12);
+}
+
+.connector-btn.primary {
+  background: var(--accent, #4a8c7a);
+  border-color: transparent;
+  color: #fff;
+}
+
+.connector-btn.ghost {
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-btn.small {
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.connector-btn.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.connector-focus-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-primary, #e0e4f0);
+  background: rgba(74, 140, 122, 0.12);
+  border: 1px solid rgba(74, 140, 122, 0.4);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.connector-oauth-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  background: var(--surface-2, #222634);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.connector-import-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.connector-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--input-bg, #12141c);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  color: var(--text-primary, #e0e4f0);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+}
+
+.connector-input:focus {
+  border-color: var(--accent, #4a8c7a);
+}
+
+.connector-error {
+  color: #f87171;
+  font-size: 11px;
+  background: rgba(248, 113, 113, 0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+
+.connector-warn {
+  color: #fbbf24;
+  font-size: 11px;
+  background: rgba(251, 191, 36, 0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.connector-warn code {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 10px;
+}
+
+.connector-sync-output pre {
+  margin: 0;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 10px;
+  color: var(--text-secondary, #8b92a8);
+  background: var(--surface-2, #222634);
+  border-radius: 6px;
+  padding: 8px 10px;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.connector-search-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.connector-emails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connector-email {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2, #222634);
+}
+
+.connector-email-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.connector-email-subject {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e4f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connector-email-from {
+  font-size: 11px;
+  color: var(--accent, #4a8c7a);
+  flex-shrink: 0;
+}
+
+.connector-email-date {
+  font-size: 10px;
+  color: var(--text-secondary, #8b92a8);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.connector-email-facts {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--text-secondary, #b6bcd0);
+  line-height: 1.5;
+}
+
+.connector-empty {
+  color: var(--text-secondary, #8b92a8);
+  font-size: 11px;
+  padding: 8px 4px;
+}

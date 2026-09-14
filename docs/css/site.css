@@ -600,3 +600,21 @@ footer{border-top:1px solid var(--border);background:var(--bg)}
   .stat-bar{gap:20px}
   .hero-tags{gap:8px}
 }
+
+/* ── Toast (deep-link handoff) ─────────────────────────────────────────── */
+.timps-toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px);
+  background:#1a1d28; color:#e0e4f0; border:1px solid rgba(142,210,251,0.22);
+  border-radius:10px; padding:12px 18px; font-size:13px; font-weight:600;
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  z-index:9999; max-width:min(90vw,520px); text-align:center;
+  box-shadow:0 12px 32px rgba(0,0,0,0.45);
+}
+.timps-toast.show{opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0)}
+
+/* ── Connector hint (under + button) ───────────────────────────────────── */
+.connector-hint{
+  margin:0; padding:0 2px 4px; font-size:11px; line-height:1.4;
+  color:#8b92a8; text-align:center;
+}
+.connector-hint code{font-family:var(--mono,monospace); font-size:11px; background:rgba(142,210,251,0.08); padding:1px 4px; border-radius:4px}

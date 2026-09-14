@@ -41,6 +41,11 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["timps"]
+      }
+    },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbXB1dGUgODkuMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwCmVkMjU1MTktMDAwMDAwMDA6ODkwMDAwMDA6MDAwLTAwMDA6MDAwMDA6MDAwMDAwMDAwMDAwCg==",
       "endpoints": [

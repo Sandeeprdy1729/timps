@@ -119,30 +119,49 @@ if (hamburger && mobileMenu) {
   });
 }
 
-/* ── Connector + toggle (local, per-browser) ── */
+/* ── Connector + handoff (opens TIMPS Desktop via deep link) ── */
+function showToast(msg) {
+  let toast = document.getElementById('timps-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'timps-toast';
+    toast.className = 'timps-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.remove('show');
+  // Force reflow to restart animation
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 5500);
+}
+
 document.querySelectorAll('.connector-plus').forEach(btn => {
-  const connector = btn.dataset.connector;
-  const key = 'timps.connector.' + connector;
-  const card = btn.closest('.connector');
-  const status = card.querySelector('.connector-status');
-  const dotEl = card.querySelector('.conn-dot');
-
-  const render = () => {
-    const connected = localStorage.getItem(key) === '1';
-    card.classList.toggle('connected', connected);
-    if (status) {
-      dotEl.style.background = connected ? 'var(--green)' : 'var(--faint)';
-      status.lastChild.textContent = connected ? ' Connected' : (status.lastChild.textContent.trim() === 'Available' ? ' Available' : status.lastChild.textContent);
-    }
-    btn.setAttribute('aria-label', connected ? 'Disconnect ' + connector : 'Connect ' + connector);
-    btn.title = connected ? 'Disconnect' : 'Connect';
-  };
-
   btn.addEventListener('click', () => {
-    localStorage.setItem(key, card.classList.contains('connected') ? '0' : '1');
-    render();
-    if (card.classList.contains('connected')) window.location.href = 'gmail.html';
-  });
+    const connector = btn.dataset.connector;
+    const deepLinkUrl = 'timps://connect/' + encodeURIComponent(connector);
+    const fallbackCmd = 'timps ' + connector + ':connect';
 
-  render();
+    // Attempt to open the desktop app via the custom-scheme deep link.
+    // Uses an iframe so the page stays intact if the app isn't installed.
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLinkUrl;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 1600);
+    } catch { /* ignore */ }
+
+    // Copy the fallback command so users can paste it into their terminal.
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(fallbackCmd).catch(() => {});
+    }
+
+    showToast(
+      'Opening TIMPS Desktop… If nothing happens, run ' + fallbackCmd
+    );
+  });
 });

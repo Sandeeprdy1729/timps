@@ -134,6 +134,42 @@ export interface IntelligenceAlert {
   snoozed_until?: number;
 }
 
+// ── Gmail connector types (mirror Rust gmail.rs) ───────────────────────────
+
+export interface GmailStatus {
+  connected: boolean;
+  email: string;
+  hasRefreshToken: boolean;
+  lastRun: string | null;
+  messagesSynced: number;
+  summaryCount: number;
+  autoSync: boolean;
+  cliPath: string | null;
+}
+
+export interface GmailSummaryEntry {
+  emailId: string;
+  subject: string;
+  from: string;
+  date: string;
+  facts: string[];
+  method: string;
+  syncedAt: string;
+}
+
+export interface GmailSyncResult {
+  ok: boolean;
+  exitCode: number;
+  output: string;
+}
+
+export interface GmailOAuthStart {
+  authUrl: string;
+  port: number;
+  redirectUri: string;
+  openedBrowser: boolean;
+}
+
 // ── Invoke helper — falls back in non-Tauri context ───────────────────────
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -179,6 +215,18 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     analyze_lens_link: '(stub) TIMPS server not running in dev mode',
     get_provider_config: { provider: 'ollama', model: '', baseUrl: '', apiKey: '' },
     set_provider_config: undefined,
+    gmail_status: { connected: false, email: 'unknown', hasRefreshToken: false, lastRun: null, messagesSynced: 0, summaryCount: 0, autoSync: false, cliPath: null },
+    gmail_import_credentials: { clientId: 'stub', saved: '' },
+    gmail_oauth_start: { authUrl: '', port: 0, redirectUri: '', openedBrowser: false },
+    gmail_oauth_finish: { email: 'dev@example.com', connected: true },
+    gmail_oauth_cancel: undefined,
+    gmail_disconnect: { removed: false },
+    gmail_sync: { ok: true, exitCode: 0, output: '(stub) gmail sync' },
+    gmail_recent: [],
+    gmail_query: [],
+    gmail_set_autosync: { enabled: false, message: '(stub)' },
+    gmail_autosync_status: { enabled: false },
+    gmail_reset: { removed: false, dir: '' },
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -383,4 +431,42 @@ export const api = {
       baseUrl: cfg.baseUrl,
       apiKey: cfg.apiKey,
     }),
+
+  // ── Gmail connector ──────────────────────────────────────────────────────
+
+  gmailStatus: () =>
+    invoke<GmailStatus>('gmail_status'),
+
+  gmailImportCredentials: (filePath: string) =>
+    invoke<{ clientId: string; saved: string }>('gmail_import_credentials', { filePath }),
+
+  gmailOauthStart: () =>
+    invoke<GmailOAuthStart>('gmail_oauth_start'),
+
+  gmailOauthFinish: () =>
+    invoke<{ email: string; connected: boolean }>('gmail_oauth_finish'),
+
+  gmailOauthCancel: () =>
+    invoke<void>('gmail_oauth_cancel'),
+
+  gmailDisconnect: () =>
+    invoke<{ removed: boolean }>('gmail_disconnect'),
+
+  gmailSync: () =>
+    invoke<GmailSyncResult>('gmail_sync'),
+
+  gmailRecent: (limit = 10) =>
+    invoke<GmailSummaryEntry[]>('gmail_recent', { limit }),
+
+  gmailQuery: (query: string, limit = 10) =>
+    invoke<GmailSummaryEntry[]>('gmail_query', { query, limit }),
+
+  gmailSetAutosync: (enabled: boolean) =>
+    invoke<{ enabled: boolean; message: string }>('gmail_set_autosync', { enabled }),
+
+  gmailAutosyncStatus: () =>
+    invoke<{ enabled: boolean }>('gmail_autosync_status'),
+
+  gmailReset: () =>
+    invoke<{ removed: boolean; dir: string }>('gmail_reset'),
 };

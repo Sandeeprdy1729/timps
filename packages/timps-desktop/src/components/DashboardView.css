@@ -1,0 +1,322 @@
+/* TIMPS Desktop — Dashboard (Overview) */
+
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px 26px;
+  gap: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dashboard-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-primary, #e0e4f0);
+}
+
+.dashboard-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dash-btn {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  color: var(--text-secondary, #8b92a8);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, border-color 0.15s;
+}
+
+.dash-btn:hover {
+  filter: brightness(1.2);
+}
+
+.dash-btn.primary {
+  background: var(--accent, #4a8c7a);
+  border-color: transparent;
+  color: #fff;
+}
+
+.dash-btn.pulse {
+  animation: dash-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes dash-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 140, 122, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(74, 140, 122, 0); }
+}
+
+/* ── Stats grid ─────────────────────────────────────────────── */
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.dash-stat-card {
+  background: var(--surface, #1a1d28);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+  line-height: 1.1;
+}
+
+.dash-stat-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #8b92a8);
+  margin-left: 4px;
+}
+
+.dash-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e4f0);
+  margin-top: 6px;
+}
+
+.dash-stat-desc {
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Panels ─────────────────────────────────────────────────── */
+
+.dash-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.dash-panel {
+  background: var(--surface, #1a1d28);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dash-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+}
+
+.dash-link {
+  background: none;
+  border: none;
+  color: var(--accent, #4a8c7a);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dash-link:hover {
+  text-decoration: underline;
+}
+
+.dash-empty {
+  font-size: 12px;
+  color: var(--text-secondary, #8b92a8);
+  padding: 8px 2px;
+}
+
+/* Connector tile */
+
+.dash-conn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--surface-2, #222634);
+}
+
+.dash-conn:hover {
+  border-color: var(--accent, #4a8c7a);
+}
+
+.dash-conn.loading {
+  opacity: 0.7;
+}
+
+.dash-conn-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--surface, #1a1d28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #4a8c7a);
+  flex-shrink: 0;
+}
+
+.dash-conn-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-conn-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+}
+
+.dash-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dash-dot.on {
+  background: #4ade80;
+}
+
+.dash-dot.off {
+  background: #6b7280;
+}
+
+.dash-conn-meta {
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-chev {
+  color: var(--text-secondary, #8b92a8);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.dash-conn-muted {
+  font-size: 10px;
+  color: var(--text-secondary, #8b92a8);
+  opacity: 0.85;
+}
+
+/* Facts / sessions lists */
+
+.dash-fact-list,
+.dash-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-fact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dash-fact-type {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #0b0d12;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.dash-fact-content {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-primary, #e0e4f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-fact-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.dash-session-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-session-summary {
+  font-size: 12px;
+  color: var(--text-primary, #e0e4f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-session-meta {
+  font-size: 10px;
+  color: var(--text-secondary, #8b92a8);
+}
+
+@media (max-width: 1000px) {
+  .dash-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .dash-columns {
+    grid-template-columns: 1fr;
+  }
+}
