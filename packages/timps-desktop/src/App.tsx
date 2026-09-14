@@ -1,28 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
-import { ChatView } from './components/ChatView';
 import { DashboardView } from './components/DashboardView';
 import { SettingsView } from './components/SettingsView';
 import { NexusView } from './components/NexusView';
 import { Sidebar } from './components/Sidebar';
-import { BackgroundDaemon } from './components/BackgroundDaemon';
-import { PassiveListener } from './components/PassiveListener';
-import { SemanticView } from './components/SemanticView';
-import { EpisodicView } from './components/EpisodicView';
 import { StatsView } from './components/StatsView';
-import { SearchView } from './components/SearchView';
 import { LensView } from './components/LensView';
+import { MemoryView } from './components/MemoryView';
 import { ConnectorsView } from './components/ConnectorsView';
 import { IntelligenceDashboard } from './components/IntelligenceDashboard';
-import { CommandCenter } from './components/CommandCenter';
 import { useTheme } from './theme/ThemeProvider';
-import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
+import { api, AggregateStats, SemanticEntry, EpisodicEntry } from './api';
 import { isTauri } from './utils/index';
 import { PluginLifecycleManager } from './plugins/lifecycle';
 import { registerBuiltinPlugins } from './plugins/builtins';
 import './App.css';
 
-type View = 'dashboard' | 'chat' | 'command' | 'lens' | 'semantic' | 'episodic' | 'stats' | 'search' | 'nexus' | 'intelligence' | 'connectors' | 'settings';
+type View = 'dashboard' | 'lens' | 'memory' | 'stats' | 'nexus' | 'intelligence' | 'connectors' | 'settings';
 
 /** Parse `timps://connect/<connector>` → view + connector. */
 function parseDeepLink(raw: string): { view: View; connector: string | null } | null {
@@ -39,12 +33,9 @@ function parseDeepLink(raw: string): { view: View; connector: string | null } | 
 }
 
 export default function App() {
-  const [projectPath, setProjectPath] = useState<string>(() => {
-    return localStorage.getItem('timps:lastProject') ?? '';
-  });
   const [view, setView] = useState<View>('dashboard');
   const [focusConnector, setFocusConnector] = useState<string | null>(null);
-  const [stats, setStats] = useState<MemoryStats | null>(null);
+  const [stats, setStats] = useState<AggregateStats | null>(null);
   const [semanticEntries, setSemanticEntries] = useState<SemanticEntry[]>([]);
   const [episodicEntries, setEpisodicEntries] = useState<EpisodicEntry[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
@@ -59,18 +50,6 @@ export default function App() {
     lifecycle.initializeAll().catch(err => {
       console.warn('Plugin initialization failed:', err);
     });
-  }, []);
-
-  // Auto-detect project path on first launch
-  useEffect(() => {
-    if (!localStorage.getItem('timps:lastProject')) {
-      api.detectProjectPath().then(p => {
-        if (p) {
-          setProjectPath(p);
-          localStorage.setItem('timps:lastProject', p);
-        }
-      });
-    }
   }, []);
 
   // Website handoff — `timps://connect/<connector>` deep links open the app
@@ -102,50 +81,35 @@ export default function App() {
     };
   }, []);
 
-  const handleBrowse = async () => {
-    try {
-      const { open } = await import('@tauri-apps/plugin-dialog');
-      const selected = await open({ directory: true, multiple: false, title: 'Select project directory' });
-      if (selected && typeof selected === 'string') {
-        setProjectPath(selected);
-        localStorage.setItem('timps:lastProject', selected);
-      }
-    } catch {
-      // Fallback if dialog plugin is unavailable
-    }
-  };
-
+  // Aggregate data across every store in ~/.timps/memory.
   useEffect(() => {
-    if (!projectPath) { setStats(null); setSemanticEntries([]); setEpisodicEntries([]); return; }
+    let cancelled = false;
     setEntriesLoading(true);
     Promise.all([
-      api.getMemoryStats(projectPath),
-      api.loadSemantic(projectPath),
-      api.loadEpisodes(projectPath),
+      api.getAggregateStats(),
+      api.loadAllSemantic(2000),
+      api.loadAllEpisodes(200),
     ]).then(([s, se, ep]) => {
+      if (cancelled) return;
       setStats(s);
       setSemanticEntries(se);
       setEpisodicEntries(ep);
     }).catch(() => {
+      if (cancelled) return;
       setStats(null);
       setSemanticEntries([]);
       setEpisodicEntries([]);
-    }).finally(() => setEntriesLoading(false));
-  }, [projectPath]);
-
-  const handleRunPrompt = useCallback((prompt: string) => {
-    setView('chat');
+    }).finally(() => {
+      if (!cancelled) setEntriesLoading(false);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   const viewLabel =
     view === 'dashboard' ? 'Overview' :
-    view === 'chat' ? 'Chat' :
-    view === 'command' ? 'Commands' :
     view === 'lens' ? 'Lens' :
-    view === 'semantic' ? 'Memory' :
-    view === 'episodic' ? 'Sessions' :
+    view === 'memory' ? 'Memory' :
     view === 'stats' ? 'Stats' :
-    view === 'search' ? 'Search' :
     view === 'nexus' ? 'Nexus' :
     view === 'intelligence' ? 'Intelligence' :
     view === 'connectors' ? 'Connectors' :
@@ -153,8 +117,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {projectPath && <BackgroundDaemon projectPath={projectPath} />}
-      {projectPath && <PassiveListener projectPath={projectPath} />}
       <header className="topbar">
         <div className="topbar-left">
           <div className="topbar-brand">
@@ -172,26 +134,15 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-center">
-          <div className="project-input-group">
-            <svg className="input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
+          <div className="topbar-scope">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
             </svg>
-            <input
-              className="project-input"
-              type="text"
-              placeholder="Enter project path..."
-              value={projectPath}
-              onChange={(e) => {
-                setProjectPath(e.target.value);
-                localStorage.setItem('timps:lastProject', e.target.value);
-              }}
-            />
-            <button className="browse-btn" onClick={handleBrowse} title="Browse for project directory">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
+            <span>
+              {stats && stats.stores > 0
+                ? `${stats.stores} store${stats.stores === 1 ? '' : 's'} · ${stats.semantic_count} facts · ${stats.episode_count} episodes`
+                : 'All local memory'}
+            </span>
           </div>
         </div>
         <div className="topbar-right">
@@ -221,7 +172,6 @@ export default function App() {
         <main className="main-content">
           {view === 'dashboard' && (
             <DashboardView
-              projectPath={projectPath}
               stats={stats}
               semanticEntries={semanticEntries}
               episodicEntries={episodicEntries}
@@ -229,27 +179,18 @@ export default function App() {
               onNavigate={(target) => setView(target as View)}
             />
           )}
-          {view === 'chat' && <ChatView projectPath={projectPath} />}
-          {view === 'command' && <CommandCenter projectPath={projectPath} stats={stats} onRunPrompt={handleRunPrompt} />}
           {view === 'lens' && <LensView />}
-          {view === 'semantic' && <SemanticView entries={semanticEntries} loading={entriesLoading} />}
-          {view === 'episodic' && <EpisodicView entries={episodicEntries} loading={entriesLoading} />}
+          {view === 'memory' && <MemoryView />}
           {view === 'stats' && <StatsView stats={stats} loading={entriesLoading} />}
-          {view === 'search' && <SearchView projectPath={projectPath} semanticEntries={semanticEntries} />}
-          {view === 'nexus' && <NexusView projectPath={projectPath} />}
-          {view === 'intelligence' && <IntelligenceDashboard projectPath={projectPath} />}
+          {view === 'nexus' && <NexusView />}
+          {view === 'intelligence' && <IntelligenceDashboard />}
           {view === 'connectors' && (
             <ConnectorsView
               focusConnector={focusConnector}
               onFocusHandled={() => setFocusConnector(null)}
             />
           )}
-          {view === 'settings' && (
-            <SettingsView
-              projectPath={projectPath}
-              onProjectPathChange={setProjectPath}
-            />
-          )}
+          {view === 'settings' && <SettingsView />}
         </main>
       </div>
     </div>

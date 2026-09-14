@@ -8,6 +8,11 @@
  * secret); the renderer stays network-free so the CSP remains strict.
  * Tokens/creds live per provider in ~/.timps/<id>/, shared with the `timps`
  * CLI (`timps gmail:sync` etc.). Synced data is distilled into TIMPS memory.
+ *
+ * Guided setup: for each provider, open its developer console, create an
+ * OAuth app, and either paste the client_id (and client_secret when required)
+ * inline or import the client JSON. The loopback callback is always
+ * http://localhost:12849/oauth2callback.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -35,18 +40,56 @@ interface ProviderMeta {
   id: string;
   display: string;
   blurb: string;
+  /** Providers that need a client_secret (no PKCE). */
+  secretRequired: boolean;
+  /** Developer-console URL where the user creates the OAuth app. */
+  console: string;
 }
 
 const PROVIDERS: ProviderMeta[] = [
-  { id: 'gmail', display: 'Gmail', blurb: 'Inbox → memory. Search, draft and triage email with context.' },
-  { id: 'calendar', display: 'Google Calendar', blurb: 'Events, meetings and schedules become recallable context.' },
-  { id: 'drive', display: 'Google Drive', blurb: 'Docs and spreadsheets indexed as searchable long-term memory.' },
-  { id: 'github', display: 'GitHub', blurb: 'Issues, PRs and commits feed decisions into memory.' },
-  { id: 'notion', display: 'Notion', blurb: 'Docs, wikis and project pages — structure becomes fact.' },
-  { id: 'slack', display: 'Slack', blurb: 'Channels and threads — decisions survive past the scroll.' },
-  { id: 'linear', display: 'Linear', blurb: 'Issues, cycles and project state become recallable facts.' },
-  { id: 'ms365', display: 'Microsoft 365', blurb: 'Mail and calendar from your Microsoft tenant.' },
+  {
+    id: 'gmail', display: 'Gmail', secretRequired: true,
+    console: 'https://console.cloud.google.com/apis/credentials',
+    blurb: 'Inbox → memory. Search, draft and triage email with context.',
+  },
+  {
+    id: 'calendar', display: 'Google Calendar', secretRequired: true,
+    console: 'https://console.cloud.google.com/apis/credentials',
+    blurb: 'Events, meetings and schedules become recallable context.',
+  },
+  {
+    id: 'drive', display: 'Google Drive', secretRequired: true,
+    console: 'https://console.cloud.google.com/apis/credentials',
+    blurb: 'Docs and spreadsheets indexed as searchable long-term memory.',
+  },
+  {
+    id: 'github', display: 'GitHub', secretRequired: true,
+    console: 'https://github.com/settings/developers',
+    blurb: 'Issues, PRs and commits feed decisions into memory.',
+  },
+  {
+    id: 'notion', display: 'Notion', secretRequired: false,
+    console: 'https://www.notion.so/my-integrations',
+    blurb: 'Docs, wikis and project pages — structure becomes fact.',
+  },
+  {
+    id: 'slack', display: 'Slack', secretRequired: false,
+    console: 'https://api.slack.com/apps',
+    blurb: 'Channels and threads — decisions survive past the scroll.',
+  },
+  {
+    id: 'linear', display: 'Linear', secretRequired: false,
+    console: 'https://linear.app/settings/api',
+    blurb: 'Issues, cycles and project state become recallable facts.',
+  },
+  {
+    id: 'ms365', display: 'Microsoft 365', secretRequired: false,
+    console: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps',
+    blurb: 'Mail and calendar from your Microsoft tenant.',
+  },
 ];
+
+const REDIRECT_URI = 'http://localhost:12849/oauth2callback';
 
 function ProviderLogo({ id }: { id: string }) {
   const style = { width: 20, height: 20, display: 'block' } as const;
@@ -127,18 +170,45 @@ interface ConnectorsViewProps {
   onFocusHandled?: () => void;
 }
 
+interface SetupStep {
+  title: string;
+  body: string;
+}
+
+function setupSteps(meta: ProviderMeta): SetupStep[] {
+  const base = [
+    {
+      title: `Create an OAuth app for ${meta.display}`,
+      body: `Open the developer console and create a new OAuth app / client for ${meta.display}.`,
+    },
+    {
+      title: 'Register the callback URL',
+      body: `Set the redirect URI to ${REDIRECT_URI}. GitHub, Slack, Linear and Notion require this exact URL; Google and Microsoft accept any loopback port.`,
+    },
+    {
+      title: 'Enter your credentials',
+      body: meta.secretRequired
+        ? 'Paste the client_id and client_secret into the form below (or import the client JSON file).'
+        : 'Paste the client_id below (or import the client JSON file). No secret needed — this provider uses PKCE.',
+    },
+  ];
+  return base;
+}
+
 export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsViewProps) {
   const [entries, setEntries] = useState<ConnectorEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
-  const [busy, setBusy] = useState<Record<string, 'connecting' | 'importing' | 'syncing'>>({});
+  const [busy, setBusy] = useState<Record<string, 'connecting' | 'importing' | 'saving' | 'syncing'>>({});
   const [awaiting, setAwaiting] = useState<Record<string, boolean>>({});
   const [syncOutput, setSyncOutput] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [importPath, setImportPath] = useState('');
   const [focusBanner, setFocusBanner] = useState<string | null>(null);
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [clientSecretInput, setClientSecretInput] = useState('');
 
-  const setBusyFor = (id: string, v: 'connecting' | 'importing' | 'syncing' | null) =>
+  const setBusyFor = (id: string, v: 'connecting' | 'importing' | 'saving' | 'syncing' | null) =>
     setBusy((b) => {
       const next = { ...b };
       if (v === null) delete next[id];
@@ -162,8 +232,32 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
     refresh();
   }, [refresh]);
 
+  // Reset the inline-paste form when switching providers.
+  useEffect(() => {
+    setClientIdInput('');
+    setClientSecretInput('');
+  }, [selected]);
+
   const entryFor = (id: string): ConnectorEntry | undefined =>
     entries?.find((e) => e.id === id);
+
+  const handleSaveInline = async (id: string) => {
+    setBusyFor(id, 'saving');
+    try {
+      await api.connectorSaveCredentials(
+        id,
+        clientIdInput.trim(),
+        clientSecretInput.trim() || undefined
+      );
+      setClientIdInput('');
+      setClientSecretInput('');
+      await refresh();
+    } catch (e) {
+      setErrors((er) => ({ ...er, [id]: String(e) }));
+    } finally {
+      setBusyFor(id, null);
+    }
+  };
 
   const handleImport = async (id: string, explicitPath?: string) => {
     setBusyFor(id, 'importing');
@@ -355,7 +449,8 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
                       <button
                         className={`connector-btn primary ${isBusy ? 'disabled' : ''}`}
                         onClick={() => handleConnect(p.id)}
-                        disabled={!!isBusy}
+                        disabled={!!isBusy || !entry?.hasCredentials}
+                        title={entry?.hasCredentials ? undefined : 'Add credentials first'}
                       >
                         {isAwaiting ? 'Waiting for browser…' : isBusy === 'connecting' ? 'Connecting…' : 'Connect'}
                       </button>
@@ -379,11 +474,14 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
 
       {selectedEntry && selectedMeta && selected && (() => {
         const sid: string = selected;
+        const meta = selectedMeta;
+        const secretRequired = meta.secretRequired;
+        const steps = setupSteps(meta);
         return (
           <div className="connector-detail">
             <div className="connector-detail-head">
               <span className="connector-detail-logo"><ProviderLogo id={sid} /></span>
-              <h3>{selectedMeta.display}</h3>
+              <h3>{meta.display}</h3>
               <span className={`connector-detail-status${selectedEntry.connected ? ' on' : ' off'}`}>
                 {selectedEntry.connected ? 'Connected' : 'Not connected'}
               </span>
@@ -392,7 +490,7 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
             {focusBanner === sid && (
               <div className="connector-focus-banner">
                 <span>
-                  Opened from the TIMPS website — {selectedEntry.connected ? `${selectedMeta.display} is connected.` : `authorizing ${selectedMeta.display}…`}
+                  Opened from the TIMPS website — {selectedEntry.connected ? `${meta.display} is connected.` : `authorizing ${meta.display}…`}
                 </span>
                 <button
                   className="connector-btn ghost small"
@@ -423,24 +521,75 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
             )}
 
             {!selectedEntry.hasCredentials && (
-              <div className="connector-import-row">
-                <span className="connector-import-label">
-                  No credentials yet — paste a path to the {selectedMeta.display} OAuth client JSON, or pick a file.
-                </span>
-                <div className="connector-import-controls">
-                  <input
-                    className="connector-input"
-                    placeholder={`~/.timps/${sid}/client.json`}
-                    value={importPath}
-                    onChange={(e) => setImportPath(e.target.value)}
-                  />
+              <div className="connector-setup">
+                <div className="connector-setup-title">
+                  <span>Set up {meta.display}</span>
+                  <span className="connector-setup-redirect">Callback: <code>{REDIRECT_URI}</code></span>
+                </div>
+                <div className="connector-setup-steps">
+                  {steps.map((s, i) => (
+                    <div key={i} className="connector-setup-step">
+                      <span className="connector-setup-step-num">{i + 1}</span>
+                      <div>
+                        <b>{s.title}</b>
+                        <p>{s.body}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="connector-setup-actions">
                   <button
-                    className="connector-btn primary small"
-                    onClick={() => handleImport(sid, importPath || undefined)}
-                    disabled={busy[sid] === 'importing'}
+                    className="connector-btn ghost small"
+                    onClick={() => {
+                      api.connectorOpenConsole(sid).catch(() => window.open(meta.console, '_blank'));
+                    }}
                   >
-                    {busy[sid] === 'importing' ? 'Importing…' : 'Import'}
+                    Open developer console
                   </button>
+                </div>
+
+                <div className="connector-import-form">
+                  <div className="connector-import-row">
+                    <input
+                      className="connector-input"
+                      placeholder="client_id (paste)"
+                      value={clientIdInput}
+                      onChange={(e) => setClientIdInput(e.target.value)}
+                    />
+                    {secretRequired && (
+                      <input
+                        className="connector-input"
+                        type="password"
+                        placeholder="client_secret (paste)"
+                        value={clientSecretInput}
+                        onChange={(e) => setClientSecretInput(e.target.value)}
+                      />
+                    )}
+                    <button
+                      className="connector-btn primary small"
+                      onClick={() => handleSaveInline(sid)}
+                      disabled={busy[sid] === 'saving' || !clientIdInput.trim() || (secretRequired && !clientSecretInput.trim())}
+                    >
+                      {busy[sid] === 'saving' ? 'Saving…' : 'Save credentials'}
+                    </button>
+                  </div>
+                  <div className="connector-import-divider">or import the OAuth client JSON file</div>
+                  <div className="connector-import-row">
+                    <input
+                      className="connector-input"
+                      placeholder={`~/.timps/${sid}/client.json`}
+                      value={importPath}
+                      onChange={(e) => setImportPath(e.target.value)}
+                    />
+                    <button
+                      className="connector-btn primary small"
+                      onClick={() => handleImport(sid, importPath || undefined)}
+                      disabled={busy[sid] === 'importing'}
+                    >
+                      {busy[sid] === 'importing' ? 'Importing…' : 'Import'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

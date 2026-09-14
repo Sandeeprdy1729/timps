@@ -7,27 +7,16 @@ import { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { api } from '../api';
 import { useTheme } from '../theme/ThemeProvider';
-import { APP, PROVIDERS } from '../constants/index';
+import { APP } from '../constants/index';
 import './SettingsView.css';
 
-interface SettingsViewProps {
-  projectPath: string;
-  onProjectPathChange: (path: string) => void;
-}
-
-export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewProps) {
+export function SettingsView() {
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [provider, setProvider] = useState(() => 
-    localStorage.getItem('timps:provider') || 'ollama'
-  );
-  const [model, setModel] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [saved, setSaved] = useState(false);
   const [version, setVersion] = useState(APP.version);
   const [autostartEnabled, setAutostartEnabled] = useState(false);
   const [autostartLoading, setAutostartLoading] = useState(false);
   const [clipboardWatcher, setClipboardWatcher] = useState(
-    () => localStorage.getItem('timps:clipboardWatcher') !== 'false'
+    () => localStorage.getItem('timps:clipboardWatcher') === 'true'
   );
 
   // Load autostart state on mount
@@ -35,13 +24,6 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
     api.isAutostartEnabled()
       .then(setAutostartEnabled)
       .catch(() => {}); // not available outside Tauri
-    api.getProviderConfig()
-      .then((cfg) => {
-        setProvider(cfg.provider || 'ollama');
-        setModel(cfg.model || '');
-        setApiKey(cfg.apiKey || '');
-      })
-      .catch(() => {}); // dev-mode stub
   }, []);
 
   // Keep in sync when the tray menu "Launch at Login" toggle fires
@@ -76,48 +58,16 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
     setClipboardWatcher(next);
     localStorage.setItem('timps:clipboardWatcher', next ? 'true' : 'false');
     if (next) {
-      void api.startClipboardWatcher(projectPath);
+      // Passive captures go into the shared home store (~/.timps/memory/<hash>).
+      void api.startClipboardWatcher('');
     } else {
       void api.stopClipboardWatcher();
     }
   };
 
-  const handleSave = () => {
-    api.saveProviderConfig({ provider, model, baseUrl: '', apiKey })
-      .then(() => {
-        localStorage.setItem('timps:provider', provider);
-        localStorage.setItem('timps:model', model);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1500);
-      })
-      .catch(() => {
-        // dev-mode stub — still reflect locally
-        localStorage.setItem('timps:provider', provider);
-        localStorage.setItem('timps:model', model);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1500);
-      });
-  };
-
   return (
     <div className="settings-view">
       <h1>Settings</h1>
-
-      <section className="settings-section">
-        <h2>Project</h2>
-        <div className="settings-field">
-          <label>Active Project</label>
-          <input
-            type="text"
-            value={projectPath}
-            onChange={e => onProjectPathChange(e.target.value)}
-            placeholder="/path/to/project"
-          />
-          <p className="settings-hint">
-            TIMPS memory stored in <code>~/.timps/memory/&lt;hash&gt;/</code>
-          </p>
-        </div>
-      </section>
 
       <section className="settings-section">
         <h2>Appearance</h2>
@@ -137,51 +87,6 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
       </section>
 
       <section className="settings-section">
-        <h2>AI Provider</h2>
-        <div className="settings-field">
-          <label>Select Provider</label>
-          <select value={provider} onChange={e => setProvider(e.target.value)}>
-            {PROVIDERS.map(p => (
-              <option key={p.name} value={p.name}>{p.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="settings-field">
-          <label>Model</label>
-          <input
-            type="text"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            placeholder={PROVIDERS.find(p => p.name === provider)?.defaultModel || 'model name'}
-          />
-        </div>
-        <div className="settings-field">
-          <label>API Key</label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-... (stored in ~/.timps/desktop.json)"
-          />
-          <p className="settings-hint">
-            Required for cloud providers. Local providers (Ollama, LM Studio, Jan, vLLM) don't need a key.
-          </p>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <h2>Server</h2>
-        <div className="settings-field">
-          <label>TIMPS Server URL</label>
-          <input
-            type="text"
-            defaultValue="http://localhost:3000"
-            placeholder="http://localhost:3000"
-          />
-        </div>
-      </section>
-
-      <section className="settings-section">
         <h2>Background Behaviour</h2>
         <div className="settings-field">
           <label>Launch at Login</label>
@@ -197,7 +102,6 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
             </button>
             <p className="settings-hint">
               TIMPS starts automatically when you log in and lives in the menu bar.
-              It listens in the background and stores everything you tell it into memory.
             </p>
           </div>
         </div>
@@ -221,9 +125,20 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
             </button>
             <p className="settings-hint">
               Off by default. When enabled, copied text (≥20 chars) is silently captured
-              into your memory so TIMPS can learn from things you research and reference.
+              into the shared home store so TIMPS can learn from things you research and reference.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>Memory</h2>
+        <div className="settings-field">
+          <p className="settings-hint">
+            All memory is stored locally in <code>~/.timps/memory/&lt;hash&gt;/</code> —
+            one store per project, plus the shared home store. No data leaves your machine
+            unless you connect a data source in the Connectors view.
+          </p>
         </div>
       </section>
 
@@ -238,10 +153,6 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
             <span>Quick Capture</span>
             <kbd>⌘ Shift N</kbd>
           </div>
-          <div className="shortcut-item">
-            <span>Command Bar</span>
-            <kbd>⌘ Shift K</kbd>
-          </div>
         </div>
       </section>
 
@@ -255,12 +166,6 @@ export function SettingsView({ projectPath, onProjectPathChange }: SettingsViewP
           <span>License</span><span>MIT</span>
         </div>
       </section>
-
-      <div className="settings-actions">
-        <button className="btn btn-primary" onClick={handleSave}>
-          {saved ? 'Saved' : 'Save Settings'}
-        </button>
-      </div>
     </div>
   );
 }
