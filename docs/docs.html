@@ -4,95 +4,137 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="TIMPS Documentation — Installation, CLI reference, memory system, MCP setup, TIMPS-Coder, SkillGalaxy, TIMPS Swarm, and more.">
-  <title>Docs — TIMPS</title>
+  <title>Docs — TIMPS Memory</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/timps.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-<nav>
+<!-- ── NAV ─────────────────────────────────────────────── -->
+<nav class="nav">
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box" title="TIMPS">
-        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
-          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
-          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
-        </svg>
-      </div>
-      TIMPS
+      <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#141413"/>
+        <rect x="4" y="6" width="8" height="5" fill="#d97757"/>
+        <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#b8b6ab"/>
+        <rect x="4" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="9" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="7" y="3" width="2" height="2" fill="#5e5d59"/>
+      </svg>
+      TIMPS&nbsp;Memory
     </a>
+
     <ul class="nav-links">
-      <li><a href="gmail.html">Connectors</a></li>
-      <li><a href="docs.html" class="active">Docs</a></li>
-      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li class="nav-item">
+        <a class="nav-link" href="index.html">Product
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">Product</div>
+          <a href="index.html">TIMPS Memory</a>
+          <a href="gmail.html">Gmail Connector</a>
+          <a href="ecosystem.html">Ecosystem</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="ecosystem.html">Ecosystem</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" href="docs.html">Docs</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">A product of TIMPS</div>
+          <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">timps-website.vercel.app</a>
+        </div>
+      </li>
     </ul>
+
     <div class="nav-cta">
-      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">GitHub</a>
       <a href="gmail.html" class="btn btn-primary btn-sm">Get started</a>
     </div>
+
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<div class="docs-layout">
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Product</a>
+  <a href="gmail.html">Gmail Connector</a>
+  <a href="ecosystem.html">Ecosystem</a>
+  <a href="docs.html">Docs</a>
+  <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Company</a>
+  <div class="mobile-cta">
+    <a href="docs.html#install" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+  </div>
+</div>
+
+<!-- ── DOCS ────────────────────────────────────────────── -->
+<div class="docs-wrap">
   <aside class="docs-sidebar">
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Getting Started</div>
+      <div class="sidebar-label">Getting started</div>
       <a href="#install" class="sidebar-link active">Installation</a>
       <a href="#quickstart" class="sidebar-link">Quick Start</a>
       <a href="#providers" class="sidebar-link">Providers</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">CLI</div>
+      <div class="sidebar-label">CLI</div>
       <a href="#cli-flags" class="sidebar-link">Flags</a>
       <a href="#slash-commands" class="sidebar-link">Slash Commands</a>
       <a href="#tools" class="sidebar-link">Built-in Tools (25+)</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Memory</div>
+      <div class="sidebar-label">Memory</div>
       <a href="#memory" class="sidebar-link">Memory System</a>
       <a href="#memory-schema" class="sidebar-link">Memory Schema</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">MCP</div>
+      <div class="sidebar-label">MCP</div>
       <a href="#mcp" class="sidebar-link">timps-mcp Setup</a>
       <a href="#mcp-tools" class="sidebar-link">MCP Tools (20)</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Extensions</div>
+      <div class="sidebar-label">Extensions</div>
       <a href="#vscode" class="sidebar-link">VS Code</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">TIMPS-Coder</div>
+      <div class="sidebar-label">TIMPS-Coder</div>
       <a href="#timps-coder" class="sidebar-link">Model Overview</a>
       <a href="#lora-adapters" class="sidebar-link">LoRA Adapters (20)</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">SkillGalaxy</div>
+      <div class="sidebar-label">SkillGalaxy</div>
       <a href="#skillgalaxy" class="sidebar-link">Skills</a>
       <a href="#skillforge" class="sidebar-link">SkillForge Composer</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Swarm</div>
+      <div class="sidebar-label">Swarm</div>
       <a href="#swarm" class="sidebar-link">TIMPS Swarm</a>
       <a href="#swarm-agents" class="sidebar-link">All 22 Agents</a>
       <a href="#swarm-mcp" class="sidebar-link">Swarm MCP</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Design Skill</div>
+      <div class="sidebar-label">Design skill</div>
       <a href="#design-skill" class="sidebar-link">claude-design-skill</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Config</div>
+      <div class="sidebar-label">Config</div>
       <a href="#config" class="sidebar-link">Environment Vars</a>
       <a href="#contributing" class="sidebar-link">Contributing</a>
     </div>
@@ -100,29 +142,44 @@
 
   <main class="docs-content">
     <h1>TIMPS Documentation</h1>
-    <p style="margin-bottom: 40px;">Everything you need to install, configure, and build with the full TIMPS ecosystem.</p>
-    <hr class="divider" style="margin-bottom: 40px;">
+    <p class="doc-intro">Everything you need to install, configure, and build with the full TIMPS ecosystem.</p>
+    <hr class="divider">
 
     <h2 id="install">Installation</h2>
     <p>Requires Node.js 18+.</p>
-    <div class="code-block">npm install -g timps-code
-timps --version</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="npm install -g timps-code">Copy</button>
+      </div>
+      <pre>npm install -g timps-code
+timps --version</pre>
+    </div>
 
     <h3>With Ollama (free, recommended)</h3>
-    <div class="code-block">ollama pull qwen2.5-coder:7b
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="ollama pull qwen2.5-coder:7b">Copy</button>
+      </div>
+      <pre>ollama pull qwen2.5-coder:7b
 ollama pull qwen2.5-coder:14b
-ollama pull sandeeprdy1729/timps-coder</div>
-    <div class="callout callout-tip">No API key needed with Ollama. TIMPS auto-detects it when Ollama is running.</div>
+ollama pull sandeeprdy1729/timps-coder</pre>
+    </div>
+    <div class="callout tip">No API key needed with Ollama. TIMPS auto-detects it when Ollama is running.</div>
 
     <h2 id="quickstart">Quick Start</h2>
-    <div class="code-block">timps
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="timps">Copy</button>
+      </div>
+      <pre>timps
 timps "add error handling to src/api.ts"
 timps --provider claude "refactor this module"
-timps --provider timps-coder "fix the async bug in queue.ts"</div>
+timps --provider timps-coder "fix the async bug in queue.ts"</pre>
+    </div>
 
     <h2 id="providers">Providers</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Flag</th><th>Provider</th><th>Env Var</th><th>Free?</th></tr></thead>
         <tbody>
           <tr><td><code>ollama</code></td><td>Ollama (local)</td><td>—</td><td>Yes</td></tr>
@@ -138,7 +195,7 @@ timps --provider timps-coder "fix the async bug in queue.ts"</div>
 
     <h2 id="cli-flags">CLI Flags</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Flag</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>--provider &lt;name&gt;</code></td><td>ollama, claude, openai, gemini, openrouter, deepseek, timps-coder</td></tr>
@@ -152,7 +209,7 @@ timps --provider timps-coder "fix the async bug in queue.ts"</div>
 
     <h2 id="slash-commands">Slash Commands</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
           <tr><td><code>/memory</code></td><td>Show what TIMPS knows about this project</td></tr>
@@ -170,7 +227,7 @@ timps --provider timps-coder "fix the async bug in queue.ts"</div>
 
     <h2 id="tools">Built-in Tools (25+)</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Category</th><th>Tools</th></tr></thead>
         <tbody>
           <tr><td>File</td><td>read_file, write_file, edit_file, delete_file, list_dir, search_files, move_file</td></tr>
@@ -186,42 +243,51 @@ timps --provider timps-coder "fix the async bug in queue.ts"</div>
 
     <h2 id="memory">Memory System</h2>
     <p>Three layers survive every restart:</p>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 24px 0;">
+    <div class="win-grid">
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">working</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Working Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Current goal, active files, recent errors. Lives in RAM. Resets on exit.</p></div>
+        <div class="window-body"><strong>Working Memory</strong><p style="margin-top:8px">Current goal, active files, recent errors. Lives in RAM. Resets on exit.</p></div>
       </div>
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">episodic</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Episodic Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Summaries of past sessions: what was built, what failed. Persisted to disk.</p></div>
+        <div class="window-body"><strong>Episodic Memory</strong><p style="margin-top:8px">Summaries of past sessions: what was built, what failed. Persisted to disk.</p></div>
       </div>
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">semantic</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Semantic Memory</strong><p style="margin-top: 8px; font-size: 0.8rem;">Permanent facts: patterns, conventions, architecture decisions.</p></div>
+        <div class="window-body"><strong>Semantic Memory</strong><p style="margin-top:8px">Permanent facts: patterns, conventions, architecture decisions.</p></div>
       </div>
     </div>
 
     <h2 id="memory-schema">Memory Schema</h2>
-    <div class="code-block">~/.timps/memory/&lt;project-hash&gt;/episodes.jsonl
-~/.timps/memory/&lt;project-hash&gt;/semantic.json</div>
-    <div class="callout callout-warn">Do not manually edit these files. Use <code>/memory</code> commands instead. Schema is backwards-compatible across versions.</div>
+    <div class="code-block">
+      <pre>~/.timps/memory/&lt;project-hash&gt;/episodes.jsonl
+~/.timps/memory/&lt;project-hash&gt;/semantic.json</pre>
+    </div>
+    <div class="callout warn">Do not manually edit these files. Use <code>/memory</code> commands instead. Schema is backwards-compatible across versions.</div>
 
     <h2 id="mcp">timps-mcp Setup</h2>
-    <div class="code-block">npm install -g timps-mcp</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="npm install -g timps-mcp">Copy</button>
+      </div>
+      <pre>npm install -g timps-mcp</pre>
+    </div>
     <h3>Claude Code / Claude Desktop</h3>
-    <div class="code-block">{
-  "mcpServers": {
-    "timps": {
-      "command": "timps-mcp"
+    <div class="code-block">
+      <pre>{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"timps"</span>: {
+      <span class="str">"command"</span>: <span class="str">"timps-mcp"</span>
     }
   }
-}</div>
+}</pre>
+    </div>
     <h3>Cursor</h3>
     <p>Settings → MCP → Add Server → Command: <code>timps-mcp</code></p>
 
     <h2 id="mcp-tools">MCP Tools (20)</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
         <tbody>
           <tr><td><code>timps_get_memories</code></td><td>Recall stored facts and preferences about the project</td></tr>
@@ -250,17 +316,22 @@ timps --provider timps-coder "fix the async bug in queue.ts"</div>
 
     <h2 id="vscode">VS Code Extension</h2>
     <p>Search "TIMPS AI Coding Agent" in the VS Code Marketplace. Features: TIMPS Chat panel, Memory Explorer sidebar, inline suggestions, provider switcher in status bar.</p>
-    <div class="callout callout-info">The VS Code extension and CLI share the same memory layer — the Memory Explorer reflects everything the CLI has learned.</div>
+    <div class="callout">The VS Code extension and CLI share the same memory layer — the Memory Explorer reflects everything the CLI has learned.</div>
 
     <h2 id="timps-coder">TIMPS-Coder — Model Overview</h2>
     <p>Fine-tuned Qwen2.5-Coder-0.5B-Instruct with Unsloth. <strong>92% accuracy</strong> on bug-fix benchmarks. Runs free via Ollama.</p>
-    <div class="code-block">ollama run sandeeprdy1729/timps-coder
-timps --provider timps-coder "fix the race condition"</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="ollama run sandeeprdy1729/timps-coder">Copy</button>
+      </div>
+      <pre>ollama run sandeeprdy1729/timps-coder
+timps --provider timps-coder "fix the race condition"</pre>
+    </div>
     <p>Base: Qwen2.5-Coder-0.5B-Instruct · Training: Unsloth 4-bit QLoRA · Hardware: MacBook M2 Air</p>
 
     <h2 id="lora-adapters">LoRA Adapters (20 Bug Patterns)</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>#</th><th>Adapter</th><th>Bug Pattern</th></tr></thead>
         <tbody>
           <tr><td>1</td><td><code>java_npe</code></td><td>Java NullPointerException patterns</td></tr>
@@ -289,9 +360,11 @@ timps --provider timps-coder "fix the race condition"</div>
 
     <h2 id="skillgalaxy">SkillGalaxy — Skills</h2>
     <p>Community library of <code>.md</code> skill files for Claude Projects. Drop a skill into a Claude Project and Claude applies it every chat automatically. 10,171+ skills across 16 domains.</p>
-    <div class="code-block">/skills install react-expert
+    <div class="code-block">
+      <pre>/skills install react-expert
 /skills install security-audit
-/skills list</div>
+/skills list</pre>
+    </div>
 
     <h2 id="skillforge">SkillForge Composer</h2>
     <p>Evolutionary optimizer for composing multiple skills efficiently.</p>
@@ -300,32 +373,46 @@ timps --provider timps-coder "fix the race condition"</div>
       <li>Runs genetic algorithm (selection → crossover → mutation → pruning)</li>
       <li>Prunes overlapping content — redundancy drops from 38% to 4%</li>
     </ul>
-    <div class="callout callout-tip">Benchmark: 72% better token efficiency (1.0x → 1.72x). Success rate 74% → 91%. Redundancy 38% → 4%.</div>
-    <div class="code-block">python3 scripts/skillforge_benchmark.py</div>
+    <div class="callout tip">Benchmark: 72% better token efficiency (1.0x → 1.72x). Success rate 74% → 91%. Redundancy 38% → 4%.</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="python3 scripts/skillforge_benchmark.py">Copy</button>
+      </div>
+      <pre>python3 scripts/skillforge_benchmark.py</pre>
+    </div>
 
     <h2 id="swarm">TIMPS Swarm</h2>
     <p>22-agent system running on <strong>Ollama + LangGraph</strong>. No cloud APIs. 10 SDLC agents + 12 Mac health agents.</p>
-    <div class="code-block">git clone https://github.com/Sandeeprdy1729/timps-swarm
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="git clone https://github.com/Sandeeprdy1729/timps-swarm">Copy</button>
+      </div>
+      <pre>git clone https://github.com/Sandeeprdy1729/timps-swarm
 cd timps-swarm
 make all
-open http://localhost:3000</div>
+open http://localhost:3000</pre>
+    </div>
 
     <h3>Run tasks</h3>
-    <div class="code-block">python3 give_work.py "Write a REST API for auth"
+    <div class="code-block">
+      <pre>python3 give_work.py "Write a REST API for auth"
 python3 give_work.py "Create a job queue" -l python
 python3 give_work.py --spawn code_generator qa_tester "Write and test"
 python3 give_work.py "My laptop fan is always running"
-python3 give_work.py --health</div>
+python3 give_work.py --health</pre>
+    </div>
 
     <h3>API key auth (team use)</h3>
-    <div class="code-block">python3 give_work.py --keygen "team-key"
+    <div class="code-block">
+      <pre>python3 give_work.py --keygen "team-key"
 python3 give_work.py --keys
-python3 give_work.py --revoke timps-sk-xxxx</div>
+python3 give_work.py --revoke timps-sk-xxxx</pre>
+    </div>
 
     <h2 id="swarm-agents">All 22 Agents</h2>
     <h3>SDLC Pipeline (10)</h3>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>#</th><th>Agent</th><th>Model</th><th>Role</th></tr></thead>
         <tbody>
           <tr><td>1</td><td>Orchestrator</td><td>qwen2.5:14b</td><td>Task DAG decomposition, routing, retries</td></tr>
@@ -343,7 +430,7 @@ python3 give_work.py --revoke timps-sk-xxxx</div>
     </div>
     <h3>Mac Health Agents (12)</h3>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>#</th><th>Agent</th><th>What it diagnoses</th></tr></thead>
         <tbody>
           <tr><td>11</td><td>System Optimizer</td><td>CPU hogs, startup bloat, thermal throttling, memory pressure</td></tr>
@@ -363,26 +450,33 @@ python3 give_work.py --revoke timps-sk-xxxx</div>
     </div>
 
     <h2 id="swarm-mcp">Swarm MCP (31 tools)</h2>
-    <div class="code-block">{
-  "mcpServers": {
-    "timps-swarm": {
-      "command": "python3",
-      "args": ["mcp_server/server.py"],
-      "cwd": "/path/to/timps-swarm"
+    <div class="code-block">
+      <pre>{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"timps-swarm"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python3"</span>,
+      <span class="str">"args"</span>: [<span class="str">"mcp_server/server.py"</span>],
+      <span class="str">"cwd"</span>: <span class="str">"/path/to/timps-swarm"</span>
     }
   }
-}</div>
+}</pre>
+    </div>
 
     <h2 id="design-skill">claude-design-skill</h2>
     <p>7 design systems in one <code>SKILL.md</code>. Drop into any Claude Project: 98% token savings vs re-explaining style guides each session.</p>
-    <div class="code-block">git clone https://github.com/Sandeeprdy1729/claude-design-skill
-# Upload DESIGN-SYSTEM.md to Claude Project Knowledge</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="git clone https://github.com/Sandeeprdy1729/claude-design-skill">Copy</button>
+      </div>
+      <pre>git clone https://github.com/Sandeeprdy1729/claude-design-skill
+<span class="cm"># Upload DESIGN-SYSTEM.md to Claude Project Knowledge</span></pre>
+    </div>
     <p>Systems: <strong>Tailwind CSS</strong> · <strong>shadcn/ui</strong> · <strong>Radix UI</strong> · <strong>Material Design 3</strong> · <strong>Apple HIG</strong> · <strong>Framer Motion</strong> · <strong>Figma Tokens</strong></p>
     <p>Slash commands: <code>/polish</code> · <code>/animate</code> · <code>/audit</code> · <code>/overdrive</code> · <code>/token</code> · <code>/a11y</code> · <code>/motion</code> · <code>/figma</code></p>
 
     <h2 id="config">Environment Variables</h2>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Variable</th><th>Description</th><th>Default</th></tr></thead>
         <tbody>
           <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Claude provider key</td><td>—</td></tr>
@@ -398,12 +492,80 @@ python3 give_work.py --revoke timps-sk-xxxx</div>
     </div>
 
     <h2 id="contributing">Contributing</h2>
-    <div class="code-block">cd timps-code && npx tsc --noEmit
+    <div class="code-block">
+      <pre>cd timps-code && npx tsc --noEmit
 cd timps-code && npm test
-cd timps-code && npm run build</div>
-    <div class="callout callout-warn">New tools need accurate descriptions. Memory schema changes must be backwards compatible. Update CHANGELOG.md.</div>
+cd timps-code && npm run build</pre>
+    </div>
+    <div class="callout warn">New tools need accurate descriptions. Memory schema changes must be backwards compatible. Update CHANGELOG.md.</div>
   </main>
 </div>
+
+<!-- ── CTA ─────────────────────────────────────────────── -->
+<section class="cta" style="border-top:1px solid var(--border)">
+  <h2>Give your agents a memory<br>that lasts.</h2>
+  <p>Free. Open source. Runs locally. No account required.</p>
+  <div class="hero-actions">
+    <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
+    <a href="index.html" class="btn btn-outline btn-lg">Back to TIMPS Memory</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────── -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand-name">TIMPS</div>
+      <div class="brand-msg">Think. Right. — persistent memory for the people and agents who do the thinking.</div>
+      <div class="footer-social">
+        <a href="https://github.com/timpss" target="_blank" rel="noopener" title="GitHub">⌥</a>
+        <a href="https://www.youtube.com/@Timps-090" target="_blank" rel="noopener" title="YouTube">▶</a>
+        <a href="https://www.linkedin.com/company/timps/" target="_blank" rel="noopener" title="LinkedIn">in</a>
+        <a href="https://x.com/TIMPs_ai" target="_blank" rel="noopener" title="X / Twitter">✕</a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a class="footer-col-link" href="index.html">TIMPS Memory</a>
+        <a class="footer-col-link" href="gmail.html">Gmail Connector</a>
+        <a class="footer-col-link" href="docs.html">Documentation</a>
+        <a class="footer-col-link" href="ecosystem.html">Ecosystem</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Website</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/news.html" target="_blank" rel="noopener">News</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/research.html" target="_blank" rel="noopener">Research</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/timps-memory.html" target="_blank" rel="noopener">TIMPS Memory lite</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Resources</div>
+        <a class="footer-col-link" href="docs.html#install">Installation</a>
+        <a class="footer-col-link" href="docs.html#mcp">MCP setup</a>
+        <a class="footer-col-link" href="docs.html#slash-commands">Slash commands</a>
+        <a class="footer-col-link" href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open source</div>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">GitHub</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank" rel="noopener">Issues</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 TIMPS · MIT License · A product of TIMPS</div>
+    <div class="footer-legal">
+      <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Terms</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Usage policy</a>
+    </div>
+  </div>
+</footer>
 
 <script src="js/main.js"></script>
 <script>

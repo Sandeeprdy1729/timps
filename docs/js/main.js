@@ -66,13 +66,16 @@ const counterObserver = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.stat-num[data-target]').forEach(el => counterObserver.observe(el));
 
-/* ── Nav scroll style ── */
+/* ── Nav shadow on scroll ── */
 window.addEventListener('scroll', () => {
-  const nav = document.querySelector('nav');
+  const nav = document.querySelector('nav.nav');
+  if (!nav) return;
   if (window.scrollY > 20) {
-    nav.style.borderBottomColor = 'rgba(255,255,255,0.1)';
+    nav.style.boxShadow = '0 4px 20px rgba(20,20,19,0.06)';
+    nav.style.borderBottomColor = 'rgba(20,20,19,0.10)';
   } else {
-    nav.style.borderBottomColor = 'rgba(255,255,255,0.08)';
+    nav.style.boxShadow = 'none';
+    nav.style.borderBottomColor = 'rgba(20,20,19,0.08)';
   }
 });
 

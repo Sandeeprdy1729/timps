@@ -3,117 +3,314 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TIMPS Memory — persistent, self-hosted memory for AI coding agents. Connect your inbox, distill it into facts, recall it forever.">
-  <title>TIMPS Memory — Persistent Memory for AI</title>
+  <meta name="description" content="TIMPS Memory — the memory that grows with you. A persistent, self-hosted memory system for your AI agents. A product of the TIMPS company.">
+  <meta property="og:title" content="TIMPS Memory — Memory that grows with you">
+  <meta property="og:description" content="A persistent, self-hosted memory system for your AI agents. A product of TIMPS.">
+  <title>TIMPS Memory — Memory that grows with you</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/timps.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-<nav>
+<!-- ── NAV ─────────────────────────────────────────────── -->
+<nav class="nav">
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box" title="TIMPS">
-        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
-          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
-          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
-        </svg>
-      </div>
-      TIMPS
+      <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#141413"/>
+        <rect x="4" y="6" width="8" height="5" fill="#d97757"/>
+        <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#b8b6ab"/>
+        <rect x="4" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="9" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="7" y="3" width="2" height="2" fill="#5e5d59"/>
+      </svg>
+      TIMPS&nbsp;Memory
     </a>
+
     <ul class="nav-links">
-      <li><a href="gmail.html">Connectors</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li class="nav-item">
+        <a class="nav-link" href="#how-it-works">Product
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">Product</div>
+          <a href="index.html">TIMPS Memory</a>
+          <a href="gmail.html">Gmail Connector</a>
+          <a href="ecosystem.html">Ecosystem</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="ecosystem.html">Ecosystem</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="docs.html">Docs</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">A product of TIMPS</div>
+          <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">timps-website.vercel.app</a>
+        </div>
+      </li>
     </ul>
+
     <div class="nav-cta">
-      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
-      <a href="gmail.html" class="btn btn-primary btn-sm">Get started</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">GitHub</a>
+      <a href="docs.html#install" class="btn btn-primary btn-sm">Get started</a>
     </div>
+
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#how-it-works">Product</a>
+  <a href="gmail.html">Gmail Connector</a>
+  <a href="ecosystem.html">Ecosystem</a>
+  <a href="docs.html">Docs</a>
+  <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Company</a>
+  <div class="mobile-cta">
+    <a href="docs.html#install" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+  </div>
+</div>
+
+<!-- ── HERO ────────────────────────────────────────────── -->
 <header class="hero">
-  <div class="container">
-    <div class="hero-inner" style="grid-template-columns:1fr;">
-      <span class="hero-badge">Self-hosted · Local-first · Free</span>
-      <h1>Memory that<br><span class="serif display">compounds</span> with use.</h1>
-      <p class="hero-sub">
-        TIMPS is persistent memory for AI coding agents. Your emails, decisions,
-        and context get distilled into facts your agent can recall forever — on
-        your machine, in your control.
-      </p>
-      <div class="hero-actions">
-        <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
-        <a href="docs.html" class="btn btn-ghost btn-lg">Read the docs</a>
-      </div>
-      <div class="hero-lang">
-        <span class="lang-tag">distills email → facts</span>
-        <span class="lang-tag">recall from any tool</span>
-        <span class="lang-tag">0 hosts, 0 tracking</span>
-      </div>
-    </div>
+  <span class="hero-badge"><span class="dot"></span>A product of TIMPS</span>
+  <h1>Memory that<br><em>grows with you.</em></h1>
+  <p class="hero-sub">
+    TIMPS Memory is a persistent, self-hosted memory system for your AI agents.
+    Your emails, decisions, and context become facts your agents recall forever —
+    on your machine, in your control.
+  </p>
+  <div class="hero-actions">
+    <a href="gmail.html" class="btn btn-primary btn-lg">Start with Gmail</a>
+    <a href="docs.html" class="btn btn-outline btn-lg">Read the docs</a>
+  </div>
+  <div class="hero-tags">
+    <span class="tag">Self-hosted</span>
+    <span class="tag">Local-first</span>
+    <span class="tag">Free &amp; open source</span>
+    <span class="tag">No account</span>
   </div>
 </header>
 
-<section class="section-sm">
-  <div class="container">
-    <div class="proof-grid">
-      <div class="proof-item">
-        <div class="proof-text">Every email, distilled into one line.</div>
-        <div class="proof-sub">Sync → facts</div>
+<!-- ── STAT BAR ────────────────────────────────────────── -->
+<div class="stat-bar">
+  <div class="stat-item"><div class="stat-num" data-target="22" data-suffix="">22</div><div class="stat-label">Memory layers</div></div>
+  <div class="stat-item"><div class="stat-num" data-target="25" data-suffix="">25</div><div class="stat-label">Intelligence tools</div></div>
+  <div class="stat-item"><div class="stat-num" data-target="100" data-suffix="%">100%</div><div class="stat-label">Local &amp; private</div></div>
+  <div class="stat-item"><div class="stat-num" data-target="0" data-suffix="">0</div><div class="stat-label">API keys required</div></div>
+</div>
+
+<!-- ── THE PROBLEM ─────────────────────────────────────── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">The problem</span>
+      <h2>Your AI agents are born with amnesia.</h2>
+      <p class="section-lead">Session ends, context dies. You re-explain your architecture, your bug patterns, your preferences — over and over again.</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="card fade-in">
+        <div class="card-icon">🧠</div>
+        <h3>Encoding failure</h3>
+        <p>Context is discarded the moment a session ends. If it never reaches long-term storage, it never happened.</p>
       </div>
-      <div class="proof-item">
-        <div class="proof-text">Ask once, remember always.</div>
-        <div class="proof-sub">Recall</div>
+      <div class="card fade-in">
+        <div class="card-icon">🔍</div>
+        <h3>Retrieval failure</h3>
+        <p>Even when context is saved, agents lack the cue-based systems to surface the right memory at the right time.</p>
       </div>
-      <div class="proof-item">
-        <div class="proof-text">Nothing leaves your machine.</div>
-        <div class="proof-sub">Local-first</div>
+      <div class="card fade-in">
+        <div class="card-icon">📉</div>
+        <h3>Decay</h3>
+        <p>Without rehearsal and consolidation, memories fade. The Ebbinghaus curve applies to AI too.</p>
+      </div>
+      <div class="card fade-in">
+        <div class="card-icon">💥</div>
+        <h3>Reconsolidation</h3>
+        <p>Every edit to a stored memory risks losing the original truth. Most systems silently overwrite.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="connect" style="background: var(--paper-2);">
-  <div class="container">
-    <div class="section-header">
-      <span class="section-label">Connectors</span>
-      <h2>Connect a connector.</h2>
-      <p>Each connector hands off to the TIMPS running on this machine — real OAuth, tokens stay local.</p>
+<!-- ── HOW IT WORKS ────────────────────────────────────── -->
+<section class="section" id="how-it-works">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">How it works</span>
+      <h2>Three quiet steps.</h2>
     </div>
-    <div class="connectors-grid">
-      <div class="connector">
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-num">01 / SYNC</div>
+        <h3>Connect</h3>
+        <p>One click hands off to TIMPS running on your machine. Real OAuth, read-only scope. Tokens stay local.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">02 / DISTILL</div>
+        <h3>Convert</h3>
+        <p>Each email becomes 1–3 knowledge facts. Raw mail never leaves your store.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">03 / REMEMBER</div>
+        <h3>Recall</h3>
+        <p>Facts answer <code>timps recall</code> from any tool, and show up in the desktop app and memory graph.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── THE STACK ───────────────────────────────────────── -->
+<section class="section alt">
+  <div class="section-inner">
+    <div class="section-head left fade-in">
+      <span class="overline">Cognitive architecture</span>
+      <h2>Five layers. Complete understanding.</h2>
+      <p class="section-lead">Most memory solutions are a vector DB. TIMPS is a cognitive architecture — five working systems, like human memory.</p>
+    </div>
+    <div class="stack-row fade-in">
+      <div class="stack-item">
+        <div class="s-num">01</div>
+        <div class="s-name">Episodic Memory</div>
+        <div class="s-desc">Session-by-session event log. What happened, when, with what outcome.</div>
+      </div>
+      <div class="stack-item">
+        <div class="s-num">02</div>
+        <div class="s-name">Semantic Graph</div>
+        <div class="s-desc">Entity-relation knowledge base. Facts, concepts, decisions, conventions.</div>
+      </div>
+      <div class="stack-item">
+        <div class="s-num">03</div>
+        <div class="s-name">Procedural Memory</div>
+        <div class="s-desc">Tool-use sequences, prompt patterns, error → fix mappings.</div>
+      </div>
+      <div class="stack-item">
+        <div class="s-num">04</div>
+        <div class="s-name">Resonance &amp; Echo</div>
+        <div class="s-desc">Cross-session activation — surfaces relevant memory before you ask.</div>
+      </div>
+      <div class="stack-item">
+        <div class="s-num">05</div>
+        <div class="s-name">Sheaf-Theoretic</div>
+        <div class="s-desc">HarmonicSheafWeaver. H¹ cohomology for semantic consistency.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 22 LAYERS ───────────────────────────────────────── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">The full system</span>
+      <h2>22 layers. Zero magic.</h2>
+      <p class="section-lead">Every layer maps to a biological memory system. Deterministic, class-based, and benchmarked.</p>
+    </div>
+    <div class="layers fade-in">
+      <div class="layer"><div class="l-num">L1</div><div class="l-name">Working Memory</div></div>
+      <div class="layer"><div class="l-num">L2</div><div class="l-name">Episodic Store</div></div>
+      <div class="layer"><div class="l-num">L3</div><div class="l-name">Semantic Graph</div></div>
+      <div class="layer"><div class="l-num">L4</div><div class="l-name">Procedural</div></div>
+      <div class="layer"><div class="l-num">L5</div><div class="l-name">ChronosForge</div></div>
+      <div class="layer"><div class="l-num">L6</div><div class="l-name">ResonanceForge</div></div>
+      <div class="layer"><div class="l-num">L7</div><div class="l-name">EchoForge</div></div>
+      <div class="layer"><div class="l-num">L8</div><div class="l-name">SynapseQuench</div></div>
+      <div class="layer"><div class="l-num">L9</div><div class="l-name">HarmonicSheaf</div></div>
+      <div class="layer"><div class="l-num">L10</div><div class="l-name">AetherForge ERL</div></div>
+      <div class="layer"><div class="l-num">L11</div><div class="l-name">SupraSheaf</div></div>
+      <div class="layer"><div class="l-num">L12</div><div class="l-name">QPTW</div></div>
+      <div class="layer"><div class="l-num">L13</div><div class="l-name">QERW</div></div>
+      <div class="layer"><div class="l-num">L14</div><div class="l-name">QISRD</div></div>
+      <div class="layer"><div class="l-num">L15</div><div class="l-name">QITRL</div></div>
+      <div class="layer"><div class="l-num">L16</div><div class="l-name">EclipseForge</div></div>
+      <div class="layer"><div class="l-num">L17</div><div class="l-name">TitanicForge</div></div>
+      <div class="layer"><div class="l-num">L18</div><div class="l-name">EngramLog</div></div>
+      <div class="layer"><div class="l-num">L19</div><div class="l-name">Consolidation</div></div>
+      <div class="layer"><div class="l-num">L20</div><div class="l-name">SpacedRepetition</div></div>
+      <div class="layer"><div class="l-num">L21</div><div class="l-name">ProvenanceForge</div></div>
+      <div class="layer"><div class="l-num">L22</div><div class="l-name">Constitutional</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── COMPARISON ──────────────────────────────────────── -->
+<section class="section alt">
+  <div class="section-inner">
+    <div class="section-head left fade-in">
+      <span class="overline">Why TIMPS</span>
+      <h2>Not another vector DB wrapper.</h2>
+      <p class="section-lead">22 layers vs. 1–2. Deterministic intelligence tools. Runs fully local, zero API keys.</p>
+    </div>
+    <div class="table-wrap fade-in">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="hl">TIMPS Memory</th>
+            <th>Mem0</th>
+            <th>Supermemory</th>
+            <th>Zep</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Memory layers</td><td class="hl"><strong>22</strong></td><td>~5</td><td>5</td><td>~3</td></tr>
+          <tr><td>Intelligence tools</td><td class="hl"><strong>25</strong></td><td>~5</td><td>—</td><td>~3</td></tr>
+          <tr><td>Cognitive architecture</td><td class="hl check">✓</td><td class="cross">✗</td><td class="partial">Partial</td><td class="cross">✗</td></tr>
+          <tr><td>Sheaf-theoretic (L9+)</td><td class="hl check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>False-memory detection</td><td class="hl check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>Immutable audit log</td><td class="hl check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>100% free with Ollama</td><td class="hl check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>Zero API keys</td><td class="hl check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+          <tr><td>Self-hostable</td><td class="hl check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+          <tr><td>MCP native</td><td class="hl check">✓</td><td class="cross">✗</td><td class="partial">Partial</td><td class="cross">✗</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONNECTORS ──────────────────────────────────────── -->
+<section class="section" id="connectors">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">Connectors</span>
+      <h2>Feed your memory daily.</h2>
+      <p class="section-lead">Each connector hands off to TIMPS running on this machine — real OAuth, tokens stay local.</p>
+    </div>
+    <div class="connectors">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name"><span class="connector-icon">@</span>Gmail</div>
-          <span class="connector-status"><span class="conn-dot off"></span>available</span>
+          <span class="connector-status"><span class="conn-dot"></span>launched</span>
         </div>
-        <div class="connector-body">
-          Read-only. Distills every synced email into knowledge facts stored in
-          TIMPS memory. Never sends, drafts, or deletes.
-        </div>
+        <div class="connector-body">Read-only. Distills every synced email into knowledge facts stored in TIMPS memory. Never sends, drafts, or deletes.</div>
         <div class="connector-actions">
-          <a href="gmail.html" class="btn btn-primary btn-sm">Docs &amp; setup</a>
+          <a href="gmail.html" class="btn btn-outline btn-sm">Docs &amp; setup</a>
         </div>
       </div>
-      <div class="connector connector-muted">
+      <div class="connector muted fade-in">
         <div class="connector-top">
           <div class="connector-name"><span class="connector-icon">#</span>Slack</div>
           <span class="connector-status"><span class="conn-dot off"></span>coming soon</span>
         </div>
         <div class="connector-body">Team conversations distilled the same way. On the roadmap.</div>
       </div>
-      <div class="connector connector-muted">
+      <div class="connector muted fade-in">
         <div class="connector-top">
           <div class="connector-name"><span class="connector-icon">≡</span>Notion</div>
           <span class="connector-status"><span class="conn-dot off"></span>coming soon</span>
@@ -124,45 +321,167 @@
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <div class="section-header">
-      <span class="section-label">How it works</span>
-      <h2>Three quiet steps.</h2>
+<!-- ── CODE ────────────────────────────────────────────── -->
+<section class="section alt">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">Developer experience</span>
+      <h2>Setup in 30 seconds.</h2>
+      <p class="section-lead">One command. No install. No API key. TIMPS analyzes your project and builds a memory profile instantly.</p>
     </div>
-    <div class="steps-grid">
-      <div class="step">
-        <div class="step-num">01 / SYNC</div>
-        <h3>Connect</h3>
-        <p>One click hands off to TIMPS on your machine. Real OAuth, read-only scope.</p>
+    <div class="code-block fade-in" data-tabs>
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="npx timps-code">Copy</button>
       </div>
-      <div class="step">
-        <div class="step-num">02 / DISTILL</div>
-        <h3>Convert</h3>
-        <p>Each email becomes 1–3 knowledge facts. Raw mail never leaves the store.</p>
+      <div class="code-tabs">
+        <div class="code-tab active">Quick Start</div>
+        <div class="code-tab">CLI</div>
       </div>
-      <div class="step">
-        <div class="step-num">03 / REMEMBER</div>
-        <h3>Recall</h3>
-        <p>Facts answer <code>timps recall</code> and appear in the desktop app.</p>
-      </div>
+      <pre><span class="cm"># Zero-install — just run it</span>
+npx timps-code <span class="str">"what does this codebase do?"</span>
+
+<span class="cm"># Or install globally</span>
+npm install -g timps-code
+timps <span class="str">"explain the architecture"</span></pre>
     </div>
-    <div class="callout callout-info" style="margin-top:56px;">
-      <strong>Private by design</strong>
-      The website is static. Your inbox connects to TIMPS running locally — OAuth tokens live in
-      <code>~/.timps/gmail/</code>, never on this page.
+    <div class="chips" style="margin-top:32px">
+      <span class="chip">Claude Code</span>
+      <span class="chip">Cursor</span>
+      <span class="chip">Windsurf</span>
+      <span class="chip">VS Code</span>
+      <span class="chip">Cline</span>
+      <span class="chip">Continue</span>
+      <span class="chip">Goose</span>
+      <span class="chip">OpenCode</span>
+      <span class="chip">Ollama</span>
+      <span class="chip">Gemini</span>
     </div>
   </div>
 </section>
 
+<!-- ── QUOTE ───────────────────────────────────────────── -->
+<section class="quote">
+  <blockquote>"We didn't build a database with a fancy API. We built a cognitive architecture — one that decays, consolidates, and retrieves the way a brain does."</blockquote>
+  <cite>— TIMPS Memory architecture</cite>
+</section>
+
+<!-- ── PRICING ─────────────────────────────────────────── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-head fade-in">
+      <span class="overline">Pricing</span>
+      <h2>Simple, transparent.</h2>
+      <p class="section-lead">100% free and open source. Run it locally with Ollama — no account, no API key, no limits.</p>
+    </div>
+    <div class="pricing">
+      <div class="price-card fade-in">
+        <div class="price-tier">Community</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">Free forever. Open source.</div>
+        <ul class="price-features">
+          <li>22-layer memory</li>
+          <li>25 intelligence tools</li>
+          <li>Local storage</li>
+          <li>Ollama — 100% local</li>
+          <li>CLI + MCP server</li>
+          <li>MIT license</li>
+        </ul>
+        <a href="https://github.com/Sandeeprdy1729/timps" class="btn btn-outline" target="_blank" rel="noopener">Get started</a>
+      </div>
+      <div class="price-card featured fade-in">
+        <div class="price-tier">Pro</div>
+        <div class="price-amount">$19<span style="font-size:16px;font-weight:400;color:var(--muted)">/mo</span></div>
+        <div class="price-period">For teams and production.</div>
+        <ul class="price-features">
+          <li>Everything in Community</li>
+          <li>PostgreSQL shared memory</li>
+          <li>Qdrant vector search</li>
+          <li>Multi-provider routing</li>
+          <li>Desktop + mobile apps</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="https://github.com/Sandeeprdy1729/timps" class="btn btn-primary" target="_blank" rel="noopener">Start building</a>
+      </div>
+      <div class="price-card fade-in">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-amount">Custom</div>
+        <div class="price-period">Custom deployments.</div>
+        <ul class="price-features">
+          <li>Everything in Pro</li>
+          <li>SSO + RBAC</li>
+          <li>On-premise deployment</li>
+          <li>Dedicated support</li>
+          <li>SLA guarantee</li>
+          <li>Training &amp; onboarding</li>
+        </ul>
+        <a href="https://github.com/Sandeeprdy1729/timps" class="btn btn-outline" target="_blank" rel="noopener">Contact us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ─────────────────────────────────────────────── -->
+<section class="cta">
+  <h2>Give your agents a memory<br>that lasts.</h2>
+  <p>Free. Open source. Runs locally. No account required.</p>
+  <div class="hero-actions">
+    <a href="docs.html#install" class="btn btn-primary btn-lg">Start building</a>
+    <a href="gmail.html" class="btn btn-outline btn-lg">Connect Gmail</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────── -->
 <footer>
-  <div class="footer-inner">
-    <small>TIMPS &mdash; persistent memory for AI coding agents.</small>
-    <div class="footer-links">
-      <a href="gmail.html">Connectors</a>
-      <a href="docs.html">Docs</a>
-      <a href="ecosystem.html">Ecosystem</a>
-      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank">GitHub</a>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand-name">TIMPS</div>
+      <div class="brand-msg">Think. Right. — persistent memory for the people and agents who do the thinking.</div>
+      <div class="footer-social">
+        <a href="https://github.com/timpss" target="_blank" rel="noopener" title="GitHub">⌥</a>
+        <a href="https://www.youtube.com/@Timps-090" target="_blank" rel="noopener" title="YouTube">▶</a>
+        <a href="https://www.linkedin.com/company/timps/" target="_blank" rel="noopener" title="LinkedIn">in</a>
+        <a href="https://x.com/TIMPs_ai" target="_blank" rel="noopener" title="X / Twitter">✕</a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a class="footer-col-link" href="index.html">TIMPS Memory</a>
+        <a class="footer-col-link" href="gmail.html">Gmail Connector</a>
+        <a class="footer-col-link" href="docs.html">Documentation</a>
+        <a class="footer-col-link" href="ecosystem.html">Ecosystem</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Website</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/news.html" target="_blank" rel="noopener">News</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/research.html" target="_blank" rel="noopener">Research</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/timps-memory.html" target="_blank" rel="noopener">TIMPS Memory lite</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Resources</div>
+        <a class="footer-col-link" href="docs.html#install">Installation</a>
+        <a class="footer-col-link" href="docs.html#mcp">MCP setup</a>
+        <a class="footer-col-link" href="docs.html#slash-commands">Slash commands</a>
+        <a class="footer-col-link" href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open source</div>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">GitHub</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank" rel="noopener">Issues</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 TIMPS · MIT License · A product of TIMPS</div>
+    <div class="footer-legal">
+      <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Terms</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Usage policy</a>
     </div>
   </div>
 </footer>

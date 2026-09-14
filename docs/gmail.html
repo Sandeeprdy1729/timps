@@ -4,77 +4,126 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="TIMPS Gmail Connector — connect your inbox, auto-sync distilled facts into long-term memory, and search them from anywhere.">
-  <title>Gmail Connector — TIMPS</title>
+  <title>Gmail Connector — TIMPS Memory</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/timps.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-<nav>
+<!-- ── NAV ─────────────────────────────────────────────── -->
+<nav class="nav">
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box" title="TIMPS Robot Mascot">
-<svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
-          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
-          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
-        </svg>
-      </div>
-      TIMPS
+      <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#141413"/>
+        <rect x="4" y="6" width="8" height="5" fill="#d97757"/>
+        <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#b8b6ab"/>
+        <rect x="4" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="9" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="7" y="3" width="2" height="2" fill="#5e5d59"/>
+      </svg>
+      TIMPS&nbsp;Memory
     </a>
+
     <ul class="nav-links">
-      <li><a href="gmail.html" class="active">Connectors</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="ecosystem.html">Ecosystem</a></li>
+      <li class="nav-item">
+        <a class="nav-link active" href="index.html">Product
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">Product</div>
+          <a href="index.html">TIMPS Memory</a>
+          <a href="gmail.html">Gmail Connector</a>
+          <a href="ecosystem.html">Ecosystem</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="ecosystem.html">Ecosystem</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="docs.html">Docs</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">A product of TIMPS</div>
+          <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">timps-website.vercel.app</a>
+        </div>
+      </li>
     </ul>
+
     <div class="nav-cta">
-      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
-      <a href="docs.html" class="btn btn-primary btn-sm">Docs</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">GitHub</a>
+      <a href="docs.html#install" class="btn btn-primary btn-sm">Get started</a>
     </div>
+
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<div class="docs-layout">
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Product</a>
+  <a href="gmail.html">Gmail Connector</a>
+  <a href="ecosystem.html">Ecosystem</a>
+  <a href="docs.html">Docs</a>
+  <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Company</a>
+  <div class="mobile-cta">
+    <a href="docs.html#install" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+  </div>
+</div>
+
+<!-- ── DOCS ────────────────────────────────────────────── -->
+<div class="docs-wrap">
   <aside class="docs-sidebar">
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Connectors</div>
+      <div class="sidebar-label">Connectors</div>
       <a href="#connect" class="sidebar-link active">Connect Gmail</a>
       <a href="#gmail-overview" class="sidebar-link">Overview</a>
       <a href="#how-it-works" class="sidebar-link">How it works</a>
       <a href="#data-store" class="sidebar-link">Data store</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">CLI</div>
+      <div class="sidebar-label">CLI</div>
       <a href="#cli-sync" class="sidebar-link">Sync now</a>
       <a href="#cli-cron" class="sidebar-link">Auto-sync (cron)</a>
     </div>
     <div class="sidebar-group">
-      <div class="sidebar-group-label">Desktop App</div>
+      <div class="sidebar-label">Desktop app</div>
       <a href="#desktop" class="sidebar-link">Connectors tab</a>
       <a href="#chat-commands" class="sidebar-link">/email commands</a>
     </div>
-    <a href="#privacy" class="sidebar-link" style="margin-top: 8px;">Privacy</a>
+    <div class="sidebar-group">
+      <a href="#privacy" class="sidebar-link">Privacy</a>
+    </div>
   </aside>
 
   <main class="docs-content">
     <h1>Gmail Connector</h1>
-    <p style="margin-bottom: 40px;">Turn your inbox into a memory. One OAuth connect, then every synced email is distilled into knowledge facts your agent can recall forever.</p>
-    <hr class="divider" style="margin-bottom: 40px;">
+    <p class="doc-intro">Turn your inbox into a memory. One OAuth connect, then every synced email is distilled into knowledge facts your agent can recall forever.</p>
+    <hr class="divider">
 
     <h2 id="connect">Connect Gmail</h2>
     <p>One command connects your inbox — a browser consent screen opens, tokens land in
     <code>~/.timps/gmail/</code>, and nothing touches any server.</p>
-    <div class="code-block">timps gmail:connect   # opens Google consent, saves tokens locally
-timps gmail:sync     # run a sync from the terminal</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="timps gmail:connect">Copy</button>
+      </div>
+      <pre>timps gmail:connect   <span class="cm"># opens Google consent, saves tokens locally</span>
+timps gmail:sync     <span class="cm"># run a sync from the terminal</span></pre>
+    </div>
     <p style="font-size: 0.85rem; margin-top: 14px;">No app installed? Run <code>timps gmail:connect</code> after
       installing TIMPS, then sync anytime with <code>timps gmail:sync</code>.</p>
 
@@ -86,44 +135,53 @@ timps gmail:sync     # run a sync from the terminal</div>
       <li>Facts are stored in TIMPS long-term memory with tags <code>email</code>, <code>gmail</code>, <code>knowledge</code>, <code>sender:&lt;address&gt;</code></li>
       <li>Searchable with <code>timps recall</code> and in the desktop app</li>
     </ul>
-    <div class="callout callout-info">First sync backfills the inbox (capped for speed). Later syncs only pull mail newer than the last run. The raw emails stay in your local store — nothing is uploaded.</div>
+    <div class="callout">First sync backfills the inbox (capped for speed). Later syncs only pull mail newer than the last run. The raw emails stay in your local store — nothing is uploaded.</div>
 
     <h2 id="how-it-works">How it works</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 24px 0;">
+    <div class="win-grid">
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">sync</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Sync</strong><p style="margin-top: 8px; font-size: 0.8rem;">Fetches new inbox mail with a refresh token, matches the previous run, and stores raw JSON per message.</p></div>
+        <div class="window-body"><strong>Sync</strong><p style="margin-top:8px">Fetches new inbox mail with a refresh token, matches the previous run, and stores raw JSON per message.</p></div>
       </div>
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">distill</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Distill</strong><p style="margin-top: 8px; font-size: 0.8rem;">Summarizes each message — subject, sender, date, and the key facts worth remembering.</p></div>
+        <div class="window-body"><strong>Distill</strong><p style="margin-top:8px">Summarizes each message — subject, sender, date, and the key facts worth remembering.</p></div>
       </div>
       <div class="window">
         <div class="window-bar"><div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div><span class="window-title">remember</span></div>
-        <div class="window-body" style="font-size: 0.82rem;"><strong>Remember</strong><p style="margin-top: 8px; font-size: 0.8rem;">Facts enter semantic memory and show up in <code>timps recall</code> and the memory graph.</p></div>
+        <div class="window-body"><strong>Remember</strong><p style="margin-top:8px">Facts enter semantic memory and show up in <code>timps recall</code> and the memory graph.</p></div>
       </div>
     </div>
 
     <h2 id="data-store">Data store</h2>
     <p>Everything lives locally in <code>~/.timps/gmail/</code> — shared by the CLI, the desktop app, and the launchd job:</p>
-    <div class="code-block">~/.timps/gmail/
-├── client.json        # Google OAuth client id + secret (chmod 600)
-├── tokens.json        # refresh + access tokens (chmod 600)
-├── state.json         # lastRun, lastMessageId, messagesSynced
-├── summaries.jsonl    # distilled facts (one JSON object per email)
-└── raw/YYYY-MM-DD/    # raw per-message copies
-<id>.json</div>
-    <div class="callout callout-warn">Tokens are never committed and never leave your machine. The desktop app and CLI read summaries locally — nothing is uploaded.</div>
+    <div class="code-block">
+      <div class="copy-row">
+        <button class="copy-btn" data-copy="~/.timps/gmail/">Copy</button>
+      </div>
+      <pre>~/.timps/gmail/
+├── client.json        <span class="cm"># Google OAuth client id + secret (chmod 600)</span>
+├── tokens.json        <span class="cm"># refresh + access tokens (chmod 600)</span>
+├── state.json         <span class="cm"># lastRun, lastMessageId, messagesSynced</span>
+├── summaries.jsonl    <span class="cm"># distilled facts (one JSON object per email)</span>
+└── raw/YYYY-MM-DD/    <span class="cm"># raw per-message copies</span>
+    &lt;id&gt;.json</pre>
+    </div>
+    <div class="callout warn"><strong>Tokens are local.</strong> Never committed, never leave your machine. The desktop app and CLI read summaries locally — nothing is uploaded.</div>
 
     <h2 id="cli-sync">CLI — sync now</h2>
-    <div class="code-block">timps gmail:sync           # one-shot sync from the terminal
-timps gmail:recent 10      # show 10 latest distilled facts
-timps gmail:search "aws"   # search facts by subject / sender / content</div>
+    <div class="code-block">
+      <pre>timps gmail:sync           <span class="cm"># one-shot sync from the terminal</span>
+timps gmail:recent 10      <span class="cm"># show 10 latest distilled facts</span>
+timps gmail:search "aws"   <span class="cm"># search facts by subject / sender / content</span></pre>
+    </div>
 
     <h2 id="cli-cron">CLI — auto-sync (cron)</h2>
     <p>Register a daily job (09:00) with the built-in cron helper:</p>
-    <div class="code-block">timps gmail:cron           # install the daily sync job
-timps gmail:cron --remove # remove it</div>
+    <div class="code-block">
+      <pre>timps gmail:cron           <span class="cm"># install the daily sync job</span>
+timps gmail:cron --remove <span class="cm"># remove it</span></pre>
+    </div>
     <p>On macOS this installs a launchd agent (<code>ai.timps.gmail.sync</code>). Logs land in <code>~/.timps/gmail/logs/</code>.</p>
 
     <h2 id="desktop">Desktop app — Connectors tab</h2>
@@ -134,12 +192,12 @@ timps gmail:cron --remove # remove it</div>
       <li><strong>Auto-sync</strong> installs/removes the daily job</li>
       <li><strong>Search</strong> filters the distilled email memories right in the tab</li>
     </ul>
-    <div class="callout callout-tip">The desktop OAuth flow runs entirely in Rust — the renderer stays network-free so the app CSP stays locked.</div>
+    <div class="callout tip"><strong>Network-free renderer.</strong> The desktop OAuth flow runs entirely in Rust — the renderer stays network-free so the app CSP stays locked.</div>
 
     <h2 id="chat-commands">Chat commands</h2>
     <p>Type these in the desktop Chat to query the inbox without an LLM round-trip:</p>
     <div class="table-wrap">
-      <table class="table-simple">
+      <table class="tbl">
         <thead><tr><th>Command</th><th>What it does</th></tr></thead>
         <tbody>
           <tr><td><code>/email recent 5</code></td><td>Latest distilled email memories</td></tr>
@@ -158,6 +216,72 @@ timps gmail:cron --remove # remove it</div>
     </ul>
   </main>
 </div>
+
+<!-- ── CTA ─────────────────────────────────────────────── -->
+<section class="cta" style="border-top:1px solid var(--border)">
+  <h2>Turn your inbox into memory.</h2>
+  <p>Free. Open source. Runs locally. No account required.</p>
+  <div class="hero-actions">
+    <a href="docs.html#install" class="btn btn-primary btn-lg">Start building</a>
+    <a href="index.html" class="btn btn-outline btn-lg">Back to TIMPS Memory</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────── -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand-name">TIMPS</div>
+      <div class="brand-msg">Think. Right. — persistent memory for the people and agents who do the thinking.</div>
+      <div class="footer-social">
+        <a href="https://github.com/timpss" target="_blank" rel="noopener" title="GitHub">⌥</a>
+        <a href="https://www.youtube.com/@Timps-090" target="_blank" rel="noopener" title="YouTube">▶</a>
+        <a href="https://www.linkedin.com/company/timps/" target="_blank" rel="noopener" title="LinkedIn">in</a>
+        <a href="https://x.com/TIMPs_ai" target="_blank" rel="noopener" title="X / Twitter">✕</a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a class="footer-col-link" href="index.html">TIMPS Memory</a>
+        <a class="footer-col-link" href="gmail.html">Gmail Connector</a>
+        <a class="footer-col-link" href="docs.html">Documentation</a>
+        <a class="footer-col-link" href="ecosystem.html">Ecosystem</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Website</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/news.html" target="_blank" rel="noopener">News</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/research.html" target="_blank" rel="noopener">Research</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/timps-memory.html" target="_blank" rel="noopener">TIMPS Memory lite</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Resources</div>
+        <a class="footer-col-link" href="docs.html#install">Installation</a>
+        <a class="footer-col-link" href="docs.html#mcp">MCP setup</a>
+        <a class="footer-col-link" href="docs.html#slash-commands">Slash commands</a>
+        <a class="footer-col-link" href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open source</div>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">GitHub</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank" rel="noopener">Issues</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 TIMPS · MIT License · A product of TIMPS</div>
+    <div class="footer-legal">
+      <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Terms</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Usage policy</a>
+    </div>
+  </div>
+</footer>
 
 <script src="js/main.js"></script>
 <script>
