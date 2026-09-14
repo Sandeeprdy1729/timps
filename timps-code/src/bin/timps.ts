@@ -12,6 +12,7 @@ import { addSwarmCommands } from '../swarm/cli.js';
 import { addSetupCommand } from '../commands/setup.js';
 import { addRecallCommand } from '../commands/recall.js';
 import { addGmailCommands } from '../commands/gmail.js';
+import { addConnectorCommands } from '../commands/connectors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..');
@@ -453,5 +454,6 @@ addSwarmCommands();
 addSetupCommand(program);
 addRecallCommand(program);
 addGmailCommands(program);
+addConnectorCommands(program);
 
 program.parse();
