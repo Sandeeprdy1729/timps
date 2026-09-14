@@ -32,6 +32,13 @@ const GOOGLE_AUTH: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN: &str = "https://oauth2.googleapis.com/token";
 const OAUTH_TIMEOUT_SECS: u64 = 300;
 
+/// Fixed loopback port for OAuth callbacks. GitHub/Slack/Linear/Notion require
+/// an *exact* redirect callback in the registered OAuth app, so an ephemeral
+/// port never works with them — users must register
+/// `http://localhost:12849/oauth2callback`. Falls back to an ephemeral port
+/// (and a warning) only when 12849 is already in use.
+const OAUTH_CALLBACK_PORT: u16 = 12849;
+
 // ── Provider registry ───────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, PartialEq)]
@@ -615,6 +622,74 @@ pub fn connector_import_credentials(id: String, file_path: String) -> Result<Val
     }))
 }
 
+// ── Command: save credentials pasted inline ─────────────────────────────────
+
+/// Save OAuth credentials entered directly in the app (no file import
+/// needed). Writes a flat `{ client_id, client_secret? }` client.json into
+/// `~/.timps/<id>/` with mode 0600. Returns the client id + saved path.
+#[tauri::command]
+pub fn connector_save_credentials(
+    id: String,
+    client_id: String,
+    client_secret: Option<String>,
+) -> Result<Value, String> {
+    let def = provider(&id).ok_or_else(|| format!("unknown connector: {}", id))?;
+    let client_id = client_id.trim();
+    if client_id.is_empty() {
+        return Err("client_id is required".to_string());
+    }
+    if def.secret_required && client_secret.as_deref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+        return Err(format!(
+            "{} requires a client_secret — paste it from the developer console.",
+            def.display
+        ));
+    }
+    fs::create_dir_all(provider_dir(&id))
+        .map_err(|e| format!("mkdir {}: {}", provider_dir(&id).display(), e))?;
+    let mut body = serde_json::Map::new();
+    body.insert("client_id".to_string(), Value::String(client_id.to_string()));
+    if let Some(secret) = client_secret {
+        let trimmed = secret.trim();
+        if !trimmed.is_empty() {
+            body.insert("client_secret".to_string(), Value::String(trimmed.to_string()));
+        }
+    }
+    let raw = serde_json::to_string_pretty(&Value::Object(body)).unwrap();
+    write_mode(&client_file(&id), &raw, 0o600)?;
+    Ok(json!({
+        "clientId": client_id,
+        "saved": client_file(&id).to_string_lossy(),
+    }))
+}
+
+// ── Command: open the provider's developer-console setup page ───────────────
+
+fn setup_url(id: &str) -> Option<&'static str> {
+    Some(match id {
+        "gmail" | "calendar" | "drive" => {
+            "https://console.cloud.google.com/apis/credentials"
+        }
+        "github" => "https://github.com/settings/developers",
+        "notion" => "https://www.notion.so/my-integrations",
+        "slack" => "https://api.slack.com/apps",
+        "linear" => "https://linear.app/settings/api",
+        "ms365" => "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps",
+        _ => return None,
+    })
+}
+
+/// Open the developer console where the user creates an OAuth app / client
+/// for a provider. The loopback callback is always
+/// `http://localhost:12849/oauth2callback` (register it exactly for
+/// GitHub / Slack / Linear / Notion; Google + Microsoft accept any loopback
+/// port).
+#[tauri::command]
+pub fn connector_open_console(id: String) -> Result<(), String> {
+    let url = setup_url(&id).ok_or_else(|| format!("unknown connector: {}", id))?;
+    open_browser(url);
+    Ok(())
+}
+
 // ── Command: begin the loopback OAuth flow ───────────────────────────────────
 
 fn parse_callback(head: &str) -> (String, String) {
@@ -650,9 +725,21 @@ pub async fn connector_connect(
     let def = provider(&id).ok_or_else(|| format!("unknown connector: {}", id))?;
     let creds = load_client(&id)?;
 
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
-        .await
-        .map_err(|e| format!("could not bind loopback listener: {}", e))?;
+    // Bind the fixed callback port first (so strict providers like GitHub /
+    // Slack / Linear / Notion can match the user's registered redirect URI).
+    // Fall back to an ephemeral port only when 12849 is already taken.
+    let listener = match tokio::net::TcpListener::bind(("127.0.0.1", OAUTH_CALLBACK_PORT)).await {
+        Ok(l) => l,
+        Err(first_err) => {
+            eprintln!(
+                "[connectors] fixed callback port {} busy ({}); using an ephemeral port — strict providers may reject the redirect.",
+                OAUTH_CALLBACK_PORT, first_err
+            );
+            tokio::net::TcpListener::bind(("127.0.0.1", 0))
+                .await
+                .map_err(|e| format!("could not bind loopback listener: {}", e))?
+        }
+    };
     let port = listener
         .local_addr()
         .map_err(|e| format!("could not read listener port: {}", e))?

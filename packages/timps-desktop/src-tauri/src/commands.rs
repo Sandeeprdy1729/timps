@@ -46,6 +46,9 @@ pub struct SemanticEntry {
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub score: Option<f64>,
+    /// 12-char store hash this entry was read from; None for single-store loads.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -55,6 +58,9 @@ pub struct EpisodicEntry {
     pub summary: String,
     pub outcome: String,
     pub tags: Vec<String>,
+    /// 12-char store hash this entry was read from; None for single-store loads.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -339,6 +345,7 @@ pub fn store_memory(
         content: value,
         tags,
         score: Some(importance),
+        source: None,
     });
     let s = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
     write_json_atomic(&p, &s)
@@ -1058,6 +1065,7 @@ pub fn passive_store(
         content,
         tags: all_tags,
         score: Some(0.7),
+        source: None,
     });
 
     // Keep most recent 2000 entries
@@ -1393,6 +1401,7 @@ pub fn run_background_summarizer(project_path: String) -> Result<usize, String> 
                 content: fact.clone(),
                 tags: vec!["synthesized".to_string(), "background".to_string()],
                 score: Some(0.8),
+                source: None,
             });
             added += 1;
         }
@@ -1980,6 +1989,273 @@ pub fn detect_project_path() -> String {
     format!("{}/Desktop", home)
 }
 
+// ── Aggregate operations (all ~/.timps/memory stores) ─────────────────────
+//
+// These merge data across every store under ~/.timps/memory/, so the desktop
+// app can visualize the user's *entire* TIMPS memory without picking a single
+// project. Single-store commands above remain unchanged and are still used by
+// the CLI and tests.
+
+/// `~/.timps` root directory.
+fn timps_dir() -> String {
+    format!("{}/.timps", home_dir())
+}
+
+/// Enumerate every project store dir under `~/.timps/memory/`.
+/// Returns `(hash, dir)` pairs sorted by hash for stable output.
+pub(crate) fn memory_stores_all() -> Vec<(String, String)> {
+    let base = format!("{}/memory", timps_dir());
+    let mut out: Vec<(String, String)> = match fs::read_dir(&base) {
+        Ok(entries) => entries
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().map(|ft| ft.is_dir()).unwrap_or(false))
+            .map(|e| {
+                let name = e.file_name().to_string_lossy().to_string();
+                let dir = e.path().to_string_lossy().to_string();
+                (name, dir)
+            })
+            .collect(),
+        Err(_) => vec![],
+    };
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// Per-store counts used by `get_aggregate_stats`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StoreStats {
+    pub project_hash: String,
+    pub semantic_count: usize,
+    pub episode_count: usize,
+    pub working_goals: usize,
+}
+
+/// Combined totals across every store under `~/.timps/memory/`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AggregateStats {
+    pub stores: usize,
+    pub semantic_count: usize,
+    pub episode_count: usize,
+    pub working_goals: usize,
+    pub breakdown: Vec<StoreStats>,
+}
+
+fn store_counts(hash: &str, dir: &str) -> StoreStats {
+    let semantic_count = {
+        let p = format!("{}/semantic.json", dir);
+        match fs::read_to_string(&p) {
+            Ok(s) => serde_json::from_str::<Vec<serde_json::Value>>(&s).map(|v| v.len()).unwrap_or(0),
+            Err(_) => 0,
+        }
+    };
+    let episode_count = {
+        let p = format!("{}/episodes.jsonl", dir);
+        match fs::File::open(&p) {
+            Ok(f) => BufReader::new(f)
+                .lines()
+                .filter(|l| l.as_ref().map(|s| !s.trim().is_empty()).unwrap_or(false))
+                .count(),
+            Err(_) => 0,
+        }
+    };
+    let working_goals = {
+        let p = format!("{}/working.json", dir);
+        match fs::read_to_string(&p) {
+            Ok(s) => {
+                let v: serde_json::Value = serde_json::from_str(&s).unwrap_or(serde_json::json!({}));
+                v["goals"].as_array().map(|a| a.len()).unwrap_or(0)
+            }
+            Err(_) => 0,
+        }
+    };
+    StoreStats {
+        project_hash: hash.to_string(),
+        semantic_count,
+        episode_count,
+        working_goals,
+    }
+}
+
+/// Total memory stats across all stores under `~/.timps/memory/`.
+#[tauri::command]
+pub fn get_aggregate_stats() -> Result<AggregateStats, String> {
+    let stores = memory_stores_all();
+    let breakdown: Vec<StoreStats> = stores
+        .iter()
+        .map(|(h, d)| store_counts(h, d))
+        .collect();
+    let semantic_count = breakdown.iter().map(|b| b.semantic_count).sum();
+    let episode_count = breakdown.iter().map(|b| b.episode_count).sum();
+    let working_goals = breakdown.iter().map(|b| b.working_goals).sum();
+    Ok(AggregateStats {
+        stores: breakdown.len(),
+        semantic_count,
+        episode_count,
+        working_goals,
+        breakdown,
+    })
+}
+
+/// Load semantic entries merged across all stores, newest first, capped at
+/// `limit`. Each entry carries its store hash in `source`.
+#[tauri::command]
+pub fn load_all_semantic(limit: u32) -> Result<Vec<SemanticEntry>, String> {
+    let limit = (limit.max(1) as usize).min(10_000);
+    let mut out: Vec<SemanticEntry> = Vec::new();
+    for (hash, dir) in memory_stores_all() {
+        let p = format!("{}/semantic.json", dir);
+        if let Ok(s) = fs::read_to_string(&p) {
+            if let Ok(mut entries) = serde_json::from_str::<Vec<SemanticEntry>>(&s) {
+                for e in entries.iter_mut() {
+                    e.source = Some(hash.clone());
+                }
+                out.extend(entries);
+            }
+        }
+    }
+    out.sort_by(|a, b| b.timestamp.partial_cmp(&a.timestamp).unwrap_or(std::cmp::Ordering::Equal));
+    out.truncate(limit);
+    Ok(out)
+}
+
+/// Load episodic entries merged across all stores, newest first, capped at
+/// `count`. Each entry carries its store hash in `source`.
+#[tauri::command]
+pub fn load_all_episodes(count: u32) -> Result<Vec<EpisodicEntry>, String> {
+    let count = (count.max(1) as usize).min(10_000);
+    let mut out: Vec<EpisodicEntry> = Vec::new();
+    for (hash, dir) in memory_stores_all() {
+        let live = format!("{}/episodes.jsonl", dir);
+        if let Ok(file) = std::fs::File::open(&live) {
+            out.extend(
+                BufReader::new(file)
+                    .lines()
+                    .filter_map(|l| l.ok())
+                    .filter(|l| !l.trim().is_empty())
+                    .filter_map(|l| serde_json::from_str::<EpisodicEntry>(&l).ok())
+                    .map(|mut e| {
+                        e.timestamp = normalize_ts(e.timestamp);
+                        e.source = Some(hash.clone());
+                        e
+                    }),
+            );
+            continue;
+        }
+        let legacy = format!("{}/episodes.json", dir);
+        if let Ok(content) = fs::read_to_string(&legacy) {
+            if let Ok(arr) = serde_json::from_str::<Vec<EpisodicEntry>>(&content) {
+                out.extend(arr.into_iter().map(|mut e| {
+                    e.timestamp = normalize_ts(e.timestamp);
+                    e.source = Some(hash.clone());
+                    e
+                }));
+            }
+        }
+    }
+    out.sort_by(|a, b| b.timestamp.partial_cmp(&a.timestamp).unwrap_or(std::cmp::Ordering::Equal));
+    out.truncate(count);
+    Ok(out)
+}
+
+/// Search semantic memory across every store. Results carry `source`.
+#[tauri::command]
+pub fn search_memory_all(query: String, limit: u32) -> Result<Vec<SemanticEntry>, String> {
+    let all = load_all_semantic(10_000)?;
+    Ok(rank_semantic(all, &query, limit.max(1) as usize))
+}
+
+/// One entry in the `~/.timps` file browser tree.
+#[derive(Debug, Serialize)]
+pub struct TreeEntry {
+    /// Base name (dir or file).
+    pub name: String,
+    /// Path relative to `~/.timps` ("" for the root). Directories end with "/".
+    pub path: String,
+    pub is_dir: bool,
+    /// File size in bytes (0 for directories).
+    pub size: u64,
+    pub children: Vec<TreeEntry>,
+}
+
+/// Recursively build the `~/.timps` tree, capped by depth + entry budget so
+/// the payload stays small enough to render instantly.
+fn build_tree(base: &Path, rel: &str, depth: usize, budget: &mut usize) -> TreeEntry {
+    let name = if rel.is_empty() {
+        ".timps".to_string()
+    } else {
+        base
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| rel.to_string())
+    };
+    let is_dir = base.is_dir();
+    let mut entry = TreeEntry {
+        name,
+        path: rel.to_string(),
+        is_dir,
+        size: is_dir.then(|| 0).unwrap_or_else(|| base.metadata().map(|m| m.len()).unwrap_or(0)),
+        children: vec![],
+    };
+    if is_dir && depth < 4 && *budget > 0 {
+        if let Ok(rd) = fs::read_dir(base) {
+            let mut items: Vec<std::path::PathBuf> = rd
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .collect();
+            items.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+            for item in items {
+                if *budget == 0 {
+                    break;
+                }
+                *budget -= 1;
+                let item_rel = if rel.is_empty() {
+                    item.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()
+                } else {
+                    format!("{}/{}", rel, item.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default())
+                };
+                entry.children.push(build_tree(&item, &item_rel, depth + 1, budget));
+            }
+        }
+    }
+    entry
+}
+
+/// Full file/folder tree under `~/.timps` for the Memory file browser.
+#[tauri::command]
+pub fn list_memory_tree() -> Result<TreeEntry, String> {
+    let root_dir = timps_dir();
+    let root = Path::new(&root_dir);
+    if !root.exists() {
+        return Err("~/.timps does not exist yet".to_string());
+    }
+    let mut budget: usize = 1500;
+    Ok(build_tree(root, "", 0, &mut budget))
+}
+
+/// Read a file under `~/.timps` for the Memory viewer. The path must stay
+/// inside `~/.timps` (prevents traversal) and is capped at 2 MB.
+#[tauri::command]
+pub fn read_memory_file(relative_path: String) -> Result<(String, u64), String> {
+    let root_dir = timps_dir();
+    let root = Path::new(&root_dir);
+    let root_canonical = fs::canonicalize(root).map_err(|e| format!("~/.timps missing: {}", e))?;
+    let candidate = root.join(&relative_path);
+    let candidate_canonical =
+        fs::canonicalize(&candidate).map_err(|e| format!("cannot read {}: {}", relative_path, e))?;
+    if !candidate_canonical.starts_with(&root_canonical) {
+        return Err("path escapes ~/.timps".to_string());
+    }
+    if !candidate_canonical.is_file() {
+        return Err(format!("{} is not a file", relative_path));
+    }
+    let meta = fs::metadata(&candidate_canonical).map_err(|e| e.to_string())?;
+    if meta.len() > 2 * 1024 * 1024 {
+        return Err(format!("{} is too large to display ({} bytes)", relative_path, meta.len()));
+    }
+    let content = fs::read_to_string(&candidate_canonical).map_err(|e| e.to_string())?;
+    Ok((content, meta.len()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1996,6 +2272,7 @@ mod tests {
             content: content.to_string(),
             tags: tags.iter().map(|s| s.to_string()).collect(),
             score: None,
+            source: None,
         }
     }
 

@@ -546,3 +546,118 @@
   opacity: 0.55;
   cursor: default;
 }
+
+/* ── Guided setup panel (developer console → paste credentials) ─────────── */
+
+.connector-setup {
+  background: var(--surface-2, #222634);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connector-setup-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e4f0);
+}
+
+.connector-setup-redirect {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-setup-redirect code {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+  color: var(--text-primary, #e0e4f0);
+}
+
+.connector-setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connector-setup-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-setup-step b {
+  color: var(--text-primary, #e0e4f0);
+  font-weight: 600;
+}
+
+.connector-setup-step p {
+  margin: 2px 0 0;
+}
+
+.connector-setup-step-num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #4a8c7a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.connector-setup-actions {
+  display: flex;
+  align-items: center;
+}
+
+.connector-import-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+}
+
+.connector-setup .connector-import-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  padding: 0;
+}
+
+.connector-import-row .connector-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.connector-import-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--text-tertiary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.connector-import-divider::before,
+.connector-import-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, rgba(255, 255, 255, 0.12));
+}

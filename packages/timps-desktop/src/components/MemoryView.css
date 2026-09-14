@@ -1,0 +1,139 @@
+.memory-view {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.mem-header h2 {
+  margin: 0 0 4px;
+}
+
+.mem-header-sub {
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 13px;
+}
+
+.mem-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.mem-tree-panel,
+.mem-content-panel {
+  border: 1px solid var(--border, #333);
+  border-radius: 10px;
+  background: var(--bg-secondary, #1e1e1e);
+  overflow: auto;
+}
+
+.mem-empty {
+  padding: 24px;
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 13px;
+}
+
+.mem-empty.error {
+  color: #e06c75;
+}
+
+.mem-tree-node {
+  padding: 2px 0;
+}
+
+.mem-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mem-tree-row:hover {
+  background: var(--hover, rgba(255, 255, 255, 0.06));
+}
+
+.mem-tree-row.dir {
+  font-weight: 500;
+}
+
+.mem-tree-row.file.selected {
+  background: var(--accent, #4a8c7a);
+  color: #fff;
+}
+
+.mem-tree-chevron {
+  width: 12px;
+  flex: none;
+  color: var(--text-secondary, #a0a0a0);
+}
+
+.mem-tree-icon {
+  width: 18px;
+  flex: none;
+  text-align: center;
+  color: var(--text-secondary, #a0a0a0);
+  font-family: monospace;
+}
+
+.mem-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mem-tree-count,
+.mem-tree-size {
+  margin-left: auto;
+  padding-right: 8px;
+  color: var(--text-secondary, #a0a0a0);
+  font-size: 11px;
+  flex: none;
+}
+
+.mem-content-panel {
+  padding: 16px;
+}
+
+.mem-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border, #333);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.mem-content-path {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-secondary, #a0a0a0);
+  word-break: break-all;
+}
+
+.mem-content-size {
+  font-size: 11px;
+  color: var(--text-secondary, #a0a0a0);
+  flex: none;
+}
+
+.mem-content-pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary, #e0e0e0);
+}

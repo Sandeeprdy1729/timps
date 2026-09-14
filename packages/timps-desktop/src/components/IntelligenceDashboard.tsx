@@ -14,7 +14,7 @@ interface IntelligenceAlert {
 }
 
 interface Props {
-  projectPath: string;
+  projectPath?: string;
 }
 
 const toolIcons: Record<string, React.ReactNode> = {
@@ -139,7 +139,7 @@ function genId(): string {
   return Array.from(buf, b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function IntelligenceDashboard({ projectPath }: Props) {
+export function IntelligenceDashboard({ projectPath = '' }: Props) {
   const [alerts, setAlerts] = useState<IntelligenceAlert[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);

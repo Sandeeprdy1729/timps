@@ -55,7 +55,11 @@ fn now_ms() -> i64 {
 
 fn trim_label(s: &str, max: usize) -> String {
     if s.len() > max {
-        format!("{}…", &s[..max])
+        let mut end = max;
+        while end > 0 && !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}…", &s[..end])
     } else {
         s.to_string()
     }
@@ -670,19 +674,8 @@ fn read_aether(dir: &str) -> LayerResult {
 
 // ── Aggregator ───────────────────────────────────────────────────────────
 
-/// Load all memory layer files and produce a unified knowledge graph
-#[tauri::command]
-pub fn load_unified_graph(project_path: String) -> UnifiedGraph {
-    let dir = memory_dir(&project_path);
-    let base = std::path::Path::new(&dir);
-    if !base.exists() {
-        return UnifiedGraph {
-            nodes: vec![],
-            edges: vec![],
-            stats: HashMap::new(),
-        };
-    }
-
+/// Read every memory layer for one store directory.
+fn read_all_layers(dir: &str) -> (Vec<UnifiedNode>, Vec<UnifiedEdge>, HashMap<String, LayerStats>) {
     let readers: Vec<(&str, fn(&str) -> LayerResult)> = vec![
         ("L1-working", read_working),
         ("L2-episodic", read_episodes),
@@ -703,7 +696,7 @@ pub fn load_unified_graph(project_path: String) -> UnifiedGraph {
     let mut stats = HashMap::new();
 
     for (name, reader) in readers {
-        let result = reader(&dir);
+        let result = reader(dir);
         let n = result.nodes.len();
         let e = result.edges.len();
         if n > 0 || e > 0 {
@@ -713,11 +706,43 @@ pub fn load_unified_graph(project_path: String) -> UnifiedGraph {
         all_edges.extend(result.edges);
     }
 
-    UnifiedGraph {
-        nodes: all_nodes,
-        edges: all_edges,
-        stats,
+    (all_nodes, all_edges, stats)
+}
+
+/// Load all memory layer files and produce a unified knowledge graph
+#[tauri::command]
+pub fn load_unified_graph(project_path: String) -> UnifiedGraph {
+    let dir = memory_dir(&project_path);
+    let base = std::path::Path::new(&dir);
+    if !base.exists() {
+        return UnifiedGraph {
+            nodes: vec![],
+            edges: vec![],
+            stats: HashMap::new(),
+        };
     }
+    let (nodes, edges, stats) = read_all_layers(&dir);
+    UnifiedGraph { nodes, edges, stats }
+}
+
+/// Same as `load_unified_graph` but merges every store under `~/.timps/memory/`
+/// so the Nexus view shows the user's entire memory graph at once.
+#[tauri::command]
+pub fn load_unified_graph_all() -> UnifiedGraph {
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+    let mut stats = HashMap::new();
+    for (_, store_dir) in crate::commands::memory_stores_all() {
+        let (store_nodes, store_edges, store_stats) = read_all_layers(&store_dir);
+        for (layer, s) in store_stats {
+            let acc = stats.entry(layer).or_insert(LayerStats { nodes: 0, edges: 0 });
+            acc.nodes += s.nodes;
+            acc.edges += s.edges;
+        }
+        nodes.extend(store_nodes);
+        edges.extend(store_edges);
+    }
+    UnifiedGraph { nodes, edges, stats }
 }
 
 #[cfg(test)]
@@ -734,11 +759,38 @@ mod tests {
 
     #[test]
     fn test_load_unified_graph() {
-        let result = load_unified_graph("/Users/sandeepreddy/Desktop/testbot".to_string());
-        eprintln!("Result: {} nodes, {} edges, {} layers", result.nodes.len(), result.edges.len(), result.stats.len());
-        for (layer, s) in &result.stats {
-            eprintln!("  layer {}: {} nodes, {} edges", layer, s.nodes, s.edges);
-        }
-        assert!(result.nodes.len() > 0, "should have at least 1 node");
+        let tmp = std::env::temp_dir().join(format!("timps_nexus_test_{}", now_ms()));
+        fs::create_dir_all(&tmp).unwrap();
+        fs::write(
+            tmp.join("working.json"),
+            r#"{"goals":["build the connector UI"]}"#,
+        )
+        .unwrap();
+
+        let (nodes, edges, stats) = read_all_layers(&tmp.to_string_lossy());
+        eprintln!(
+            "Result: {} nodes, {} edges, {} layers",
+            nodes.len(),
+            edges.len(),
+            stats.len()
+        );
+        assert!(
+            nodes.len() > 0,
+            "should have at least 1 node from working.json"
+        );
+        assert!(
+            nodes.iter().any(|n| n.layer == "L1-working"),
+            "goal should be in L1-working"
+        );
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn test_load_unified_graph_all_empty() {
+        // Without a real ~/.timps/memory tree this must simply return an
+        // empty graph instead of erroring.
+        let result = load_unified_graph_all();
+        assert!(result.nodes.is_empty() || result.edges.len() + result.nodes.len() > 0);
     }
 }

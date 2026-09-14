@@ -12,6 +12,8 @@ export interface SemanticEntry {
   content: string;
   tags: string[];
   score?: number;
+  /** Store hash this entry came from (aggregate loads only). */
+  source?: string;
 }
 
 export interface EpisodicEntry {
@@ -20,6 +22,8 @@ export interface EpisodicEntry {
   summary: string;
   outcome: string;
   tags: string[];
+  /** Store hash this entry came from (aggregate loads only). */
+  source?: string;
 }
 
 export interface WorkingState {
@@ -33,6 +37,29 @@ export interface MemoryStats {
   semantic_count: number;
   episode_count: number;
   working_goals: number;
+}
+
+export interface StoreStats {
+  project_hash: string;
+  semantic_count: number;
+  episode_count: number;
+  working_goals: number;
+}
+
+export interface AggregateStats {
+  stores: number;
+  semantic_count: number;
+  episode_count: number;
+  working_goals: number;
+  breakdown: StoreStats[];
+}
+
+export interface MemoryTreeEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+  children: MemoryTreeEntry[];
 }
 
 export interface KnowledgeNode {
@@ -229,6 +256,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     check_proactive_notifications: [],
     load_knowledge_graph: { nodes: [], edges: [] },
     load_unified_graph: { nodes: [], edges: [], stats: {} },
+    load_unified_graph_all: { nodes: [], edges: [], stats: {} },
     detect_project_path: '',
     detect_link_type: 'other',
     save_to_lens_queue: 'stub_lens_id',
@@ -239,6 +267,12 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     fetch_github_meta: null,
     fetch_hf_meta: null,
     analyze_lens_link: '(stub) TIMPS server not running in dev mode',
+    get_aggregate_stats: { stores: 0, semantic_count: 0, episode_count: 0, working_goals: 0, breakdown: [] },
+    load_all_semantic: [],
+    load_all_episodes: [],
+    search_memory_all: [],
+    list_memory_tree: { name: '.timps', path: '', is_dir: true, size: 0, children: [] },
+    read_memory_file: ['', 0],
     get_provider_config: { provider: 'ollama', model: '', baseUrl: '', apiKey: '' },
     set_provider_config: undefined,
     gmail_status: { connected: false, email: 'unknown', hasRefreshToken: false, lastRun: null, messagesSynced: 0, summaryCount: 0, autoSync: false, cliPath: null },
@@ -265,6 +299,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     ],
     connector_status: { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
     connector_import_credentials: { clientId: 'stub', saved: '' },
+    connector_save_credentials: { clientId: 'stub', saved: '' },
     connector_connect: { authUrl: '', port: 0, redirectUri: '', openedBrowser: false },
     connector_oauth_finish: { account: 'dev@example.com', connected: true },
     connector_oauth_cancel: undefined,
@@ -295,6 +330,34 @@ export const api = {
 
   loadUnifiedGraph: (projectPath: string) =>
     invoke<UnifiedGraph>('load_unified_graph', { projectPath }),
+
+  /** Whole-memory graph merged across every store in ~/.timps/memory. */
+  loadUnifiedGraphAll: () =>
+    invoke<UnifiedGraph>('load_unified_graph_all'),
+
+  /** Aggregate counts across every store. */
+  getAggregateStats: () =>
+    invoke<AggregateStats>('get_aggregate_stats'),
+
+  /** Semantic entries merged from all stores, newest first. */
+  loadAllSemantic: (limit = 2000) =>
+    invoke<SemanticEntry[]>('load_all_semantic', { limit }),
+
+  /** Episodic entries merged from all stores, newest first. */
+  loadAllEpisodes: (count = 200) =>
+    invoke<EpisodicEntry[]>('load_all_episodes', { count }),
+
+  /** Search semantic memory across every store. */
+  searchMemoryAll: (query: string, limit = 50) =>
+    invoke<SemanticEntry[]>('search_memory_all', { query, limit }),
+
+  /** Full file/folder tree of ~/.timps for the Memory browser. */
+  listMemoryTree: () =>
+    invoke<MemoryTreeEntry>('list_memory_tree'),
+
+  /** Read a file inside ~/.timps as text. Returns [content, byteLength]. */
+  readMemoryFile: (relativePath: string) =>
+    invoke<[string, number]>('read_memory_file', { relativePath }),
 
   detectProjectPath: () =>
     invoke<string>('detect_project_path'),
@@ -524,6 +587,18 @@ export const api = {
 
   connectorImportCredentials: (id: string, filePath: string) =>
     invoke<{ clientId: string; saved: string }>('connector_import_credentials', { id, filePath }),
+
+  /** Save OAuth credentials pasted inline (client_id + optional secret). */
+  connectorSaveCredentials: (id: string, clientId: string, clientSecret?: string) =>
+    invoke<{ clientId: string; saved: string }>('connector_save_credentials', {
+      id,
+      clientId,
+      clientSecret: clientSecret ?? null,
+    }),
+
+  /** Open the provider's developer console where an OAuth app is created. */
+  connectorOpenConsole: (id: string) =>
+    invoke<void>('connector_open_console', { id }),
 
   connectorConnect: (id: string) =>
     invoke<ConnectorConnectStart>('connector_connect', { id }),

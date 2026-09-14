@@ -196,14 +196,14 @@ describe('SettingsView — autostart toggle', () => {
 
   it('renders "Background Behaviour" section', () => {
     render(
-      <SettingsView projectPath="/test" onProjectPathChange={() => {}} />
+      <SettingsView />
     );
     expect(screen.getByText('Background Behaviour')).toBeInTheDocument();
   });
 
   it('shows "Launch at Login" label', () => {
     render(
-      <SettingsView projectPath="/test" onProjectPathChange={() => {}} />
+      <SettingsView />
     );
     expect(screen.getByText('Launch at Login')).toBeInTheDocument();
   });
@@ -212,7 +212,7 @@ describe('SettingsView — autostart toggle', () => {
     const spy = vi.spyOn(api, 'enableAutostart').mockResolvedValue(undefined);
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(false);
 
-    render(<SettingsView projectPath="/test" onProjectPathChange={() => {}} />);
+    render(<SettingsView />);
 
     // Wait for isAutostartEnabled to resolve
     await waitFor(() => expect(api.isAutostartEnabled).toHaveBeenCalled());
@@ -228,7 +228,7 @@ describe('SettingsView — autostart toggle', () => {
     const spy = vi.spyOn(api, 'disableAutostart').mockResolvedValue(undefined);
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(true);
 
-    render(<SettingsView projectPath="/test" onProjectPathChange={() => {}} />);
+    render(<SettingsView />);
 
     await waitFor(() => expect(api.isAutostartEnabled).toHaveBeenCalled());
 
@@ -242,7 +242,7 @@ describe('SettingsView — autostart toggle', () => {
   it('syncs button label when autostart-changed Tauri event fires', async () => {
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(false);
 
-    render(<SettingsView projectPath="/test" onProjectPathChange={() => {}} />);
+    render(<SettingsView />);
     await waitFor(() => expect(mockListen).toHaveBeenCalledWith('autostart-changed', expect.any(Function)));
 
     // Tray menu toggled autostart on
