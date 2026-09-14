@@ -35,6 +35,26 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 - TUI: `src/ui/App.tsx` (Ink/React 19).
 - MCP client: `src/services/mcp/`, auto-discovery at `src/tools/mcpDiscovery.ts`.
 
+### Connector sync services (timps-code)
+
+Generic per-provider sync pipeline shared by the desktop Connectors UI (Tauri engine shells out to `timps <id>:sync`):
+
+| File | Purpose |
+|------|---------|
+| `src/services/connectors/registry.ts` | `CONNECTORS` — the 7 non-gmail defs (calendar, drive, github, notion, slack, linear, ms365) with token URI, refreshable flag, scope hint, maxItems |
+| `src/services/connectors/tokens.ts` | `~/.timps/<id>/` storage: `client.json` (Google desktop JSON or flat `{client_id, client_secret?}`), `tokens.json`, `state.json`, `summaries.jsonl`; `ensureAccessToken()` refresh + `syncedCount()`, `disconnectConnector()` |
+| `src/services/connectors/clients.ts` | Per-provider read-only fetchers → normalized `ConnectorItem { id, title, body, when, who, url, meta }` |
+| `src/services/connectors/sync.ts` | `runConnectorSync(id, opts)` — fetch → raw-store `raw/<date>/<id>.json` (dedup) → append summary line → `itemFact()` distill → `Memory.storeFact` → update state |
+| `src/commands/connectors.ts` | Registers `<id>:sync/status/disconnect` for the 7 providers (gmail has its own module) |
+
+Storage contract shared with the Rust engine (`packages/timps-desktop/…/connectors.rs`): tokens.json is `{ accessToken, refreshToken?, expiresAt, scopes, email, obtainedAt }`; state.json `{ lastRun, syncedCount }`; summaries.jsonl one line per synced item (`source`, `title`, `body`, `when`, `who`, `facts[]`). Desktop maps `gmail` → `~/.timps/gmail` (kept working via the old gmail module).
+
+Gotchas:
+- `ensureAccessToken` treats a token as stale when within 5 min of `expiresAt` and refreshes via the provider token endpoint (`client_secret` resent when present). Notion/Linear are not refreshable → throw a friendly "reconnect in TIMPS Desktop" error on expiry.
+- Facts are stored with `Memory(os.homedir())` → the canonical `~/.timps/memory/<hash>` store. Tests must use `storeMemory: false` (or point `TIMPS_DIR` to a temp dir) — `TIMPS_DIR` in memory-core is hardcoded to `~/.timps`.
+- Provider dir env override: `TIMPS_<ID>_DIR`, e.g. `TIMPS_CALENDAR_DIR` (tests rely on this).
+- Connector IDs here must match the Rust engine's `connectors.rs` IDs exactly.
+
 ## Auto-capture & context-anywhere (timps setup / recall)
 
 - `timps setup` installs MCP registration **and** a marker-fenced instruction block (`<!-- timps:memory:start -->` … `<!-- timps:memory:end -->`) into each detected agent's global rule file, so agents pull context at session start and store user data proactively. Files: `~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`, Cursor `~/.cursor/rules/timps.mdc` (`alwaysApply: true` frontmatter). Windsurf has no instruction file (MCP only). See `timps-code/src/commands/setup.ts` (`installInstructions`/`uninstallInstructions`).
