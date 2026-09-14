@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TIMPS Connectors — connect your accounts to TIMPS Memory. Gmail is live; Slack, Notion, Drive, Outlook and Discord are coming soon.">
+  <meta name="description" content="TIMPS Connectors — connect Gmail, Calendar, Drive, GitHub, Notion, Slack, Linear and Microsoft 365 to TIMPS Memory. Scoped, revocable, on your machine.">
   <title>Connectors — TIMPS Memory</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -104,8 +104,8 @@
   <div class="section-inner">
     <div class="section-head">
       <span class="overline">Available now</span>
-      <h2>One connector shipping.<br>Seven in the works.</h2>
-      <p class="section-lead">Gmail is live today — connect it once and every synced email becomes recallable fact. The rest are on the road.</p>
+      <h2>Eight connectors.<br>One local memory.</h2>
+      <p class="section-lead">Every connector ships in TIMPS Desktop — import your OAuth client, hit connect, and linked data is distilled into facts your agents recall forever. Scoped and revocable, on your machine.</p>
     </div>
 
     <div class="connectors">
@@ -122,68 +122,95 @@
         <p class="connector-hint">Opens TIMPS Desktop — run <code>timps gmail:connect</code> if it isn't installed</p>
       </div>
 
-      <div class="connector muted fade-in">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name">
-            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg></span> Slack
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 3.5A3.5 3.5 0 0 1 3.5 0h17A3.5 3.5 0 0 1 24 3.5v10.51a9.6 9.6 0 0 0-2.4-1.4V5.5H0v11A3.5 3.5 0 0 0 3.5 20h6.2a9.7 9.7 0 0 0 .46 2.4H3.5A3.5 3.5 0 0 1 0 18.5z" fill="#4285F4"/><rect x="2.6" y="9" width="18.8" height="2.4" rx="1.2" fill="#fff"/><circle cx="17" cy="17" r="7" fill="#4285F4"/><path d="M17 13.5v3.6h3.6" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span> Google Calendar
           </div>
-          <div class="connector-status"><span class="conn-dot off"></span>Coming soon · Beta</div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
         </div>
-        <div class="connector-body">
-          Turns channels, decisions, and team threads into shared memory — so your agents
-          never re-ask what the team already agreed on.
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="calendar" aria-label="Connect Google Calendar" title="Opens TIMPS Desktop · timps calendar:connect">＋</button>
         </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps calendar:connect</code> if it isn't installed</p>
       </div>
 
-      <div class="connector muted fade-in">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name">
-            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg></span> Notion
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13.8 2.9 6.6 15.6h13.4L26.6 3H18.6c-.4 0-.8 0-1.1 0z" transform="scale(.9) translate(1.3 1.5)" fill="#F4B400"/><path d="M2.2 15.6 5.4 21l8.4-14.5L10.6 1z" transform="scale(.9) translate(1.3 1.5)" fill="#4285F4"/><path d="M16.6 21h13.3l-3.3-5-6.7-1.8L16.6 21z" transform="scale(.9) translate(1.3 1.5)" fill="#34A853"/></svg></span> Google Drive
           </div>
-          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
         </div>
-        <div class="connector-body">
-          Brings your docs, wikis, and project pages into memory — structure becomes fact,
-          decisions become recallable.
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="drive" aria-label="Connect Google Drive" title="Opens TIMPS Desktop · timps drive:connect">＋</button>
         </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps drive:connect</code> if it isn't installed</p>
       </div>
 
-      <div class="connector muted fade-in">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name">
-            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/></svg></span> Google Drive
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#E6E6E6" d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.4 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 3 1.1a10.4 10.4 0 0 1 5.5 0c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.6.1 2.9.7.8 1.1 1.8 1.1 3 0 4.2-2.6 5.1-5.1 5.4.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12C23.5 5.6 18.4.5 12 .5z"/></svg></span> GitHub
           </div>
-          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
         </div>
-        <div class="connector-body">
-          Indexes your documents and spreadsheets as searchable long-term memory — find the
-          answer, not the file.
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="github" aria-label="Connect GitHub" title="Opens TIMPS Desktop · timps github:connect">＋</button>
         </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps github:connect</code> if it isn't installed</p>
       </div>
 
-      <div class="connector muted fade-in">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name">
-            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.43.34-.76.22-.34.59-.54.36-.2.87-.2t.86.2q.35.21.57.55.22.34.31.77.1.43.1.88zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7Q.58 6 1 6h6.5V2.55q0-.44.3-.75.3-.3.75-.3h12.9q.44 0 .75.3.3.3.3.75V10.85l1.24.72h.01q.1.07.18.18.07.12.07.25zm-6-8.25v3h3v-3zm0 4.5v3h3v-3zm0 4.5v1.83l3.05-1.83zm-5.25-9v3h3.75v-3zm0 4.5v3h3.75v-3zm0 4.5v2.03l2.41 1.5 1.34-.8v-2.73zM9 3.75V6h2l.13.01.12.04v-2.3zM5.98 15.98q.9 0 1.6-.3.7-.32 1.19-.86.48-.55.73-1.28.25-.74.25-1.61 0-.83-.25-1.55-.24-.71-.71-1.24t-1.15-.83q-.68-.3-1.55-.3-.92 0-1.64.3-.71.3-1.2.85-.5.54-.75 1.3-.25.74-.25 1.63 0 .85.26 1.56.26.72.74 1.23.48.52 1.17.81.69.3 1.56.3zM7.5 21h12.39L12 16.08V17q0 .41-.3.7-.29.3-.7.3H7.5zm15-.13v-7.24l-5.9 3.54Z"/></svg></span> Outlook
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933z"/></svg></span> Notion
           </div>
-          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
         </div>
-        <div class="connector-body">
-          The same inbox-to-memory pipeline as Gmail, for Microsoft 365 mailboxes.
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="notion" aria-label="Connect Notion" title="Opens TIMPS Desktop · timps notion:connect">＋</button>
         </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps notion:connect</code> if it isn't installed</p>
       </div>
 
-      <div class="connector muted fade-in">
+      <div class="connector fade-in">
         <div class="connector-top">
           <div class="connector-name">
-            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg></span> Discord
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#36C5F0" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#E01E5A" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg></span> Slack
           </div>
-          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
         </div>
-        <div class="connector-body">
-          Captures conversations from your servers and DMs — decisions and context survive
-          past the scroll.
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="slack" aria-label="Connect Slack" title="Opens TIMPS Desktop · timps slack:connect">＋</button>
         </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps slack:connect</code> if it isn't installed</p>
+      </div>
+
+      <div class="connector fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#5E6AD2"/><path d="M8 13.5a4.5 4.5 0 0 1 4.5-4.5V12a4.5 4.5 0 0 1 4.5 4.5H8z" fill="#fff" opacity="0.9"/><circle cx="8" cy="13.5" r="2.2" fill="#fff"/></svg></span> Linear
+          </div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
+        </div>
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="linear" aria-label="Connect Linear" title="Opens TIMPS Desktop · timps linear:connect">＋</button>
+        </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps linear:connect</code> if it isn't installed</p>
+      </div>
+
+      <div class="connector fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-logo"><svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="11" height="11" fill="#F25022"/><rect x="13" y="0" width="11" height="11" fill="#7FBA00"/><rect x="0" y="13" width="11" height="11" fill="#00A4EF"/><rect x="13" y="13" width="11" height="11" fill="#FFB900"/></svg></span> Microsoft 365
+          </div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
+        </div>
+        <div class="connector-connect">
+          <button class="connector-plus" data-connector="ms365" aria-label="Connect Microsoft 365" title="Opens TIMPS Desktop · timps ms365:connect">＋</button>
+        </div>
+        <p class="connector-hint">Opens TIMPS Desktop — run <code>timps ms365:connect</code> if it isn't installed</p>
       </div>
     </div>
   </div>
@@ -191,8 +218,8 @@
 
 <!-- ── CTA ─────────────────────────────────────────────── -->
 <section class="cta">
-  <h2>Start with the one that's live.</h2>
-  <p>Gmail is ready. Free. Open source. Runs locally.</p>
+  <h2>Connect them all.</h2>
+  <p>Eight connectors in TIMPS Desktop. Free, open source, runs locally — scoped and revocable.</p>
   <div class="hero-actions">
     <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
     <a href="docs.html#install" class="btn btn-outline btn-lg">Install TIMPS</a>

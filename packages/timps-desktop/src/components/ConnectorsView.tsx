@@ -1,13 +1,17 @@
 /**
- * TIMPS Connectors — ConnectorsView
- * Strapped-in integrations (currently Gmail, read-only). Emails are synced into
- * TIMPS memory via the CLI pipeline; raw copies live in ~/.timps/gmail.
- * The OAuth browser flow runs in Rust (loopback listener) — the renderer stays
- * network-free so the CSP can remain strict.
+ * TIMPS Connectors — multi-provider connector hub.
+ * Links external services (Gmail, Calendar, Drive, GitHub, Notion, Slack,
+ * Linear, Microsoft 365) via OAuth so the assistant can read/act on the user's
+ * data — the Grok connector model, self-hosted.
+ *
+ * The OAuth browser flow runs in Rust (loopback listener + PKCE / client
+ * secret); the renderer stays network-free so the CSP remains strict.
+ * Tokens/creds live per provider in ~/.timps/<id>/, shared with the `timps`
+ * CLI (`timps gmail:sync` etc.). Synced data is distilled into TIMPS memory.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { api, GmailStatus, GmailSummaryEntry } from '../api';
+import { api, ConnectorEntry } from '../api';
 import './ConnectorsView.css';
 
 function fmtTime(iso: string | null): string {
@@ -25,6 +29,97 @@ function fmtTime(iso: string | null): string {
   }
 }
 
+// ── Provider metadata (mirrors Rust connectors.rs registry) ─────────────────
+
+interface ProviderMeta {
+  id: string;
+  display: string;
+  blurb: string;
+}
+
+const PROVIDERS: ProviderMeta[] = [
+  { id: 'gmail', display: 'Gmail', blurb: 'Inbox → memory. Search, draft and triage email with context.' },
+  { id: 'calendar', display: 'Google Calendar', blurb: 'Events, meetings and schedules become recallable context.' },
+  { id: 'drive', display: 'Google Drive', blurb: 'Docs and spreadsheets indexed as searchable long-term memory.' },
+  { id: 'github', display: 'GitHub', blurb: 'Issues, PRs and commits feed decisions into memory.' },
+  { id: 'notion', display: 'Notion', blurb: 'Docs, wikis and project pages — structure becomes fact.' },
+  { id: 'slack', display: 'Slack', blurb: 'Channels and threads — decisions survive past the scroll.' },
+  { id: 'linear', display: 'Linear', blurb: 'Issues, cycles and project state become recallable facts.' },
+  { id: 'ms365', display: 'Microsoft 365', blurb: 'Mail and calendar from your Microsoft tenant.' },
+];
+
+function ProviderLogo({ id }: { id: string }) {
+  const style = { width: 20, height: 20, display: 'block' } as const;
+  switch (id) {
+    case 'gmail':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/>
+        </svg>
+      );
+    case 'calendar':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 3.5A3.5 3.5 0 0 1 3.5 0h17A3.5 3.5 0 0 1 24 3.5v10.51a9.6 9.6 0 0 0-2.4-1.4V5.5H0v11A3.5 3.5 0 0 0 3.5 20h6.2a9.7 9.7 0 0 0 .46 2.4H3.5A3.5 3.5 0 0 1 0 18.5z" fill="#4285F4"/>
+          <rect x="2.6" y="9" width="18.8" height="2.4" rx="1.2" fill="#fff"/>
+          <circle cx="17" cy="17" r="7" fill="#4285F4"/>
+          <path d="M17 13.5v3.6h3.6" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        </svg>
+      );
+    case 'drive':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.8 2.9 6.6 15.6h13.4L26.6 3H18.6c-.4 0-.8 0-1.1 0z" transform="scale(.9) translate(1.3 1.5)" fill="#FFC107"/>
+          <path d="M13.8 2.9 6.6 15.6h13.4L26.6 3H18.6c-.4 0-.8 0-1.1 0z" transform="scale(.9) translate(1.3 1.5)" fill="#F4B400"/>
+          <path d="M2.2 15.6 5.4 21l8.4-14.5L10.6 1z" transform="scale(.9) translate(1.3 1.5)" fill="#4285F4"/>
+          <path d="M16.6 21h13.3l-3.3-5-6.7-1.8L16.6 21z" transform="scale(.9) translate(1.3 1.5)" fill="#34A853"/>
+        </svg>
+      );
+    case 'github':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#E6E6E6" d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.4 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 3 1.1a10.4 10.4 0 0 1 5.5 0c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.6.1 2.9.7.8 1.1 1.8 1.1 3 0 4.2-2.6 5.1-5.1 5.4.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12C23.5 5.6 18.4.5 12 .5z"/>
+        </svg>
+      );
+    case 'notion':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#fff" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933z"/>
+        </svg>
+      );
+    case 'slack':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#36C5F0" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/>
+          <path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/>
+          <path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/>
+          <path fill="#E01E5A" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+        </svg>
+      );
+    case 'linear':
+      return (
+        <svg style={style} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="#5E6AD2"/>
+          <path d="M8 13.5a4.5 4.5 0 0 1 4.5-4.5V12a4.5 4.5 0 0 1 4.5 4.5H8z" fill="#fff" opacity="0.9"/>
+          <circle cx="8" cy="13.5" r="2.2" fill="#fff"/>
+        </svg>
+      );
+    case 'ms365':
+      return (
+        <svg style={style} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="11" height="11" fill="#F25022"/>
+          <rect x="13" y="0" width="11" height="11" fill="#7FBA00"/>
+          <rect x="0" y="13" width="11" height="11" fill="#00A4EF"/>
+          <rect x="13" y="13" width="11" height="11" fill="#FFB900"/>
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
+
 interface ConnectorsViewProps {
   /** Connector requested via a `timps://connect/<name>` deep link from the website. */
   focusConnector?: string | null;
@@ -33,36 +128,31 @@ interface ConnectorsViewProps {
 }
 
 export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsViewProps) {
-  const [status, setStatus] = useState<GmailStatus | null>(null);
+  const [entries, setEntries] = useState<ConnectorEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // OAuth connect
-  const [connecting, setConnecting] = useState(false);
-  const [awaitingOAuth, setAwaitingOAuth] = useState(false);
-
-  // Import credentials
+  const [selected, setSelected] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Record<string, 'connecting' | 'importing' | 'syncing'>>({});
+  const [awaiting, setAwaiting] = useState<Record<string, boolean>>({});
+  const [syncOutput, setSyncOutput] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [importPath, setImportPath] = useState('');
-  const [importing, setImporting] = useState(false);
+  const [focusBanner, setFocusBanner] = useState<string | null>(null);
 
-  // Sync
-  const [syncing, setSyncing] = useState(false);
-  const [syncOutput, setSyncOutput] = useState<string | null>(null);
-
-  // Emails
-  const [recent, setRecent] = useState<GmailSummaryEntry[]>([]);
-  const [query, setQuery] = useState('');
-  const [searching, setSearching] = useState(false);
+  const setBusyFor = (id: string, v: 'connecting' | 'importing' | 'syncing' | null) =>
+    setBusy((b) => {
+      const next = { ...b };
+      if (v === null) delete next[id];
+      else next[id] = v;
+      return next;
+    });
 
   const refresh = useCallback(async () => {
     try {
-      const s = await api.gmailStatus();
-      setStatus(s);
-      const emails = await api.gmailRecent(10);
-      setRecent(emails);
-      setError(null);
+      const list = await api.connectorList();
+      setEntries(list);
+      setErrors({});
     } catch (e) {
-      setError(String(e));
+      setErrors((er) => ({ ...er, _list: String(e) }));
     } finally {
       setLoading(false);
     }
@@ -72,135 +162,128 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
     refresh();
   }, [refresh]);
 
-  const handleImport = async () => {
-    setImporting(true);
-    setError(null);
+  const entryFor = (id: string): ConnectorEntry | undefined =>
+    entries?.find((e) => e.id === id);
+
+  const handleImport = async (id: string, explicitPath?: string) => {
+    setBusyFor(id, 'importing');
     try {
-      if (!importPath) {
+      const path = explicitPath || importPath;
+      if (!path) {
         const picked = await open({
           multiple: false,
-          title: 'Select Google OAuth client JSON',
+          title: `Select ${id} OAuth client JSON`,
           filters: [{ name: 'JSON', extensions: ['json'] }],
         });
         if (!picked) return;
         setImportPath(String(picked));
-        const res = await api.gmailImportCredentials(String(picked));
-        await refresh();
-        return;
+        await api.connectorImportCredentials(id, String(picked));
+      } else {
+        await api.connectorImportCredentials(id, path);
+        setImportPath('');
       }
-      const res = await api.gmailImportCredentials(importPath);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setErrors((er) => ({ ...er, [id]: String(e) }));
     } finally {
-      setImporting(false);
+      setBusyFor(id, null);
     }
   };
 
-  const handleConnect = async () => {
-    setConnecting(true);
-    setError(null);
+  const handleConnect = async (id: string) => {
+    setBusyFor(id, 'connecting');
     try {
-      const start = await api.gmailOauthStart();
-      setAwaitingOAuth(true);
-      const result = await api.gmailOauthFinish();
+      const start = await api.connectorConnect(id);
+      setAwaiting((a) => ({ ...a, [id]: true }));
+      const result = await api.connectorOauthFinish(id);
+      setAwaiting((a) => ({ ...a, [id]: false }));
+      setErrors((er) => ({ ...er, [id]: '' }));
       await refresh();
-      setAwaitingOAuth(false);
-      setSyncOutput(`Connected as ${result.email}`);
+      setSyncOutput((so) => ({ ...so, [id]: `Connected as ${result.account}` }));
     } catch (e) {
-      setAwaitingOAuth(false);
-      setError(String(e));
+      setAwaiting((a) => ({ ...a, [id]: false }));
+      setErrors((er) => ({ ...er, [id]: String(e) }));
     } finally {
-      setConnecting(false);
+      setBusyFor(id, null);
     }
   };
 
-  const handleCancelOAuth = async () => {
+  const handleCancelOAuth = async (id: string) => {
     try {
-      await api.gmailOauthCancel();
+      await api.connectorOauthCancel(id);
     } catch {
       /* ignore */
     }
-    setAwaitingOAuth(false);
-    setConnecting(false);
+    setAwaiting((a) => ({ ...a, [id]: false }));
+    setBusyFor(id, null);
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncOutput(null);
-    setError(null);
+  const handleSync = async (id: string) => {
+    setBusyFor(id, 'syncing');
+    setSyncOutput((so) => ({ ...so, [id]: '' }));
     try {
-      const res = await api.gmailSync();
-      setSyncOutput(res.ok ? res.output || 'Sync completed.' : `Sync exited with code ${res.exitCode}:\n${res.output}`);
+      const res = await api.connectorSync(id);
+      setSyncOutput((so) => ({
+        ...so,
+        [id]: res.ok ? res.output || 'Sync completed.' : `Sync exited with code ${res.exitCode}:\n${res.output}`,
+      }));
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setErrors((er) => ({ ...er, [id]: String(e) }));
     } finally {
-      setSyncing(false);
+      setBusyFor(id, null);
     }
   };
 
-  const handleAutoSync = async (enabled: boolean) => {
-    setError(null);
+  const handleDisconnect = async (id: string) => {
     try {
-      const res = await api.gmailSetAutosync(enabled);
+      await api.connectorDisconnect(id);
+      setSyncOutput((so) => ({ ...so, [id]: '' }));
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setErrors((er) => ({ ...er, [id]: String(e) }));
     }
   };
 
-  const handleDisconnect = async () => {
-    setError(null);
-    try {
-      await api.gmailDisconnect();
-      setRecent([]);
-      await refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setSearching(true);
-    try {
-      const results = await api.gmailQuery(query.trim(), 10);
-      setRecent(results);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const connected = status?.connected ?? false;
-
-  // Deep-link handoff (website → `timps://connect/<connector>`): auto-start the
-  // OAuth flow for the connector the user clicked "+" on, once we know status.
+  // Deep-link handoff (website → `timps://connect/<connector>`): select the
+  // connector and auto-start the OAuth flow if credentials are available.
   const autoStarted = useRef<string | null>(null);
-  const [focusBanner, setFocusBanner] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focusConnector) return;
-    if (focusConnector !== 'gmail') {
+    if (!PROVIDERS.some((p) => p.id === focusConnector)) {
       onFocusHandled?.();
       return;
     }
+    setSelected(focusConnector);
     setFocusBanner(focusConnector);
-    if (loading || connected || connecting || importing) return;
-    if (autoStarted.current !== focusConnector) {
-      autoStarted.current = focusConnector;
-      handleConnect();
+    if (loading || busy[focusConnector] || awaiting[focusConnector]) return;
+    const entry = entryFor(focusConnector);
+    if (!entry) return;
+    if (entry.connected) {
+      setFocusBanner(null);
+      onFocusHandled?.();
+      return;
     }
-  }, [focusConnector, loading, connected, connecting, importing]);
+    if (entry.hasCredentials && autoStarted.current !== focusConnector) {
+      autoStarted.current = focusConnector;
+      handleConnect(focusConnector);
+    }
+    // No credentials → banner stays; the user imports creds in the detail panel.
+  }, [focusConnector, loading, entries, busy, awaiting]);
 
   useEffect(() => {
-    if (focusBanner && connected) {
+    if (!focusBanner) return;
+    const entry = entryFor(focusBanner);
+    if (entry?.connected) {
       setFocusBanner(null);
       onFocusHandled?.();
     }
-  }, [focusBanner, connected]);
+  }, [focusBanner, entries]);
+
+  const connectedCount = entries?.filter((e) => e.connected).length ?? 0;
+  const selectedEntry = selected ? entryFor(selected) : undefined;
+  const selectedMeta = PROVIDERS.find((p) => p.id === selected);
 
   return (
     <div className="connectors-view">
@@ -212,179 +295,165 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
               <line x1="6" y1="4" x2="12" y2="4"/><line x1="14" y1="6" x2="14" y2="12"/><line x1="12" y1="14" x2="6" y2="14"/>
             </svg>
             Connectors
-            <span className="connectors-badge">Gmail</span>
+            {!loading && <span className="connectors-badge">{connectedCount} / {PROVIDERS.length} connected</span>}
           </span>
-        </div>
-        <div className="connectors-header-actions">
-          {connected && (
-            <button className="connector-btn ghost" onClick={handleDisconnect}>
-              Disconnect
-            </button>
-          )}
+          <p className="connectors-subtitle">
+            Link external services via OAuth — scoped, revocable, stored on this machine.{' '}
+            <code>timps &lt;name&gt;:sync</code> distills synced data into memory your agents can recall.
+          </p>
         </div>
       </div>
 
       {loading ? (
         <div className="connector-loading">Loading…</div>
       ) : (
-        <div className="connector-card">
-          <div className="connector-row">
-            <div className="connector-logo" aria-hidden>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>
-                <path d="M3 7l9 6 9-6"/>
-              </svg>
-            </div>
-            <div className="connector-info">
-              <div className="connector-name">
-                Gmail
-                <span className={`status-dot ${connected ? 'on' : 'off'}`} />
-                <span className="status-label">{connected ? 'Connected' : 'Not connected'}</span>
-              </div>
-              {connected ? (
-                <div className="connector-meta">
-                  {status?.email && <span>{status.email}</span>}
-                  <span>last sync {fmtTime(status?.lastRun ?? null)}</span>
-                  <span>{status?.messagesSynced ?? 0} emails · {status?.summaryCount ?? 0} summaries</span>
-                </div>
-              ) : (
-                <div className="connector-meta">
-                  <span>Emails → distilled knowledge facts in TIMPS memory (read-only)</span>
-                </div>
-              )}
-            </div>
-            <div className="connector-actions">
-              {connected ? (
-                <>
-                  <button
-                    className={`connector-btn primary ${syncing ? 'disabled' : ''}`}
-                    onClick={handleSync}
-                    disabled={syncing}
-                  >
-                    {syncing ? 'Syncing…' : 'Sync now'}
-                  </button>
-                  <button
-                    className={`connector-btn ${status?.autoSync ? 'primary' : 'ghost'}`}
-                    onClick={() => handleAutoSync(!(status?.autoSync ?? false))}
-                  >
-                    {status?.autoSync ? 'Auto-sync on' : 'Auto-sync off'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className={`connector-btn primary ${connecting ? 'disabled' : ''}`}
-                    onClick={handleConnect}
-                    disabled={connecting || importing}
-                  >
-                    {awaitingOAuth ? 'Waiting for browser…' : connecting ? 'Connecting…' : 'Connect'}
-                  </button>
-                  <button
-                    className={`connector-btn ghost ${importing ? 'disabled' : ''}`}
-                    onClick={handleImport}
-                    disabled={importing}
-                  >
-                    {importing ? 'Importing…' : 'Import credentials'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {focusBanner === 'gmail' && (
-            <div className="connector-focus-banner">
-              <span>
-                Opened from the TIMPS website — authorizing Gmail…
-              </span>
-              <button
-                className="connector-btn ghost small"
-                onClick={() => {
-                  setFocusBanner(null);
-                  onFocusHandled?.();
-                }}
+        <div className="connector-grid">
+          {PROVIDERS.map((p) => {
+            const entry = entryFor(p.id);
+            const connected = entry?.connected ?? false;
+            const isBusy = busy[p.id];
+            const isAwaiting = awaiting[p.id];
+            const isSelected = selected === p.id;
+            return (
+              <div
+                key={p.id}
+                className={`connector-tile${connected ? ' connected' : ''}${isSelected ? ' selected' : ''}`}
+                onClick={() => setSelected(isSelected ? null : p.id)}
               >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          {awaitingOAuth && (
-            <div className="connector-oauth-hint">
-              <span>Complete the consent screen in your browser to authorize TIMPS (read-only).</span>
-              <button className="connector-btn ghost small" onClick={handleCancelOAuth}>
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {!connected && importPath !== '' && (
-            <div className="connector-import-row">
-              <input
-                className="connector-input"
-                placeholder="Path to Google OAuth client JSON…"
-                value={importPath}
-                onChange={(e) => setImportPath(e.target.value)}
-              />
-              <button className="connector-btn primary small" onClick={handleImport} disabled={importing}>
-                Import
-              </button>
-            </div>
-          )}
-
-          {error && <div className="connector-error">{error}</div>}
-
-          {syncOutput && connected && (
-            <div className="connector-sync-output">
-              <pre>{syncOutput}</pre>
-            </div>
-          )}
-
-          {!status?.cliPath && connected && (
-            <div className="connector-warn">
-              Sync needs the TIMPS CLI build. Run <code>npm run build</code> in <code>timps-code/</code> or set <code>TIMPS_CLI_JS</code>.
-            </div>
-          )}
-
-          {connected && (
-            <>
-              <div className="connector-search-row">
-                <input
-                  className="connector-input"
-                  placeholder="Search emails (subject / sender / facts)…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                />
-                <button className="connector-btn primary small" onClick={handleSearch} disabled={searching}>
-                  {searching ? '…' : 'Search'}
-                </button>
+                <div className="connector-tile-top">
+                  <span className="connector-tile-logo"><ProviderLogo id={p.id} /></span>
+                  <div className="connector-tile-head">
+                    <span className="connector-tile-name">{p.display}</span>
+                    <span className={`connector-tile-status${connected ? ' on' : ' off'}`}>
+                      {connected ? (entry?.account && entry.account !== 'unknown' ? entry.account : 'Connected') : 'Not connected'}
+                    </span>
+                  </div>
+                  {entry?.hasCredentials && !connected && (
+                    <span className="connector-tile-creds" title="Credentials imported">creds ✓</span>
+                  )}
+                </div>
+                <p className="connector-tile-blurb">{p.blurb}</p>
+                <div className="connector-tile-actions" onClick={(e) => e.stopPropagation()}>
+                  {connected ? (
+                    <>
+                      <button
+                        className={`connector-btn primary ${isBusy === 'syncing' ? 'disabled' : ''}`}
+                        onClick={() => handleSync(p.id)}
+                        disabled={!!isBusy}
+                      >
+                        {isBusy === 'syncing' ? 'Syncing…' : 'Sync now'}
+                      </button>
+                      <button
+                        className="connector-btn ghost"
+                        onClick={() => handleDisconnect(p.id)}
+                      >
+                        Disconnect
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className={`connector-btn primary ${isBusy ? 'disabled' : ''}`}
+                        onClick={() => handleConnect(p.id)}
+                        disabled={!!isBusy}
+                      >
+                        {isAwaiting ? 'Waiting for browser…' : isBusy === 'connecting' ? 'Connecting…' : 'Connect'}
+                      </button>
+                      <button
+                        className={`connector-btn ghost ${isBusy === 'importing' ? 'disabled' : ''}`}
+                        onClick={() => handleImport(p.id)}
+                        disabled={!!isBusy}
+                      >
+                        {isBusy === 'importing' ? 'Importing…' : 'Credentials'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="connector-emails">
-                {recent.length === 0 ? (
-                  <div className="connector-empty">No email summaries yet — run Sync now.</div>
-                ) : (
-                  recent.map((e) => (
-                    <div key={e.emailId} className="connector-email">
-                      <div className="connector-email-head">
-                        <span className="connector-email-subject">{e.subject}</span>
-                        <span className="connector-email-from">{e.from}</span>
-                        <span className="connector-email-date">{fmtTime(e.syncedAt || e.date)}</span>
-                      </div>
-                      {e.facts?.length > 0 && (
-                        <ul className="connector-email-facts">
-                          {e.facts.slice(0, 3).map((f, i) => (
-                            <li key={i}>{f}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </>
-          )}
+            );
+          })}
         </div>
       )}
+
+      {errors._list && <div className="connector-error">{errors._list}</div>}
+
+      {selectedEntry && selectedMeta && selected && (() => {
+        const sid: string = selected;
+        return (
+          <div className="connector-detail">
+            <div className="connector-detail-head">
+              <span className="connector-detail-logo"><ProviderLogo id={sid} /></span>
+              <h3>{selectedMeta.display}</h3>
+              <span className={`connector-detail-status${selectedEntry.connected ? ' on' : ' off'}`}>
+                {selectedEntry.connected ? 'Connected' : 'Not connected'}
+              </span>
+            </div>
+
+            {focusBanner === sid && (
+              <div className="connector-focus-banner">
+                <span>
+                  Opened from the TIMPS website — {selectedEntry.connected ? `${selectedMeta.display} is connected.` : `authorizing ${selectedMeta.display}…`}
+                </span>
+                <button
+                  className="connector-btn ghost small"
+                  onClick={() => {
+                    setFocusBanner(null);
+                    onFocusHandled?.();
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <div className="connector-detail-meta">
+              <span>Account: <b>{selectedEntry.account || '—'}</b></span>
+              <span>Scopes requested: <b>{selectedEntry.scopes}</b></span>
+              <span>Last sync: <b>{fmtTime(selectedEntry.lastRun ?? null)}</b></span>
+              <span>Synced items: <b>{selectedEntry.syncedCount}</b></span>
+            </div>
+
+            {awaiting[sid] && (
+              <div className="connector-oauth-hint">
+                <span>Complete the consent screen in your browser to authorize TIMPS. Tokens stay on this machine and are revocable anytime.</span>
+                <button className="connector-btn ghost small" onClick={() => handleCancelOAuth(sid)}>
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {!selectedEntry.hasCredentials && (
+              <div className="connector-import-row">
+                <span className="connector-import-label">
+                  No credentials yet — paste a path to the {selectedMeta.display} OAuth client JSON, or pick a file.
+                </span>
+                <div className="connector-import-controls">
+                  <input
+                    className="connector-input"
+                    placeholder={`~/.timps/${sid}/client.json`}
+                    value={importPath}
+                    onChange={(e) => setImportPath(e.target.value)}
+                  />
+                  <button
+                    className="connector-btn primary small"
+                    onClick={() => handleImport(sid, importPath || undefined)}
+                    disabled={busy[sid] === 'importing'}
+                  >
+                    {busy[sid] === 'importing' ? 'Importing…' : 'Import'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {errors[sid] && <div className="connector-error">{errors[sid]}</div>}
+            {syncOutput[sid] && (
+              <div className="connector-sync-output">
+                <pre>{syncOutput[sid]}</pre>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

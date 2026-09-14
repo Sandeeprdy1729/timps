@@ -315,3 +315,234 @@
   font-size: 11px;
   padding: 8px 4px;
 }
+
+/* ── Multi-provider connector grid ─────────────────────────────────────── */
+
+.connectors-header {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.connectors-subtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  line-height: 1.5;
+}
+
+.connectors-subtitle code {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 10px;
+  background: var(--surface-2, #222634);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.connector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  padding: 14px 18px;
+  overflow-y: auto;
+}
+
+.connector-tile {
+  background: var(--surface, #1a1d28);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.connector-tile:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.connector-tile.selected {
+  border-color: var(--accent, #8ed2fb);
+  box-shadow: 0 0 0 1px var(--accent, #8ed2fb);
+}
+
+.connector-tile-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.connector-tile-logo,
+.connector-detail-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--surface-2, #222634);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.connector-tile-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.connector-tile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connector-tile-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary, #8b92a8);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connector-tile-status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.connector-tile-status.on::before {
+  background: #4ade80;
+}
+
+.connector-tile-status.off::before {
+  background: #6b7280;
+}
+
+.connector-tile-creds {
+  font-size: 10px;
+  color: var(--accent, #8ed2fb);
+  background: rgba(142, 210, 251, 0.1);
+  border: 1px solid rgba(142, 210, 251, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+.connector-tile-blurb {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.connector-tile-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.connector-tile-actions .connector-btn {
+  flex: 1;
+  text-align: center;
+}
+
+.connector-detail {
+  margin: 0 18px 18px;
+  background: var(--surface, #1a1d28);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.connector-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.connector-detail-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #e0e4f0);
+  flex: 1;
+}
+
+.connector-detail-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.connector-detail-status.on {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.connector-detail-status.off {
+  color: var(--text-secondary, #8b92a8);
+  background: var(--surface-2, #222634);
+}
+
+.connector-detail-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+}
+
+.connector-detail-meta b {
+  color: var(--text-primary, #e0e4f0);
+  font-weight: 600;
+}
+
+.connector-import-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #8b92a8);
+  background: var(--surface-2, #222634);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.connector-import-label {
+  line-height: 1.5;
+}
+
+.connector-import-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.connector-import-controls .connector-input {
+  flex: 1;
+}
+
+.connector-btn.small {
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+.connector-btn.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
