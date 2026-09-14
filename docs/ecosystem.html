@@ -3,662 +3,598 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TIMPS Ecosystem — timps-code CLI, TIMPS-Coder model, SkillGalaxy marketplace, TIMPS Swarm, claude-design-skill, timps-mcp, and timps-vscode.">
-  <title>Ecosystem — TIMPS</title>
+  <meta name="description" content="TIMPS Ecosystem — timps-code CLI, TIMPS-Coder model, SkillGalaxy marketplace, TIMPS Swarm, claude-design-skill, timps-mcp, and timps-vscode. One brain, everything connected.">
+  <title>Ecosystem — TIMPS Memory</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/timps-fonts.css">
-  <link rel="stylesheet" href="css/styles.css">
-  <style>
-    .eco-hero {
-      padding: 120px 0 64px;
-      text-align: center;
-    }
-    .eco-full-card {
-      background: var(--bg-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      margin-bottom: 32px;
-      transition: all 0.25s;
-    }
-    .eco-full-card:hover { border-color: var(--border-hover); }
-    .eco-full-header {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      align-items: center;
-      gap: 24px;
-      padding: 32px;
-      border-bottom: 1px solid var(--border);
-    }
-    .eco-full-icon {
-      width: 64px; height: 64px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      flex-shrink: 0;
-    }
-    .eco-full-title h2 { font-size: 1.5rem; margin-bottom: 4px; }
-    .eco-full-title p { font-size: 0.9rem; color: var(--text-dim); }
-    .eco-full-body { padding: 32px; }
-    .eco-full-body p { margin-bottom: 16px; }
-    .eco-columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      margin-top: 24px;
-    }
-    .eco-columns h4 { font-size: 0.85rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
-    .eco-columns ul { list-style: none; }
-    .eco-columns li { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
-    .eco-columns li::before { content: '→'; color: var(--accent); flex-shrink: 0; }
-    .eco-full-footer {
-      padding: 20px 32px;
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .stat-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg-2);
-      border: 1px solid var(--border);
-      padding: 5px 12px;
-      border-radius: 100px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .stat-chip .chip-val { color: var(--text); font-weight: 700; }
-    @media (max-width: 768px) {
-      .eco-full-header { grid-template-columns: auto 1fr; }
-      .eco-full-header .eco-links { grid-column: 1 / -1; }
-      .eco-columns { grid-template-columns: 1fr; }
-    }
-  </style>
-  <link rel="stylesheet" href="css/timps.css">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
 
-<nav>
+<!-- ── NAV ─────────────────────────────────────────────── -->
+<nav class="nav">
   <div class="nav-inner">
     <a href="index.html" class="nav-logo">
-      <div class="logo-box" title="TIMPS">
-        <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
-          <rect x="3" y="5" width="10" height="7" rx="1" fill="#141414"/>
-          <rect x="4" y="6" width="8" height="5" fill="#3a3a36"/>
-          <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
-          <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
-          <rect x="3" y="12" width="10" height="5" rx="1" fill="#ddddd7"/>
-          <rect x="4" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="9" y="17" width="3" height="1" fill="#ddddd7"/>
-          <rect x="7" y="3" width="2" height="2" fill="#666666"/>
-        </svg>
-      </div>
-      TIMPS
+      <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#141413"/>
+        <rect x="4" y="6" width="8" height="5" fill="#d97757"/>
+        <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#b8b6ab"/>
+        <rect x="4" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="9" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="7" y="3" width="2" height="2" fill="#5e5d59"/>
+      </svg>
+      TIMPS&nbsp;Memory
     </a>
+
     <ul class="nav-links">
-      <li><a href="gmail.html">Connectors</a></li>
-      <li><a href="docs.html">Docs</a></li>
-      <li><a href="ecosystem.html" class="active">Ecosystem</a></li>
+      <li class="nav-item">
+        <a class="nav-link" href="index.html">Product
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">Product</div>
+          <a href="index.html">TIMPS Memory</a>
+          <a href="gmail.html">Gmail Connector</a>
+          <a href="ecosystem.html">Ecosystem</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" href="ecosystem.html">Ecosystem</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="docs.html">Docs</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">A product of TIMPS</div>
+          <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">timps-website.vercel.app</a>
+        </div>
+      </li>
     </ul>
+
     <div class="nav-cta">
-      <a href="https://github.com/Sandeepreddy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">GitHub</a>
       <a href="gmail.html" class="btn btn-primary btn-sm">Get started</a>
     </div>
+
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<!-- Hero -->
-<div class="eco-hero">
-  <div class="hero-bg"></div>
-  <div class="container" style="position: relative;">
-    <span class="section-label">Ecosystem</span>
-    <h1 style="margin: 16px 0 20px;">One mission.<br>Seven tools.</h1>
-    <p style="max-width: 560px; margin: 0 auto 40px; font-size: 1.1rem;">
-      Every TIMPS project — from the CLI agent to the fine-tuned model to the 22-agent swarm — shares the same memory and skills layer. One brain. Everything connected.
-    </p>
-
-    <!-- Ecosystem map diagram -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 700px; margin: 0 auto; text-align: center;">
-      <a href="#timps-code" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">💻</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">timps-code</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">CLI</div>
-        </div>
-      </a>
-      <a href="#timps-coder" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🤖</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">TIMPS-Coder</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">Model</div>
-        </div>
-      </a>
-      <a href="#skill-galaxy" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">⭐</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">SkillGalaxy</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">Marketplace</div>
-        </div>
-      </a>
-      <a href="#timps-swarm" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🐝</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">Swarm</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">22 agents</div>
-        </div>
-      </a>
-      <a href="#design-skill" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🎨</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">Design Skill</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">7 systems</div>
-        </div>
-      </a>
-      <a href="#timps-mcp" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🔌</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">timps-mcp</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">MCP server</div>
-        </div>
-      </a>
-      <a href="#timps-vscode" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🧩</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">timps-vscode</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">Extension</div>
-        </div>
-      </a>
-      <a href="#packages/server" style="text-decoration: none;">
-        <div class="feature-card" style="padding: 16px; cursor: pointer;">
-          <div style="font-size: 1.4rem; margin-bottom: 6px;">🌐</div>
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text);">packages/server</div>
-          <div style="font-size: 0.7rem; color: var(--text-dim);">REST API</div>
-        </div>
-      </a>
-    </div>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Product</a>
+  <a href="gmail.html">Gmail Connector</a>
+  <a href="ecosystem.html">Ecosystem</a>
+  <a href="docs.html">Docs</a>
+  <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Company</a>
+  <div class="mobile-cta">
+    <a href="docs.html#install" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
   </div>
 </div>
 
-<div class="container" style="padding-bottom: 96px;">
+<!-- Hero -->
+<section class="hero" style="padding-bottom:56px">
+  <span class="hero-badge"><span class="dot"></span>Ecosystem · A product of TIMPS</span>
+  <h1>One mission.<br><em>Seven tools.</em></h1>
+  <p class="hero-sub">Every TIMPS project — from the CLI agent to the fine-tuned model to the 22-agent swarm — shares the same memory and skills layer. One brain. Everything connected.</p>
+
+  <div class="hero-tags">
+    <a href="#timps-code" class="tag">💻 timps-code · CLI</a>
+    <a href="#timps-coder" class="tag">🤖 TIMPS-Coder · Model</a>
+    <a href="#skill-galaxy" class="tag">⭐ SkillGalaxy · 10,171+</a>
+    <a href="#timps-swarm" class="tag">🐝 Swarm · 22 agents</a>
+    <a href="#design-skill" class="tag">🎨 Design Skill · 7 systems</a>
+    <a href="#timps-mcp" class="tag">🔌 timps-mcp · 20 tools</a>
+    <a href="#timps-vscode" class="tag">🧩 timps-vscode</a>
+  </div>
+</section>
+
+<div style="max-width:1240px;margin:0 auto;padding:0 var(--page-margin) 96px">
 
   <!-- ── timps-code ── -->
-  <div class="eco-full-card fade-in" id="timps-code">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(124,106,247,0.15);">💻</div>
-      <div class="eco-full-title">
-        <h2>timps-code <span class="eco-badge badge-cli" style="font-size: 0.75rem; vertical-align: middle;">CLI</span></h2>
-        <p>The main TIMPS CLI coding agent — the thing most people install first</p>
+  <div class="card fade-in" id="timps-code" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">💻</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">timps-code <span class="tag" style="font-size:10.5px">CLI</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">The main TIMPS CLI coding agent — the thing most people install first</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="eco-link">⭐ GitHub</a>
-        <a href="https://www.npmjs.com/package/timps-code" target="_blank" class="eco-link">📦 npm</a>
-        <a href="docs.html" class="eco-link">📖 Docs</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
+        <a href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener" class="btn btn-outline btn-sm">npm</a>
+        <a href="docs.html" class="btn btn-outline btn-sm">Docs</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>timps-code is a terminal-based AI coding agent with a 3-layer persistent memory system, 25+ built-in tools, multi-provider support, and a self-correcting agent loop. It's the open-source alternative to Claude Code that doesn't forget everything when you close the terminal.</p>
+    <p>timps-code is a terminal-based AI coding agent with a 3-layer persistent memory system, 25+ built-in tools, multi-provider support, and a self-correcting agent loop. It's the open-source alternative to Claude Code that doesn't forget everything when you close the terminal.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>Key features</h4>
-          <ul>
-            <li>3-layer memory: working, episodic, semantic</li>
-            <li>25+ tools: file ops, shell, git, web search, tests, GitHub</li>
-            <li>Multi-provider: Ollama (free), Claude, GPT-4, Gemini, OpenRouter, DeepSeek</li>
-            <li>Self-correcting loop: retries 3x with revised approach on failure</li>
-            <li>Skills system: install domain expertise from SkillGalaxy</li>
-            <li>Memory branching: safe experimentation with <code>/branch</code></li>
-            <li>One-shot and interactive modes</li>
-            <li>TUI (Ink/React terminal UI) with streaming output</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Quick install</h4>
-          <div class="terminal" style="font-size: 0.8rem;">
-            <div class="terminal-bar">
-              <div class="terminal-dot red"></div>
-              <div class="terminal-dot yellow"></div>
-              <div class="terminal-dot green"></div>
-            </div>
-            <div class="terminal-body">
-              <div><span class="prompt">$</span> npm install -g timps-code</div>
-              <div><span class="prompt">$</span> ollama pull qwen2.5-coder:7b</div>
-              <div><span class="prompt">$</span> timps</div>
-              <div class="out-g">✓ Ollama detected</div>
-              <div class="out-b">✓ Memory loaded</div>
-              <div class="out-y">Ready. Type your task →</div>
-            </div>
-          </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Key features</div>
+        <ul class="docs-content-mini">
+          <li>3-layer memory: working, episodic, semantic</li>
+          <li>25+ tools: file ops, shell, git, web search, tests, GitHub</li>
+          <li>Multi-provider: Ollama (free), Claude, GPT-4, Gemini, OpenRouter, DeepSeek</li>
+          <li>Self-correcting loop: retries 3x with revised approach on failure</li>
+          <li>Skills system: install domain expertise from SkillGalaxy</li>
+          <li>Memory branching: safe experimentation with <code>/branch</code></li>
+          <li>One-shot and interactive modes</li>
+          <li>TUI (Ink/React terminal UI) with streaming output</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Quick install</div>
+        <div class="code-block" style="margin:0">
+          <div class="copy-row"><button class="copy-btn" data-copy="npm install -g timps-code">Copy</button></div>
+          <pre><span class="cm"># install the CLI</span>
+npm install -g timps-code
+
+<span class="cm"># free local model</span>
+ollama pull qwen2.5-coder:7b
+
+<span class="cm"># go</span>
+timps</pre>
         </div>
       </div>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">25+</span> built-in tools</div>
-      <div class="stat-chip"><span class="chip-val">3-layer</span> memory</div>
-      <div class="stat-chip"><span class="chip-val">7</span> providers</div>
-      <div class="stat-chip"><span class="chip-val">MIT</span> license</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">25+</strong> built-in tools</span>
+      <span class="tag"><strong style="color:var(--ink)">3-layer</strong> memory</span>
+      <span class="tag"><strong style="color:var(--ink)">7</strong> providers</span>
+      <span class="tag"><strong style="color:var(--ink)">MIT</strong> license</span>
     </div>
   </div>
 
   <!-- ── TIMPS-Coder ── -->
-  <div class="eco-full-card fade-in" id="timps-coder">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(249,115,22,0.15);">🤖</div>
-      <div class="eco-full-title">
-        <h2>TIMPS-Coder <span class="eco-badge badge-model" style="font-size: 0.75rem; vertical-align: middle;">Model</span></h2>
-        <p>Fine-tuned 0.5B coding model with 20 LoRA adapters for bug patterns</p>
+  <div class="card fade-in" id="timps-coder" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🤖</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">TIMPS-Coder <span class="tag" style="font-size:10.5px">Model</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">Fine-tuned 0.5B coding model with 20 LoRA adapters for bug patterns</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/TIMPS-Coder" target="_blank" class="eco-link">⭐ GitHub</a>
-        <a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank" class="eco-link">🤗 HuggingFace</a>
-        <a href="https://ollama.com/sandeeprdy1729/timps-coder" target="_blank" class="eco-link">🦙 Ollama</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/TIMPS-Coder" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
+        <a href="https://huggingface.co/sandeeprdy1729/TIMPS-Coder-0.5B" target="_blank" rel="noopener" class="btn btn-outline btn-sm">HuggingFace</a>
+        <a href="https://ollama.com/sandeeprdy1729/timps-coder" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Ollama</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>TIMPS-Coder is a fine-tuned version of <strong>Qwen2.5-Coder-0.5B-Instruct</strong> trained with Unsloth on a MacBook M2 Air. Despite its small size, it achieves 92% accuracy on a held-out bug-fix benchmark — beating models 10x its size on specialized tasks.</p>
-      <p>The secret is 20 domain-specific LoRA adapters, each trained on a specific class of bugs. The right adapter is selected automatically based on the error context.</p>
+    <p>TIMPS-Coder is a fine-tuned version of <strong>Qwen2.5-Coder-0.5B-Instruct</strong> trained with Unsloth on a MacBook M2 Air. Despite its small size, it achieves 92% accuracy on a held-out bug-fix benchmark — beating models 10x its size on specialized tasks.</p>
+    <p>The secret is 20 domain-specific LoRA adapters, each trained on a specific class of bugs. The right adapter is selected automatically based on the error context.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>Model specs</h4>
-          <ul>
-            <li>Base: Qwen2.5-Coder-0.5B-Instruct</li>
-            <li>Training: Unsloth (4-bit QLoRA)</li>
-            <li>Hardware: MacBook M2 Air</li>
-            <li>Accuracy: 92% on bug-fix benchmark</li>
-            <li>20 LoRA adapters (one per bug class)</li>
-            <li>Available: Ollama, HuggingFace, MLX</li>
-          </ul>
-        </div>
-        <div>
-          <h4>LoRA adapters (20 bug patterns)</h4>
-          <ul>
-            <li>java_npe — NullPointerException</li>
-            <li>python_asyncio — async/await mistakes</li>
-            <li>js_null_check — null/undefined errors</li>
-            <li>react_hooks — hooks rules violations</li>
-            <li>sql_injection — SQL security</li>
-            <li>xss_vulnerability — XSS prevention</li>
-            <li>memory_leak — resource cleanup</li>
-            <li>race_condition — concurrency bugs</li>
-            <li>+ 12 more adapters</li>
-          </ul>
-        </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Model specs</div>
+        <ul class="docs-content-mini">
+          <li>Base: Qwen2.5-Coder-0.5B-Instruct</li>
+          <li>Training: Unsloth (4-bit QLoRA)</li>
+          <li>Hardware: MacBook M2 Air</li>
+          <li>Accuracy: 92% on bug-fix benchmark</li>
+          <li>20 LoRA adapters (one per bug class)</li>
+          <li>Available: Ollama, HuggingFace, MLX</li>
+        </ul>
       </div>
-
-      <div class="code-block" style="margin-top: 20px;"># Run via Ollama
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">LoRA adapters (20 bug patterns)</div>
+        <ul class="docs-content-mini">
+          <li><code>java_npe</code> — NullPointerException</li>
+          <li><code>python_asyncio</code> — async/await mistakes</li>
+          <li><code>js_null_check</code> — null/undefined errors</li>
+          <li><code>react_hooks</code> — hooks rules violations</li>
+          <li><code>sql_injection</code> — SQL security</li>
+          <li><code>xss_vulnerability</code> — XSS prevention</li>
+          <li><code>memory_leak</code> — resource cleanup</li>
+          <li><code>race_condition</code> — concurrency bugs</li>
+          <li>+ 12 more adapters</li>
+        </ul>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top:20px">
+      <div class="copy-row"><button class="copy-btn" data-copy="ollama run sandeeprdy1729/timps-coder">Copy</button></div>
+      <pre><span class="cm"># Run via Ollama</span>
 ollama run sandeeprdy1729/timps-coder
 timps --provider timps-coder "fix the async bug in src/queue.ts"
 
-# Or from HuggingFace
+<span class="cm"># Or from HuggingFace</span>
 from transformers import AutoModelForCausalLM, AutoTokenizer
-model = AutoModelForCausalLM.from_pretrained("sandeeprdy1729/TIMPS-Coder-0.5B")</div>
+model = AutoModelForCausalLM.from_pretrained("sandeeprdy1729/TIMPS-Coder-0.5B")</pre>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">92%</span> bug-fix accuracy</div>
-      <div class="stat-chip"><span class="chip-val">0.5B</span> parameters</div>
-      <div class="stat-chip"><span class="chip-val">20</span> LoRA adapters</div>
-      <div class="stat-chip"><span class="chip-val">Free</span> via Ollama</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">92%</strong> bug-fix accuracy</span>
+      <span class="tag"><strong style="color:var(--ink)">0.5B</strong> parameters</span>
+      <span class="tag"><strong style="color:var(--ink)">20</strong> LoRA adapters</span>
+      <span class="tag"><strong style="color:var(--ink)">Free</strong> via Ollama</span>
     </div>
   </div>
 
   <!-- ── SkillGalaxy ── -->
-  <div class="eco-full-card fade-in" id="skill-galaxy">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(34,197,94,0.15);">⭐</div>
-      <div class="eco-full-title">
-        <h2>SkillGalaxy <span class="eco-badge badge-hub" style="font-size: 0.75rem; vertical-align: middle;">Marketplace</span></h2>
-        <p>10,171+ community skills for Claude Projects and any MCP client</p>
+  <div class="card fade-in" id="skill-galaxy" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">⭐</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">SkillGalaxy <span class="tag" style="font-size:10.5px">Marketplace</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">10,171+ community skills for Claude Projects and any MCP client</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://skill-galaxy.vercel.app" target="_blank" class="eco-link">🌐 Live Site</a>
-        <a href="https://github.com/Sandeeprdy1729/skill_galaxy" target="_blank" class="eco-link">⭐ GitHub</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://skill-galaxy.vercel.app" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Live Site</a>
+        <a href="https://github.com/Sandeeprdy1729/skill_galaxy" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>SkillGalaxy is a free marketplace for Claude Project skills — compressed domain-knowledge files that load into any Claude conversation. Think of it like npm for AI expertise. Browse 16 domains, download any skill, and it applies to every conversation in that Claude Project.</p>
-      <p>The platform is powered by <strong>SkillForge</strong>, an evolutionary optimizer that composites multiple skills with 72% better token efficiency than naive concatenation. The MCP server gives 10 tools to manage skills programmatically.</p>
+    <p>SkillGalaxy is a free marketplace for Claude Project skills — compressed domain-knowledge files that load into any Claude conversation. Think of it like npm for AI expertise. Browse 16 domains, download any skill, and it applies to every conversation in that Claude Project.</p>
+    <p>The platform is powered by <strong>SkillForge</strong>, an evolutionary optimizer that composites multiple skills with 72% better token efficiency than naive concatenation. The MCP server gives 10 tools to manage skills programmatically.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>Skill domains (16)</h4>
-          <ul>
-            <li>Frontend development (React, Vue, Svelte)</li>
-            <li>Backend architecture (Node.js, FastAPI, Rails)</li>
-            <li>DevOps & infrastructure (Kubernetes, Terraform)</li>
-            <li>Security & OWASP compliance</li>
-            <li>Data science & ML (PyTorch, sklearn)</li>
-            <li>Mobile (React Native, Flutter)</li>
-            <li>Design systems & UI/UX</li>
-            <li>Testing & QA strategies</li>
-            <li>+ 8 more domains</li>
-          </ul>
-        </div>
-        <div>
-          <h4>SkillForge features</h4>
-          <ul>
-            <li>Evolutionary composition: 72% token savings</li>
-            <li>Conflict detection between skills</li>
-            <li>Domain compatibility scoring</li>
-            <li>Auto-generates hybrid SKILL.md</li>
-            <li>MCP server with 10 tools</li>
-            <li>Supabase backend for community ratings</li>
-            <li>Free forever — no auth required to download</li>
-          </ul>
-        </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Skill domains (16)</div>
+        <ul class="docs-content-mini">
+          <li>Frontend development (React, Vue, Svelte)</li>
+          <li>Backend architecture (Node.js, FastAPI, Rails)</li>
+          <li>DevOps &amp; infrastructure (Kubernetes, Terraform)</li>
+          <li>Security &amp; OWASP compliance</li>
+          <li>Data science &amp; ML (PyTorch, sklearn)</li>
+          <li>Mobile (React Native, Flutter)</li>
+          <li>Design systems &amp; UI/UX</li>
+          <li>Testing &amp; QA strategies</li>
+          <li>+ 8 more domains</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">SkillForge features</div>
+        <ul class="docs-content-mini">
+          <li>Evolutionary composition: 72% token savings</li>
+          <li>Conflict detection between skills</li>
+          <li>Domain compatibility scoring</li>
+          <li>Auto-generates hybrid SKILL.md</li>
+          <li>MCP server with 10 tools</li>
+          <li>Supabase backend for community ratings</li>
+          <li>Free forever — no auth required to download</li>
+        </ul>
       </div>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">10,171+</span> skills</div>
-      <div class="stat-chip"><span class="chip-val">16</span> domains</div>
-      <div class="stat-chip"><span class="chip-val">72%</span> token savings</div>
-      <div class="stat-chip"><span class="chip-val">Free</span> forever</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">10,171+</strong> skills</span>
+      <span class="tag"><strong style="color:var(--ink)">16</strong> domains</span>
+      <span class="tag"><strong style="color:var(--ink)">72%</strong> token savings</span>
+      <span class="tag"><strong style="color:var(--ink)">Free</strong> forever</span>
     </div>
   </div>
 
   <!-- ── TIMPS Swarm ── -->
-  <div class="eco-full-card fade-in" id="timps-swarm">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(239,68,68,0.15);">🐝</div>
-      <div class="eco-full-title">
-        <h2>TIMPS Swarm <span class="eco-badge badge-swarm" style="font-size: 0.75rem; vertical-align: middle;">Multi-Agent</span></h2>
-        <p>22 specialized agents covering the full SDLC pipeline and computer health</p>
+  <div class="card fade-in" id="timps-swarm" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🐝</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">TIMPS Swarm <span class="tag" style="font-size:10.5px">Multi-Agent</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">22 specialized agents covering the full SDLC pipeline and computer health</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank" class="eco-link">⭐ GitHub</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/timps-swarm" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>TIMPS Swarm is a Python-based multi-agent system built on LangGraph and Ollama. Give it a feature request and it handles the entire software development lifecycle automatically — from writing requirements to deploying a Docker container.</p>
-      <p>The <strong>computer health subsystem</strong> is a unique 12-agent cluster that diagnoses and fixes macOS problems: disk health, memory pressure, slow startup, network issues, and more.</p>
+    <p>TIMPS Swarm is a Python-based multi-agent system built on LangGraph and Ollama. Give it a feature request and it handles the entire software development lifecycle automatically — from writing requirements to deploying a Docker container.</p>
+    <p>The <strong>computer health subsystem</strong> is a unique 12-agent cluster that diagnoses and fixes macOS problems: disk health, memory pressure, slow startup, network issues, and more.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>SDLC Pipeline (10 agents)</h4>
-          <ul>
-            <li>PM Agent — writes user stories and acceptance criteria</li>
-            <li>Architect Agent — proposes system design and ADRs</li>
-            <li>Coder Agent — writes the implementation</li>
-            <li>Reviewer Agent — code review and refactoring</li>
-            <li>QA Agent — writes and runs tests</li>
-            <li>Security Agent — OWASP audit and pen testing</li>
-            <li>Docs Agent — README, API docs, inline comments</li>
-            <li>DevOps Agent — Dockerfile, CI/CD, deployment</li>
-            <li>Observer Agent — metrics, tracing, logging</li>
-            <li>Coordinator — orchestrates the full pipeline</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Computer Health (12 agents)</h4>
-          <ul>
-            <li>Disk health analyzer</li>
-            <li>Memory pressure monitor</li>
-            <li>Startup items optimizer</li>
-            <li>Network diagnostics</li>
-            <li>DNS troubleshooter</li>
-            <li>Battery health checker</li>
-            <li>Process bloat detector</li>
-            <li>Log analyzer</li>
-            <li>System updates checker</li>
-            <li>Permission repair agent</li>
-            <li>Thermal manager</li>
-            <li>Backup status verifier</li>
-          </ul>
-        </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">SDLC Pipeline (10 agents)</div>
+        <ul class="docs-content-mini">
+          <li>PM Agent — writes user stories and acceptance criteria</li>
+          <li>Architect Agent — proposes system design and ADRs</li>
+          <li>Coder Agent — writes the implementation</li>
+          <li>Reviewer Agent — code review and refactoring</li>
+          <li>QA Agent — writes and runs tests</li>
+          <li>Security Agent — OWASP audit and pen testing</li>
+          <li>Docs Agent — README, API docs, inline comments</li>
+          <li>DevOps Agent — Dockerfile, CI/CD, deployment</li>
+          <li>Observer Agent — metrics, tracing, logging</li>
+          <li>Coordinator — orchestrates the full pipeline</li>
+        </ul>
       </div>
-
-      <div class="code-block" style="margin-top: 20px;">git clone https://github.com/Sandeeprdy1729/timps-swarm
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Computer Health (12 agents)</div>
+        <ul class="docs-content-mini">
+          <li>Disk health analyzer</li>
+          <li>Memory pressure monitor</li>
+          <li>Startup items optimizer</li>
+          <li>Network diagnostics</li>
+          <li>DNS troubleshooter</li>
+          <li>Battery health checker</li>
+          <li>Process bloat detector</li>
+          <li>Log analyzer</li>
+          <li>System updates checker</li>
+          <li>Permission repair agent</li>
+          <li>Thermal manager</li>
+          <li>Backup status verifier</li>
+        </ul>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top:20px">
+      <div class="copy-row"><button class="copy-btn" data-copy="git clone https://github.com/Sandeeprdy1729/timps-swarm">Copy</button></div>
+      <pre>git clone https://github.com/Sandeeprdy1729/timps-swarm
 cd timps-swarm && pip install -r requirements.txt
 python swarm.py "add OAuth2 to the API"
 
-# Computer health mode
-python swarm.py --mode health "my Mac is running slow"</div>
+<span class="cm"># Computer health mode</span>
+python swarm.py --mode health "my Mac is running slow"</pre>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">22</span> agents</div>
-      <div class="stat-chip"><span class="chip-val">31</span> MCP tools</div>
-      <div class="stat-chip"><span class="chip-val">LangGraph</span> DAG</div>
-      <div class="stat-chip"><span class="chip-val">Ollama</span> powered</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">22</strong> agents</span>
+      <span class="tag"><strong style="color:var(--ink)">31</strong> MCP tools</span>
+      <span class="tag"><strong style="color:var(--ink)">LangGraph</strong> DAG</span>
+      <span class="tag"><strong style="color:var(--ink)">Ollama</strong> powered</span>
     </div>
   </div>
 
   <!-- ── Design Skill ── -->
-  <div class="eco-full-card fade-in" id="design-skill">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(245,158,11,0.15);">🎨</div>
-      <div class="eco-full-title">
-        <h2>Claude Design Skill <span class="eco-badge badge-skill" style="font-size: 0.75rem; vertical-align: middle;">Skill</span></h2>
-        <p>7 design systems merged into one ultra-compressed portable SKILL.md</p>
+  <div class="card fade-in" id="design-skill" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🎨</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">Claude Design Skill <span class="tag" style="font-size:10.5px">Skill</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">7 design systems merged into one ultra-compressed portable SKILL.md</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/claude-design-skill" target="_blank" class="eco-link">⭐ GitHub</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/claude-design-skill" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>This SKILL.md file packs 7 complete professional design systems into a single, ultra-compressed file. Drop it into any Claude Project and Claude gains deep expertise in Tailwind CSS, shadcn/ui, Radix UI, Material Design, Apple HIG, Framer Motion, and Figma tokenization — in one go.</p>
-      <p>The compression technique achieves <strong>98% token savings</strong> — 22 tokens replaces what would otherwise take 1,100 tokens of design prompt engineering.</p>
+    <p>This SKILL.md file packs 7 complete professional design systems into a single, ultra-compressed file. Drop it into any Claude Project and Claude gains deep expertise in Tailwind CSS, shadcn/ui, Radix UI, Material Design, Apple HIG, Framer Motion, and Figma tokenization — in one go.</p>
+    <p>The compression technique achieves <strong>98% token savings</strong> — 22 tokens replaces what would otherwise take 1,100 tokens of design prompt engineering.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>Design systems included</h4>
-          <ul>
-            <li>Tailwind CSS — utility-first layout and spacing</li>
-            <li>shadcn/ui — component composition rules</li>
-            <li>Radix UI — accessible primitives and ARIA</li>
-            <li>Material Design 3 — motion and elevation</li>
-            <li>Apple Human Interface Guidelines</li>
-            <li>Framer Motion — animation best practices</li>
-            <li>Figma token system — design-to-code bridge</li>
-          </ul>
-        </div>
-        <div>
-          <h4>8 slash commands</h4>
-          <ul>
-            <li>/polish — apply all 7 systems in one pass</li>
-            <li>/animate — add Framer Motion transitions</li>
-            <li>/audit — accessibility and contrast check</li>
-            <li>/overdrive — maximum visual polish mode</li>
-            <li>/token — extract design tokens</li>
-            <li>/a11y — full WCAG 2.1 AA audit</li>
-            <li>/motion — detailed animation system</li>
-            <li>/figma — generate Figma-ready tokens</li>
-          </ul>
-        </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Design systems included</div>
+        <ul class="docs-content-mini">
+          <li>Tailwind CSS — utility-first layout and spacing</li>
+          <li>shadcn/ui — component composition rules</li>
+          <li>Radix UI — accessible primitives and ARIA</li>
+          <li>Material Design 3 — motion and elevation</li>
+          <li>Apple Human Interface Guidelines</li>
+          <li>Framer Motion — animation best practices</li>
+          <li>Figma token system — design-to-code bridge</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">8 slash commands</div>
+        <ul class="docs-content-mini">
+          <li><code>/polish</code> — apply all 7 systems in one pass</li>
+          <li><code>/animate</code> — add Framer Motion transitions</li>
+          <li><code>/audit</code> — accessibility and contrast check</li>
+          <li><code>/overdrive</code> — maximum visual polish mode</li>
+          <li><code>/token</code> — extract design tokens</li>
+          <li><code>/a11y</code> — full WCAG 2.1 AA audit</li>
+          <li><code>/motion</code> — detailed animation system</li>
+          <li><code>/figma</code> — generate Figma-ready tokens</li>
+        </ul>
       </div>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">7</span> design systems</div>
-      <div class="stat-chip"><span class="chip-val">98%</span> token savings</div>
-      <div class="stat-chip"><span class="chip-val">8</span> slash commands</div>
-      <div class="stat-chip"><span class="chip-val">Free</span> MIT</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">7</strong> design systems</span>
+      <span class="tag"><strong style="color:var(--ink)">98%</strong> token savings</span>
+      <span class="tag"><strong style="color:var(--ink)">8</strong> slash commands</span>
+      <span class="tag"><strong style="color:var(--ink)">Free</strong> MIT</span>
     </div>
   </div>
 
   <!-- ── timps-mcp ── -->
-  <div class="eco-full-card fade-in" id="timps-mcp">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(90,211,245,0.15);">🔌</div>
-      <div class="eco-full-title">
-        <h2>timps-mcp <span class="eco-badge badge-mcp" style="font-size: 0.75rem; vertical-align: middle;">MCP Server</span></h2>
-        <p>Give Claude Code and Cursor the persistent memory they were born without</p>
+  <div class="card fade-in" id="timps-mcp" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🔌</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">timps-mcp <span class="tag" style="font-size:10.5px">MCP Server</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">Give Claude Code and Cursor the persistent memory they were born without</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="eco-link">⭐ GitHub</a>
-        <a href="https://www.npmjs.com/package/timps-mcp" target="_blank" class="eco-link">📦 npm</a>
-        <a href="docs.html#mcp-install" class="eco-link">📖 Setup</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
+        <a href="https://www.npmjs.com/package/timps-mcp" target="_blank" rel="noopener" class="btn btn-outline btn-sm">npm</a>
+        <a href="docs.html#mcp" class="btn btn-outline btn-sm">Setup</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>timps-mcp is a Model Context Protocol server that adds TIMPS's persistent memory system to any MCP-compatible tool. Install it once and Claude Code, Cursor, Windsurf, and GitHub Copilot all get long-term project memory.</p>
-      <p>The 20 tools range from basic memory operations (store, recall, list) to advanced intelligence tools like the <strong>bug prophet</strong>, <strong>contradiction detector</strong>, and <strong>burnout seismograph</strong>.</p>
+    <p>timps-mcp is a Model Context Protocol server that adds TIMPS's persistent memory system to any MCP-compatible tool. Install it once and Claude Code, Cursor, Windsurf, and GitHub Copilot all get long-term project memory.</p>
+    <p>The 20 tools range from basic memory operations (store, recall, list) to advanced intelligence tools like the <strong>bug prophet</strong>, <strong>contradiction detector</strong>, and <strong>burnout seismograph</strong>.</p>
+    <div class="code-block" style="margin-top:20px">
+      <div class="copy-row"><button class="copy-btn" data-copy="npm install -g timps-mcp">Copy</button></div>
+      <pre>npm install -g timps-mcp
 
-      <div class="code-block">npm install -g timps-mcp
-
-# Claude Code (add to claude_desktop_config.json)
+<span class="cm"># Claude Code (add to claude_desktop_config.json)</span>
 {
-  "mcpServers": {
-    "timps": { "command": "timps-mcp" }
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"timps"</span>: { <span class="str">"command"</span>: <span class="str">"timps-mcp"</span> }
   }
 }
 
-# Cursor: Settings → MCP → Add → Command: timps-mcp</div>
+<span class="cm"># Cursor: Settings → MCP → Add → Command: timps-mcp</span></pre>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">20</span> MCP tools</div>
-      <div class="stat-chip"><span class="chip-val">3</span> editors supported</div>
-      <div class="stat-chip"><span class="chip-val">30 sec</span> setup</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">20</strong> MCP tools</span>
+      <span class="tag"><strong style="color:var(--ink)">3</strong> editors supported</span>
+      <span class="tag"><strong style="color:var(--ink)">30 sec</strong> setup</span>
     </div>
   </div>
 
   <!-- ── timps-vscode ── -->
-  <div class="eco-full-card fade-in" id="timps-vscode">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(0,120,255,0.15);">🧩</div>
-      <div class="eco-full-title">
-        <h2>timps-vscode <span class="eco-badge badge-vscode" style="font-size: 0.75rem; vertical-align: middle;">VS Code</span></h2>
-        <p>TIMPS as a native VS Code extension with chat panel and memory explorer</p>
+  <div class="card fade-in" id="timps-vscode" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🧩</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">timps-vscode <span class="tag" style="font-size:10.5px">VS Code</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">TIMPS as a native VS Code extension with chat panel and memory explorer</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent" target="_blank" class="eco-link">🛒 Marketplace</a>
-        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="eco-link">⭐ GitHub</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://marketplace.visualstudio.com/items?itemName=TIMPs.timps-ai-coding-agent" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Marketplace</a>
+        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>The TIMPS VS Code extension brings the full agent experience inside your editor. Chat with TIMPS in the sidebar without leaving VS Code, browse what TIMPS remembers about your project in the Memory Explorer, and trigger one-shot tasks with keyboard shortcuts.</p>
+    <p>The TIMPS VS Code extension brings the full agent experience inside your editor. Chat with TIMPS in the sidebar without leaving VS Code, browse what TIMPS remembers about your project in the Memory Explorer, and trigger one-shot tasks with keyboard shortcuts.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>Extension features</h4>
-          <ul>
-            <li>Chat panel with streaming output</li>
-            <li>Memory Explorer sidebar</li>
-            <li>Inline code suggestions</li>
-            <li>Keyboard shortcut for quick tasks</li>
-            <li>Provider switcher in status bar</li>
-            <li>Works with same memory as CLI</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Install</h4>
-          <div class="code-block" style="font-size: 0.78rem; margin-top: 0;">
-# VS Code Marketplace:
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Extension features</div>
+        <ul class="docs-content-mini">
+          <li>Chat panel with streaming output</li>
+          <li>Memory Explorer sidebar</li>
+          <li>Inline code suggestions</li>
+          <li>Keyboard shortcut for quick tasks</li>
+          <li>Provider switcher in status bar</li>
+          <li>Works with same memory as CLI</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">Install</div>
+        <div class="code-block" style="margin:0">
+          <div class="copy-row"><button class="copy-btn" data-copy="ext install TIMPs.timps-ai-coding-agent">Copy</button></div>
+          <pre><span class="cm"># VS Code Marketplace:
 # Search "TIMPS AI Coding Agent"
-# Publisher: TIMPs
+# Publisher: TIMPs</span>
 
-# Or command line:
-ext install TIMPs.timps-ai-coding-agent</div>
+<span class="cm"># Or command line:</span>
+ext install TIMPs.timps-ai-coding-agent</pre>
         </div>
       </div>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">v1.2.0</span></div>
-      <div class="stat-chip">Publisher: <span class="chip-val">TIMPs</span></div>
-      <div class="stat-chip">VS Code <span class="chip-val">1.85+</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">v1.2.0</strong></span>
+      <span class="tag">Publisher: <strong style="color:var(--ink)">TIMPs</strong></span>
+      <span class="tag">VS Code <strong style="color:var(--ink)">1.85+</strong></span>
     </div>
   </div>
 
   <!-- ── packages/server ── -->
-  <div class="eco-full-card fade-in" id="packages/server">
-    <div class="eco-full-header">
-      <div class="eco-full-icon" style="background: rgba(124,106,247,0.15);">🌐</div>
-      <div class="eco-full-title">
-        <h2>packages/server <span class="eco-badge badge-cli" style="font-size: 0.75rem; vertical-align: middle;">Server</span></h2>
-        <p>Full REST API server and web dashboard for building custom AI pipelines</p>
+  <div class="card fade-in" id="packages-server" style="margin-bottom:20px">
+    <div style="display:flex;align-items:start;gap:20px;flex-wrap:wrap;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="connector-icon" style="width:48px;height:48px;font-size:22px">🌐</div>
+        <div>
+          <h3 style="font-family:var(--serif);font-size:24px;font-weight:500">packages/server <span class="tag" style="font-size:10.5px">Server</span></h3>
+          <p style="font-size:14px;color:var(--ink-3)">Full REST API server and web dashboard for building custom AI pipelines</p>
+        </div>
       </div>
-      <div class="eco-links">
-        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="eco-link">⭐ GitHub</a>
-        <a href="docs.html#packages/server" class="eco-link">📖 Docs</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline btn-sm">GitHub</a>
+        <a href="docs.html" class="btn btn-outline btn-sm">Docs</a>
       </div>
     </div>
-    <div class="eco-full-body">
-      <p>packages/server is the server component of the TIMPS ecosystem. It exposes the agent loop, memory system, and intelligence tools as a REST API, making it easy to build custom AI-powered applications or host TIMPS as a managed service.</p>
+    <p>packages/server is the server component of the TIMPS ecosystem. It exposes the agent loop, memory system, and intelligence tools as a REST API, making it easy to build custom AI-powered applications or host TIMPS as a managed service.</p>
 
-      <div class="eco-columns">
-        <div>
-          <h4>What's included</h4>
-          <ul>
-            <li>Express REST API with 25 intelligence tools</li>
-            <li>Web dashboard at /dashboard</li>
-            <li>Embedding-based long-term memory</li>
-            <li>Multi-provider support (same as CLI)</li>
-            <li>Docker-ready with multi-arch builds</li>
-            <li>Vercel deployment config included</li>
-          </ul>
-        </div>
-        <div>
-          <h4>REST API endpoints</h4>
-          <ul>
-            <li>POST /api/agent/run</li>
-            <li>GET /api/memory</li>
-            <li>POST /api/memory/save</li>
-            <li>GET /api/tools</li>
-            <li>POST /api/skills/install</li>
-            <li>GET /api/episodes</li>
-          </ul>
-        </div>
+    <div class="grid grid-2" style="margin-top:20px">
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">What's included</div>
+        <ul class="docs-content-mini">
+          <li>Express REST API with 25 intelligence tools</li>
+          <li>Web dashboard at /dashboard</li>
+          <li>Embedding-based long-term memory</li>
+          <li>Multi-provider support (same as CLI)</li>
+          <li>Docker-ready with multi-arch builds</li>
+          <li>Vercel deployment config included</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sidebar-label" style="margin-bottom:10px">REST API endpoints</div>
+        <ul class="docs-content-mini">
+          <li><code>POST /api/agent/run</code></li>
+          <li><code>GET /api/memory</code></li>
+          <li><code>POST /api/memory/save</code></li>
+          <li><code>GET /api/tools</code></li>
+          <li><code>POST /api/skills/install</code></li>
+          <li><code>GET /api/episodes</code></li>
+        </ul>
       </div>
     </div>
-    <div class="eco-full-footer">
-      <div class="stat-chip"><span class="chip-val">17</span> intelligence tools</div>
-      <div class="stat-chip"><span class="chip-val">Express</span> + TypeScript</div>
-      <div class="stat-chip"><span class="chip-val">Docker</span> ready</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px">
+      <span class="tag"><strong style="color:var(--ink)">25</strong> intelligence tools</span>
+      <span class="tag"><strong style="color:var(--ink)">Express</strong> + TypeScript</span>
+      <span class="tag"><strong style="color:var(--ink)">Docker</strong> ready</span>
     </div>
   </div>
 
 </div>
 
-<!-- Footer -->
+<!-- ── CTA ─────────────────────────────────────────────── -->
+<section class="cta">
+  <h2>Every tool shares the same brain.</h2>
+  <p>Free. Open source. Runs locally. No account required.</p>
+  <div class="hero-actions">
+    <a href="docs.html#install" class="btn btn-primary btn-lg">Start building</a>
+    <a href="gmail.html" class="btn btn-outline btn-lg">Connect Gmail</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────── -->
 <footer>
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <a href="index.html" class="nav-logo" style="margin-bottom: 12px; display: inline-flex;">
-          <div class="logo-icon">T</div>
-          TIMPS
-        </a>
-        <p>The open-source AI coding agent that remembers.<br>Free with Ollama. No lock-in. MIT licensed.</p>
-      </div>
-      <div class="footer-col">
-        <h4>Ecosystem</h4>
-        <ul>
-          <li><a href="#timps-code">timps-code</a></li>
-          <li><a href="#timps-coder">TIMPS-Coder</a></li>
-          <li><a href="#skill-galaxy">SkillGalaxy</a></li>
-          <li><a href="#timps-swarm">TIMPS Swarm</a></li>
-          <li><a href="#design-skill">Design Skill</a></li>
-          <li><a href="#timps-mcp">timps-mcp</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Resources</h4>
-        <ul>
-          <li><a href="docs.html">Documentation</a></li>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="https://skill-galaxy.vercel.app" target="_blank">SkillGalaxy</a></li>
-          <li><a href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank">Changelog</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Community</h4>
-        <ul>
-          <li><a href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank">Issues</a></li>
-          <li><a href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank">Discussions</a></li>
-          <li><a href="https://github.com/Sandeeprdy1729" target="_blank">GitHub Profile</a></li>
-        </ul>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand-name">TIMPS</div>
+      <div class="brand-msg">Think. Right. — persistent memory for the people and agents who do the thinking.</div>
+      <div class="footer-social">
+        <a href="https://github.com/timpss" target="_blank" rel="noopener" title="GitHub">⌥</a>
+        <a href="https://www.youtube.com/@Timps-090" target="_blank" rel="noopener" title="YouTube">▶</a>
+        <a href="https://www.linkedin.com/company/timps/" target="_blank" rel="noopener" title="LinkedIn">in</a>
+        <a href="https://x.com/TIMPs_ai" target="_blank" rel="noopener" title="X / Twitter">✕</a>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p>© 2026 TIMPS. MIT License.</p>
-      <p style="color: var(--text-dim); font-size: 0.78rem;">Built by Sandeep Reddy</p>
+
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a class="footer-col-link" href="index.html">TIMPS Memory</a>
+        <a class="footer-col-link" href="gmail.html">Gmail Connector</a>
+        <a class="footer-col-link" href="docs.html">Documentation</a>
+        <a class="footer-col-link" href="ecosystem.html">Ecosystem</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Website</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/news.html" target="_blank" rel="noopener">News</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/research.html" target="_blank" rel="noopener">Research</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/timps-memory.html" target="_blank" rel="noopener">TIMPS Memory lite</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Resources</div>
+        <a class="footer-col-link" href="docs.html#install">Installation</a>
+        <a class="footer-col-link" href="docs.html#mcp">MCP setup</a>
+        <a class="footer-col-link" href="docs.html#slash-commands">Slash commands</a>
+        <a class="footer-col-link" href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open source</div>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">GitHub</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank" rel="noopener">Issues</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 TIMPS · MIT License · A product of TIMPS</div>
+    <div class="footer-legal">
+      <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Terms</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Usage policy</a>
     </div>
   </div>
 </footer>
