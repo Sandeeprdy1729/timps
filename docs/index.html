@@ -32,14 +32,13 @@
       TIMPS
     </a>
     <ul class="nav-links">
-      <li><a href="memory.html">Memory</a></li>
       <li><a href="gmail.html">Connectors</a></li>
       <li><a href="docs.html">Docs</a></li>
       <li><a href="ecosystem.html">Ecosystem</a></li>
     </ul>
     <div class="nav-cta">
       <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
-      <a href="memory.html" class="btn btn-primary btn-sm">Live Memory</a>
+      <a href="gmail.html" class="btn btn-primary btn-sm">Get started</a>
     </div>
   </div>
 </nav>
@@ -55,8 +54,8 @@
         your machine, in your control.
       </p>
       <div class="hero-actions">
-        <a href="memory.html" class="btn btn-primary btn-lg">See live memory</a>
-        <a href="gmail.html#connect" class="btn btn-ghost btn-lg">Connect Gmail</a>
+        <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
+        <a href="docs.html" class="btn btn-ghost btn-lg">Read the docs</a>
       </div>
       <div class="hero-lang">
         <span class="lang-tag">distills email → facts</span>
@@ -86,51 +85,25 @@
   </div>
 </section>
 
-<section class="section" id="live-memory">
-  <div class="container">
-    <div class="section-header">
-      <span class="section-label">Live memory</span>
-      <h2>Right now, TIMPS remembers.</h2>
-      <p>This is the actual store the running connector produces. Rendered live from the published memory data.</p>
-    </div>
-    <div class="memory-stats" id="live-stats">
-      <div class="mem-stat"><div class="mem-stat-value">&middot;</div><div class="mem-stat-label">memories</div></div>
-      <div class="mem-stat"><div class="mem-stat-value">&middot;</div><div class="mem-stat-label">facts</div></div>
-      <div class="mem-stat"><div class="mem-stat-value">&middot;</div><div class="mem-stat-label">emails synced</div></div>
-      <div class="mem-stat"><div class="mem-stat-value">&middot;</div><div class="mem-stat-label">last sync</div></div>
-    </div>
-    <div class="mem-list" id="live-recent"></div>
-    <p style="font-size:0.82rem; color: var(--ink-3); margin-top: 22px;">
-      <a href="memory.html" style="text-decoration:underline; text-underline-offset:3px;">Open the full memory dashboard &rarr;</a>
-    </p>
-  </div>
-</section>
-
 <section class="section" id="connect" style="background: var(--paper-2);">
   <div class="container">
     <div class="section-header">
       <span class="section-label">Connectors</span>
       <h2>Connect a connector.</h2>
-      <p>Each connector hands off to the TIMPS running on this machine — real OAuth, tokens stay local. Status below is live.</p>
+      <p>Each connector hands off to the TIMPS running on this machine — real OAuth, tokens stay local.</p>
     </div>
-    <div class="connectors-grid" id="connectors">
-      <div class="connector" data-connector="gmail">
+    <div class="connectors-grid">
+      <div class="connector">
         <div class="connector-top">
           <div class="connector-name"><span class="connector-icon">@</span>Gmail</div>
-          <span class="connector-status"><span class="conn-dot off" id="gmail-dot"></span><span id="gmail-state">checking&hellip;</span></span>
+          <span class="connector-status"><span class="conn-dot off"></span>available</span>
         </div>
         <div class="connector-body">
           Read-only. Distills every synced email into knowledge facts stored in
           TIMPS memory. Never sends, drafts, or deletes.
         </div>
-        <div class="connector-stats">
-          <div><span id="gmail-memories">—</span><span>memories</span></div>
-          <div><span id="gmail-facts">—</span><span>facts</span></div>
-          <div><span id="gmail-synced">—</span><span>emails</span></div>
-        </div>
         <div class="connector-actions">
-          <a href="gmail.html#connect" class="btn btn-primary btn-sm" data-connect="gmail">Connect Gmail</a>
-          <a href="gmail.html" class="btn btn-ghost btn-sm">Docs</a>
+          <a href="gmail.html" class="btn btn-primary btn-sm">Docs &amp; setup</a>
         </div>
       </div>
       <div class="connector connector-muted">
@@ -171,7 +144,7 @@
       <div class="step">
         <div class="step-num">03 / REMEMBER</div>
         <h3>Recall</h3>
-        <p>Facts answer <code>timps recall</code>, appear in the dashboard, and feed the live memory page.</p>
+        <p>Facts answer <code>timps recall</code> and appear in the desktop app.</p>
       </div>
     </div>
     <div class="callout callout-info" style="margin-top:56px;">
@@ -186,15 +159,14 @@
   <div class="footer-inner">
     <small>TIMPS &mdash; persistent memory for AI coding agents.</small>
     <div class="footer-links">
-      <a href="memory.html">Memory</a>
       <a href="gmail.html">Connectors</a>
       <a href="docs.html">Docs</a>
+      <a href="ecosystem.html">Ecosystem</a>
       <a href="https://github.com/Sandeeprdy1729/timps" target="_blank">GitHub</a>
     </div>
   </div>
 </footer>
 
 <script src="js/main.js"></script>
-<script src="js/connect.js"></script>
 </body>
 </html>
