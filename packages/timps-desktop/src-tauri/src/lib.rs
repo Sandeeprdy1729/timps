@@ -1,4 +1,5 @@
 mod commands;
+mod gmail;
 mod nexus_bridge;
 
 #[cfg(target_os = "macos")]
@@ -21,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_deep_link::init())
         // ── Window event handling ───────────────────────────────────────
         // "main" → hide to tray on close.
         // "chat-popup" → hide on close or on blur (dropdown behavior).
@@ -42,6 +44,9 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // ── Connector states (Gmail OAuth flow) ────────────────
+            app.manage(gmail::GmailOAuthState::default());
+
             // ── Create the chat-popup window (hidden, top-right) ────────
             use tauri::WebviewWindowBuilder;
             use tauri::WebviewUrl;
@@ -290,6 +295,19 @@ pub fn run() {
             nexus_bridge::load_unified_graph,
             // Project path auto-detection
             commands::detect_project_path,
+            // ── Gmail connector ──
+            gmail::gmail_status,
+            gmail::gmail_import_credentials,
+            gmail::gmail_oauth_start,
+            gmail::gmail_oauth_finish,
+            gmail::gmail_oauth_cancel,
+            gmail::gmail_disconnect,
+            gmail::gmail_sync,
+            gmail::gmail_recent,
+            gmail::gmail_query,
+            gmail::gmail_set_autosync,
+            gmail::gmail_autosync_status,
+            gmail::gmail_reset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

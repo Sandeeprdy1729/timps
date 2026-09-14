@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { ChatView } from './components/ChatView';
+import { DashboardView } from './components/DashboardView';
 import { SettingsView } from './components/SettingsView';
 import { NexusView } from './components/NexusView';
 import { Sidebar } from './components/Sidebar';
@@ -10,21 +12,38 @@ import { EpisodicView } from './components/EpisodicView';
 import { StatsView } from './components/StatsView';
 import { SearchView } from './components/SearchView';
 import { LensView } from './components/LensView';
+import { ConnectorsView } from './components/ConnectorsView';
 import { IntelligenceDashboard } from './components/IntelligenceDashboard';
 import { CommandCenter } from './components/CommandCenter';
 import { useTheme } from './theme/ThemeProvider';
 import { api, MemoryStats, SemanticEntry, EpisodicEntry } from './api';
+import { isTauri } from './utils/index';
 import { PluginLifecycleManager } from './plugins/lifecycle';
 import { registerBuiltinPlugins } from './plugins/builtins';
 import './App.css';
 
-type View = 'chat' | 'command' | 'lens' | 'semantic' | 'episodic' | 'stats' | 'search' | 'nexus' | 'intelligence' | 'settings';
+type View = 'dashboard' | 'chat' | 'command' | 'lens' | 'semantic' | 'episodic' | 'stats' | 'search' | 'nexus' | 'intelligence' | 'connectors' | 'settings';
+
+/** Parse `timps://connect/<connector>` → view + connector. */
+function parseDeepLink(raw: string): { view: View; connector: string | null } | null {
+  try {
+    const url = new URL(raw);
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'connect' && parts[1]) {
+      return { view: 'connectors', connector: parts[1].toLowerCase() };
+    }
+  } catch {
+    /* not a parseable URL */
+  }
+  return null;
+}
 
 export default function App() {
   const [projectPath, setProjectPath] = useState<string>(() => {
     return localStorage.getItem('timps:lastProject') ?? '';
   });
-  const [view, setView] = useState<View>('chat');
+  const [view, setView] = useState<View>('dashboard');
+  const [focusConnector, setFocusConnector] = useState<string | null>(null);
   const [stats, setStats] = useState<MemoryStats | null>(null);
   const [semanticEntries, setSemanticEntries] = useState<SemanticEntry[]>([]);
   const [episodicEntries, setEpisodicEntries] = useState<EpisodicEntry[]>([]);
@@ -52,6 +71,35 @@ export default function App() {
         }
       });
     }
+  }, []);
+
+  // Website handoff — `timps://connect/<connector>` deep links open the app
+  // on the Connectors view and auto-kick the OAuth flow for that connector.
+  useEffect(() => {
+    if (!isTauri()) return;
+    let mounted = true;
+    const handle = (urls: string[]) => {
+      if (!mounted || !urls?.length) return;
+      const parsed = parseDeepLink(urls[0]);
+      if (!parsed) return;
+      setView(parsed.view);
+      setFocusConnector(parsed.connector);
+      // Bring the (possibly tray-hidden) main window to the front.
+      import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+        const win = getCurrentWindow();
+        win.show().catch(() => {});
+        win.setFocus().catch(() => {});
+      }).catch(() => {});
+    };
+    onOpenUrl(handle).catch(() => {});
+    getCurrent()
+      .then((current: string[] | null) => {
+        if (current?.length) handle(current);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleBrowse = async () => {
@@ -90,6 +138,7 @@ export default function App() {
   }, []);
 
   const viewLabel =
+    view === 'dashboard' ? 'Overview' :
     view === 'chat' ? 'Chat' :
     view === 'command' ? 'Commands' :
     view === 'lens' ? 'Lens' :
@@ -99,6 +148,7 @@ export default function App() {
     view === 'search' ? 'Search' :
     view === 'nexus' ? 'Nexus' :
     view === 'intelligence' ? 'Intelligence' :
+    view === 'connectors' ? 'Connectors' :
     'Settings';
 
   return (
@@ -169,6 +219,16 @@ export default function App() {
           stats={stats}
         />
         <main className="main-content">
+          {view === 'dashboard' && (
+            <DashboardView
+              projectPath={projectPath}
+              stats={stats}
+              semanticEntries={semanticEntries}
+              episodicEntries={episodicEntries}
+              loading={entriesLoading}
+              onNavigate={(target) => setView(target as View)}
+            />
+          )}
           {view === 'chat' && <ChatView projectPath={projectPath} />}
           {view === 'command' && <CommandCenter projectPath={projectPath} stats={stats} onRunPrompt={handleRunPrompt} />}
           {view === 'lens' && <LensView />}
@@ -178,6 +238,12 @@ export default function App() {
           {view === 'search' && <SearchView projectPath={projectPath} semanticEntries={semanticEntries} />}
           {view === 'nexus' && <NexusView projectPath={projectPath} />}
           {view === 'intelligence' && <IntelligenceDashboard projectPath={projectPath} />}
+          {view === 'connectors' && (
+            <ConnectorsView
+              focusConnector={focusConnector}
+              onFocusHandled={() => setFocusConnector(null)}
+            />
+          )}
           {view === 'settings' && (
             <SettingsView
               projectPath={projectPath}

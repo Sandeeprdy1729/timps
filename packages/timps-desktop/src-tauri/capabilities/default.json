@@ -13,6 +13,7 @@
     "core:window:allow-is-visible",
     "core:window:allow-inner-position",
     "core:event:default",
+    "deep-link:default",
     "shell:allow-open",
     "dialog:default",
     "fs:default",

@@ -46,6 +46,16 @@ function formatTiming(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
+function formatGmailEmails(emails: Array<{ subject: string; from: string; date?: string; facts?: string[] }>, header: string): string {
+  if (emails.length === 0) return `${header}\n(no emails found)`;
+  const lines = emails.map(e => {
+    const head = { subject: `• ${e.subject}`, from: `from ${e.from}` };
+    const factLines = (e.facts ?? []).slice(0, 2).map(f => `    - ${f}`);
+    return [head.subject, head.from, ...factLines].join('\n');
+  });
+  return `${header}\n${lines.join('\n')}`;
+}
+
 function loadConversations(): Conversation[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -184,6 +194,15 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
 
     const assistantId = `msg-${now}-assistant`;
     const mode = query.startsWith('/plan') ? 'plan' as const : 'build' as const;
+
+    // Connector slash-commands (no LLM round-trip)
+    if (query.startsWith('/email')) {
+      setInput('');
+      void emit('timps:chat-message', { role: 'user', content: query });
+      void handleGmailCommand(query, assistantId, now);
+      return;
+    }
+
     setCurrentMode(mode);
     setSending(true);
     setInput('');
@@ -269,6 +288,44 @@ export function ChatView({ projectPath, draftPrompt, onDraftConsumed }: ChatView
       handleSend();
     }
   };
+
+  const handleGmailCommand = useCallback(async (query: string, assistantId: string, now: number) => {
+    const convId = activeId;
+    if (!convId) return;
+    let body = '';
+    try {
+      const tokens = query.split(/\s+/).slice(1);
+      const cmd = tokens[0]?.toLowerCase() ?? 'help';
+      if (cmd === 'recent' || cmd === 'latest' || cmd === 'inbox') {
+        const limit = Math.min(parseInt(tokens[1] ?? '5', 10) || 5, 20);
+        const emails = await api.gmailRecent(limit);
+        body = formatGmailEmails(emails, `Latest ${emails.length} email${emails.length === 1 ? '' : 's'}:`);
+      } else if (cmd === 'search' || cmd === 'find') {
+        const q = tokens.slice(1).join(' ').trim();
+        body = q
+          ? formatGmailEmails(await api.gmailQuery(q, 10), `Emails matching "${q}":`)
+          : 'Usage: /email search <query>';
+      } else if (cmd === 'sync') {
+        const res = await api.gmailSync();
+        body = res.ok ? 'Email sync completed. Facts are now in memory.' : `Email sync failed (exit ${res.exitCode}).`;
+      } else {
+        body = ['/email recent [n] — latest distilled emails',
+                '/email search <query> — search by subject/sender',
+                '/email sync — sync now'].join('\n');
+      }
+    } catch (e) {
+      body = `Email error: ${String(e)}`;
+    }
+    updateConversation(convId, {
+      messages: [
+        ...messages,
+        { id: `msg-${now}`, role: 'user', content: query, timestamp: now },
+        { id: assistantId, role: 'assistant', content: body, timestamp: now },
+      ],
+    });
+    setSending(false);
+    void emit('timps:chat-message', { role: 'assistant', content: body });
+  }, [activeId, messages, updateConversation]);
 
   const isEmpty = messages.length === 0;
 

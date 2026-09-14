@@ -11,6 +11,7 @@ import * as os from 'os';
 import { addSwarmCommands } from '../swarm/cli.js';
 import { addSetupCommand } from '../commands/setup.js';
 import { addRecallCommand } from '../commands/recall.js';
+import { addGmailCommands } from '../commands/gmail.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, '..', '..');
@@ -451,5 +452,6 @@ program
 addSwarmCommands();
 addSetupCommand(program);
 addRecallCommand(program);
+addGmailCommands(program);
 
 program.parse();

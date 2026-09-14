@@ -22,7 +22,19 @@ export type InvokeCmd =
   | 'set_provider'
   | 'get_provider_config'
   | 'set_provider_config'
-  | 'install_update';
+  | 'install_update'
+  | 'gmail_status'
+  | 'gmail_import_credentials'
+  | 'gmail_oauth_start'
+  | 'gmail_oauth_finish'
+  | 'gmail_oauth_cancel'
+  | 'gmail_disconnect'
+  | 'gmail_sync'
+  | 'gmail_recent'
+  | 'gmail_query'
+  | 'gmail_set_autosync'
+  | 'gmail_autosync_status'
+  | 'gmail_reset';
 
 interface InvokeOptions {
   timeout?: number;
@@ -102,4 +114,16 @@ export const ipcMethods = {
   saveProviderConfig: (cfg: { provider: string; model: string; baseUrl: string; apiKey: string }) =>
     ipc.invoke('set_provider_config', { ...cfg }),
   installUpdate: () => ipc.invoke('install_update'),
+  gmailStatus: () => ipc.invoke('gmail_status'),
+  gmailImportCredentials: (filePath: string) => ipc.invoke('gmail_import_credentials', { filePath }),
+  gmailOauthStart: () => ipc.invoke('gmail_oauth_start'),
+  gmailOauthFinish: () => ipc.invoke('gmail_oauth_finish'),
+  gmailOauthCancel: () => ipc.invoke('gmail_oauth_cancel'),
+  gmailDisconnect: () => ipc.invoke('gmail_disconnect'),
+  gmailSync: () => ipc.invoke('gmail_sync'),
+  gmailRecent: (limit: number) => ipc.invoke('gmail_recent', { limit }),
+  gmailQuery: (query: string, limit: number) => ipc.invoke('gmail_query', { query, limit }),
+  gmailSetAutosync: (enabled: boolean) => ipc.invoke('gmail_set_autosync', { enabled }),
+  gmailAutosyncStatus: () => ipc.invoke('gmail_autosync_status'),
+  gmailReset: () => ipc.invoke('gmail_reset'),
 };
