@@ -170,6 +170,32 @@ export interface GmailOAuthStart {
   openedBrowser: boolean;
 }
 
+// ── Connector types (multi-provider; mirror Rust connectors.rs) ────────────
+
+export interface ConnectorEntry {
+  id: string;
+  display: string;
+  connected: boolean;
+  account: string;
+  hasCredentials: boolean;
+  lastRun: string | null;
+  syncedCount: number;
+  scopes: number;
+}
+
+export interface ConnectorConnectStart {
+  authUrl: string;
+  port: number;
+  redirectUri: string;
+  openedBrowser: boolean;
+}
+
+export interface ConnectorSyncResult {
+  ok: boolean;
+  exitCode: number;
+  output: string;
+}
+
 // ── Invoke helper — falls back in non-Tauri context ───────────────────────
 
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
@@ -227,6 +253,24 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     gmail_set_autosync: { enabled: false, message: '(stub)' },
     gmail_autosync_status: { enabled: false },
     gmail_reset: { removed: false, dir: '' },
+    connector_list: [
+      { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+      { id: 'calendar', display: 'Google Calendar', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+      { id: 'drive', display: 'Google Drive', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+      { id: 'github', display: 'GitHub', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 3 },
+      { id: 'notion', display: 'Notion', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 0 },
+      { id: 'slack', display: 'Slack', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 6 },
+      { id: 'linear', display: 'Linear', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+      { id: 'ms365', display: 'Microsoft 365', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 5 },
+    ],
+    connector_status: { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+    connector_import_credentials: { clientId: 'stub', saved: '' },
+    connector_connect: { authUrl: '', port: 0, redirectUri: '', openedBrowser: false },
+    connector_oauth_finish: { account: 'dev@example.com', connected: true },
+    connector_oauth_cancel: undefined,
+    connector_disconnect: { removed: false },
+    connector_reset: { removed: false, dir: '' },
+    connector_sync: { ok: false, exitCode: -1, output: '(stub) sync not available in dev mode' },
   };
   return Promise.resolve(stubs[cmd] as T);
 }
@@ -469,4 +513,33 @@ export const api = {
 
   gmailReset: () =>
     invoke<{ removed: boolean; dir: string }>('gmail_reset'),
+
+  // ── Connectors (multi-provider) ─────────────────────────────────────────
+
+  connectorList: () =>
+    invoke<ConnectorEntry[]>('connector_list'),
+
+  connectorStatus: (id: string) =>
+    invoke<ConnectorEntry>('connector_status', { id }),
+
+  connectorImportCredentials: (id: string, filePath: string) =>
+    invoke<{ clientId: string; saved: string }>('connector_import_credentials', { id, filePath }),
+
+  connectorConnect: (id: string) =>
+    invoke<ConnectorConnectStart>('connector_connect', { id }),
+
+  connectorOauthFinish: (id: string) =>
+    invoke<{ account: string; connected: boolean }>('connector_oauth_finish', { id }),
+
+  connectorOauthCancel: (id: string) =>
+    invoke<void>('connector_oauth_cancel', { id }),
+
+  connectorDisconnect: (id: string) =>
+    invoke<{ removed: boolean }>('connector_disconnect', { id }),
+
+  connectorReset: (id: string) =>
+    invoke<{ removed: boolean; dir: string }>('connector_reset', { id }),
+
+  connectorSync: (id: string) =>
+    invoke<ConnectorSyncResult>('connector_sync', { id }),
 };

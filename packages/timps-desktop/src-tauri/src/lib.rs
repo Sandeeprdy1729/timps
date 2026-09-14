@@ -1,4 +1,5 @@
 mod commands;
+mod connectors;
 mod gmail;
 mod nexus_bridge;
 
@@ -46,6 +47,7 @@ pub fn run() {
         .setup(|app| {
             // ── Connector states (Gmail OAuth flow) ────────────────
             app.manage(gmail::GmailOAuthState::default());
+            app.manage(connectors::ConnectorState::default());
 
             // ── Create the chat-popup window (hidden, top-right) ────────
             use tauri::WebviewWindowBuilder;
@@ -308,6 +310,16 @@ pub fn run() {
             gmail::gmail_set_autosync,
             gmail::gmail_autosync_status,
             gmail::gmail_reset,
+            // ── Connectors (multi-provider) ──
+            connectors::connector_list,
+            connectors::connector_status,
+            connectors::connector_import_credentials,
+            connectors::connector_connect,
+            connectors::connector_oauth_finish,
+            connectors::connector_oauth_cancel,
+            connectors::connector_disconnect,
+            connectors::connector_reset,
+            connectors::connector_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
