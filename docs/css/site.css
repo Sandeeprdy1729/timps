@@ -391,7 +391,7 @@ table.tbl{width:100%;border-collapse:collapse;min-width:560px}
 }
 .connector-logo{
   width:30px;height:30px;border-radius:8px;
-  background:var(--paper);border:1px solid var(--border-faint);
+  background:var(--white);border:1px solid var(--border-faint);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .connector-logo svg{width:18px;height:18px;fill:var(--ink)}
@@ -400,6 +400,32 @@ table.tbl{width:100%;border-collapse:collapse;min-width:560px}
 .conn-dot.off{background:var(--faint)}
 .connector-body{font-size:14.5px;color:var(--ink-2);line-height:1.55;flex:1}
 .connector-actions{margin-top:4px}
+
+/* ── Login card (claude.com style) ─────────────────────── */
+.login-card{display:flex;justify-content:center;padding:48px 24px 8px}
+.login-inner{
+  width:100%;max-width:420px;background:var(--white);
+  border:1px solid var(--border);border-radius:14px;
+  padding:40px 36px;text-align:center;
+  box-shadow:0 8px 32px rgba(20,20,19,0.05);
+}
+.login-title{font-family:var(--serif);font-size:26px;font-weight:500;letter-spacing:-0.01em}
+.login-sub{font-size:14px;color:var(--ink-2);line-height:1.55;margin:10px auto 24px;max-width:320px}
+.google-btn-wrap{display:flex;justify-content:center}
+.google-btn-wrap iframe, .google-btn-wrap>div{max-width:100%}
+.login-note{
+  font-family:var(--mono);font-size:12px;color:var(--red);
+  background:rgba(180,67,46,0.08);border:1px solid rgba(180,67,46,0.25);
+  border-radius:8px;padding:10px 12px;margin-top:18px;text-align:left;line-height:1.5;
+}
+.signed-in{display:flex;align-items:center;gap:12px;text-align:left;margin-top:4px}
+.si-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+.si-info{flex:1;min-width:0}
+.si-name{font-weight:600;font-size:15px}
+.si-email{font-size:13px;color:var(--ink-3)}
+.si-ok{margin-top:2px;font-family:var(--mono);font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:0.04em}
+.login-legal{margin-top:22px;font-size:11.5px;color:var(--faint);line-height:1.5}
+.si-avatar[hidden]{display:none}
 
 /* ── Quote ───────────────────────────────────────────────── */
 .quote{padding:72px var(--page-margin);text-align:center;background:var(--ink);color:var(--white)}
