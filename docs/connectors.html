@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TIMPS Connectors — connect your accounts to TIMPS Memory. Gmail is live; Slack, Notion, Drive, Outlook and Discord are coming soon.">
+  <title>Connectors — TIMPS Memory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/timps-fonts.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <svg class="nav-robot" viewBox="0 0 16 18" xmlns="http://www.w3.org/2000/svg" style="image-rendering:pixelated">
+        <rect x="3" y="5" width="10" height="7" rx="1" fill="#141413"/>
+        <rect x="4" y="6" width="8" height="5" fill="#d97757"/>
+        <rect x="5" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="9" y="7" width="2" height="2" fill="#ffffff"/>
+        <rect x="5" y="10" width="6" height="1" fill="#ffffff"/>
+        <rect x="3" y="12" width="10" height="5" rx="1" fill="#b8b6ab"/>
+        <rect x="4" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="9" y="17" width="3" height="1" fill="#b8b6ab"/>
+        <rect x="7" y="3" width="2" height="2" fill="#5e5d59"/>
+      </svg>
+      TIMPS&nbsp;Memory
+    </a>
+
+    <ul class="nav-links">
+      <li class="nav-item">
+        <a class="nav-link" href="index.html">Product
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">Product</div>
+          <a href="index.html">TIMPS Memory</a>
+          <a href="connectors.html">Connectors</a>
+          <a href="gmail.html">Gmail Connector</a>
+          <a href="docs.html">Documentation</a>
+        </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" href="connectors.html">Connectors</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="docs.html">Docs</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <div class="nav-drop">
+          <div class="dd-label">A product of TIMPS</div>
+          <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">timps-website.vercel.app</a>
+        </div>
+      </li>
+    </ul>
+
+    <div class="nav-cta">
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">GitHub</a>
+      <a href="gmail.html" class="btn btn-primary btn-sm">Get started</a>
+    </div>
+
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Product</a>
+  <a href="connectors.html">Connectors</a>
+  <a href="gmail.html">Gmail Connector</a>
+  <a href="docs.html">Docs</a>
+  <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Company</a>
+  <div class="mobile-cta">
+    <a href="gmail.html" class="btn btn-primary">Get started</a>
+    <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener" class="btn btn-outline">GitHub</a>
+  </div>
+</div>
+
+<!-- ── HERO ────────────────────────────────────────────── -->
+<header class="hero">
+  <span class="hero-badge"><span class="dot"></span>Connectors · A product of TIMPS</span>
+  <h1>Turn your accounts<br>into <em>memory.</em></h1>
+  <p class="hero-sub">
+    Connectors are how your world finds its way into TIMPS Memory. Every email, message,
+    and document you connect becomes a distilled fact your agents recall forever —
+    on your machine, in your control.
+  </p>
+  <div class="hero-actions">
+    <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
+    <a href="docs.html" class="btn btn-outline btn-lg">Read the docs</a>
+  </div>
+</header>
+
+<!-- ── CONNECTOR CARDS ─────────────────────────────────── -->
+<div class="section" style="padding-top:48px">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="overline">Available now</span>
+      <h2>One connector shipping.<br>Seven in the works.</h2>
+      <p class="section-lead">Gmail is live today — connect it once and every synced email becomes recallable fact. The rest are on the road.</p>
+    </div>
+
+    <div class="connectors">
+      <div class="connector fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">@</span> Gmail
+          </div>
+          <div class="connector-status"><span class="conn-dot"></span>Available</div>
+        </div>
+        <div class="connector-body">
+          Distills your inbox into knowledge facts — subjects, senders, dates, and the key
+          points worth remembering. Read-only. Syncs on a schedule.
+        </div>
+        <div class="connector-actions">
+          <a href="gmail.html" class="btn btn-primary btn-sm">Connect</a>
+          <a href="gmail.html" class="btn btn-outline btn-sm">Setup guide</a>
+        </div>
+      </div>
+
+      <div class="connector muted fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">#</span> Slack
+          </div>
+          <div class="connector-status"><span class="conn-dot off"></span>Coming soon · Beta</div>
+        </div>
+        <div class="connector-body">
+          Turns channels, decisions, and team threads into shared memory — so your agents
+          never re-ask what the team already agreed on.
+        </div>
+      </div>
+
+      <div class="connector muted fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">N</span> Notion
+          </div>
+          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+        </div>
+        <div class="connector-body">
+          Brings your docs, wikis, and project pages into memory — structure becomes fact,
+          decisions become recallable.
+        </div>
+      </div>
+
+      <div class="connector muted fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">▣</span> Google Drive
+          </div>
+          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+        </div>
+        <div class="connector-body">
+          Indexes your documents and spreadsheets as searchable long-term memory — find the
+          answer, not the file.
+        </div>
+      </div>
+
+      <div class="connector muted fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">✉</span> Outlook
+          </div>
+          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+        </div>
+        <div class="connector-body">
+          The same inbox-to-memory pipeline as Gmail, for Microsoft 365 mailboxes.
+        </div>
+      </div>
+
+      <div class="connector muted fade-in">
+        <div class="connector-top">
+          <div class="connector-name">
+            <span class="connector-icon">◈</span> Discord
+          </div>
+          <div class="connector-status"><span class="conn-dot off"></span>Coming soon</div>
+        </div>
+        <div class="connector-body">
+          Captures conversations from your servers and DMs — decisions and context survive
+          past the scroll.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOW IT WORKS ────────────────────────────────────── -->
+<section class="section alt">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="overline">How it works</span>
+      <h2>Every connector runs the same pipeline.</h2>
+      <p class="section-lead">Connect once, and each connector stays quiet in the background — feeding facts into the same memory your agents already share.</p>
+    </div>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-num">01 · Connect</div>
+        <h3>Authorize locally</h3>
+        <p>One command opens a consent screen in your browser. Tokens land in <code>~/.timps/</code> — nothing leaves your machine.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">02 · Sync &amp; distill</div>
+        <h3>Facts, not firehose</h3>
+        <p>Each sync distills raw content into 1–3 knowledge facts. Raw copies stay local; only distilled facts enter memory.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">03 · Remember</div>
+        <h3>Recall from anywhere</h3>
+        <p>Facts land in semantic memory with source tags — searchable with <code>timps recall</code>, the desktop app, or any MCP client.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRIVACY ─────────────────────────────────────────── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="overline">Privacy by design</span>
+      <h2>Read-only. Local-first. Yours.</h2>
+    </div>
+    <div class="grid grid-4">
+      <div class="card fade-in">
+        <div class="card-icon">🔒</div>
+        <h3>Read-only scopes</h3>
+        <p>Connectors never send, edit, or delete. No write permission is ever requested.</p>
+      </div>
+      <div class="card fade-in">
+        <div class="card-icon">💾</div>
+        <h3>Stored locally</h3>
+        <p>Raw copies and tokens stay in <code>~/.timps/</code> with 600 permissions. Nothing is uploaded.</p>
+      </div>
+      <div class="card fade-in">
+        <div class="card-icon">🧂</div>
+        <h3>Distilled only</h3>
+        <p>Only compact knowledge facts enter memory — never the raw stream.</p>
+      </div>
+      <div class="card fade-in">
+        <div class="card-icon">🔌</div>
+        <h3>Disconnect anytime</h3>
+        <p>One command or button revokes access and deletes stored credentials.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ─────────────────────────────────────────────── -->
+<section class="cta">
+  <h2>Start with the one that's live.</h2>
+  <p>Gmail is ready. Free. Open source. Runs locally.</p>
+  <div class="hero-actions">
+    <a href="gmail.html" class="btn btn-primary btn-lg">Connect Gmail</a>
+    <a href="docs.html#install" class="btn btn-outline btn-lg">Install TIMPS</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────────────────────── -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand-name">TIMPS</div>
+      <div class="brand-msg">Think. Right. — persistent memory for the people and agents who do the thinking.</div>
+      <div class="footer-social">
+        <a href="https://github.com/timpss" target="_blank" rel="noopener" title="GitHub">⌥</a>
+        <a href="https://www.youtube.com/@Timps-090" target="_blank" rel="noopener" title="YouTube">▶</a>
+        <a href="https://www.linkedin.com/company/timps/" target="_blank" rel="noopener" title="LinkedIn">in</a>
+        <a href="https://x.com/TIMPs_ai" target="_blank" rel="noopener" title="X / Twitter">✕</a>
+      </div>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-title">Product</div>
+        <a class="footer-col-link" href="index.html">TIMPS Memory</a>
+        <a class="footer-col-link" href="connectors.html">Connectors</a>
+        <a class="footer-col-link" href="gmail.html">Gmail Connector</a>
+        <a class="footer-col-link" href="docs.html">Documentation</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Company</div>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/" target="_blank" rel="noopener">TIMPS Website</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/news.html" target="_blank" rel="noopener">News</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/research.html" target="_blank" rel="noopener">Research</a>
+        <a class="footer-col-link" href="https://timps-website.vercel.app/timps-memory.html" target="_blank" rel="noopener">TIMPS Memory lite</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Resources</div>
+        <a class="footer-col-link" href="docs.html#install">Installation</a>
+        <a class="footer-col-link" href="docs.html#mcp">MCP setup</a>
+        <a class="footer-col-link" href="docs.html#slash-commands">Slash commands</a>
+        <a class="footer-col-link" href="https://www.npmjs.com/package/timps-code" target="_blank" rel="noopener">npm</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Open source</div>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">GitHub</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/issues" target="_blank" rel="noopener">Issues</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/discussions" target="_blank" rel="noopener">Discussions</a>
+        <a class="footer-col-link" href="https://github.com/Sandeeprdy1729/timps/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 TIMPS · MIT License · A product of TIMPS</div>
+    <div class="footer-legal">
+      <a href="https://timps-website.vercel.app/" target="_blank" rel="noopener">Privacy</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Terms</a>
+      <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" rel="noopener">Usage policy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
