@@ -32,14 +32,13 @@
       TIMPS
     </a>
     <ul class="nav-links">
-      <li><a href="memory.html">Memory</a></li>
       <li><a href="gmail.html" class="active">Connectors</a></li>
       <li><a href="docs.html">Docs</a></li>
       <li><a href="ecosystem.html">Ecosystem</a></li>
     </ul>
     <div class="nav-cta">
       <a href="https://github.com/Sandeeprdy1729/timps" target="_blank" class="btn btn-ghost btn-sm">Star on GitHub</a>
-      <a href="gmail.html#connect" class="btn btn-primary btn-sm">Connect</a>
+      <a href="docs.html" class="btn btn-primary btn-sm">Docs</a>
     </div>
   </div>
 </nav>
@@ -63,10 +62,6 @@
       <a href="#desktop" class="sidebar-link">Connectors tab</a>
       <a href="#chat-commands" class="sidebar-link">/email commands</a>
     </div>
-    <div class="sidebar-group">
-      <div class="sidebar-group-label">Memory</div>
-      <a href="memory.html" class="sidebar-link">Live Memory →</a>
-    </div>
     <a href="#privacy" class="sidebar-link" style="margin-top: 8px;">Privacy</a>
   </aside>
 
@@ -76,29 +71,12 @@
     <hr class="divider" style="margin-bottom: 40px;">
 
     <h2 id="connect">Connect Gmail</h2>
-    <p>One click hands this page off to TIMPS running on this machine — a browser
-    consent screen opens, tokens land in <code>~/.timps/gmail/</code>, and nothing touches any server.</p>
-    <div class="connector" style="max-width: 560px;">
-      <div class="connector-top">
-        <div class="connector-name"><span class="connector-icon">@</span>Gmail</div>
-        <span class="connector-status"><span class="conn-dot" id="gmail-dot"></span><span id="gmail-state">checking&hellip;</span></span>
-      </div>
-      <div class="connector-body">
-        Read-only scope. Distills every synced email into knowledge facts stored in
-        TIMPS memory. Never sends, drafts, or deletes.
-      </div>
-      <div class="connector-stats">
-        <div><span id="gmail-memories">—</span><span>memories</span></div>
-        <div><span id="gmail-facts">—</span><span>facts</span></div>
-        <div><span id="gmail-synced">—</span><span>emails</span></div>
-      </div>
-      <div class="connector-actions">
-        <a href="#connect" class="btn btn-primary btn-sm" data-connect="gmail">Connect Gmail</a>
-        <button class="btn btn-ghost btn-sm" type="button" id="gmail-copy">Copy command</button>
-      </div>
-    </div>
+    <p>One command connects your inbox — a browser consent screen opens, tokens land in
+    <code>~/.timps/gmail/</code>, and nothing touches any server.</p>
+    <div class="code-block">timps gmail:connect   # opens Google consent, saves tokens locally
+timps gmail:sync     # run a sync from the terminal</div>
     <p style="font-size: 0.85rem; margin-top: 14px;">No app installed? Run <code>timps gmail:connect</code> after
-      installing TIMPS, then this page can sync with <code>timps gmail:sync</code>.</p>
+      installing TIMPS, then sync anytime with <code>timps gmail:sync</code>.</p>
 
     <h2 id="gmail-overview">Overview</h2>
     <p>The Gmail connector is a <strong>read-only</strong> integration. It never sends, drafts, or deletes anything.</p>
@@ -106,7 +84,7 @@
       <li>Connect with a Google OAuth consent screen (Desktop / installed-app client)</li>
       <li>Every sync scans the inbox and <strong>distills each email into 1–3 knowledge facts</strong></li>
       <li>Facts are stored in TIMPS long-term memory with tags <code>email</code>, <code>gmail</code>, <code>knowledge</code>, <code>sender:&lt;address&gt;</code></li>
-      <li>Searchable with <code>timps recall</code>, in the desktop app, and on the <a href="memory.html">live memory page</a></li>
+      <li>Searchable with <code>timps recall</code> and in the desktop app</li>
     </ul>
     <div class="callout callout-info">First sync backfills the inbox (capped for speed). Later syncs only pull mail newer than the last run. The raw emails stay in your local store — nothing is uploaded.</div>
 
@@ -135,7 +113,7 @@
 ├── summaries.jsonl    # distilled facts (one JSON object per email)
 └── raw/YYYY-MM-DD/    # raw per-message copies
 <id>.json</div>
-    <div class="callout callout-warn">Tokens are never committed. The <a href="memory.html">memory page</a> only renders the distilled summaries, never raw message or token data.</div>
+    <div class="callout callout-warn">Tokens are never committed and never leave your machine. The desktop app and CLI read summaries locally — nothing is uploaded.</div>
 
     <h2 id="cli-sync">CLI — sync now</h2>
     <div class="code-block">timps gmail:sync           # one-shot sync from the terminal
@@ -182,7 +160,6 @@ timps gmail:cron --remove # remove it</div>
 </div>
 
 <script src="js/main.js"></script>
-<script src="js/connect.js"></script>
 <script>
 const headings = document.querySelectorAll('.docs-content h2[id]');
 const links = document.querySelectorAll('.sidebar-link');
