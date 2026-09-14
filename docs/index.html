@@ -107,6 +107,31 @@
   </div>
 </header>
 
+<!-- ── LOGIN ───────────────────────────────────────────── -->
+<section class="login-card fade-in" id="login-card">
+  <div class="login-inner">
+    <div class="login-title">Welcome to TIMPS Memory</div>
+    <div class="login-sub">Sign in with your Google account to sync your connectors. Local-first — your memory stays on your machine.</div>
+
+    <div class="google-btn-wrap" id="google-btn-wrap">
+      <div id="google-btn"></div>
+    </div>
+
+    <div class="signed-in" id="signed-in" hidden>
+      <img class="si-avatar" id="si-avatar" alt="" referrerpolicy="no-referrer">
+      <div class="si-info">
+        <div class="si-name" id="si-name"></div>
+        <div class="si-email" id="si-email"></div>
+        <div class="si-ok">Signed in with Google</div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="si-signout">Sign out</button>
+    </div>
+
+    <div id="login-note" class="login-note" hidden></div>
+    <div class="login-legal">Signing in never uploads your memory. The Google button requests an ID token only — it is decoded in your browser and never leaves it.</div>
+  </div>
+</section>
+
 <!-- ── FOOTER ──────────────────────────────────────────── -->
 <footer>
   <div class="footer-top">
@@ -164,5 +189,6 @@
 </footer>
 
 <script src="js/main.js"></script>
+<script src="js/google-auth.js"></script>
 </body>
 </html>
