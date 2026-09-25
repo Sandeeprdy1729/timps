@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -82,6 +82,17 @@ pub struct MemoryStats {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+/// Derive the canonical 12-hex store id for a project path.
+///
+/// MUST stay byte-compatible with `projectHash()` in
+/// `packages/memory-core/src/storage.ts`, which the CLI, the MCP server and the
+/// SDK all use. That function is `sha256(path.resolve(p) → realpathSync).hex[:12]`.
+///
+/// The realpath step is load-bearing: on macOS `/tmp` and `/var/tmp` are symlinks
+/// into `/private/...`, so without it the desktop and the CLI would compute two
+/// different hashes for the same directory and silently write to two different
+/// stores. Verified: home dirs and normal repo paths match either way; only
+/// symlinked paths diverge.
 pub(crate) fn project_hash_inner(project_path: &str) -> String {
     let path = Path::new(project_path);
     let normalized = if path.is_absolute() {
@@ -89,7 +100,10 @@ pub(crate) fn project_hash_inner(project_path: &str) -> String {
     } else {
         std::env::current_dir().unwrap_or_default().join(path)
     };
-    let path_str = normalized.to_string_lossy();
+    // Resolve symlinks, falling back to the resolved form when the path does
+    // not exist yet (same fallback memory-core uses).
+    let canonical = fs::canonicalize(&normalized).unwrap_or(normalized);
+    let path_str = canonical.to_string_lossy();
     let mut hasher = Sha256::new();
     hasher.update(path_str.as_bytes());
     let result = hasher.finalize();
@@ -102,15 +116,88 @@ pub(crate) fn home_dir() -> String {
         .unwrap_or_else(|_| ".".to_string())
 }
 
-fn memory_dir(project_path: &str) -> String {
+/// Canonical memory store for a project: ~/.timps/memory/&lt;12-hex hash&gt;/
+/// Shared with the connector sync engines so everything the desktop writes lands
+/// in the same place the desktop reads.
+pub(crate) fn memory_dir(project_path: &str) -> String {
     let home = home_dir();
     let hash = project_hash_inner(project_path);
+    adopt_legacy_store(&home, &hash, &legacy_project_hash_inner(project_path));
     format!("{}/.timps/memory/{}", home, hash)
+}
+
+/// Store hash used before symlink resolution: SHA-256 of the raw absolute
+/// path. Retained only so stores written by older builds can be found.
+fn legacy_project_hash_inner(project_path: &str) -> String {
+    let path = Path::new(project_path);
+    let normalized = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().unwrap_or_default().join(path)
+    };
+    let mut hasher = Sha256::new();
+    hasher.update(normalized.to_string_lossy().as_bytes());
+    hex::encode(&hasher.finalize()[..6])
+}
+
+/// Move a store written by a pre-canonicalization build onto its new key.
+///
+/// Hashing changed from the raw absolute path to the symlink-resolved path so
+/// `/tmp/x` and `/private/tmp/x` finally share one store. That rekeyed every
+/// project reached through a symlink, stranding its existing memory under the
+/// old hash - invisible to the CLI, MCP and SDK, which all hash the canonical
+/// form.
+///
+/// Only adopts when the canonical store holds no semantic data, so real data is
+/// never clobbered. A cheap no-op for the overwhelming majority of paths, where
+/// the two hashes are identical.
+fn adopt_legacy_store(home: &str, canonical_hash: &str, legacy_hash: &str) {
+    if canonical_hash == legacy_hash {
+        return;
+    }
+    let root = PathBuf::from(home).join(".timps").join("memory");
+    let canonical = root.join(canonical_hash);
+    let legacy = root.join(legacy_hash);
+
+    if fs::read_to_string(canonical.join("semantic.json"))
+        .map(|s| !s.trim().is_empty() && s.trim() != "[]")
+        .unwrap_or(false)
+    {
+        return;
+    }
+    if !legacy.join("semantic.json").exists() {
+        return;
+    }
+    if let Some(parent) = canonical.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if fs::rename(&legacy, &canonical).is_err() {
+        // Cross-device, or a handle held open on Windows: copying still
+        // preserves the data when the rename cannot.
+        if let Ok(entries) = fs::read_dir(&legacy) {
+            for e in entries.flatten() {
+                let _ = fs::copy(e.path(), canonical.join(e.file_name()));
+            }
+        }
+    }
 }
 
 /// Serializes read-modify-write cycles on semantic.json to prevent data loss
 /// from concurrent access (clipboard watcher thread + Tauri commands).
-static SEMANTIC_LOCK: Mutex<()> = Mutex::new(());
+///
+/// Also taken by `gmail_sync::store_facts` (via `semantic_write_lock`) so that
+/// a connector sync cannot clobber a concurrent chat/clipboard write. Two
+/// separate mutexes would not serialize against each other, which is exactly
+/// how a lost update slips in.
+pub(crate) static SEMANTIC_LOCK: Mutex<()> = Mutex::new(());
+
+/// Acquire the semantic.json write lock, tolerating a poisoned mutex.
+///
+/// A panic while holding the lock leaves the data intact (writes are atomic),
+/// so refusing to write forever afterwards would be worse than proceeding.
+pub(crate) fn semantic_write_lock() -> std::sync::MutexGuard<'static, ()> {
+    SEMANTIC_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// Write JSON data to a file atomically: write to a temp file, then rename.
 /// Prevents readers from seeing a half-written (truncated) file.
@@ -135,7 +222,17 @@ pub fn load_semantic(project_path: String) -> Result<Vec<SemanticEntry>, String>
     let dir = memory_dir(&project_path);
     let p = format!("{}/semantic.json", dir);
     match fs::read_to_string(&p) {
-        Ok(s) => serde_json::from_str(&s).map_err(|e| e.to_string()),
+        // Normalize to seconds: `semantic.json` is shared with memory-core,
+        // which writes milliseconds, while older desktop builds wrote seconds.
+        // Returning raw values would make the two sort as if decades apart.
+        Ok(s) => serde_json::from_str(&s)
+            .map(|mut v: Vec<SemanticEntry>| {
+                for e in v.iter_mut() {
+                    e.timestamp = normalize_ts(e.timestamp);
+                }
+                v
+            })
+            .map_err(|e| e.to_string()),
         Err(_) => Ok(vec![]),
     }
 }
@@ -337,10 +434,16 @@ pub fn store_memory(
     entries.retain(|e| e.id != key);
     entries.push(SemanticEntry {
         id: key,
+        // Milliseconds, matching memory-core's canonical semantic format
+        // (`MemoryEntry.timestamp`). Writing seconds here would make every
+        // other consumer — the CLI, timps-mcp, the SDK — read these entries as
+        // 1970, and would break sort order against CLI-written entries.
+        // Legacy second-precision entries from older builds are still read
+        // correctly because the loaders normalize on the way out.
         timestamp: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_secs() as i64,
+            .as_millis() as i64,
         kind: "fact".to_string(),
         content: value,
         tags,
@@ -2107,6 +2210,10 @@ pub fn load_all_semantic(limit: u32) -> Result<Vec<SemanticEntry>, String> {
         if let Ok(s) = fs::read_to_string(&p) {
             if let Ok(mut entries) = serde_json::from_str::<Vec<SemanticEntry>>(&s) {
                 for e in entries.iter_mut() {
+                    // Same ms/seconds normalization as `load_semantic`, so
+                    // entries from different writers interleave in one
+                    // correctly-ordered timeline.
+                    e.timestamp = normalize_ts(e.timestamp);
                     e.source = Some(hash.clone());
                 }
                 out.extend(entries);
@@ -2259,10 +2366,18 @@ pub fn read_memory_file(relative_path: String) -> Result<(String, u64), String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     // Serializes tests that mutate the process-global HOME env var; without
     // this, parallel test threads race on set_var("HOME", ...).
-    static HOME_LOCK: Mutex<()> = Mutex::new(());
+    /// Shared with every other module's env-mutating tests - see
+    /// `crate::TEST_ENV_LOCK`. A private lock here would not exclude
+    /// `gmail_sync`'s tests, which reassign the same variables.
+    fn home_lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::TEST_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
 
     fn entry(id: &str, content: &str, tags: &[&str]) -> SemanticEntry {
         SemanticEntry {
@@ -2278,6 +2393,57 @@ mod tests {
 
     fn ids(results: &[SemanticEntry]) -> Vec<&str> {
         results.iter().map(|e| e.id.as_str()).collect()
+    }
+
+    /// Pins the desktop's project hash to the values `projectHash()` in
+    /// packages/memory-core/src/storage.ts actually produces.
+    ///
+    /// These constants were generated by running memory-core's own
+    /// implementation (path.resolve → realpathSync → sha256 → hex[:12]). If
+    /// this test fails, the desktop and the CLI/MCP/SDK are reading and writing
+    /// *different* memory stores — connector facts, chat memories and CLI
+    /// memories would silently split, so fix the algorithm rather than the
+    /// expectation.
+    ///
+    /// The expectations below are `sha256(resolved path)[..12 hex]`, computed
+    /// out of band with `shasum -a 256`. The fixture paths are deliberately
+    /// non-existent so `canonicalize` falls back to the literal path and the
+    /// expected value is identical on every machine. Real-path resolution is
+    /// covered by `project_hash_canonicalizes_symlinked_paths`.
+    #[test]
+    fn project_hash_matches_memory_core() {
+        assert_eq!(
+            project_hash_inner("/virtual/timps-parity/home"),
+            "857c5a57f185"
+        );
+        assert_eq!(
+            project_hash_inner("/virtual/timps-parity/home/workspace/service"),
+            "1c8d692029d6"
+        );
+    }
+
+    /// `/tmp` is a symlink to `/private/tmp` on macOS. memory-core realpaths it;
+    /// if the desktop ever stops doing the same, the two halves of TIMPS split
+    /// into separate stores for one directory.
+    #[test]
+    fn project_hash_canonicalizes_symlinked_paths() {
+        let via_short = project_hash_inner("/tmp");
+        let via_long = project_hash_inner("/private/tmp");
+        if std::path::Path::new("/private/tmp").exists() {
+            assert_eq!(
+                via_short, via_long,
+                "/tmp and /private/tmp must resolve to one store"
+            );
+        }
+        // And it must be the realpath-based value, not the literal one.
+        assert_eq!(via_short, "11fe14a563f7");
+    }
+
+    #[test]
+    fn project_hash_is_relative_to_cwd() {
+        let rel = project_hash_inner(".");
+        let cwd = std::env::current_dir().unwrap();
+        assert_eq!(rel, project_hash_inner(&cwd.to_string_lossy()));
     }
 
     #[test]
@@ -2399,10 +2565,10 @@ mod tests {
     #[test]
     fn config_round_trips_through_desktop_json() {
         // Isolate from the real ~/.timps config via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
         let temp = std::env::temp_dir().join(format!("timps-cfg-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         set_provider("openai".to_string()).expect("set_provider should persist");
         assert_eq!(get_provider(), "openai");
@@ -2445,6 +2611,162 @@ mod tests {
     // ── M85: timestamp unit consistency (seconds everywhere) ──────────────
 
     #[test]
+    fn store_memory_writes_millisecond_timestamps() {
+        // semantic.json is shared with memory-core, which reads raw values and
+        // expects milliseconds. Writing seconds here would make the CLI, MCP and
+        // SDK read these as 1970 and sort them below every CLI-written entry.
+        let _home_guard = home_lock();
+        let temp = std::env::temp_dir().join(format!("timps-sem-writer-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(&temp).unwrap();
+        let _home = TempHome::at(temp.clone());
+
+        store_memory(
+            "proj".to_string(),
+            "k1".to_string(),
+            "a fact".to_string(),
+            0.5,
+            vec!["t".to_string()],
+        )
+        .expect("store_memory should succeed");
+
+        let raw = std::fs::read_to_string(PathBuf::from(memory_dir("proj")).join("semantic.json")).unwrap();
+        let entries: Vec<serde_json::Value> = serde_json::from_str(&raw).unwrap();
+        let ts = entries[0]["timestamp"].as_i64().expect("timestamp present");
+        assert!(
+            ts >= 100_000_000_000,
+            "timestamp {} looks like seconds; semantic.json must be millis",
+            ts
+        );
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn load_semantic_normalizes_mixed_unit_stores() {
+        // The live hazard: a store containing both a memory-core entry (ms) and
+        // a legacy desktop entry (seconds). Unnormalized they sort as if one
+        // were 50,000 years old, hiding the real ordering.
+        let _home_guard = home_lock();
+        let temp = std::env::temp_dir().join(format!("timps-sem-mixed-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(&temp).unwrap();
+        let _home = TempHome::at(temp.clone());
+
+        let dir = PathBuf::from(memory_dir("proj"));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("semantic.json"),
+            serde_json::to_string(&vec![
+                serde_json::json!({"id":"a","timestamp":1_785_680_181_385i64,"type":"fact","content":"from CLI (ms)","tags":[]}),
+                serde_json::json!({"id":"b","timestamp":1_785_680_181i64,"type":"fact","content":"legacy desktop (s)","tags":[]}),
+            ])
+            .unwrap(),
+        )
+        .unwrap();
+
+        let entries = load_semantic("proj".to_string()).unwrap();
+        assert_eq!(entries.len(), 2);
+        // Same real instant -> same normalized second.
+        assert_eq!(entries[0].timestamp, entries[1].timestamp);
+        assert!(entries[0].timestamp < 100_000_000_000, "must be seconds now");
+        // And they no longer look 50,000 years apart.
+        assert_eq!(entries[0].timestamp.abs_diff(entries[1].timestamp), 0);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// The regression that motivated legacy adoption: a project opened through
+    /// a symlink hashes differently than its real path, so pre-canonicalization
+    /// memory would be invisible to the CLI/MCP/SDK forever.
+    #[test]
+    fn symlinked_project_adopts_its_pre_canonicalization_store() {
+        let _home_guard = home_lock();
+        let temp = std::env::temp_dir().join(format!("timps-adopt-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        let real = temp.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        let link = temp.join("link");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let home = temp.join("home");
+        let _home = TempHome::at(home.clone());
+
+        // Write memory the way an older build would have: keyed on the raw
+        // (unresolved) symlink path.
+        let legacy_hash = legacy_project_hash_inner(link.to_str().unwrap());
+        let legacy_store = PathBuf::from(&home).join(".timps/memory").join(&legacy_hash);
+        std::fs::create_dir_all(&legacy_store).unwrap();
+        std::fs::write(
+            legacy_store.join("semantic.json"),
+            r#"[{"id":"a","timestamp":1700000000,"type":"fact","content":"old memory","tags":[]}]"#,
+        )
+        .unwrap();
+
+        // Reading via the symlink must now find it, and via the real path too.
+        let via_link = PathBuf::from(memory_dir(link.to_str().unwrap()));
+        let via_real = PathBuf::from(memory_dir(real.to_str().unwrap()));
+        assert_eq!(via_link, via_real, "both spellings must resolve to one store");
+
+        let entries: Vec<serde_json::Value> = serde_json::from_str(
+            &std::fs::read_to_string(via_link.join("semantic.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(entries.len(), 1, "orphaned memory must not be lost");
+        assert_eq!(entries[0]["content"], "old memory");
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Adoption must never clobber: if the canonical store already has data,
+    /// the legacy directory is ambiguous and has to be left alone.
+    #[test]
+    fn legacy_adoption_never_overwrites_populated_canonical_store() {
+        let _home_guard = home_lock();
+        let temp = std::env::temp_dir().join(format!("timps-adopt-clobber-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        let real = temp.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        let link = temp.join("link");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let home = temp.join("home");
+        let _home = TempHome::at(home.clone());
+        let root = PathBuf::from(&home).join(".timps/memory");
+
+        let legacy_hash = legacy_project_hash_inner(link.to_str().unwrap());
+        let legacy_store = root.join(&legacy_hash);
+        std::fs::create_dir_all(&legacy_store).unwrap();
+        std::fs::write(legacy_store.join("semantic.json"), r#"[{"content":"legacy"}]"#).unwrap();
+
+        // Derive the path WITHOUT going through memory_dir, which adopts on
+        // sight - we need the canonical store populated first.
+        let canonical_store = root.join(project_hash_inner(link.to_str().unwrap()));
+        std::fs::create_dir_all(&canonical_store).unwrap();
+        std::fs::write(
+            canonical_store.join("semantic.json"),
+            r#"[{"content":"canonical"}]"#,
+        )
+        .unwrap();
+
+        // Re-resolve now that the canonical store is populated.
+        let _ = memory_dir(link.to_str().unwrap());
+        let kept: Vec<serde_json::Value> = serde_json::from_str(
+            &std::fs::read_to_string(canonical_store.join("semantic.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(kept[0]["content"], "canonical", "canonical data must win");
+        assert!(
+            legacy_store.join("semantic.json").exists(),
+            "ambiguous legacy store must be preserved, not deleted"
+        );
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
     fn normalize_ts_converts_milliseconds_to_seconds() {
         // ~1.7e12 ms (e.g. 2025-01-01) must be treated as ms, not seconds.
         let ms = 1_735_689_600_000_i64;
@@ -2460,10 +2782,10 @@ mod tests {
     #[test]
     fn store_episode_writes_seconds_timestamp() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
         let temp = std::env::temp_dir().join(format!("timps-ep-writer-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         store_episode("m85-proj".to_string(), "session summary".to_string(), "success".to_string(), vec![])
             .expect("store_episode should succeed");
@@ -2487,10 +2809,10 @@ mod tests {
     #[test]
     fn load_episodes_normalizes_legacy_ms_timestamps() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
         let temp = std::env::temp_dir().join(format!("timps-ep-reader-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         let dir = memory_dir("m85-proj");
         std::fs::create_dir_all(&dir).expect("mkdir");
@@ -2520,7 +2842,54 @@ mod tests {
             .unwrap_or(false)
     }
 
-    fn wait_until<F: Fn() -> bool>(mut cond: F, timeout_ms: u64) -> bool {
+    /// Points `HOME` at a fresh temp dir for the duration of a test, then puts
+    /// the previous value back.
+    ///
+    /// Undoing this by hand with `remove_var("HOME")` is a trap: `HOME` is
+    /// process-global, so a test that ends with it unset makes every later
+    /// `memory_dir()` resolve to `./.timps/...` and write into the repo, and a
+    /// detached watcher thread that outlives the test compounds the damage.
+    /// Always restore the previous value, never clear it.
+    struct TempHome {
+        dir: PathBuf,
+        prev: Option<String>,
+    }
+    impl TempHome {
+        /// Use a caller-supplied directory, so a test that already builds its
+        /// own temp tree keeps every path it asserts on.
+        fn at(dir: PathBuf) -> Self {
+            let prev = std::env::var("HOME").ok();
+            std::env::set_var("HOME", &dir);
+            Self { dir, prev }
+        }
+    }
+    impl Drop for TempHome {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(p) => std::env::set_var("HOME", p),
+                None => std::env::remove_var("HOME"),
+            }
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    /// Stops the singleton clipboard watcher when the test ends, however it
+    /// ends.
+    ///
+    /// `spawn_clipboard_watcher` returns early when a watcher is already
+    /// running, so a thread leaked by one test silently turns the next test's
+    /// spawn into a no-op - it then watches the *previous* test's project and
+    /// clip source, and fails far away from the real cause. Pair with
+    /// `home_lock()` so the watcher thread can never outlive the HOME it was
+    /// started under.
+    struct WatcherGuard;
+    impl Drop for WatcherGuard {
+        fn drop(&mut self) {
+            let _ = stop_clipboard_watcher();
+        }
+    }
+
+    fn wait_until<F: Fn() -> bool>(cond: F, timeout_ms: u64) -> bool {
         let deadline = std::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
         while std::time::Instant::now() < deadline {
             if cond() {
@@ -2543,10 +2912,11 @@ mod tests {
     #[test]
     fn clipboard_watcher_restart_uses_new_project_only() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
+        let _watcher = WatcherGuard;
         let temp = std::env::temp_dir().join(format!("timps-clip-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
             std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
@@ -2594,10 +2964,11 @@ mod tests {
     #[test]
     fn clipboard_watcher_second_start_is_noop() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
+        let _watcher = WatcherGuard;
         let temp = std::env::temp_dir().join(format!("timps-clip-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         let clips: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
             std::sync::Arc::new(std::sync::Mutex::new(vec!["clipboard memory one".to_string()]));
@@ -2627,10 +2998,11 @@ mod tests {
     #[test]
     fn clipboard_watcher_stores_all_distinct_clips() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
+        let _watcher = WatcherGuard;
         let temp = std::env::temp_dir().join(format!("timps-clip-throttle-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         // Six distinct snippets copied in quick succession. Under the old
         // `passive_ticks % 6 == 0` gate only ~1 of these would ever be stored.
@@ -2756,10 +3128,11 @@ mod tests {
     #[test]
     fn clipboard_watcher_and_passive_store_never_persist_secrets() {
         // Isolate from the real ~/.timps memory via a temp HOME.
-        let _home_guard = HOME_LOCK.lock().unwrap();
+        let _home_guard = home_lock();
+        let _watcher = WatcherGuard;
         let temp = std::env::temp_dir().join(format!("timps-clip-secret-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp);
-        std::env::set_var("HOME", &temp);
+        let _home = TempHome::at(temp.clone());
 
         let aws = concat!("AKIA", "IOSFODNN7EXAMPLE"); // 20 chars — long enough for the watcher
 
@@ -2803,7 +3176,7 @@ mod tests {
         assert!(
             !std::path::Path::new(&format!("{}/semantic.json", memory_dir("secProjWatcher")))
                 .exists(),
-            "no semantic.json should be created when only a secret was copied"
+            "no semantic.json for secProjWatcher"
         );
 
         // 3) Sanity: normal text through the same watcher still stores.

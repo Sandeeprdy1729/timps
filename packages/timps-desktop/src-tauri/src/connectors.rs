@@ -72,7 +72,12 @@ fn providers() -> Vec<ProviderDef> {
             display: "Gmail",
             auth_uri: GOOGLE_AUTH,
             token_uri: GOOGLE_TOKEN,
-            scopes: &["https://www.googleapis.com/auth/gmail.readonly"],
+            scopes: &[
+                "https://www.googleapis.com/auth/gmail.readonly",
+                // Required by `Identity::UserinfoEmail` below; without it the
+                // userinfo call 403s and the account shows as "unknown".
+                "https://www.googleapis.com/auth/userinfo.email",
+            ],
             google_family: true,
             secret_required: true,
             identity: Identity::UserinfoEmail,
@@ -175,7 +180,7 @@ fn home_dir() -> String {
         .unwrap_or_else(|_| ".".to_string())
 }
 
-fn provider_dir(id: &str) -> PathBuf {
+pub(crate) fn provider_dir(id: &str) -> PathBuf {
     if let Ok(dir) = std::env::var(format!("TIMPS_{}_DIR", id.to_uppercase())) {
         if !dir.is_empty() {
             return PathBuf::from(dir);
@@ -350,33 +355,26 @@ struct ClientCreds {
 
 /// Loads `client.json`. Accepts Google's downloaded client JSON (flat,
 /// `{ installed: ... }` or `{ web: ... }`) or a flat `{ client_id, client_secret? }`.
+///
+/// When no local file exists, falls back to the TIMPS-owned OAuth client so
+/// Google-backed connectors (Gmail today) work with zero setup — the user
+/// clicks Connect and only sees Google's consent screen, with no Google Cloud
+/// project to create. A local `client.json` always wins, so anyone can point
+/// TIMPS at their own OAuth app without rebuilding.
 fn load_client(id: &str) -> Result<ClientCreds, String> {
-    let file = client_file(id);
-    let raw = fs::read_to_string(&file).map_err(|_| {
-        format!(
-            "No {} OAuth credentials found. Create an OAuth app for this provider and import its client JSON (Connectors → Credentials).",
-            id
-        )
-    })?;
-    let parsed: Value =
-        serde_json::from_str(&raw).map_err(|_| format!("{} is not valid JSON.", file.display()))?;
-    let section = parsed
-        .get("installed")
-        .or_else(|| parsed.get("web"))
-        .unwrap_or(&parsed);
-    let client_id = section
-        .get("client_id")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| format!("client.json for {} is missing client_id.", id))?
-        .to_string();
-    let client_secret = section
-        .get("client_secret")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    Ok(ClientCreds {
-        client_id,
-        client_secret,
-    })
+    if let Ok(resolved) = crate::bundled_oauth::resolve(id) {
+        // Logged because "which OAuth app is this actually using?" is the first
+        // question when a connect or refresh fails unexpectedly.
+        eprintln!("[connectors] {} using {} OAuth app", id, resolved.source);
+        return Ok(ClientCreds {
+            client_id: resolved.client_id,
+            client_secret: resolved.client_secret,
+        });
+    }
+    Err(format!(
+        "No {} OAuth credentials found. Create an OAuth app for this provider and import its client JSON (Connectors → Credentials).",
+        id
+    ))
 }
 
 fn has_tokens(id: &str) -> bool {
@@ -537,11 +535,22 @@ pub struct ConnectorEntry {
     pub account: String,
     #[serde(rename = "hasCredentials")]
     pub has_credentials: bool,
+    /// True when TIMPS ships the OAuth app for this provider, so the user can
+    /// connect with one click and never touches a developer console.
+    #[serde(rename = "oneClick")]
+    pub one_click: bool,
     #[serde(rename = "lastRun")]
     pub last_run: Option<String>,
     #[serde(rename = "syncedCount")]
     pub synced_count: usize,
     pub scopes: usize,
+    /// Set when the stored grant is dead (revoked / expired refresh token).
+    /// The UI turns this into a "Reconnect" button instead of a dead Sync.
+    #[serde(rename = "needsReconnect")]
+    pub needs_reconnect: bool,
+    /// Why the grant is dead, ready to show as a tooltip or inline note.
+    #[serde(rename = "reconnectReason")]
+    pub reconnect_reason: Option<String>,
 }
 
 fn connector_entry(def: &ProviderDef) -> ConnectorEntry {
@@ -570,10 +579,22 @@ fn connector_entry(def: &ProviderDef) -> ConnectorEntry {
         display_name: def.display.to_string(),
         connected: has_tokens(def.id),
         account,
-        has_credentials: client_file(def.id).exists(),
+        // A provider counts as "credentialed" when the user supplied their own
+        // client.json *or* TIMPS bundles one for it. Bundled is what makes
+        // Gmail a one-click connect.
+        has_credentials: client_file(def.id).exists() || load_client(def.id).is_ok(),
+        one_click: crate::bundled_oauth::bundled_available(def.id),
         last_run,
         synced_count,
         scopes: def.scopes.len(),
+        needs_reconnect: state
+            .get("needsReconnect")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        reconnect_reason: state
+            .get("reconnectReason")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()),
     }
 }
 
@@ -866,10 +887,24 @@ pub async fn connector_connect(
 
         let account = fetch_identity(&client, identity, access).await;
         if save_tokens(&provider_id, access, refresh, expires, &account).is_ok() {
+            // A fresh grant supersedes any "reconnect needed" flag left behind
+            // by a previous invalid_grant failure.
+            if provider_id == "gmail" {
+                crate::gmail_sync::clear_needs_reconnect();
+            }
             *outcome.lock().unwrap() = Some(ConnectorOutcome { account });
         }
     });
 
+    // Logged so support can compare the exact request against the redirect URIs
+    // registered on the provider's OAuth app when Google answers with a bare
+    // "400. That's an error." page. The client_id is redacted.
+    eprintln!(
+        "[connectors] {} auth url: {} (client_id={}…)",
+        id,
+        auth_url,
+        &creds.client_id.chars().take(12).collect::<String>()
+    );
     open_browser(&auth_url);
 
     Ok(json!({
@@ -986,14 +1021,77 @@ pub struct ConnectorSyncResult {
     #[serde(rename = "exitCode")]
     pub exit_code: i32,
     pub output: String,
+    /// True when the sync stopped because the grant is dead and the user must
+    /// re-consent. The UI swaps "Sync" for "Reconnect".
+    #[serde(rename = "needsReconnect")]
+    pub needs_reconnect: bool,
+    /// Number of messages persisted by this run (0 for non-Gmail providers).
+    pub stored: usize,
+    /// Number of knowledge facts written into the memory store.
+    #[serde(rename = "factsStored")]
+    pub facts_stored: usize,
+    /// Messages whose summary line could not be appended. Non-zero means the
+    /// raw archive is complete but `summaries.jsonl` is short, so the
+    /// summary-driven views will under-report.
+    #[serde(rename = "summaryErrors")]
+    pub summary_errors: usize,
 }
 
+/// Sync one connector.
+///
+/// Gmail runs the **native** Rust pipeline (`gmail_sync::sync`): it fetches from
+/// the Gmail API, distills facts, and writes straight into the canonical
+/// `~/.timps/memory/<projectHash>/semantic.json` — no Node, no CLI, no
+/// `dist/bin/timps.js` sitting next to the executable (which never existed in a
+/// packaged `.app`).
+///
+/// Other providers still shell out to the CLI, which remains the reference
+/// implementation for them until they get native engines too.
 #[tauri::command]
-pub async fn connector_sync(id: String) -> Result<ConnectorSyncResult, String> {
+pub async fn connector_sync(
+    id: String,
+    project_path: Option<String>,
+    max_messages: Option<u32>,
+) -> Result<ConnectorSyncResult, String> {
     let def = provider(&id).ok_or_else(|| format!("unknown connector: {}", id))?;
     if !has_tokens(def.id) {
         return Err(format!("{} is not connected.", def.display));
     }
+
+    // ── Native path: Gmail ──
+    if def.id == "gmail" {
+        let project = project_path.unwrap_or_default();
+        let cap = max_messages.unwrap_or(50).clamp(1, 200);
+        let report = crate::gmail_sync::sync(&project, 30, cap).await;
+        // `sync` persists the reconnect marker itself at the point of
+        // detection; this only clears it after a fully clean run. A partial
+        // failure must not clear an existing marker, otherwise a prior revoked
+        // token would silently look healthy again.
+        if report.error.is_none() && !report.needs_reconnect {
+            crate::gmail_sync::clear_needs_reconnect();
+        }
+        let mut output = format!(
+            "{} — {} new message(s), {} fact(s) written to memory",
+            def.display, report.stored, report.facts_stored
+        );
+        if report.skipped > 0 {
+            output.push_str(&format!(" ({} already synced, skipped)", report.skipped));
+        }
+        if let Some(err) = &report.error {
+            output.push_str(&format!("\n⚠ {}", err));
+        }
+        return Ok(ConnectorSyncResult {
+            ok: report.error.is_none(),
+            exit_code: if report.error.is_none() { 0 } else { 1 },
+            output,
+            needs_reconnect: report.needs_reconnect,
+            stored: report.stored,
+            facts_stored: report.facts_stored,
+            summary_errors: report.summary_errors,
+        });
+    }
+
+    // ── Fallback: CLI shell-out for providers without a native engine ──
     let cli = match find_cli_js() {
         Some(p) => p,
         None => {
@@ -1004,6 +1102,10 @@ pub async fn connector_sync(id: String) -> Result<ConnectorSyncResult, String> {
                     "Sync needs the TIMPS CLI ({}-based streaming into memory is on the roadmap, but the CLI implements it). Build with `npm run build` in timps-code.",
                     def.display
                 ),
+                needs_reconnect: false,
+                stored: 0,
+                summary_errors: 0,
+                facts_stored: 0,
             })
         }
     };
@@ -1026,6 +1128,7 @@ pub async fn connector_sync(id: String) -> Result<ConnectorSyncResult, String> {
     Ok(ConnectorSyncResult {
         ok: output.status.success(),
         exit_code: output.status.code().unwrap_or(-1),
+        summary_errors: 0,
         output: combined
             .lines()
             .filter(|l| !l.trim().is_empty())
@@ -1034,5 +1137,8 @@ pub async fn connector_sync(id: String) -> Result<ConnectorSyncResult, String> {
             .chars()
             .take(4000)
             .collect(),
+        needs_reconnect: combined.contains("invalid_grant"),
+        stored: 0,
+        facts_stored: 0,
     })
 }

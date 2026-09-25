@@ -159,6 +159,11 @@
   color: #fff;
 }
 
+.connector-btn.primary.warn {
+  background: #d97706;
+  color: #fff;
+}
+
 .connector-btn.ghost {
   color: var(--text-secondary, #8b92a8);
 }
@@ -430,6 +435,16 @@
   background: #6b7280;
 }
 
+/* Grant is dead (revoked / expired refresh token) — amber, not red: the user's
+   data is intact, they just need to re-consent. */
+.connector-tile-status.warn {
+  color: #fbbf24;
+}
+
+.connector-tile-status.warn::before {
+  background: #fbbf24;
+}
+
 .connector-tile-creds {
   font-size: 10px;
   color: var(--accent, #8ed2fb);
@@ -498,6 +513,30 @@
 .connector-detail-status.off {
   color: var(--text-secondary, #8b92a8);
   background: var(--surface-2, #222634);
+}
+
+.connector-detail-status.warn {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.14);
+}
+
+/* Inline notice explaining a dead grant, with a Reconnect action. */
+.connector-warn-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.connector-warn-hint span {
+  flex: 1;
 }
 
 .connector-detail-meta {

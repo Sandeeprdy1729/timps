@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "TIMPS — Memory Cockpit",
+        "title": "TIMPS \u2014 Memory Cockpit",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -44,7 +44,9 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["timps"]
+        "schemes": [
+          "timps"
+        ]
       }
     },
     "updater": {
@@ -53,7 +55,8 @@
       ],
       "windows": {
         "installMode": "passive"
-      }
+      },
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENEOEM1MjgyMERDQjRGMkEKUldRcVQ4c05nbEtNemZ4TnJ6OXFVS3NXanNZNDdGSXl4UWxyUWE3YVdYVTQ3MUhObXBjcDVmU2UK"
     }
   }
 }

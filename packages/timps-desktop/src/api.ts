@@ -205,9 +205,14 @@ export interface ConnectorEntry {
   connected: boolean;
   account: string;
   hasCredentials: boolean;
+  /** TIMPS ships an OAuth app for this provider — connect needs no setup. */
+  oneClick: boolean;
   lastRun: string | null;
   syncedCount: number;
   scopes: number;
+  /** Grant is dead (revoked/expired). Swap "Sync" for "Reconnect". */
+  needsReconnect: boolean;
+  reconnectReason: string | null;
 }
 
 export interface ConnectorConnectStart {
@@ -221,6 +226,9 @@ export interface ConnectorSyncResult {
   ok: boolean;
   exitCode: number;
   output: string;
+  needsReconnect: boolean;
+  stored: number;
+  factsStored: number;
 }
 
 // ── Invoke helper — falls back in non-Tauri context ───────────────────────
@@ -232,6 +240,15 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     return tauriInvoke<T>(cmd, args);
   }
   // Browser-dev / Vitest stub — return sensible defaults
+
+  // Mirrors the Rust side: the Google one-click client is injected at compile
+  // time (option_env!("TIMPS_BUNDLED_GOOGLE_CLIENT_ID")), so a plain browser
+  // preview has none. Set VITE_TIMPS_BUNDLED_GOOGLE=1 to exercise the
+  // one-click UI without pretending the real backend has a credential.
+  const BUNDLED_GOOGLE =
+    (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_TIMPS_BUNDLED_GOOGLE ===
+    '1';
+
   const stubs: Record<string, unknown> = {
     project_hash: 'devcafe123456',
     load_semantic: [],
@@ -288,16 +305,16 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     gmail_autosync_status: { enabled: false },
     gmail_reset: { removed: false, dir: '' },
     connector_list: [
-      { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
-      { id: 'calendar', display: 'Google Calendar', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
-      { id: 'drive', display: 'Google Drive', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
-      { id: 'github', display: 'GitHub', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 3 },
-      { id: 'notion', display: 'Notion', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 0 },
-      { id: 'slack', display: 'Slack', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 6 },
-      { id: 'linear', display: 'Linear', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
-      { id: 'ms365', display: 'Microsoft 365', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 5 },
+      { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: true, oneClick: BUNDLED_GOOGLE, lastRun: null, syncedCount: 0, scopes: 1, needsReconnect: false, reconnectReason: null },
+      { id: 'calendar', display: 'Google Calendar', connected: false, account: 'unknown', hasCredentials: true, oneClick: BUNDLED_GOOGLE, lastRun: null, syncedCount: 0, scopes: 1, needsReconnect: false, reconnectReason: null },
+      { id: 'drive', display: 'Google Drive', connected: false, account: 'unknown', hasCredentials: true, oneClick: BUNDLED_GOOGLE, lastRun: null, syncedCount: 0, scopes: 1, needsReconnect: false, reconnectReason: null },
+      { id: 'github', display: 'GitHub', connected: false, account: 'unknown', hasCredentials: false, oneClick: false, lastRun: null, syncedCount: 0, scopes: 3, needsReconnect: false, reconnectReason: null },
+      { id: 'notion', display: 'Notion', connected: false, account: 'unknown', hasCredentials: false, oneClick: false, lastRun: null, syncedCount: 0, scopes: 0, needsReconnect: false, reconnectReason: null },
+      { id: 'slack', display: 'Slack', connected: false, account: 'unknown', hasCredentials: false, oneClick: false, lastRun: null, syncedCount: 0, scopes: 6, needsReconnect: false, reconnectReason: null },
+      { id: 'linear', display: 'Linear', connected: false, account: 'unknown', hasCredentials: false, oneClick: false, lastRun: null, syncedCount: 0, scopes: 1, needsReconnect: false, reconnectReason: null },
+      { id: 'ms365', display: 'Microsoft 365', connected: false, account: 'unknown', hasCredentials: false, oneClick: false, lastRun: null, syncedCount: 0, scopes: 5, needsReconnect: false, reconnectReason: null },
     ],
-    connector_status: { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: false, lastRun: null, syncedCount: 0, scopes: 1 },
+    connector_status: { id: 'gmail', display: 'Gmail', connected: false, account: 'unknown', hasCredentials: true, oneClick: BUNDLED_GOOGLE, lastRun: null, syncedCount: 0, scopes: 1, needsReconnect: false, reconnectReason: null },
     connector_import_credentials: { clientId: 'stub', saved: '' },
     connector_save_credentials: { clientId: 'stub', saved: '' },
     connector_connect: { authUrl: '', port: 0, redirectUri: '', openedBrowser: false },
@@ -615,6 +632,18 @@ export const api = {
   connectorReset: (id: string) =>
     invoke<{ removed: boolean; dir: string }>('connector_reset', { id }),
 
-  connectorSync: (id: string) =>
-    invoke<ConnectorSyncResult>('connector_sync', { id }),
+  /**
+   * Sync a connector into memory.
+   *
+   * `projectPath` selects which canonical memory store receives the distilled
+   * facts (`~/.timps/memory/<hash>/semantic.json`). Pass the active project so
+   * the desktop's own chat recalls them; omit for the global home store, which
+   * is what the CLI and MCP server read.
+   */
+  connectorSync: (id: string, projectPath?: string, maxMessages?: number) =>
+    invoke<ConnectorSyncResult>('connector_sync', {
+      id,
+      projectPath: projectPath ?? null,
+      maxMessages: maxMessages ?? null,
+    }),
 };

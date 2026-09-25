@@ -12,6 +12,7 @@ import React from 'react';
 import { mockEmit, mockListen, fireTauriEvent } from '../test-setup';
 import { PassiveListener } from './PassiveListener';
 import { SettingsView } from './SettingsView';
+import { ThemeProvider } from '../theme/ThemeProvider';
 import { QuickCapture } from './QuickCapture';
 import { api } from '../api';
 
@@ -194,17 +195,22 @@ describe('SettingsView — autostart toggle', () => {
     vi.clearAllMocks();
   });
 
-  it('renders "Background Behaviour" section', () => {
+  // SettingsView reads the theme, so it needs the same ThemeProvider ancestor
+  // the real app renders at the root.
+  const renderSettings = () =>
     render(
-      <SettingsView />
+      <ThemeProvider>
+        <SettingsView />
+      </ThemeProvider>
     );
+
+  it('renders "Background Behaviour" section', () => {
+    renderSettings();
     expect(screen.getByText('Background Behaviour')).toBeInTheDocument();
   });
 
   it('shows "Launch at Login" label', () => {
-    render(
-      <SettingsView />
-    );
+    renderSettings();
     expect(screen.getByText('Launch at Login')).toBeInTheDocument();
   });
 
@@ -212,7 +218,7 @@ describe('SettingsView — autostart toggle', () => {
     const spy = vi.spyOn(api, 'enableAutostart').mockResolvedValue(undefined);
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(false);
 
-    render(<SettingsView />);
+    renderSettings();
 
     // Wait for isAutostartEnabled to resolve
     await waitFor(() => expect(api.isAutostartEnabled).toHaveBeenCalled());
@@ -228,7 +234,7 @@ describe('SettingsView — autostart toggle', () => {
     const spy = vi.spyOn(api, 'disableAutostart').mockResolvedValue(undefined);
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(true);
 
-    render(<SettingsView />);
+    renderSettings();
 
     await waitFor(() => expect(api.isAutostartEnabled).toHaveBeenCalled());
 
@@ -242,7 +248,7 @@ describe('SettingsView — autostart toggle', () => {
   it('syncs button label when autostart-changed Tauri event fires', async () => {
     vi.spyOn(api, 'isAutostartEnabled').mockResolvedValue(false);
 
-    render(<SettingsView />);
+    renderSettings();
     await waitFor(() => expect(mockListen).toHaveBeenCalledWith('autostart-changed', expect.any(Function)));
 
     // Tray menu toggled autostart on
