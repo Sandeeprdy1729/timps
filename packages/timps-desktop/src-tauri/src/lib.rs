@@ -1,6 +1,8 @@
+mod bundled_oauth;
 mod commands;
 mod connectors;
 mod gmail;
+mod gmail_sync;
 mod nexus_bridge;
 
 #[cfg(target_os = "macos")]
@@ -333,3 +335,13 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+/// Single lock for every test that mutates process-global state (`HOME`,
+/// `TIMPS_GMAIL_DIR`, ...).
+///
+/// Per-module locks do NOT serialize against each other: `commands` and
+/// `gmail_sync` each held a private mutex while both reassigning `HOME`, so
+/// their tests clobbered each other's store and failed nondeterministically.
+/// One lock for the whole crate is the only thing that actually excludes.
+#[cfg(test)]
+pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

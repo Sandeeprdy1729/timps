@@ -5183,6 +5183,7 @@ dependencies = [
 name = "timps-desktop"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "cc",
  "core-graphics",
  "hex",

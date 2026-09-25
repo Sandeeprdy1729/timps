@@ -9,14 +9,18 @@
  * Tokens/creds live per provider in ~/.timps/<id>/, shared with the `timps`
  * CLI (`timps gmail:sync` etc.). Synced data is distilled into TIMPS memory.
  *
- * Guided setup: for each provider, open its developer console, create an
- * OAuth app, and either paste the client_id (and client_secret when required)
- * inline or import the client JSON. The loopback callback is always
- * http://localhost:12849/oauth2callback.
+ * One-click: TIMPS ships its own OAuth app for the Google family (Gmail,
+ * Calendar, Drive), so those connect with a single click and no Google Cloud
+ * project — the same model Claude and Grok use. Providers TIMPS cannot ship an
+ * app for (GitHub, Slack, Notion, Linear, Microsoft 365) still need the guided
+ * setup: open the provider's developer console, create an OAuth app, then paste
+ * the client_id/client_secret or import the client JSON. The loopback callback
+ * is always http://localhost:12849/oauth2callback.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { api, ConnectorEntry } from '../api';
+import { useProject } from '../hooks';
 import './ConnectorsView.css';
 
 function fmtTime(iso: string | null): string {
@@ -195,6 +199,11 @@ function setupSteps(meta: ProviderMeta): SetupStep[] {
   return base;
 }
 
+// Connectors that get a first sync immediately after a successful connect.
+// Only Gmail has a native sync engine; the others shell out to the CLI, which
+// is too slow and side-effecty to trigger without the user asking.
+const AUTO_SYNC_AFTER_CONNECT = new Set(['gmail']);
+
 export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsViewProps) {
   const [entries, setEntries] = useState<ConnectorEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,6 +216,10 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
   const [focusBanner, setFocusBanner] = useState<string | null>(null);
   const [clientIdInput, setClientIdInput] = useState('');
   const [clientSecretInput, setClientSecretInput] = useState('');
+  // Sync target: the project the rest of the app is reading, so connector facts
+  // are recallable straight away. Empty ⇒ the global home store, which is what
+  // the CLI and MCP server read.
+  const { projectPath } = useProject();
 
   const setBusyFor = (id: string, v: 'connecting' | 'importing' | 'saving' | 'syncing' | null) =>
     setBusy((b) => {
@@ -294,6 +307,33 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
       setErrors((er) => ({ ...er, [id]: '' }));
       await refresh();
       setSyncOutput((so) => ({ ...so, [id]: `Connected as ${result.account}` }));
+
+      // Pull the first batch straight after connecting. Otherwise the user has
+      // to notice a second button, and the promise of "connect and your mail
+      // is queryable" is broken until they do.
+      if (AUTO_SYNC_AFTER_CONNECT.has(id)) {
+        setBusyFor(id, 'syncing');
+        try {
+          const res = await api.connectorSync(id, projectPath);
+          const where = projectPath.trim() ? 'this project' : 'your global store';
+          setSyncOutput((so) => ({
+            ...so,
+            [id]: `Connected as ${result.account}. ${res.output}${
+              res.factsStored
+                ? ` Facts are in ${where} — ask the assistant about them and they will come back.`
+                : ''
+            }`,
+          }));
+          await refresh();
+        } catch (e) {
+          // A failed first sync must not read as a failed connect: the grant
+          // is valid, the fetch just didn't work.
+          setSyncOutput((so) => ({
+            ...so,
+            [id]: `Connected as ${result.account}. First sync failed: ${String(e)} — use Sync to retry.`,
+          }));
+        }
+      }
     } catch (e) {
       setAwaiting((a) => ({ ...a, [id]: false }));
       setErrors((er) => ({ ...er, [id]: String(e) }));
@@ -316,10 +356,16 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
     setBusyFor(id, 'syncing');
     setSyncOutput((so) => ({ ...so, [id]: '' }));
     try {
-      const res = await api.connectorSync(id);
+      // Write into the same project store the rest of the app reads, so facts
+      // distilled here are immediately recallable in chat.
+      const res = await api.connectorSync(id, projectPath);
+      const where = projectPath.trim() ? 'this project' : 'your global store';
+      const detail = res.factsStored
+        ? `${res.output} Facts are in ${where} — ask the assistant about them and they will come back.`
+        : res.output;
       setSyncOutput((so) => ({
         ...so,
-        [id]: res.ok ? res.output || 'Sync completed.' : `Sync exited with code ${res.exitCode}:\n${res.output}`,
+        [id]: res.ok ? detail || 'Sync completed.' : `Sync exited with code ${res.exitCode}:\n${res.output}`,
       }));
       await refresh();
     } catch (e) {
@@ -418,17 +464,46 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
                   <span className="connector-tile-logo"><ProviderLogo id={p.id} /></span>
                   <div className="connector-tile-head">
                     <span className="connector-tile-name">{p.display}</span>
-                    <span className={`connector-tile-status${connected ? ' on' : ' off'}`}>
-                      {connected ? (entry?.account && entry.account !== 'unknown' ? entry.account : 'Connected') : 'Not connected'}
+                    <span
+                      className={`connector-tile-status${connected ? (entry?.needsReconnect ? ' warn' : ' on') : ' off'}`}
+                      title={entry?.reconnectReason ?? undefined}
+                    >
+                      {connected
+                        ? entry?.needsReconnect
+                          ? 'Needs reconnect'
+                          : entry?.account && entry.account !== 'unknown'
+                            ? entry.account
+                            : 'Connected'
+                        : 'Not connected'}
                     </span>
                   </div>
-                  {entry?.hasCredentials && !connected && (
-                    <span className="connector-tile-creds" title="Credentials imported">creds ✓</span>
+                  {entry?.oneClick && !connected && (
+                    <span className="connector-tile-creds" title="No setup needed — TIMPS ships this OAuth app">1-click ✓</span>
+                  )}
+                  {!entry?.oneClick && entry?.hasCredentials && !connected && (
+                    <span className="connector-tile-creds" title="Your OAuth app imported">creds ✓</span>
                   )}
                 </div>
                 <p className="connector-tile-blurb">{p.blurb}</p>
                 <div className="connector-tile-actions" onClick={(e) => e.stopPropagation()}>
-                  {connected ? (
+                  {connected && entry?.needsReconnect ? (
+                    <>
+                      <button
+                        className={`connector-btn primary warn ${isBusy ? 'disabled' : ''}`}
+                        onClick={() => handleConnect(p.id)}
+                        disabled={!!isBusy}
+                        title={entry.reconnectReason ?? 'Authorization expired — reconnect to continue syncing'}
+                      >
+                        {isAwaiting ? 'Waiting for browser…' : isBusy === 'connecting' ? 'Reconnecting…' : 'Reconnect'}
+                      </button>
+                      <button
+                        className="connector-btn ghost"
+                        onClick={() => handleDisconnect(p.id)}
+                      >
+                        Disconnect
+                      </button>
+                    </>
+                  ) : connected ? (
                     <>
                       <button
                         className={`connector-btn primary ${isBusy === 'syncing' ? 'disabled' : ''}`}
@@ -454,13 +529,17 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
                       >
                         {isAwaiting ? 'Waiting for browser…' : isBusy === 'connecting' ? 'Connecting…' : 'Connect'}
                       </button>
-                      <button
-                        className={`connector-btn ghost ${isBusy === 'importing' ? 'disabled' : ''}`}
-                        onClick={() => handleImport(p.id)}
-                        disabled={!!isBusy}
-                      >
-                        {isBusy === 'importing' ? 'Importing…' : 'Credentials'}
-                      </button>
+                      {/* Providers TIMPS ships an OAuth app for don't need a
+                          credentials button — Connect just works. */}
+                      {entry?.oneClick ? null : (
+                        <button
+                          className={`connector-btn ghost ${isBusy === 'importing' ? 'disabled' : ''}`}
+                          onClick={() => handleImport(p.id)}
+                          disabled={!!isBusy}
+                        >
+                          {isBusy === 'importing' ? 'Importing…' : 'Credentials'}
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -482,8 +561,12 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
             <div className="connector-detail-head">
               <span className="connector-detail-logo"><ProviderLogo id={sid} /></span>
               <h3>{meta.display}</h3>
-              <span className={`connector-detail-status${selectedEntry.connected ? ' on' : ' off'}`}>
-                {selectedEntry.connected ? 'Connected' : 'Not connected'}
+              <span
+                className={`connector-detail-status${selectedEntry.connected ? (selectedEntry.needsReconnect ? ' warn' : ' on') : ' off'}`}
+              >
+                {selectedEntry.connected
+                  ? selectedEntry.needsReconnect ? 'Needs reconnect' : 'Connected'
+                  : 'Not connected'}
               </span>
             </div>
 
@@ -511,6 +594,30 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
               <span>Synced items: <b>{selectedEntry.syncedCount}</b></span>
             </div>
 
+            {selectedEntry.connected && selectedEntry.needsReconnect && (
+              <div className="connector-warn-hint">
+                <span>
+                  {selectedEntry.reconnectReason
+                    ?? 'Google no longer accepts this authorization. Reconnect to grant access again — nothing is lost, your synced mail is still stored.'}
+                </span>
+                <button className="connector-btn primary small" onClick={() => handleConnect(sid)}>
+                  {awaiting[sid] ? 'Waiting for browser…' : 'Reconnect'}
+                </button>
+              </div>
+            )}
+
+            {selectedEntry.oneClick && !selectedEntry.connected && (
+              <div className="connector-oauth-hint">
+                <span>
+                  No setup needed — TIMPS ships the {meta.display} OAuth app. Clicking Connect just opens Google&apos;s consent screen.
+                  You can still use your own OAuth app via Credentials.
+                </span>
+                <button className="connector-btn ghost small" onClick={() => handleImport(sid)}>
+                  Use my own app
+                </button>
+              </div>
+            )}
+
             {awaiting[sid] && (
               <div className="connector-oauth-hint">
                 <span>Complete the consent screen in your browser to authorize TIMPS. Tokens stay on this machine and are revocable anytime.</span>
@@ -520,7 +627,7 @@ export function ConnectorsView({ focusConnector, onFocusHandled }: ConnectorsVie
               </div>
             )}
 
-            {!selectedEntry.hasCredentials && (
+            {!selectedEntry.hasCredentials && !selectedEntry.oneClick && (
               <div className="connector-setup">
                 <div className="connector-setup-title">
                   <span>Set up {meta.display}</span>
