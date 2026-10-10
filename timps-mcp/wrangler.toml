@@ -7,4 +7,8 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 TIMPS_MEMORY_URL = "https://enlargement-pump-machine-acceptance.trycloudflare.com"
 TIMPS_PROJECT_PATH = "."
-TIMPS_API_KEY = "***REMOVED:REDACTED-TIMPS-KEY***"
+
+# TIMPS_API_KEY is a SECRET and must never be committed here.
+# Set it on the Worker instead:
+#   wrangler secret put TIMPS_API_KEY
+# For local dev, put it in an untracked .dev.vars file.

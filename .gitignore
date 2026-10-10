@@ -25,6 +25,9 @@ target/
 .env
 .env.local
 .env.*.local
+.dev.vars
+.dev.vars.*
+.vars
 
 # IDE
 .vscode/
