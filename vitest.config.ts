@@ -1,6 +1,13 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // plugin-sdk's package entry is ./dist, which CI never builds; test against source.
+      '@timps-ai/plugin-sdk': fileURLToPath(new URL('./packages/plugin-sdk/src/index.ts', import.meta.url)),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',

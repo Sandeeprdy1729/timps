@@ -2,18 +2,49 @@
 // Verifies query() actually applies timestampMin/timestampMax/filter/limit filters,
 // unlike the previous silent no-op (results.filter() without reassignment).
 //
-// RedisBackend._connect() lazy-requires 'ioredis'; a stub is provided under this
-// package's node_modules (gitignored, test-only) so no real Redis server is needed.
+// An in-memory fake client is injected so no real Redis server (or ioredis
+// connection) is needed.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { RedisBackend } from './RedisBackend.js';
 import type { StorageQuery } from './types.js';
+
+/** Minimal in-memory stand-in for the ioredis calls RedisBackend makes. */
+function fakeRedis() {
+  const strings = new Map<string, string>();
+  const sets = new Map<string, Set<string>>();
+  const setOf = (k: string) => {
+    if (!sets.has(k)) sets.set(k, new Set());
+    return sets.get(k)!;
+  };
+  const ops = {
+    set: (k: string, v: string) => { strings.set(k, v); },
+    del: (k: string) => { strings.delete(k); },
+    sadd: (k: string, m: string) => { setOf(k).add(m); },
+    srem: (k: string, m: string) => { setOf(k).delete(m); },
+  };
+  return {
+    get: async (k: string) => strings.get(k) ?? null,
+    exists: async (k: string) => (strings.has(k) ? 1 : 0),
+    smembers: async (k: string) => [...setOf(k)],
+    quit: async () => 'OK',
+    multi() {
+      const queued: Array<() => void> = [];
+      const tx: any = {};
+      for (const [name, fn] of Object.entries(ops)) {
+        tx[name] = (...args: [string, string]) => { queued.push(() => fn(...args)); return tx; };
+      }
+      tx.exec = async () => queued.map(run => [null, run()]);
+      return tx;
+    },
+  };
+}
 
 describe('RedisBackend — M45 query filters', () => {
   let backend: RedisBackend;
 
   beforeEach(() => {
-    backend = new RedisBackend({ keyPrefix: 'test:' });
+    backend = new RedisBackend({ keyPrefix: 'test:', client: fakeRedis() });
   });
 
   it('query limit caps result count', async () => {

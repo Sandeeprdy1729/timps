@@ -7,6 +7,8 @@ import { buildKey, scopeListPrefix } from './types.js';
 export interface RedisBackendOptions {
   url?: string;
   keyPrefix?: string;
+  /** Pre-built ioredis-compatible client (skips the lazy ioredis require). */
+  client?: any;
 }
 
 export class RedisBackend implements StorageBackend {
@@ -33,6 +35,10 @@ export class RedisBackend implements StorageBackend {
   }
 
   private async _connect(): Promise<void> {
+    if (this.options.client) {
+      this.client = this.options.client;
+      return;
+    }
     try {
       const Redis = require('ioredis');
       this.client = this.options.url ? new Redis(this.options.url) : new Redis();
