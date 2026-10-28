@@ -135,7 +135,7 @@ export class BenchmarkRunner {
     let r1 = 0, r5 = 0, r10 = 0, mrrSum = 0, ndcgSum = 0;
 
     for (const { query, expectedSubstrings } of RECALL_QUERIES) {
-      const results = engine.recall(query, { limit: 10 });
+      const results = await engine.recall(query, { limit: 10 });
       const rank = results.findIndex(r => expectedSubstrings.some(s => r.content.includes(s)));
       const effectiveRank = rank === -1 ? Infinity : rank + 1;
       if (effectiveRank <= 1) r1++;
@@ -479,13 +479,13 @@ export class BenchmarkRunner {
         });
       }
       // Warm-up query (index build cost).
-      engine.recall('typescript', { limit: 5 });
+      await engine.recall('typescript', { limit: 5 });
 
       const queries = ['typescript', 'testing framework', 'how do we deploy', 'database choice', 'styling approach'];
       const samples: number[] = [];
       for (const q of queries) {
         const t = Date.now();
-        engine.recall(q, { limit: 10 });
+        await engine.recall(q, { limit: 10 });
         samples.push(Date.now() - t);
       }
       samples.sort((a, b) => a - b);
