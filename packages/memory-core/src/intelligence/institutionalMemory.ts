@@ -57,12 +57,7 @@ export class InstitutionalMemory {
     if (this._backend) {
       this._backend.write(path.basename(this.file), data);
     } else {
-      fs.writeSync(
-        fs.openSync(this.file, 'w'),
-        JSON.stringify(data, null, 2),
-        0,
-        'utf-8'
-      );
+      fs.writeFileSync(this.file, JSON.stringify(data, null, 2), 'utf-8');
     }
   }
 

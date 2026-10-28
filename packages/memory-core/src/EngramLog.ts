@@ -55,7 +55,10 @@ function readFileSafe(p: string): string | null {
 function writeAtomic(p: string, data: string): void {
   const tmp = p + '.tmp';
   fs.writeFileSync(tmp, data, 'utf-8');
-  fs.fsyncSync(fs.openSync(tmp, 'r'));
+  // 'r+' because Windows rejects fsync on read-only handles; close so the
+  // rename below (and the next one onto `p`) isn't blocked by an open handle.
+  const fd = fs.openSync(tmp, 'r+');
+  try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
   fs.renameSync(tmp, p);
 }
 
