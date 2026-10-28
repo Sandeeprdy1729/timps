@@ -22,6 +22,20 @@ export interface FileBackendOptions {
   wal?: boolean;
 }
 
+/**
+ * fsync a file by path and always release the descriptor.
+ * Opened 'r+' because Windows rejects fsync on read-only handles (EPERM),
+ * and a leaked handle makes the next rename onto that file fail with EPERM.
+ */
+function fsyncPath(filePath: string): void {
+  const fd = fs.openSync(filePath, 'r+');
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 export class FileBackend implements StorageBackend {
   private baseDir: string;
   private walEnabled: boolean;
@@ -117,7 +131,7 @@ export class FileBackend implements StorageBackend {
       const walPath = filePath + '.wal';
       fs.writeFileSync(walPath, serialized, 'utf-8');
       // fsync to ensure data is on disk
-      try { fs.fsyncSync(fs.openSync(walPath, 'r')); } catch { /* best effort */ }
+      try { fsyncPath(walPath); } catch { /* best effort */ }
       // Atomic rename on POSIX
       fs.renameSync(walPath, filePath);
     } else {
@@ -194,7 +208,7 @@ export class FileBackend implements StorageBackend {
       const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : '';
       const newContent = existing + line + '\n';
       fs.writeFileSync(walPath, newContent, 'utf-8');
-      try { fs.fsyncSync(fs.openSync(walPath, 'r')); } catch { /* best effort */ }
+      try { fsyncPath(walPath); } catch { /* best effort */ }
       fs.renameSync(walPath, filePath);
     } else {
       fs.appendFileSync(filePath, line + '\n', 'utf-8');
