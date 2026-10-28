@@ -130,6 +130,8 @@ async function main(): Promise<void> {
 
     if (jsonFile) {
       const fs = await import('node:fs');
+      const path = await import('node:path');
+      fs.mkdirSync(path.dirname(jsonFile), { recursive: true });
       fs.writeFileSync(jsonFile, JSON.stringify({ results: allGateResults, blocked }, null, 2));
     }
     return;
@@ -148,6 +150,8 @@ async function main(): Promise<void> {
 
   if (jsonFile) {
     const fs = await import('node:fs');
+    const path = await import('node:path');
+    fs.mkdirSync(path.dirname(jsonFile), { recursive: true });
     fs.writeFileSync(jsonFile, JSON.stringify({ results }, null, 2));
     console.log(`Results written to: ${jsonFile}`);
   }

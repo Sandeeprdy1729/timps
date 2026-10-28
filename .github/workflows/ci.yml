@@ -30,6 +30,7 @@ jobs:
 
       - name: Build SDK packages
         run: |
+          npm run build --workspace=packages/memory-core
           npm run build --workspace=packages/plugin-sdk
           npm run build --workspace=packages/sdk
 
