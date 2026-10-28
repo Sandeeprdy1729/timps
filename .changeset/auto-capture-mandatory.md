@@ -1,5 +1,5 @@
 ---
-"timps-code": patch
+"@timps-ai/timps-code": patch
 ---
 
 ### `timps setup` instructions — auto-capture is now explicitly MANDATORY

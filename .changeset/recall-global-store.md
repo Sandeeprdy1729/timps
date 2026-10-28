@@ -1,5 +1,5 @@
 ---
-"timps-code": minor
+"@timps-ai/timps-code": minor
 ---
 
 ### `timps recall` / `timps context` now also search the global (home) store

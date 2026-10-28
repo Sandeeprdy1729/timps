@@ -1,6 +1,6 @@
 ---
 "@timps-ai/timps-mcp": patch
-"timps-code": minor
+"@timps-ai/timps-code": minor
 ---
 
 ### `timps setup` now installs memory-usage instructions — auto-capture is on by default

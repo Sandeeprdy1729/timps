@@ -1,5 +1,5 @@
 ---
-"timps-code": minor
+"@timps-ai/timps-code": minor
 ---
 
 ### Generic connector sync services (calendar/drive/github/notion/slack/linear/ms365)
