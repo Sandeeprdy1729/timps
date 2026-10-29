@@ -196,14 +196,19 @@ export class MemoryServer {
   }
 
   private configureApp(): void {
-    // CORS
+    // CORS. A wildcard origin cannot be combined with credentials — browsers
+    // reject it and it lets any site drive the API — so credentials are only
+    // enabled when an explicit list of real origins is configured.
+    const configured = this.options.corsOrigins ?? '*';
+    const allowedOrigins = configured === '*'
+      ? '*'
+      : (typeof configured === 'string' ? configured.split(',') : configured)
+        .map(o => o.trim())
+        .filter(o => /^https?:\/\/[^\s*]+$/i.test(o));
+    const wildcard = allowedOrigins === '*';
     this.app.use(cors({
-      origin: this.options.corsOrigins === '*'
-        ? '*'
-        : (typeof this.options.corsOrigins === 'string'
-          ? this.options.corsOrigins.split(',')
-          : this.options.corsOrigins),
-      credentials: true,
+      origin: wildcard ? '*' : allowedOrigins,
+      credentials: !wildcard,
     }));
 
     // Body parsing
