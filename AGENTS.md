@@ -8,11 +8,11 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 
 | Surface | Path | Package | Build | Test | Typecheck |
 |---|---|---|---|---|---|---|
-| CLI | `timps-code/` | `timps-code` | `tsc` (ESM, NodeNext) | `vitest` (unified) | `tsc --noEmit` |
-| MCP server | `timps-mcp/` | `timps-mcp` | `tsup src/index.ts --format cjs --no-dts --out-dir dist` | `vitest` (unified) | `tsc --noEmit` (4GB heap) |
+| CLI | `timps-code/` | `@timps-ai/timps-code` | `tsc` (ESM, NodeNext) | `vitest` (unified) | `tsc --noEmit` |
+| MCP server | `timps-mcp/` | `@timps-ai/timps-mcp` | `tsup src/index.ts --format cjs --no-dts --out-dir dist` | `vitest` (unified) | `tsc --noEmit` (4GB heap) |
 | VS Code ext | `timps-vscode/` | `timps-ai-coding-agent` | `npm run compile` (tsc) | `vitest` (unified) | `tsc --noEmit` |
 | Full server | `packages/server/` | `@timps/server` | `tsc` (CJS) | `vitest` (unified) | `tsc --noEmit` |
-| Memory engine | `packages/memory-core/` | `@timps/memory-core` | `tsup` (CJS + dts) | `vitest` (unified) | `tsc --noEmit` |
+| Memory engine | `packages/memory-core/` | `@timps-ai/memory-core` | `tsup` (CJS + dts) | `vitest` (unified) | `tsc --noEmit` |
 
 - `npm run build` — turbo run build (all packages; mobile/plugins/docs may need extra tooling).
 - `npm run build:ci` — CI-targeted build that **excludes** 10 packages (mobile, plugins, docs, timps-code, timps-mcp).
@@ -21,7 +21,7 @@ Monorepo workspace roots: `packages/*`, `apps/*`, `timps-code`, `timps-mcp`.
 ## TypeScript config drift
 
 - `timps-code` → ESM (`module: NodeNext`), `.js` extension in imports required.
-- `timps-mcp` → CJS, `strict: false`, no declarations.
+- `timps-mcp` → CJS, `strict: true`, no declarations (it is a CLI; the package publishes no types).
 - `packages/server` → CJS, wide include.
 - `packages/memory-core` → CJS, vitest resolves `.js` imports automatically.
 
@@ -64,8 +64,15 @@ Gotchas:
   - `timps context [--project <path>]` — print the full memory context string.
 - `timps setup --server <url>` sets **both** `TIMPS_URL` and `TIMPS_MEMORY_URL` (in `buildRegistration()`), because timps-mcp's memory tools (`timps_store_memory`, `timps_get_memories`, `timps_check_contradiction`) route through `MemoryClient` only when `TIMPS_MEMORY_URL` is set AND server mode is on (`TIMPS_URL`). Override either via `TIMPS_SETUP_ENV=TIMPS_MEMORY_URL=… timps setup …`. Legacy `packages/server` (port 3000) is the only thing that serves `/api/*` (timpsAPI `chat` proxy); a MemoryServer-only deploy 404s those non-memory tools.
 - MemoryServer deploy: full compose stack (Postgres primary + 2 streaming replicas, PgBouncer, Redis, Qdrant, MemoryServer ×N, Prometheus, Grafana, OTel) lives in `packages/memory-core/docker-compose.yml`. Guide: `DEPLOY.md` → Option 5. Single-process: `MEMORY_PROJECT_PATH=<dir> MEMORY_PORT=4100 node packages/memory-core/dist/server/start.js` (defaults `/data`, which must exist/writable). Entry `dist/server/start.js` mounts eval routes → needs writable project path at startup.
-- **`projectHash()` canonicalizes with `fs.realpathSync`** so a project reachable via multiple path spellings (e.g. `/tmp/…` vs `/private/tmp/…` on macOS) maps to one store under `~/.timps/memory/<hash>/`. Keep this behavior if you touch `packages/memory-core/src/storage.ts` (that package is git-ignored/hidden here; rebuild its dist so `timps-code` picks up the change).
+- **`projectHash()` canonicalizes with `fs.realpathSync` (`fs.realpathSync.native` on Windows, which also normalizes case — `C:\Proj` and `c:\proj` are one store; an existing store under the old case-sensitive hash keeps being used)** so a project reachable via multiple path spellings (e.g. `/tmp/…` vs `/private/tmp/…` on macOS) maps to one store under `~/.timps/memory/<hash>/`. Keep this behavior if you touch `packages/memory-core/src/storage.ts` (that package is git-ignored/hidden here; rebuild its dist so `timps-code` picks up the change).
 - End-to-end contract: agents store via `timps_store_memory` MCP (project dir → canonical hash), terminal reads via `timps recall`/`timps context` on the same canonical hash — they always converge on one store.
+
+## timps-mcp transports
+
+- **stdio** (default) — what `timps setup` registers. On Windows the registration is `cmd /c npx -y @timps-ai/timps-mcp` (clients spawn without a shell and `npx` is `npx.cmd`).
+- **`--http`** — streamable HTTP on `/mcp`, stateless (fresh `McpServer` per request). Binds `127.0.0.1` by default (`--host` / `TIMPS_MCP_HOST`), rejects cross-site browser `Origin`s (loopback and `TIMPS_MCP_ALLOWED_ORIGINS` allowed), rejects non-loopback `Host` headers when bound to loopback (DNS rebinding), and requires `Authorization: Bearer $TIMPS_MCP_TOKEN` when set. Bodies over 4 MB → 413, invalid JSON → JSON-RPC `-32700`. Logic lives in `timps-mcp/src/httpTransport.ts`; CLI parsing in `src/options.ts`.
+- `registerAllTools()` returns the number of tools registered; `/health` and the startup line report it.
+- `src/index.ts` only runs `main()` when not under Vitest (`process.env.VITEST`), so tests can import it.
 
 ## Memory — unified implementations
 
@@ -182,11 +189,7 @@ To add a new migration:
 - `MemoryEngine.contradiction.check(statement, autoStore?)` defaults `autoStore=true` — pass `false` in tests.
 - ContradictionDetector requires >50% Jaccard vocabulary overlap to trigger. Exact phrasings needed for `CONTRADICTION`.
 - **Unified test runner:** Vitest across all packages. Run `npm test` (root) or `vitest run` for all tests. Coverage: `npm run test:coverage` (80% threshold enforced).
-- `packages/server` is missing `@timps/memory-core` in its package.json `dependencies` — it's installed by hoisting but won't resolve in `npm ci --production`.
 - `timps-desktop` has a JSX parsing issue in `global.d.ts` (missing space before `declare` keyword after a JSX block). If `npx tsc --noEmit` fails for timps-desktop, check `.d.ts` files for similar syntax issues.
-- `test-coverage.yml` matrix includes `config`, `integration-base` packages that no longer exist. Drop them from the matrix if they're removed from the workspace.
-- `supply-chain-audit.yml` uses `google/osv-scanner-action@v1.0.2` (old). Update to `v2.3.8` if the action fails.
-- `packages/server` `check` script is `tsc` but TypeScript isn't installed as a devDependency — it's hoisted from the root. CI may fail on strict isolated environments unless `typescript` is added to its devDependencies.
 
 ## Phase 2c — Horizontal Scaling (June 2026)
 
@@ -342,7 +345,6 @@ When `backend` is omitted, falls back to `getBackend(dir)` (legacy FileBackend).
 - **Arg order:** `saveSemantic(dir, entries, backend?)` — backend is the **3rd** param. `appendEpisode(dir, episode, backend?)` — backend is the **3rd** param. `loadSemantic(dir, backend?)` — backend is the **2nd** param. Double-check arg order when calling from MemoryEngine.
 - **Jaccard dedup triggers on short strings:** Content like `'A: pattern 1'` vs `'A: pattern 2'` have Jaccard similarity >0.8, triggering dedup. Use sufficiently distinct content strings in tests.
 - **Multi-project recall requires shared backend:** `multiProjectRecall` works by temporarily switching scope on the engine's backend. Engines with separate backends cannot cross-project recall. Use a single `InMemoryBackend` shared across scope-managed engines in tests.
-- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails because time/day matching (TimeDiff < 60min, same dayOfWeek) always triggers on captures/matches within the same second. Unrelated to Phase 2e.
 - **`StorageBackend.setScope()` is one-way:** Once set, all subsequent ops use that scope until changed. `multiProjectRecall` restores the original scope after each project iteration.
 - **Migration v3→v4 does NOT wrap data files:** `episodes.json`, `semantic.json`, `working.json` are raw arrays. They get a `.org-scope.json` sidecar instead of being wrapped with `_meta`. Layer state files (with `_meta`) get inline `orgScope` metadata.
 - **`CURRENT_SCHEMA_VERSION`** is now 4. Bump for any on-disk format change.
@@ -420,7 +422,6 @@ Plugin Author                         TIMPS User
 - **CLI's `pluginInstall` auto-detects marketplace plugins** — if the name has no npm scope prefix (`@`), it tries the marketplace first
 - **Dependency resolver has no package registry fallback** — it only resolves from the `available` map passed in. For production, wire to the PluginRegistry.
 - **All 14 marketplace tests must pass before push** — run `npx vitest run packages/memory-core/src/marketplace.test.ts`
-- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3a)
 
 ## Phase 3b — Observability & Telemetry (Privacy-Preserving)
 
@@ -505,7 +506,6 @@ The `RedactionPipeline` enforces privacy at the attribute level. **Safe** keys p
 - **No eval dashboard.** Eval runs (`timps eval:run`) are batch CLI processes that Prometheus never scrapes; there is deliberately no `dashboard-eval.json` in `deploy/grafana/` (docker-compose mounts only the four real dashboards).
 - **Histogram buckets** are fixed: `[1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms. Tune these for your latency range.
 - **CRDT metrics** are only collected when `instrumentCRDT()` is called with an active telemetry manager. The CRDT module itself is not modified.
-- **Pre-existing test failure:** `ContextVector — L19` still fails (unrelated to Phase 3b). `chaos.test.ts` also has 2 pre-existing failures (`cross-instance test`, `concurrent-write-*` recall counts) from the documented short-string Jaccard dedup gotcha.
 
 ## Phase 3d+3e — Secure Config, Rate Limits, Auth, Billing Removal (June 2026)
 
@@ -680,7 +680,6 @@ Updated files:
 - **ContradictionDetector `check()` calls `this._lsh.query(claim, 16)`** — returns `string[]` IDs. The `autoStore=true` default still stores each claim after checking.
 - **MemoryEngine `_computationHandlers()` register per-task-type handlers** — `eigenmode`, `contradiction`, `decay_scores`, `materialized_view`. Worker routes task.type to the matching handler via `this.handlers[task.type]`.
 - **`MaterializedViews.refresh(name, computeFn)` requires a compute function** — the materialized_view handler passes `async () => []` as fallback. Override in production by registering a real compute handler at engine level.
-- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4b). Time/day matching triggers on captures within the same second.
 
 ## Phase 4c — Memory Compaction (June 2026)
 
@@ -794,7 +793,6 @@ If guardrails detect issues, the LLM is retried once with an explicit warning.
 - **k-means++ initialization** uses weighted random selection for the first centroid, then distance-squared weighting for remaining centroids.
 - **ArchiveBackend stores gzipped JSON** — each batch is one `archive_{timestamp}.json.gz` file. Index is a stripped manifest list.
 - **Compression ratio for verbose content**: typically 2-7x. Embedding is always preserved.
-- **Pre-existing test failure:** `ContextVector — L19 > match returns empty when no similar contexts` fails (unrelated to Phase 4c).
 
 ## Phase 4d — Rust-Native Compute Engine (June 2026)
 
@@ -969,7 +967,8 @@ VS Code                              TIMPS LSP Proxy                      Real L
 
 ### Gotchas
 
-- **15/16 LSP tests pass** — 1 graceful-degradation test accepts timeout via `.catch()` (the server doesn't crash, which is the point of the test)
+- **All LSP tests pass** — the graceful-degradation test accepts a timeout via `.catch()` (the server not crashing is the point of the test).
+- **`LspProxyServer.stop()` returns a Promise** that resolves once the real language server has exited (SIGKILL after 2s). Await it before deleting the server's working directory — on Windows a live child keeps its cwd locked (EPERM). A stopped server's late `exit` event no longer clears the reference to a restarted one.
 - **Pre-existing `executor.ts` errors** remain (3x `seedEngineWithDataset` property missing) — unrelated to LSP work
 - **LSP proxy uses `fetch`** for MemoryClient HTTP calls — requires Node.js 18+ (built-in `fetch` available)
 - **`LspLocationLink` type** — Added to `protocol.ts` exports. Definition handler casts results with `'uri' in loc` type-narrowing check.
