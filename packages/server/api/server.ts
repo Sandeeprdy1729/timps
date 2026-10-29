@@ -68,12 +68,23 @@ export function createApp(): Express {
   ];
   const publicPath = candidates.find(p => fs.existsSync(p)) || candidates[0];
   console.log(`Serving static files from: ${publicPath}`);
+
+  // Page routes read from disk on every hit, so they get their own limiter —
+  // the /api limiter is far too tight for normal page loads.
+  const pageLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please slow down.' },
+  });
+
   app.use(express.static(publicPath));
 
   // Explicit HTML fallbacks so direct URL access works
-  app.get('/', (_req, res) => res.sendFile(path.join(publicPath, 'index.html')));
-  app.get('/chat', (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
-  app.get('/chat.html', (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
+  app.get('/', pageLimiter, (_req, res) => res.sendFile(path.join(publicPath, 'index.html')));
+  app.get('/chat', pageLimiter, (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
+  app.get('/chat.html', pageLimiter, (_req, res) => res.sendFile(path.join(publicPath, 'chat.html')));
   
   app.use('/api', routes);
   
