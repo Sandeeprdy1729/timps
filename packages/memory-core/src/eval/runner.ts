@@ -14,9 +14,24 @@ const DATASET_PATHS = [
   path.join(__dirname, '..', '..', '..', 'evals', 'datasets'),
 ];
 
+/** Dataset names are plain slugs; anything else is rejected outright. */
+const DATASET_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+
+function datasetFileName(name: string): string {
+  if (!DATASET_NAME_PATTERN.test(name) || name.includes('..')) {
+    throw new Error(`Invalid dataset name: ${JSON.stringify(name)}`);
+  }
+  return `${name}.json`;
+}
+
 function resolveDatasetPath(name: string): string {
+  const fileName = datasetFileName(name);
   for (const dir of DATASET_PATHS) {
-    const filePath = path.join(dir, `${name}.json`);
+    const baseDir = path.resolve(dir);
+    const filePath = path.resolve(baseDir, fileName);
+    // Keep the resolved file inside the dataset directory even if the name
+    // somehow slips past the pattern above.
+    if (!filePath.startsWith(baseDir + path.sep)) continue;
     if (fs.existsSync(filePath)) return filePath;
   }
   throw new Error(`Dataset "${name}" not found in any of: ${DATASET_PATHS.join(', ')}`);
