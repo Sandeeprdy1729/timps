@@ -34,6 +34,9 @@ jobs:
           npm run build --workspace=packages/plugin-sdk
           npm run build --workspace=packages/sdk
 
+      - name: Verify release build
+        run: npm run release:build
+
       - name: Run SDK package tests
         run: |
           npm run test --workspace=packages/plugin-sdk
