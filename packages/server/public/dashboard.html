@@ -347,30 +347,54 @@ var eventMeta = {
   synapse_event: { icon: '⬢', label: 'Synapse Activation', col: 'teal' },
 };
 
+// Small DOM helper. Everything coming from the event stream is set as text,
+// never parsed as markup.
+function feedNode(tag, className, text) {
+  var node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null && text !== '') node.textContent = String(text);
+  return node;
+}
+
 function addToFeed(evt) {
   var feed = document.getElementById('feed');
+  var payload = evt.payload || {};
   var meta = eventMeta[evt.type] || { icon: '·', label: evt.type, col: 'muted' };
   var time = new Date(evt.timestamp).toLocaleTimeString();
 
-  var content = '';
+  var contentEl = feedNode('div', 'feed-content');
   if (evt.type === 'contradiction') {
-    var score = Math.round((evt.payload.score || 0) * 100);
-    content = '<strong>' + score + '% confidence</strong> — ' + esc(evt.payload.new_text || '');
-    if (evt.payload.claim) content += '<br/><span style="color:var(--muted2)">Conflicts: "' + esc(evt.payload.claim.slice(0,60)) + '"</span>';
+    var score = Math.round((payload.score || 0) * 100);
+    contentEl.appendChild(feedNode('strong', '', score + '% confidence'));
+    contentEl.appendChild(document.createTextNode(' — ' + (payload.new_text || '')));
+    if (payload.claim) {
+      contentEl.appendChild(document.createElement('br'));
+      var claimEl = feedNode('span', '', 'Conflicts: "' + String(payload.claim).slice(0, 60) + '"');
+      claimEl.style.color = 'var(--muted2)';
+      contentEl.appendChild(claimEl);
+    }
   } else if (evt.type === 'tool_activated') {
-    content = '<strong>' + esc(evt.payload.tool || '') + '</strong> activated';
+    contentEl.appendChild(feedNode('strong', '', payload.tool || ''));
+    contentEl.appendChild(document.createTextNode(' activated'));
   } else if (evt.type === 'chat_message') {
-    content = esc((evt.payload.userMessage || '').slice(0, 80));
-    if (evt.payload.toolsActivated && evt.payload.toolsActivated.length) {
-      content += '<br/><span style="color:var(--teal)">→ ' + evt.payload.toolsActivated.join(', ') + '</span>';
+    contentEl.appendChild(document.createTextNode((payload.userMessage || '').slice(0, 80)));
+    if (payload.toolsActivated && payload.toolsActivated.length) {
+      contentEl.appendChild(document.createElement('br'));
+      var toolsEl = feedNode('span', '', '→ ' + payload.toolsActivated.join(', '));
+      toolsEl.style.color = 'var(--teal)';
+      contentEl.appendChild(toolsEl);
     }
   } else {
-    content = esc(JSON.stringify(evt.payload).slice(0, 100));
+    contentEl.appendChild(document.createTextNode(JSON.stringify(payload).slice(0, 100)));
   }
 
   var el = document.createElement('div');
   el.className = 'feed-item ' + evt.type;
-  el.innerHTML = '<div class="feed-type"><span>' + meta.icon + ' ' + meta.label + '</span><span class="feed-time">' + time + '</span></div><div class="feed-content">' + content + '</div>';
+  var typeEl = feedNode('div', 'feed-type');
+  typeEl.appendChild(feedNode('span', '', meta.icon + ' ' + meta.label));
+  typeEl.appendChild(feedNode('span', 'feed-time', time));
+  el.appendChild(typeEl);
+  el.appendChild(contentEl);
 
   // Prepend — newest at top
   feed.insertBefore(el, feed.firstChild);
