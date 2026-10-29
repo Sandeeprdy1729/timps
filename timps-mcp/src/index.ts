@@ -12,6 +12,12 @@ import * as http from 'node:http';
 import { MemoryEngine, MemoryClient } from '@timps-ai/memory-core';
 
 import { registerAllTools, type ToolContext } from './registerTools.js';
+import { parseCliArgs, usage, validateApiPath } from './options.js';
+import { createHttpHandler, parseAllowedOrigins } from './httpTransport.js';
+
+// Bundled at build time, so this is the published package's version.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const VERSION: string = require('../package.json').version;
 
 // ── Runtime mode ────────────────────────────────────────────────────────────
 // LOCAL mode: TIMPS_URL is not set (or TIMPS_LOCAL=true).  All tools use
@@ -24,19 +30,8 @@ const TIMPS_URL = process.env.TIMPS_URL || 'http://localhost:3000';
 const TIMPS_USER_ID = parseInt(process.env.TIMPS_USER_ID || '1', 10);
 const PROJECT_PATH = process.env.TIMPS_PROJECT_PATH || process.cwd();
 
-// MemoryClient for canonical MemoryServer (used when TIMPS_MEMORY_URL is set)
-const memoryClient = SERVER_MODE && process.env.TIMPS_MEMORY_URL
-  ? new MemoryClient({ baseUrl: process.env.TIMPS_MEMORY_URL, token: process.env.TIMPS_API_KEY })
-  : null;
-
-// Local memory engine (used in LOCAL mode)
-const localEngine = new MemoryEngine(PROJECT_PATH);
-
 async function timpsAPI(path: string, method = 'GET', body?: unknown): Promise<any> {
-  // Validate path to prevent path traversal
-  if (!path.startsWith('/') || path.includes('..') || /[<>"|]/.test(path)) {
-    throw new Error(`Invalid API path: ${path}`);
-  }
+  validateApiPath(path);
   const res = await fetch(`${TIMPS_URL}/api${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -51,104 +46,75 @@ async function chat(message: string, username?: string): Promise<string> {
   return data.response || 'No response from TIMPs';
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const httpMode = args.includes('--http');
-  const portIdx = args.indexOf('--port');
-  const port = portIdx !== -1 ? parseInt(args[portIdx + 1], 10) : parseInt(process.env.TIMPS_MCP_PORT || '4200', 10);
+function createServer(toolCtx: ToolContext): { server: McpServer; toolCount: number } {
+  const server = new McpServer({ name: 'timps-mcp', version: VERSION });
+  const toolCount = registerAllTools(server, toolCtx);
+  return { server, toolCount };
+}
 
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  const opts = parseCliArgs(argv);
+  if (opts.version) {
+    console.log(VERSION);
+    return;
+  }
+  if (opts.help) {
+    console.log(usage(VERSION));
+    return;
+  }
+
+  // Created only once we know we're serving, so --version/--help have no side effects.
   const toolCtx: ToolContext = {
-    memoryClient,
-    localEngine,
+    memoryClient: SERVER_MODE && process.env.TIMPS_MEMORY_URL
+      ? new MemoryClient({ baseUrl: process.env.TIMPS_MEMORY_URL, token: process.env.TIMPS_API_KEY })
+      : null,
+    localEngine: new MemoryEngine(PROJECT_PATH),
     timpsAPI,
     chat,
     SERVER_MODE,
     TIMPS_USER_ID,
   };
+  const modeLabel = SERVER_MODE ? `server mode → ${TIMPS_URL}` : `local mode → ${PROJECT_PATH}`;
 
-  if (httpMode) {
-    // ── HTTP/SSE transport for Claude.ai custom connectors ──
-    const httpServer = http.createServer(async (req, res) => {
-      // CORS headers for Claude.ai
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID, Mcp-Session-Id');
-      res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
-
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end();
-        return;
-      }
-
-      // Health check
-      if (req.method === 'GET' && req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', transport: 'streamable-http', tools: 67 }));
-        return;
-      }
-
-      // MCP endpoint: /mcp
-      if (req.url === '/mcp' || req.url?.startsWith('/mcp?')) {
-        try {
-          // Stateless mode — no session ID, each request is independent
-          const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: undefined,
-          });
-
-          // Parse body for POST requests
-          let parsedBody: any = undefined;
-          if (req.method === 'POST') {
-            const chunks: Buffer[] = [];
-            for await (const chunk of req) chunks.push(chunk);
-            const raw = Buffer.concat(chunks).toString();
-            parsedBody = raw ? JSON.parse(raw) : undefined;
-          }
-
-          // DELETE — session termination (no-op in stateless mode)
-          if (req.method === 'DELETE') {
-            res.writeHead(200);
-            res.end();
-            return;
-          }
-
-          // Create a fresh server per request and register all tools
-          const server = new McpServer({ name: 'timps-mcp', version: '1.0.0' });
-          registerAllTools(server, toolCtx);
-
-          // Connect and handle
-          await server.connect(transport);
-          await transport.handleRequest(req, res, parsedBody);
-        } catch (err: any) {
-          console.error('[HTTP] Error:', err.message);
-          if (!res.headersSent) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Internal server error' }));
-          }
-        }
-        return;
-      }
-
-      // 404 for unknown routes
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Not found. Use POST /mcp for MCP protocol.' }));
+  if (opts.http) {
+    // ── Streamable HTTP transport (stateless: fresh server per request) ──
+    const { toolCount } = createServer(toolCtx);
+    const handler = createHttpHandler({
+      security: {
+        host: opts.host,
+        allowedOrigins: parseAllowedOrigins(process.env.TIMPS_MCP_ALLOWED_ORIGINS),
+        token: process.env.TIMPS_MCP_TOKEN || undefined,
+      },
+      toolCount,
+      handleMcp: async (req, res, body) => {
+        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+        const { server } = createServer(toolCtx);
+        await server.connect(transport);
+        await transport.handleRequest(req, res, body);
+      },
     });
 
-    httpServer.listen(port, () => {
-      console.error(`TIMPs MCP HTTP transport on http://localhost:${port}/mcp`);
+    const httpServer = http.createServer(handler);
+    await new Promise<void>((resolve, reject) => {
+      httpServer.once('error', reject);
+      httpServer.listen(opts.port, opts.host, () => resolve());
     });
+    console.error(`TIMPs MCP v${VERSION} (${modeLabel}, ${toolCount} tools) on http://${opts.host}:${opts.port}/mcp`);
+    if (!process.env.TIMPS_MCP_TOKEN) {
+      console.error('  No TIMPS_MCP_TOKEN set: any local process can use this endpoint.');
+    }
   } else {
     // ── Stdio transport (default, for local agents) ──
-    const server = new McpServer({ name: 'timps-mcp', version: '1.0.0' });
-    registerAllTools(server, toolCtx);
-
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error(`TIMPs MCP v1.0.0 → ${TIMPS_URL} (user ${TIMPS_USER_ID})`);
+    const { server, toolCount } = createServer(toolCtx);
+    await server.connect(new StdioServerTransport());
+    console.error(`TIMPs MCP v${VERSION} (${modeLabel}, ${toolCount} tools)`);
   }
 }
 
-main().catch((err) => {
-  console.error('TIMPs MCP failed:', err.message);
-  process.exit(1);
-});
+// Vitest imports this module to test it; only run as a program otherwise.
+if (!process.env.VITEST) {
+  main().catch((err) => {
+    console.error('TIMPs MCP failed:', err.message);
+    process.exit(1);
+  });
+}
