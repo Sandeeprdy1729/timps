@@ -3,6 +3,9 @@
 
 import type { StorageBackend, StorageQuery, StorageRecord, StorageTransaction, OrgScope } from './types.js';
 
+/** Upper bound on characters hashed per word so a huge token cannot stall the loop. */
+const MAX_SPARSE_WORD_CHARS = 10_000;
+
 export interface QdrantBackendOptions {
   url?: string;
   apiKey?: string;
@@ -398,7 +401,8 @@ export class QdrantBackend implements StorageBackend {
     // Simple hash to indices (0-65535 range for Qdrant sparse vectors)
     for (const word of words) {
       let hash = 0;
-      for (let i = 0; i < word.length; i++) {
+      const limit = Math.min(word.length, MAX_SPARSE_WORD_CHARS);
+      for (let i = 0; i < limit; i++) {
         hash = ((hash << 5) - hash) + word.charCodeAt(i);
         hash = hash & hash;
       }
