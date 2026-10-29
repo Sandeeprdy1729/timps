@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Response } from 'express';
+import type { NextFunction, Response } from 'express';
 import type { MemoryEngine } from '../MemoryEngine';
 import type { AuthenticatedRequest } from './auth';
 import type { MemoryWsServer, WsEvent } from './websocket';
@@ -7,6 +7,35 @@ import type { MemoryEntry, ConflictEvent, ConflictResolutionRequest, ConflictRes
 import { generateId } from '../storage.js';
 
 const pendingConflicts = new Map<string, ConflictEvent>();
+
+// In-process throttle for the expensive forge endpoints. The server also runs
+// a per-org limiter, but that one only kicks in when the caller sends an org id,
+// so these heavy routes get their own cap per caller and minute.
+const THROTTLE_WINDOW_MS = 60_000;
+const THROTTLE_MAX_REQUESTS = 60;
+const throttleHits = new Map<string, number>();
+
+function rateLimitExpensive(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  const caller = (req.headers['x-org-id'] as string) || req.auth?.orgId || req.ip || 'anonymous';
+  const window = Math.floor(Date.now() / THROTTLE_WINDOW_MS);
+  const key = `${caller}:${window}`;
+  const used = throttleHits.get(key) ?? 0;
+
+  if (used >= THROTTLE_MAX_REQUESTS) {
+    const retryAfterMs = THROTTLE_WINDOW_MS - (Date.now() % THROTTLE_WINDOW_MS);
+    res.set('Retry-After', String(Math.ceil(retryAfterMs / 1000)));
+    res.status(429).json({ error: 'Too many requests. Try again later.', retryAfterMs });
+    return;
+  }
+
+  throttleHits.set(key, used + 1);
+  if (throttleHits.size > 1000) {
+    for (const existing of throttleHits.keys()) {
+      if (!existing.endsWith(`:${window}`)) throttleHits.delete(existing);
+    }
+  }
+  next();
+}
 
 export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServer): Router {
   const router = Router();
@@ -485,7 +514,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   // ── Forge layer access ──────────────────────────────────────────────────
 
   // Engram log verify
-  router.get('/forge/engram/verify', (_req: AuthenticatedRequest, res: Response) => {
+  router.get('/forge/engram/verify', rateLimitExpensive, (_req: AuthenticatedRequest, res: Response) => {
     try {
       const result = engine.verifyEngramChain();
       res.json(result);
@@ -495,7 +524,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   });
 
   // Run consolidation
-  router.post('/forge/consolidate', (req: AuthenticatedRequest, res: Response) => {
+  router.post('/forge/consolidate', rateLimitExpensive, (req: AuthenticatedRequest, res: Response) => {
     try {
       const result = engine.runConsolidation(req.body);
       res.json(result);
@@ -505,7 +534,7 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   });
 
   // Prune sweep
-  router.post('/forge/prune', (_req: AuthenticatedRequest, res: Response) => {
+  router.post('/forge/prune', rateLimitExpensive, (_req: AuthenticatedRequest, res: Response) => {
     try {
       const result = engine.runPruneSweep();
       emit({
