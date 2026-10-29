@@ -177,7 +177,7 @@ async function main() {
     if (!truth) { console.warn(`No ground truth for ${q.id}`); continue; }
 
     // Retrieve relevant memory context
-    const memories = engine.recall(q.question, { limit: 5 });
+    const memories = await engine.recall(q.question, { limit: 5 });
     const memoryContext = memories.length > 0
       ? `\n\nRELEVANT PROJECT MEMORY:\n${memories.map(m => `- ${m.content}`).join('\n')}`
       : '';
