@@ -1,6 +1,6 @@
 {
   "name": "@timps-ai/memory-core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "TIMPS 22-layer persistent memory engine — working, episodic, semantic, procedural, and 18 forge layers with 25 intelligence tools for AI agents. Contradiction detection, bug pattern tracking, and burnout monitoring.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
