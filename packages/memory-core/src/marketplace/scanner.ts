@@ -119,8 +119,24 @@ function validatePermissions(declared: Permission[], code: string): ScanResult {
 
 const NPM_AUDIT_TIMEOUT_MS = 15_000;
 
+/**
+ * How to invoke npm without a shell. On Windows `npm` is `npm.cmd`, which Node
+ * refuses to spawn with shell:false (EINVAL since the CVE-2024-27980 fix), so
+ * the audit was always skipped there. Run npm's CLI script with this node instead.
+ */
+function npmInvocation(): { command: string; args: string[] } {
+  if (process.platform !== 'win32') return { command: 'npm', args: [] };
+  const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  return fs.existsSync(npmCli)
+    ? { command: process.execPath, args: [npmCli] }
+    : { command: 'npm.cmd', args: [] };
+}
+
 function runNpmAudit(code: string): ScanResult {
-  const pkgMatch = code.match(/"dependencies"\s*:\s*\{([^}]+)\}/);
+  // `[^{}]+`, not `[^}]+`: the old class could run past a nested `{`, so input
+  // with many `"dependencies":{{` repeats was scanned to the end from each one
+  // (CodeQL js/polynomial-redos). A dependencies object never nests braces.
+  const pkgMatch = code.match(/"dependencies"\s*:\s*\{([^{}]+)\}/);
   if (!pkgMatch) return { rule: 'npm-audit', severity: 'info', passed: true, message: 'No npm dependencies declared' };
 
   const deps = pkgMatch[1];
@@ -141,10 +157,9 @@ function runNpmAudit(code: string): ScanResult {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `timps-scan-${randomBytes(4).toString('hex')}-`));
     fs.writeFileSync(path.join(tmpDir, 'package.json'), pkgJson);
 
-    // spawnSync with an args array + shell:false → no shell, no command
-    // injection. Bare 'npm' is a .cmd shim on Windows, so use npm.cmd there.
-    const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const result = spawnSync(npmBin, ['audit', '--json'], {
+    // spawnSync with an args array + shell:false → no shell, no command injection.
+    const npm = npmInvocation();
+    const result = spawnSync(npm.command, [...npm.args, 'audit', '--json'], {
       cwd: tmpDir,
       encoding: 'utf-8',
       timeout: NPM_AUDIT_TIMEOUT_MS,

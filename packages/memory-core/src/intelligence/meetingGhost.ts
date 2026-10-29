@@ -33,7 +33,9 @@ const COMMITMENT_PATTERNS: RegExp[] = [
 const DEADLINE_PATTERNS: RegExp[] = [
   /\bby\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|end\s+of\s+(?:day|week|month|quarter|year)|eod|eow|next\s+week|next\s+month|tomorrow|tonight|q[1-4])(?:[,.!\s]|$)/i,
   /\bbefore\s+([^.!?\n]{3,40})/i,
-  /\b(?:due|deadline)\s*[:-]?\s*([^.!?\n]{3,40})/i,
+  // `\s*(?:[:-]\s*)?`, not `\s*[:-]?\s*`: two adjacent \s* quantifiers made
+  // matching polynomial on long runs of spaces (CodeQL js/polynomial-redos).
+  /\b(?:due|deadline)\s*(?:[:-]\s*)?([^.!?\n]{3,40})/i,
   /\b(\d{4}-\d{2}-\d{2})\b/,
 ];
 

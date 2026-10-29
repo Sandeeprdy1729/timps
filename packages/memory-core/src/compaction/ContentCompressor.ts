@@ -71,7 +71,7 @@ export class ContentCompressor {
    * 4. Reconstruct as concise summary
    */
   private _compressContent(content: string): string {
-    let text = content;
+    const text = content;
 
     // Preserve error messages if configured
     if (this.options.preserveErrors) {
@@ -134,7 +134,10 @@ export class ContentCompressor {
 
     // File paths (simple patterns)
     if (this.options.preserveFilePaths) {
-      const pathMatches = content.match(/[\w\-./]+\.\w{2,4}/g);
+      // The lookbehind starts a match only at the beginning of a path-like run.
+      // Unanchored, every position inside a long run of path chars rescanned to
+      // its end, which is quadratic (CodeQL js/polynomial-redos). Same matches.
+      const pathMatches = content.match(/(?<![\w\-./])[\w\-./]+\.\w{2,4}/g);
       if (pathMatches) pathMatches.forEach(e => entities.add(e));
     }
 
