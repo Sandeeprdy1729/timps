@@ -265,9 +265,9 @@ export function createGrpcServer(engine: MemoryEngine, options: GrpcServerOption
       }
     },
 
-    GetContext: (call: any, callback: any) => {
+    GetContext: async (call: any, callback: any) => {
       try {
-        const context = engine.getContextString(call.request.task ?? '');
+        const context = await engine.getContextString(call.request.task ?? '');
         callback(null, { context });
       } catch (err: any) {
         callback({ code: grpc.status.INTERNAL, message: err.message });

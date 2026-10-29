@@ -11,16 +11,22 @@ export interface ToolContext {
   TIMPS_USER_ID: number;
 }
 
+/** Registers every TIMPS tool on `server` and returns how many were registered. */
 export function registerAllTools(
   server: McpServer,
   ctx: ToolContext
-): void {
+): number {
   const { memoryClient, localEngine, timpsAPI, chat, SERVER_MODE, TIMPS_USER_ID } = ctx;
-  const registerTool = server.registerTool.bind(server) as (
+  const boundRegisterTool = server.registerTool.bind(server) as (
     name: string,
     config: { description: string; inputSchema: Record<string, unknown> },
     handler: (args: any) => any
   ) => void;
+  let registered = 0;
+  const registerTool: typeof boundRegisterTool = (name, config, handler) => {
+    registered++;
+    boundRegisterTool(name, config, handler);
+  };
 
   // ── Core Memory ─────────────────────────────────────────────────────────────
 
@@ -1604,4 +1610,6 @@ export function registerAllTools(
     }
     return { content: [{ type: 'text' as const, text: lines.join('\n') }] };
   });
+
+  return registered;
 }

@@ -386,14 +386,33 @@ describe('LspProxyServer', () => {
       // Timeout is acceptable — graceful degradation means the server doesn't crash
     });
 
-    failServer.stop();
+    await failServer.stop();
   });
 
-  it('stops all timers and processes on stop', () => {
-    server.stop();
+  it('stops all timers and processes on stop', async () => {
+    server.start(testRoot);
+    await server.stop();
     // No debounce timers should remain
     const timers = (server as unknown as { debounceTimers: Map<string, unknown> }).debounceTimers;
     expect(timers.size).toBe(0);
+    expect(server.isRunning()).toBe(false);
+  });
+
+  it('a stopped server exiting late does not clobber a restarted one', async () => {
+    type WithProcess = { realServerProcess: import('node:child_process').ChildProcess | null };
+    server.start(testRoot);
+    const first = (server as unknown as WithProcess).realServerProcess!;
+    expect(first).not.toBeNull();
+    const firstExited = new Promise<void>((resolve) => first.once('exit', () => resolve()));
+
+    void server.stop();
+    server.start(testRoot);
+    const second = (server as unknown as WithProcess).realServerProcess;
+    expect(second).not.toBeNull();
+    expect(second).not.toBe(first);
+
+    await firstExited;
+    expect((server as unknown as WithProcess).realServerProcess).toBe(second);
   });
 
   it('tracks document state after didOpen', () => {
@@ -439,8 +458,8 @@ describe('LspProxyServer', () => {
     expect(docs.get('file:///test.ts')?.text).toBe('line1\nlineB\nline3\n');
   });
 
-  afterEach(() => {
-    server.stop();
+  afterEach(async () => {
+    await server.stop();
   });
 
   afterAll(() => {

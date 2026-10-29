@@ -5,6 +5,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 export interface Contribution {
   id: string;
@@ -66,7 +67,7 @@ export class InstitutionalMemory {
     const name = contributor.toLowerCase();
     const now = new Date().toISOString();
     const c: Contribution = {
-      id: `im_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('im'),
       contributor: name,
       kind,
       text,

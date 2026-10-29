@@ -360,7 +360,7 @@ export function uninstallInstructions(target: AgentTarget, dryRun = false): bool
 
 // ── Command resolution ────────────────────────────────────────────────────────
 
-export function buildRegistration(opts: SetupOptions): McpRegistration {
+export function buildRegistration(opts: SetupOptions, platform: NodeJS.Platform = process.platform): McpRegistration {
   const env: Record<string, string> = {};
   if (opts.server) {
     env.TIMPS_URL = opts.server;
@@ -377,7 +377,16 @@ export function buildRegistration(opts: SetupOptions): McpRegistration {
     }
   }
   if (opts.binary) {
+    // A .js bundle has no executable bit / shebang support on Windows: run it with node.
+    if (/\.[cm]?js$/i.test(opts.binary)) {
+      return { command: 'node', args: [opts.binary], env };
+    }
     return { command: opts.binary, args: [], env };
+  }
+  // MCP clients spawn servers without a shell, and on Windows `npx` is npx.cmd,
+  // so a bare "npx" fails with ENOENT there. Go through cmd /c instead.
+  if (platform === 'win32') {
+    return { command: 'cmd', args: ['/c', DEFAULT_COMMAND, ...DEFAULT_ARGS], env };
   }
   return { command: DEFAULT_COMMAND, args: [...DEFAULT_ARGS], env };
 }

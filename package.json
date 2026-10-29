@@ -34,6 +34,8 @@
     "clean": "turbo run clean --filter=!@timps/mobile",
     "docs": "turbo run build --filter=@timps/docs",
     "dashboard": "turbo run dev --filter=@timps/memory-dashboard",
+    "release:build": "npm run build --workspace=packages/memory-core && npm run build --workspace=packages/plugin-sdk && npm run build --workspace=timps-mcp && npm run build --workspace=timps-code && npm run build --workspace=packages/server",
+    "release": "npm run release:build && changeset publish",
     "cli": "cd timps-code && npm run dev",
     "tui": "cd timps-code && npm run dev"
   },

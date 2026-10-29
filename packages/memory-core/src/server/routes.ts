@@ -238,10 +238,10 @@ export function createMemoryRoutes(engine: MemoryEngine, wsServer?: MemoryWsServ
   });
 
   // ── Get context string (for prompt injection) ───────────────────────────
-  router.post('/context', (req: AuthenticatedRequest, res: Response) => {
+  router.post('/context', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { task } = req.body;
-      const context = engine.getContextString(task ?? '');
+      const context = await engine.getContextString(task ?? '');
       res.json({ context });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

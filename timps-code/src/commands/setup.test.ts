@@ -68,13 +68,25 @@ describe('tomlString', () => {
 
 describe('buildRegistration', () => {
   it('defaults to npx -y @timps-ai/timps-mcp', () => {
-    const r = buildRegistration({});
+    const r = buildRegistration({}, 'linux');
     expect(r).toEqual({ command: 'npx', args: ['-y', '@timps-ai/timps-mcp'], env: {} });
   });
 
+  it('wraps npx in cmd /c on Windows, where clients spawn without a shell', () => {
+    const r = buildRegistration({}, 'win32');
+    expect(r).toEqual({ command: 'cmd', args: ['/c', 'npx', '-y', '@timps-ai/timps-mcp'], env: {} });
+  });
+
   it('uses --binary as the command with no args', () => {
-    const r = buildRegistration({ binary: '/usr/local/bin/timps-mcp' });
+    const r = buildRegistration({ binary: '/usr/local/bin/timps-mcp' }, 'linux');
     expect(r).toEqual({ command: '/usr/local/bin/timps-mcp', args: [], env: {} });
+  });
+
+  it('runs a --binary .js bundle through node', () => {
+    expect(buildRegistration({ binary: 'C:\\tools\\timps-mcp\\dist\\index.js' }, 'win32'))
+      .toEqual({ command: 'node', args: ['C:\\tools\\timps-mcp\\dist\\index.js'], env: {} });
+    expect(buildRegistration({ binary: '/opt/timps/timps-mcp.cjs' }, 'linux'))
+      .toEqual({ command: 'node', args: ['/opt/timps/timps-mcp.cjs'], env: {} });
   });
 
   it('sets TIMPS_URL + TIMPS_MEMORY_URL env when --server is provided', () => {

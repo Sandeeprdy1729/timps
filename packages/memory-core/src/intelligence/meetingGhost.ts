@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 export interface Commitment {
   id: string;
@@ -25,14 +26,16 @@ const COMMITMENT_PATTERNS: RegExp[] = [
   /\bI(?:'ll| will| am going to| plan to)?\s+(?:also\s+)?([^.!?\n]{6,140})/gi,
   /\bwe(?:'ll| will| are going to| need to)?\s+(?:also\s+)?([^.!?\n]{6,140})/gi,
   /@(\w+)\s+(?:to|will|should|owns?|does|handles?)\s+([^.!?\n]{6,140})/gi,
-  /\b(?:TODO|ACTION|AI)\s*[:\-]\s*([^\n]{6,140})/gi,
+  /\b(?:TODO|ACTION|AI)\s*[:-]\s*([^\n]{6,140})/gi,
   /\b(\w+)\s+(?:to|will|should|owns?|does|handles?)\s+(?:the\s+)?([^.!?\n]{6,140})/gi,
 ];
 
 const DEADLINE_PATTERNS: RegExp[] = [
   /\bby\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|end\s+of\s+(?:day|week|month|quarter|year)|eod|eow|next\s+week|next\s+month|tomorrow|tonight|q[1-4])(?:[,.!\s]|$)/i,
   /\bbefore\s+([^.!?\n]{3,40})/i,
-  /\b(?:due|deadline)\s*[:\-]?\s*([^.!?\n]{3,40})/i,
+  // `\s*(?:[:-]\s*)?`, not `\s*[:-]?\s*`: two adjacent \s* quantifiers made
+  // matching polynomial on long runs of spaces (CodeQL js/polynomial-redos).
+  /\b(?:due|deadline)\s*(?:[:-]\s*)?([^.!?\n]{3,40})/i,
   /\b(\d{4}-\d{2}-\d{2})\b/,
 ];
 
@@ -114,7 +117,7 @@ export class MeetingGhost {
         const owner = match[0].match(/^@?(\w+)\s+(?:to|will|should|owns?)/i)?.[1];
         const deadline = findDeadline(text);
         found.push({
-          id: `c_${Date.now().toString(36)}_${found.length}_${Math.random().toString(36).slice(2, 5)}`,
+          id: generateId('c'),
           text: text.replace(/\s+/g, ' ').trim(),
           owner: owner?.toLowerCase(),
           deadline,

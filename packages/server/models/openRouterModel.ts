@@ -60,7 +60,7 @@ export class OpenRouterModel extends BaseModel {
 
     let toolCalls: GenerateResponse['toolCalls'];
     if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-      toolCalls = choice.message.tool_calls.map(tc => ({
+      toolCalls = choice.message.tool_calls.map((tc: OpenAI.Chat.ChatCompletionMessageToolCall) => ({
         id: tc.id,
         type: 'function' as const,
         function: {

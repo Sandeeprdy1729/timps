@@ -1070,12 +1070,21 @@ export class MemoryEngine {
     const now = Date.now();
     const useIntel = options?.useIntelligence ?? true;
 
+    // BM25 scores are unbounded (often 3–15), but the calibrator expects a
+    // 0–1 similarity. Unnormalized, every candidate clamped to confidence 1
+    // and ranking collapsed to noise. Scale relative to the best candidate.
+    const maxRawScore = candidates.reduce((m, c) => Math.max(m, c.score ?? 0), 0);
+    const normalizeSimilarity = (raw: number | undefined): number => {
+      if (raw === undefined) return 0.5;
+      return maxRawScore > 1 ? raw / maxRawScore : raw;
+    };
+
     const scored: ScoredMemoryEntry[] = candidates.map(entry => {
       const prov = useIntel ? this.provenanceForge.explain(entry.id) : null;
       const sourceReliability = prov ? this.provenanceForge.reliability(prov) : 0.5;
       const ageDays = (now - entry.timestamp) / (24 * 60 * 60 * 1000);
       const evidenceCount = prov?.evidenceCount ?? 1;
-      const similarityScore = entry.score ?? 0.5;
+      const similarityScore = normalizeSimilarity(entry.score);
 
       // Stage 3: Confidence calibration
       let calibratedConfidence = similarityScore;

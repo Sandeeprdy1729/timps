@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 export interface PastDecision {
   id: string;
@@ -69,7 +70,7 @@ export class DeadReckoning {
   /** Log a past decision with its outcome (used to seed the simulation model). */
   log(decision: string, context: string, regret_score: number, outcome: 'positive' | 'neutral' | 'negative'): PastDecision {
     const d: PastDecision = {
-      id: `pd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('pd'),
       decision,
       context,
       regret_score: Math.max(0, Math.min(1, regret_score)),

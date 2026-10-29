@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/timps-code"><img src="https://img.shields.io/npm/v/timps-code?label=timps-code&color=brightgreen&style=for-the-badge" alt="npm"></a>
-  <a href="https://www.npmjs.com/package/timps-mcp"><img src="https://img.shields.io/npm/v/timps-mcp?label=timps-mcp&color=0ea5e9&style=for-the-badge" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@timps-ai/timps-code"><img src="https://img.shields.io/npm/v/@timps-ai/timps-code?label=timps-code&color=brightgreen&style=for-the-badge" alt="npm"></a>
+  <a href="https://www.npmjs.com/package/@timps-ai/timps-mcp"><img src="https://img.shields.io/npm/v/@timps-ai/timps-mcp?label=timps-mcp&color=0ea5e9&style=for-the-badge" alt="npm"></a>
   <a href="https://github.com/Sandeeprdy1729/timps/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Sandeeprdy1729/timps/ci.yml?label=CI&style=for-the-badge" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
 </p>
@@ -39,7 +39,7 @@
 ## Essayez en 30 secondes
 
 ```bash
-npx timps-code "what does this codebase do?"
+npx @timps-ai/timps-code "what does this codebase do?"
 ```
 
 Pas d'installation, pas de configuration, pas de clé API. Pointez-le vers n'importe quel repo. Si Ollama tourne en local, c'est 100% gratuit et rien ne sort de votre machine. Sinon, il vous guidera dans le choix d'un fournisseur.

@@ -50,42 +50,19 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npx changeset publish
+          # Builds every publishable package first: only timps-code has a
+          # prepublishOnly hook, so a bare `changeset publish` shipped the
+          # others without dist/.
+          publish: npm run release
           title: 'chore: version packages'
           commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # ── timps-code: publish if changed ─────────────────────────────────────
-      - name: Publish timps-code
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "NPM_TOKEN not configured — skipping publish"
-            exit 0
-          fi
-          cd timps-code
-          npm ci
-          npm run build
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # ── timps-mcp: publish if changed ──────────────────────────────────────
-      - name: Publish timps-mcp
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "NPM_TOKEN not configured — skipping publish"
-            exit 0
-          fi
-          cd timps-mcp
-          npm ci
-          npm run build
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # timps-code and timps-mcp are published by `changeset publish` above;
+      # re-publishing the same version here failed with "cannot publish over
+      # the previously published version".
 
       # ── GitHub Release notes ────────────────────────────────────────────────
       - name: Create GitHub Release

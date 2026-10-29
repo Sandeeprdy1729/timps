@@ -74,31 +74,37 @@ export class LspProxyServer {
 
   private launchRealServer(rootPath: string): void {
     try {
-      this.realServerProcess = spawn(
+      const child = spawn(
         this.config.serverCommand,
         this.config.serverArgs || ['--stdio'],
         { stdio: ['pipe', 'pipe', 'pipe'], cwd: rootPath }
       );
+      this.realServerProcess = child;
 
-      this.realServerProcess.stdout?.on('data', (data: Buffer) => {
+      child.stdout?.on('data', (data: Buffer) => {
         this.handleRealServerResponse(data.toString());
       });
 
-      this.realServerProcess.stderr?.on('data', (data: Buffer) => {
+      child.stderr?.on('data', (data: Buffer) => {
         // Most language servers log to stderr — forward for debugging
         if (this.config.languageId !== 'typescript' || !data.toString().includes('[Info')) {
           // silently absorb most stderr (language servers are chatty)
         }
       });
 
-      this.realServerProcess.on('error', (err) => {
+      child.on('error', (err) => {
         console.error(`[TIMPS LSP:${this.config.languageId}] Real server error:`, err.message);
       });
 
-      this.realServerProcess.on('exit', (code) => {
+      child.on('exit', (code) => {
         console.warn(`[TIMPS LSP:${this.config.languageId}] Real server exited (${code})`);
-        this.realServerProcess = null;
-        this.initialized = false;
+        // After stop() + start(), a late exit from the old process must not
+        // clear the reference to the new one (that left the proxy thinking no
+        // server was running, so the next start() spawned a duplicate).
+        if (this.realServerProcess === child) {
+          this.realServerProcess = null;
+          this.initialized = false;
+        }
       });
     } catch (err) {
       console.error(`[TIMPS LSP:${this.config.languageId}] Failed to start real server:`, err);
@@ -628,7 +634,8 @@ export class LspProxyServer {
     return '';
   }
 
-  stop(): void {
+  /** Stops the proxy. Resolves once the real language server process has exited. */
+  stop(): Promise<void> {
     for (const [, timer] of this.debounceTimers) {
       clearTimeout(timer);
     }
@@ -636,11 +643,22 @@ export class LspProxyServer {
     this.documents.clear();
     this.lastDiagnostics.clear();
 
-    if (this.realServerProcess) {
-      this.realServerProcess.kill();
-      this.realServerProcess = null;
-    }
+    const child = this.realServerProcess;
+    this.realServerProcess = null;
     this.initialized = false;
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      // Escalate if the server ignores the polite signal.
+      const forceKill = setTimeout(() => child.kill('SIGKILL'), 2000);
+      forceKill.unref();
+      child.once('exit', () => {
+        clearTimeout(forceKill);
+        resolve();
+      });
+      child.kill();
+    });
   }
 
   isRunning(): boolean {

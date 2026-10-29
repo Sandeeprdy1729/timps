@@ -148,7 +148,11 @@ export class ConstitutionalSandbox {
   }
 
   private extractCode(prompt: string, lang: string): string | null {
-    const fence = prompt.match(/```(?:\w+)?\n?([\s\S]*?)```/);
+    // An info string (```python) only counts when a newline follows it. The old
+    // `(?:\w+)?\n?` overlapped with the body, so an unclosed fence followed by
+    // word characters backtracked quadratically (CodeQL js/polynomial-redos), and
+    // an inline fence like ```print('hi')``` lost "print" as a fake language tag.
+    const fence = prompt.match(/```(?:\w*\n)?([\s\S]*?)```/);
     if (fence) return fence[1].trim();
     return prompt.replace(/^(please\s+)?(run|execute|test)\s+(this|that|the\s+following)?:?\s*/i, '').trim();
   }

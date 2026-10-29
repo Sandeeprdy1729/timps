@@ -18,6 +18,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
 import type { StorageBackend } from './backends/types.js';
+import { fnv1a, mulberry32 } from './forgeEmbedding.js';
 
 export type ResonanceDomain =
   | "burnout"
@@ -291,10 +292,12 @@ export class ResonanceForge {
     ).length;
     const frequency = Math.min(1, recentInDomain / 20);
 
-    let phase = Math.random() * 2 * Math.PI;
+    // Phase is derived from the content so weaving is reproducible.
+    const phaseRand = mulberry32(fnv1a(content));
+    let phase = phaseRand() * 2 * Math.PI;
     if (opts.causalParentId && this.store.nodes[opts.causalParentId]) {
       const parent = this.store.nodes[opts.causalParentId]!;
-      phase = (parent.phase + (Math.random() - 0.5) * 0.4) % (2 * Math.PI);
+      phase = (parent.phase + (phaseRand() - 0.5) * 0.4) % (2 * Math.PI);
     }
 
     const baseAmplitude =
@@ -631,8 +634,10 @@ export class ResonanceForge {
     const trajectory: number[] = [
       parseFloat(fieldStrength.toFixed(3)),
     ];
+    // Seeded from the inputs so identical state gives an identical prediction.
+    const rand = mulberry32(fnv1a(`${domain}:${nodes.map((n) => n.id).join(",")}:${steps}`));
     for (let i = 1; i < steps; i++) {
-      const noise = (Math.random() - 0.5) * 0.04;
+      const noise = (rand() - 0.5) * 0.04;
       fieldStrength = Math.max(
         0,
         Math.min(

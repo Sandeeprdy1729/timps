@@ -46,7 +46,8 @@ function makeExecutable(): string {
 describe('M69 — shell_which is a pure-Node PATH lookup', () => {
   it('finds an executable on PATH without shelling out', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'timps-which-test-'));
-    const file = join(dir, 'timps_probe');
+    // Windows resolves commands via PATHEXT, so the probe needs an extension.
+    const file = join(dir, process.platform === 'win32' ? 'timps_probe.cmd' : 'timps_probe');
     writeFileSync(file, '#!/bin/sh\necho probe\n');
     chmodSync(file, 0o755);
     const oldPath = process.env.PATH;

@@ -20,10 +20,22 @@ describe('projectHash — canonical path hashing', () => {
     const link = path.join(os.tmpdir(), `timps-hash-link-${Date.now()}`);
     fs.mkdirSync(real, { recursive: true });
     try {
-      fs.symlinkSync(real, link);
+      // 'junction' is ignored on POSIX; on Windows it links a directory
+      // without needing admin rights or Developer Mode (plain symlinks EPERM).
+      fs.symlinkSync(real, link, 'junction');
       expect(projectHash(link)).toBe(projectHash(real));
     } finally {
       fs.rmSync(link, { force: true });
+      fs.rmSync(real, { recursive: true, force: true });
+    }
+  });
+
+  test.runIf(process.platform === 'win32')('differently-cased Windows paths hash to the same project', () => {
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), 'timps-Case-'));
+    try {
+      expect(projectHash(real.toLowerCase())).toBe(projectHash(real));
+      expect(projectHash(real.toUpperCase())).toBe(projectHash(real));
+    } finally {
       fs.rmSync(real, { recursive: true, force: true });
     }
   });

@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -71,7 +72,7 @@ export class RegretOracle {
   /** log: record a decision with optional outcome and regret score */
   log(description: string, outcome?: string, regret_score = 0, decision_type?: string): Decision {
     const dec: Decision = {
-      id: `dec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('dec'),
       description,
       decision_type,
       regret_score,
