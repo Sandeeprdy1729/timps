@@ -226,19 +226,20 @@ export class MemoryServer {
   private mountRoutes(): void {
     let memoryRoutes: express.Router;
 
-    // Per-org rate limiting middleware
+    // Rate limiting middleware. Callers without an org id are bucketed by
+    // address, otherwise unauthenticated routes would skip the limiter entirely.
     const rateLimitMiddleware = async (req: any, res: any, next: any) => {
-      const orgId = req.auth?.orgId ?? req.headers['x-org-id'] as string;
-      if (orgId) {
-        const result = await this.rateLimiter.checkMemoryOp(orgId);
-        if (!result.allowed) {
-          res.set('Retry-After', String(Math.ceil((result.retryAfterMs ?? 60000) / 1000)));
-          return res.status(429).json({
-            error: 'Rate limit exceeded. Try again later.',
-            retryAfterMs: result.retryAfterMs,
-            orgId,
-          });
-        }
+      const orgId = req.auth?.orgId
+        ?? (req.headers['x-org-id'] as string)
+        ?? (req.ip ? `ip:${req.ip}` : 'anonymous');
+      const result = await this.rateLimiter.checkMemoryOp(orgId);
+      if (!result.allowed) {
+        res.set('Retry-After', String(Math.ceil((result.retryAfterMs ?? 60000) / 1000)));
+        return res.status(429).json({
+          error: 'Rate limit exceeded. Try again later.',
+          retryAfterMs: result.retryAfterMs,
+          orgId,
+        });
       }
       next();
     };
@@ -344,14 +345,14 @@ export class MemoryServer {
 
       // Marketplace also behind auth
       const marketplaceRoutes = createMarketplaceRoutes(this.engine.backend);
-      this.app.use('/marketplace', combinedAuth, marketplaceRoutes);
+      this.app.use('/marketplace', combinedAuth, rateLimitMiddleware, marketplaceRoutes);
     } else {
       memoryRoutes = createMemoryRoutes(this.engine, this.wsServer);
       this.app.use('/memory', rateLimitMiddleware, memoryRoutes);
 
       // Marketplace open (no auth)
       const marketplaceRoutes = createMarketplaceRoutes(this.engine.backend);
-      this.app.use('/marketplace', marketplaceRoutes);
+      this.app.use('/marketplace', rateLimitMiddleware, marketplaceRoutes);
     }
 
     // ── Project Room endpoints ──
