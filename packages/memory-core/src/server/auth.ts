@@ -39,12 +39,15 @@ const DEFAULT_EXPIRY = '24h';
 const API_KEY_PREFIX = 'timps_';
 const API_KEY_BYTES = 20; // 40 hex chars
 
+/** Domain separator so an api key digest can never collide with a password hash. */
+const API_KEY_DIGEST_CONTEXT = 'timps-api-key-v1';
+
 /** Generate a new API key. Returns { key, hash, id }. The key is shown ONCE. */
 export function generateApiKey(name: string): { key: string; hash: string; id: string } {
   const random = crypto.randomBytes(API_KEY_BYTES).toString('hex');
   const key = `${API_KEY_PREFIX}${random}`;
   const id = random.slice(0, 8);
-  const hash = sha256(key);
+  const hash = apiKeyDigest(key);
   return { key, hash, id };
 }
 
@@ -53,14 +56,29 @@ export function sha256(input: string): string {
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
+/**
+ * Digest stored for an API key. HMAC-SHA-256 with a fixed context string.
+ * API keys are 160 random bits, so a single fast pass is enough — this is not
+ * a password and must not need a slow KDF on every request.
+ */
+export function apiKeyDigest(input: string): string {
+  return crypto.createHmac('sha256', API_KEY_DIGEST_CONTEXT).update(input).digest('hex');
+}
+
 /** Constant-time comparison for API keys (timing-safe). */
 export function verifyApiKey(provided: string, storedHash: string): boolean {
-  const providedHash = sha256(provided);
-  try {
-    return crypto.timingSafeEqual(Buffer.from(providedHash, 'hex'), Buffer.from(storedHash, 'hex'));
-  } catch {
-    return false;
+  // The plain SHA-256 form is accepted so keys written before the switch to
+  // the domain-separated digest keep working.
+  for (const candidate of [apiKeyDigest(provided), sha256(provided)]) {
+    try {
+      const a = Buffer.from(candidate, 'hex');
+      const b = Buffer.from(storedHash, 'hex');
+      if (a.length === b.length && crypto.timingSafeEqual(a, b)) return true;
+    } catch {
+      // fall through to the next candidate
+    }
   }
+  return false;
 }
 
 /** Extract API key from request: Bearer header, ?key= query param, or x-api-key header. */
