@@ -313,6 +313,15 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
     } catch { document.getElementById('statusDot').classList.remove('connected'); }
   }
 
+  // Build an element; text always goes through textContent so nothing here
+  // can turn server data into markup.
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null && text !== '') node.textContent = String(text);
+    return node;
+  }
+
   function addMessage(role, content, type) {
     type = type || 'normal';
     var msgs = document.getElementById('messages');
@@ -324,13 +333,13 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
     var contentEl = document.createElement('div');
     if (type === 'search') {
       contentEl.className = 'msg-content search-result';
-      contentEl.innerHTML = content;
-    } else if (type === 'dna') {
-      contentEl.className = 'msg-content';
-      contentEl.innerHTML = content;
     } else {
       contentEl.className = 'msg-content' + (role === 'user' ? ' user-content' : role === 'system' ? ' system-content' : '');
-      contentEl.textContent = content;
+    }
+    if (content && typeof content === 'object' && content.nodeType) {
+      contentEl.appendChild(content);
+    } else {
+      contentEl.textContent = content === undefined || content === null ? '' : String(content);
     }
     var timeEl = document.createElement('div');
     timeEl.className = 'msg-time';
@@ -404,8 +413,7 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       });
       var data = await res.json();
       hideTyping();
-      var html = buildDNAAlertHTML(data, statement);
-      addMessage('assistant', html, 'dna');
+      addMessage('assistant', buildDNAAlert(data), 'dna');
       if (state.activeTab === 'dna') await loadPositions();
     } catch (err) {
       hideTyping();
@@ -451,23 +459,23 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
     }
   }
 
-  function buildDNAAlertHTML(data, statement) {
+  function buildDNAAlert(data) {
     var v = (data.verdict || 'CLEAN').toLowerCase();
     var score = Math.round((data.contradiction_score || 0) * 100);
     var verdictText = v === 'contradiction' ? 'CONTRADICTION DETECTED'
       : v === 'partial' ? 'PARTIAL CONFLICT'
       : 'NO CONTRADICTION';
-    var html = '<div class="dna-alert ' + v + '">';
-    html += '<div class="dna-verdict ' + v + '">' + verdictText + ' — ' + score + '%</div>';
-    if (data.explanation) html += '<div class="dna-explanation">' + data.explanation + '</div>';
+    var box = el('div', 'dna-alert ' + v);
+    box.appendChild(el('div', 'dna-verdict ' + v, verdictText + ' — ' + score + '%'));
+    if (data.explanation) box.appendChild(el('div', 'dna-explanation', data.explanation));
     if (data.memory_quote && data.matched_position) {
-      html += '<div class="dna-quote">Stored on ' + new Date(data.matched_position.created_at).toLocaleDateString() + ': &ldquo;' + data.memory_quote + '&rdquo;</div>';
+      box.appendChild(el('div', 'dna-quote',
+        'Stored on ' + new Date(data.matched_position.created_at).toLocaleDateString() + ': “' + data.memory_quote + '”'));
     }
     if (data.extracted_claims && data.extracted_claims.length) {
-      html += '<div class="dna-meta">Claim extracted: ' + data.extracted_claims[0] + '</div>';
+      box.appendChild(el('div', 'dna-meta', 'Claim extracted: ' + data.extracted_claims[0]));
     }
-    html += '</div>';
-    return html;
+    return box;
   }
 
   // ─── Positions panel ────────────────────────────────────────────────────────
@@ -480,25 +488,36 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       var positions = data.positions || [];
       document.getElementById('dnaCount').textContent = positions.length + ' position' + (positions.length !== 1 ? 's' : '');
       var list = document.getElementById('positionsList');
+      list.textContent = '';
       if (!positions.length) {
-        list.innerHTML = '<div class="dna-empty">No positions stored yet.<br/>Use !dna &lt;statement&gt; to begin.</div>';
+        var empty = el('div', 'dna-empty');
+        empty.appendChild(document.createTextNode('No positions stored yet.'));
+        empty.appendChild(document.createElement('br'));
+        empty.appendChild(document.createTextNode('Use !dna <statement> to begin.'));
+        list.appendChild(empty);
         return;
       }
-      list.innerHTML = positions.map(function(p) {
+      positions.forEach(function(p) {
         var date = p.created_at ? new Date(p.created_at).toLocaleDateString() : '';
-        var contra = p.contradiction_count > 0
-          ? '<span class="pos-contra-badge">' + p.contradiction_count + ' conflict' + (p.contradiction_count !== 1 ? 's' : '') + '</span>'
-          : '';
-        return '<div class="pos-item">'
-          + '<div class="pos-meta"><span class="pos-id">#' + p.id + '</span>'
-          + '<span class="pos-topic">' + (p.topic_cluster || 'general') + '</span>'
-          + '<span class="pos-type">' + (p.claim_type || '') + '</span>'
-          + contra + '</div>'
-          + '<div class="pos-claim">' + p.extracted_claim + '</div>'
-          + '<div class="pos-footer"><span>' + date + '</span>'
-          + '<span class="pos-del" onclick="deletePosition(' + p.id + ')">delete</span></div>'
-          + '</div>';
-      }).join('');
+        var item = el('div', 'pos-item');
+        var meta = el('div', 'pos-meta');
+        meta.appendChild(el('span', 'pos-id', '#' + p.id));
+        meta.appendChild(el('span', 'pos-topic', p.topic_cluster || 'general'));
+        meta.appendChild(el('span', 'pos-type', p.claim_type || ''));
+        if (p.contradiction_count > 0) {
+          meta.appendChild(el('span', 'pos-contra-badge',
+            p.contradiction_count + ' conflict' + (p.contradiction_count !== 1 ? 's' : '')));
+        }
+        item.appendChild(meta);
+        item.appendChild(el('div', 'pos-claim', p.extracted_claim));
+        var footer = el('div', 'pos-footer');
+        footer.appendChild(el('span', '', date));
+        var del = el('span', 'pos-del', 'delete');
+        del.addEventListener('click', function() { deletePosition(p.id); });
+        footer.appendChild(del);
+        item.appendChild(footer);
+        list.appendChild(item);
+      });
     } catch (err) {
       console.warn('Could not load positions:', err);
     }
@@ -524,18 +543,39 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       var kw = keyword.toLowerCase();
       var matches = (data.memories || []).filter(function(m) { return m.content && m.content.toLowerCase().includes(kw); });
       if (!matches.length) { addMessage('assistant', 'No memories found matching "' + keyword + '".', 'system'); return; }
-      var html = '<div style="color:var(--green);font-size:11px;margin-bottom:8px">Found ' + matches.length + ' item(s) matching "<span style=\'color:var(--accent)\'>' + keyword + '</span>":</div>';
+      var frag = document.createDocumentFragment();
+      var head = el('div', '', 'Found ' + matches.length + ' item(s) matching ');
+      head.style.cssText = 'color:var(--green);font-size:11px;margin-bottom:8px';
+      var kw = el('span', '', '"' + keyword + '"');
+      kw.style.color = 'var(--accent)';
+      head.appendChild(kw);
+      head.appendChild(document.createTextNode(':'));
+      frag.appendChild(head);
       matches.forEach(function(m) {
         var stars = '★'.repeat(Math.min(m.importance || 1, 5));
-        html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span><span class="sr-content">' + m.content + '</span></div>';
+        var item = el('div', 'sr-item');
+        item.appendChild(el('span', 'sr-id', '[' + m.id + ']'));
+        item.appendChild(el('span', 'sr-type', (m.memory_type || 'MEMORY').toUpperCase()));
+        item.appendChild(el('span', 'sr-stars', stars));
+        item.appendChild(el('span', 'sr-content', m.content));
+        frag.appendChild(item);
       });
-      addMessage('assistant', html, 'search');
+      addMessage('assistant', frag, 'search');
     } catch { hideTyping(); addMessage('assistant', 'Could not search memories.', 'system'); }
   }
 
   function handleForget(keyword) {
     document.getElementById('confirmTitle').textContent = '!forget "' + keyword + '"';
-    document.getElementById('confirmBody').innerHTML = 'Delete all memories matching <strong style="font-family:var(--mono);color:var(--accent)">"' + keyword + '"</strong>?<br/><br/>Cannot be undone.';
+    var body = document.getElementById('confirmBody');
+    body.textContent = '';
+    body.appendChild(document.createTextNode('Delete all memories matching '));
+    var strong = el('strong', '', '"' + keyword + '"');
+    strong.style.cssText = 'font-family:var(--mono);color:var(--accent)';
+    body.appendChild(strong);
+    body.appendChild(document.createTextNode('?'));
+    body.appendChild(document.createElement('br'));
+    body.appendChild(document.createElement('br'));
+    body.appendChild(document.createTextNode('Cannot be undone.'));
     confirmCallback = async function() {
       closeConfirm();
       addMessage('assistant', '!forget "' + keyword + '" confirmed.', 'system');
@@ -552,13 +592,26 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       hideTyping();
       var all = (data.memories || []).slice(-10).reverse();
       if (!all.length) { addMessage('assistant', 'No memories stored yet.', 'system'); return; }
-      var html = '<div style="color:var(--accent);font-size:11px;margin-bottom:8px">AUDIT LOG — Last ' + all.length + ' memories</div>';
+      var frag = document.createDocumentFragment();
+      var head = el('div', '', 'AUDIT LOG — Last ' + all.length + ' memories');
+      head.style.cssText = 'color:var(--accent);font-size:11px;margin-bottom:8px';
+      frag.appendChild(head);
       all.forEach(function(m) {
         var stars = '★'.repeat(Math.min(m.importance || 1, 5));
         var date = m.created_at ? new Date(m.created_at).toLocaleString() : '';
-        html += '<div class="sr-item"><span class="sr-id">[' + m.id + ']</span> <span class="sr-type">' + (m.memory_type || 'MEMORY').toUpperCase() + '</span> <span class="sr-stars">' + stars + '</span>' + (date ? '<span style="color:var(--muted2);font-size:9px;float:right">' + date + '</span>' : '') + '<span class="sr-content">' + m.content + '</span></div>';
+        var item = el('div', 'sr-item');
+        item.appendChild(el('span', 'sr-id', '[' + m.id + ']'));
+        item.appendChild(el('span', 'sr-type', (m.memory_type || 'MEMORY').toUpperCase()));
+        item.appendChild(el('span', 'sr-stars', stars));
+        if (date) {
+          var when = el('span', '', date);
+          when.style.cssText = 'color:var(--muted2);font-size:9px;float:right';
+          item.appendChild(when);
+        }
+        item.appendChild(el('span', 'sr-content', m.content));
+        frag.appendChild(item);
       });
-      addMessage('assistant', html, 'search');
+      addMessage('assistant', frag, 'search');
     } catch { hideTyping(); addMessage('assistant', 'Could not fetch audit log.', 'system'); }
   }
 
@@ -571,13 +624,29 @@ Commands: !blame &lt;keyword&gt;   !forget &lt;keyword&gt;   !audit   !dna &lt;s
       document.getElementById('memCount').textContent = memories.length + ' memories';
       document.getElementById('statusDot').classList.add('connected');
       var list = document.getElementById('memoriesList');
-      if (!memories.length) { list.innerHTML = '<div class="memory-empty">No memories yet.<br/>Start chatting to store context.</div>'; return; }
+      list.textContent = '';
+      if (!memories.length) {
+        var empty = el('div', 'memory-empty');
+        empty.appendChild(document.createTextNode('No memories yet.'));
+        empty.appendChild(document.createElement('br'));
+        empty.appendChild(document.createTextNode('Start chatting to store context.'));
+        list.appendChild(empty);
+        return;
+      }
       var recent = memories.slice().reverse().slice(0, 30);
-      list.innerHTML = recent.map(function(m) {
+      recent.forEach(function(m) {
         var stars = '★'.repeat(Math.min(m.importance || 1, 5));
         var date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
-        return '<div class="memory-item"><div class="mem-meta"><span class="mem-id">#' + m.id + '</span><span class="mem-type">' + (m.memory_type || 'MEM').toUpperCase() + '</span><span class="mem-stars">' + stars + '</span></div><div class="mem-content">' + m.content + '</div>' + (date ? '<div class="mem-footer">' + date + ' · retrieved ' + (m.retrieval_count || 0) + '×</div>' : '') + '</div>';
-      }).join('');
+        var item = el('div', 'memory-item');
+        var meta = el('div', 'mem-meta');
+        meta.appendChild(el('span', 'mem-id', '#' + m.id));
+        meta.appendChild(el('span', 'mem-type', (m.memory_type || 'MEM').toUpperCase()));
+        meta.appendChild(el('span', 'mem-stars', stars));
+        item.appendChild(meta);
+        item.appendChild(el('div', 'mem-content', m.content));
+        if (date) item.appendChild(el('div', 'mem-footer', date + ' · retrieved ' + (m.retrieval_count || 0) + '×'));
+        list.appendChild(item);
+      });
     } catch { document.getElementById('statusDot').classList.remove('connected'); }
   }
 
