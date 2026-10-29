@@ -132,13 +132,24 @@ export class ContentCompressor {
     const upperMatches = content.match(/[A-Z]{2,}(?:_[A-Z]{2,})+/g);
     if (upperMatches) upperMatches.forEach(e => entities.add(e));
 
-    // File paths (simple patterns)
+    // File paths (simple patterns). Scanned token by token instead of with a
+    // backtracking regex, which went quadratic on strings full of dots.
     if (this.options.preserveFilePaths) {
-      // The lookbehind starts a match only at the beginning of a path-like run.
-      // Unanchored, every position inside a long run of path chars rescanned to
-      // its end, which is quadratic (CodeQL js/polynomial-redos). Same matches.
-      const pathMatches = content.match(/(?<![\w\-./])[\w\-./]+\.\w{2,4}/g);
-      if (pathMatches) pathMatches.forEach(e => entities.add(e));
+      for (const token of content.split(/[^A-Za-z0-9_.\-/]+/)) {
+        if (!token || token.length > 512) continue;
+        const dot = token.lastIndexOf('.');
+        if (dot <= 0) continue;
+        const ext = token.slice(dot + 1);
+        if (ext.length < 2 || ext.length > 4) continue;
+        let alphaNumeric = true;
+        for (const ch of ext) {
+          const isDigit = ch >= '0' && ch <= '9';
+          const isLower = ch >= 'a' && ch <= 'z';
+          const isUpper = ch >= 'A' && ch <= 'Z';
+          if (!isDigit && !isLower && !isUpper) { alphaNumeric = false; break; }
+        }
+        if (alphaNumeric) entities.add(token);
+      }
     }
 
     return [...entities];
