@@ -20,7 +20,9 @@ describe('projectHash — canonical path hashing', () => {
     const link = path.join(os.tmpdir(), `timps-hash-link-${Date.now()}`);
     fs.mkdirSync(real, { recursive: true });
     try {
-      fs.symlinkSync(real, link);
+      // 'junction' is ignored on POSIX; on Windows it links a directory
+      // without needing admin rights or Developer Mode (plain symlinks EPERM).
+      fs.symlinkSync(real, link, 'junction');
       expect(projectHash(link)).toBe(projectHash(real));
     } finally {
       fs.rmSync(link, { force: true });

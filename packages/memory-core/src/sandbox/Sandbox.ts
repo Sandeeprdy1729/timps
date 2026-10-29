@@ -43,6 +43,42 @@ export interface SandboxHandle {
   destroy(): Promise<void>;
 }
 
+const IS_WINDOWS = process.platform === 'win32';
+
+/**
+ * Windows only: resolve a bare command name against the *host* PATH/PATHEXT.
+ * The sandbox env's PATH (/usr/bin:/bin) doesn't exist on Windows, so a bare
+ * `spawn('bash')` would fail with ENOENT. POSIX keeps the restricted PATH.
+ */
+function resolveHostExecutable(command: string): string {
+  if (!IS_WINDOWS || path.isAbsolute(command) || command.includes('\\') || command.includes('/')) {
+    return command;
+  }
+  const exts = (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';').filter(Boolean);
+  for (const dir of (process.env.PATH ?? '').split(path.delimiter).filter(Boolean)) {
+    for (const ext of ['', ...exts]) {
+      const candidate = path.join(dir, command + ext);
+      try {
+        if (fs.statSync(candidate).isFile()) return candidate;
+      } catch { /* not here */ }
+    }
+  }
+  return command;
+}
+
+/** `python3` on Windows is usually the Microsoft Store alias stub; use `python`. */
+const PYTHON_COMMAND = IS_WINDOWS ? 'python' : 'python3';
+
+/** Host env vars a Windows process can't start without (Python needs SYSTEMROOT). */
+function windowsRuntimeEnv(): NodeJS.ProcessEnv {
+  if (!IS_WINDOWS) return {};
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of ['SYSTEMROOT', 'WINDIR', 'COMSPEC', 'PATHEXT']) {
+    if (process.env[key]) env[key] = process.env[key];
+  }
+  return env;
+}
+
 const DEFAULT_OPTIONS: Required<Omit<SandboxOptions, 'networkAllowList' | 'env' | 'files'>> = {
   runtime: 'auto',
   workspaceDir: '',
@@ -96,7 +132,7 @@ export class SubprocessSandbox implements SandboxHandle {
     const scriptHash = crypto.createHash('sha256').update(command + '\n' + args.join(' ')).digest('hex').slice(0, 16);
 
     return new Promise<ExecResult>((resolve) => {
-      const child: ChildProcess = spawn(command, args, {
+      const child: ChildProcess = spawn(resolveHostExecutable(command), args, {
         cwd: this.workspaceDir,
         env: this.buildEnv(),
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -184,6 +220,7 @@ export class SubprocessSandbox implements SandboxHandle {
     }
 
     const env: NodeJS.ProcessEnv = {
+      ...windowsRuntimeEnv(),
       PATH: '/usr/bin:/bin:' + this.workspaceDir,
       HOME: this.workspaceDir,
       TMPDIR: this.workspaceDir,
@@ -214,6 +251,7 @@ export class SubprocessSandbox implements SandboxHandle {
   private netBlockEnv(): NodeJS.ProcessEnv {
     const sandboxBin = this.createNetBlockWrappers();
     const env: NodeJS.ProcessEnv = {
+      ...windowsRuntimeEnv(),
       PATH: [sandboxBin, '/usr/bin', '/bin'].join(path.delimiter),
       HOME: this.workspaceDir,
       TMPDIR: this.workspaceDir,
@@ -247,24 +285,23 @@ export class PythonSandbox extends SubprocessSandbox {
 
   private setupVenv(): void {
     try {
-      const r = require('node:child_process').spawnSync('python3', ['-m', 'venv', this.venvDir], {
-        stdio: 'pipe',
-        timeout: 60_000,
-      });
-      if (r.status === 0) {
-        const pip = this.venvDir + '/bin/pip';
-        if (fs.existsSync(pip)) {
-          // ok
-        }
-      }
+      // --without-pip: the sandbox never installs packages, and bootstrapping
+      // pip made every PythonSandbox construction take seconds (~14s on Windows).
+      require('node:child_process').spawnSync(
+        resolveHostExecutable(PYTHON_COMMAND),
+        ['-m', 'venv', '--without-pip', this.venvDir],
+        { stdio: 'pipe', timeout: 60_000 },
+      );
     } catch {
       // venv unavailable, fall through
     }
   }
 
   async exec(pythonCode: string, args: string[] = [], opts?: { stdin?: string; timeoutMs?: number }): Promise<ExecResult> {
-    const py = this.venvDir + '/bin/python';
-    const usePy = fs.existsSync(py) ? py : 'python3';
+    const py = IS_WINDOWS
+      ? path.join(this.venvDir, 'Scripts', 'python.exe')
+      : this.venvDir + '/bin/python';
+    const usePy = fs.existsSync(py) ? py : PYTHON_COMMAND;
     const code = this.options.network === 'none' ? this.injectPythonNetBlock(pythonCode) : pythonCode;
     return super.exec(usePy, ['-c', code, ...args], opts);
   }
