@@ -84,12 +84,18 @@ describe('file_operations sandbox (M79)', () => {
     expect(fs.existsSync(target)).toBe(false);
   });
 
-  it('cannot read through a symlink pointing outside the sandbox', async () => {
+  it('cannot read through a symlink pointing outside the sandbox', async (ctx) => {
     const secretOutside = path.join(os.tmpdir(), `timps-m79-outside-${Date.now()}.txt`);
     fs.writeFileSync(secretOutside, 'outside-secret');
     const link = path.join(sandbox, 'innocent-link.txt');
     try {
-      fs.symlinkSync(secretOutside, link);
+      try {
+        fs.symlinkSync(secretOutside, link);
+      } catch (err) {
+        // Windows only allows file symlinks with admin rights or Developer Mode.
+        if ((err as NodeJS.ErrnoException).code === 'EPERM') ctx.skip();
+        throw err;
+      }
       process.env.TIMPS_FILE_BASE_DIRS = sandbox;
       const tool = await freshFileTool();
       const result = await tool.execute({ operation: 'read', path: link });

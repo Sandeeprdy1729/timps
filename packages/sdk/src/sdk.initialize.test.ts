@@ -41,11 +41,11 @@ describe('MemoryClient storage location', () => {
     await client.initialize();
 
     expect(mem.backends).toHaveLength(1);
-    expect(mem.backends[0]).toEqual({ baseDir: '/canonical/alpha' });
+    expect(mem.backends[0]).toEqual({ baseDir: path.join('/canonical', 'alpha') });
     expect(mem.engineConstructs).toHaveLength(1);
     const [construct] = mem.engineConstructs;
     expect(construct.projectPath).toBe('/proj/alpha');
-    expect(construct.options.dir).toBe('/canonical/alpha');
+    expect(construct.options.dir).toBe(path.join('/canonical', 'alpha'));
     expect(construct.options.backend).toBeDefined();
   });
 
