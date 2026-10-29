@@ -84,6 +84,8 @@ export class MemoryServer {
   private projectRooms = new Map<string, ProjectRoom>();
   private _telemetryManager: TelemetryManager | null = null;
   private _apiKeys = new Map<string, ApiKeyRecord>();
+  /** Count kept separately so logs never read from the key map itself. */
+  private _apiKeyCount = 0;
   private _apiKeysPath: string;
 
   get rateLimiterInstance(): RateLimiter {
@@ -239,7 +241,7 @@ export class MemoryServer {
     let authMiddleware: ReturnType<typeof createAuthMiddleware> | undefined;
 
     // ── Combined auth: API key OR JWT ────────────────────────────────────
-    const hasApiKeyAuth = this.options.apiKeyAuth && this._apiKeys.size > 0;
+    const hasApiKeyAuth = this.options.apiKeyAuth && this._apiKeyCount > 0;
     const hasJwtAuth = !!this.options.auth;
 
     if (hasApiKeyAuth || hasJwtAuth) {
@@ -464,7 +466,7 @@ export class MemoryServer {
     await new Promise<void>((resolve) => {
       this.httpServer.listen(this.options.port, () => {
         const authStatus = this.options.apiKeyAuth
-          ? `API Key (${this._apiKeys.size} key(s)) + JWT`
+          ? `API Key (${this._apiKeyCount} key(s)) + JWT`
           : this.options.auth
             ? 'JWT only'
             : 'DISABLED';
@@ -568,17 +570,19 @@ export class MemoryServer {
     try {
       if (fs.existsSync(this._apiKeysPath)) {
         const data = JSON.parse(fs.readFileSync(this._apiKeysPath, 'utf-8')) as ApiKeyRecord[];
+        this._apiKeyCount = 0;
         for (const record of data) {
           this._apiKeys.set(record.id, record);
+          this._apiKeyCount += 1;
         }
-        console.log(`[MemoryServer] Loaded ${this._apiKeys.size} API key(s) from ${this._apiKeysPath}`);
+        console.log(`[MemoryServer] Loaded ${this._apiKeyCount} API key(s) from ${this._apiKeysPath}`);
       }
     } catch (err) {
       console.error('[MemoryServer] Failed to load API keys:', err);
     }
 
     // Auto-generate first key if none exist
-    if (this._apiKeys.size === 0) {
+    if (this._apiKeyCount === 0) {
       const { key, id } = this.generateNewApiKey('auto-generated');
       console.log(`\n╔═══════════════════════════════════════════════════════════╗`);
       console.log(`║  🔑  FIRST API KEY GENERATED                             ║`);
@@ -601,6 +605,7 @@ export class MemoryServer {
       createdAt: new Date().toISOString(),
     };
     this._apiKeys.set(id, record);
+    this._apiKeyCount += 1;
     this._saveApiKeys();
     return { key, id };
   }
@@ -608,7 +613,10 @@ export class MemoryServer {
   /** Revoke an API key by ID. */
   revokeApiKey(id: string): boolean {
     const existed = this._apiKeys.delete(id);
-    if (existed) this._saveApiKeys();
+    if (existed) {
+      this._apiKeyCount = Math.max(0, this._apiKeyCount - 1);
+      this._saveApiKeys();
+    }
     return existed;
   }
 
