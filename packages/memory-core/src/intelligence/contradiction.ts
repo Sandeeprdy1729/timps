@@ -17,6 +17,7 @@ import type { HarmonicSheafWeaver, CohomologyResult } from '../HarmonicSheafWeav
 import type { RustLSHNative } from '../native.js';
 import { LSHIndex } from '../computation/LSHIndex.js';
 import { createRustLSH } from '../native.js';
+import { generateId } from '../storage.js';
 
 export interface Position {
   id: string;
@@ -278,7 +279,7 @@ export class ContradictionDetector {
     if (dup) return dup;
 
     const pos: Position = {
-      id: `pos_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('pos'),
       content: content.slice(0, 500),
       extracted_claim,
       topic_cluster: extracted_claim.split(/\s+/).slice(0, 3).join('_'),

@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 export interface APIQuirk {
   id: string;
@@ -59,7 +60,7 @@ export class APIArchaeologist {
   /** record_quirk: save a discovered API quirk to institutional memory */
   recordQuirk(api_name: string, quirk: string, endpoint?: string, severity: APIQuirk['severity'] = 'info'): APIQuirk {
     const q: APIQuirk = {
-      id: `aq_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('aq'),
       api_name,
       endpoint,
       discovered_quirk: quirk,

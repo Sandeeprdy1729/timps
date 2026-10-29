@@ -30,6 +30,16 @@ describe('projectHash — canonical path hashing', () => {
     }
   });
 
+  test.runIf(process.platform === 'win32')('differently-cased Windows paths hash to the same project', () => {
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), 'timps-Case-'));
+    try {
+      expect(projectHash(real.toLowerCase())).toBe(projectHash(real));
+      expect(projectHash(real.toUpperCase())).toBe(projectHash(real));
+    } finally {
+      fs.rmSync(real, { recursive: true, force: true });
+    }
+  });
+
   test('nonexistent paths still produce a stable resolved hash', () => {
     const a = projectHash('/definitely/not/a/real/dir');
     const b = projectHash('/definitely/not/a/real/dir');

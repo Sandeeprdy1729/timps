@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -71,7 +72,7 @@ export class PatternLearner {
       return existing;
     }
     const pat: LearnedPattern = {
-      id: `lp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('lp'),
       content: content.trim(),
       tags: ['learned', ...tags],
       observed_count: 1,

@@ -87,6 +87,13 @@ async function main(): Promise<void> {
     options.auth = { secret: jwtSecret };
   }
 
+  if (!jwtSecret && !apiKeyAuthEnv) {
+    console.warn(
+      `[start] WARNING: no authentication configured — anyone who can reach port ${port} can read and write memory. ` +
+      'Set TIMPS_JWT_SECRET or TIMPS_API_KEY_AUTH, or keep the port on a private network.',
+    );
+  }
+
   const server = new MemoryServer(options);
   await server.start();
 

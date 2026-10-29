@@ -6,6 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from '../backends/types.js';
+import { generateId } from '../storage.js';
 
 function jaccard(a: string, b: string): number {
   const normalize = (s: string) =>
@@ -73,7 +74,7 @@ export class ArchitectureDriftDetector {
   /** record_insight: save a codebase insight */
   recordInsight(insight_type: InsightType, description: string, project_id = 'default', evidence?: string): CodebaseInsight {
     const insight: CodebaseInsight = {
-      id: `ci_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      id: generateId('ci'),
       project_id,
       insight_type,
       description,

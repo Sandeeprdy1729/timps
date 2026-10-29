@@ -32,16 +32,42 @@ export function getBackend(baseDir: string): StorageBackend {
   return backend;
 }
 
+function hashPath(canonical: string): string {
+  return crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 12);
+}
+
+function realpathOr(resolved: string, realpath: (p: string) => string): string {
+  try {
+    return realpath(resolved);
+  } catch {
+    // Path may not exist yet — keep the resolved form.
+    return resolved;
+  }
+}
+
 export function projectHash(projectPath: string): string {
   // Canonicalize so symlinked paths (e.g. /tmp → /private/tmp on macOS) map to
   // the same store regardless of which spelling the caller uses.
-  let canonical = path.resolve(projectPath);
-  try {
-    canonical = fs.realpathSync(canonical);
-  } catch {
-    // Path may not exist yet — keep the resolved form.
+  const resolved = path.resolve(projectPath);
+  if (process.platform !== 'win32') {
+    return hashPath(realpathOr(resolved, fs.realpathSync));
   }
-  return crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 12);
+
+  // Windows paths are case-insensitive, but fs.realpathSync keeps the caller's
+  // casing, so `C:\Proj` and `c:\proj` (VS Code often lowercases the drive)
+  // split one project into two stores. realpathSync.native returns the on-disk
+  // case.
+  const hash = hashPath(realpathOr(resolved, fs.realpathSync.native));
+  const legacyHash = hashPath(realpathOr(resolved, fs.realpathSync));
+  if (legacyHash !== hash) {
+    // Keep using a store created under the old, case-sensitive hash rather
+    // than silently starting an empty one.
+    const memoryRoot = path.join(TIMPS_DIR, 'memory');
+    if (!fs.existsSync(path.join(memoryRoot, hash)) && fs.existsSync(path.join(memoryRoot, legacyHash))) {
+      return legacyHash;
+    }
+  }
+  return hash;
 }
 
 /**

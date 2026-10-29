@@ -19,6 +19,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { StorageBackend } from './backends/types.js';
+import { fnv1a, mulberry32 } from './forgeEmbedding.js';
 import type { IMemoryLayer, LayerId, MemoryEntry, MemoryQuery, MemoryRetrievalResult, VerificationEvidence, AuditReport } from './IMemoryLayer';
 import type { Provenance } from './ProvenanceForge';
 
@@ -497,8 +498,11 @@ export class ChronosForge implements IMemoryLayer {
     const drift = (avgSignal - 0.5) * 0.08;
     const trajectory: number[] = [parseFloat(avgSignal.toFixed(3))];
     let cur = avgSignal;
+    // Seeded from the inputs: the same graph state must give the same forecast
+    // (unseeded noise could flip riskLevel between identical calls).
+    const rand = mulberry32(fnv1a(`${domain}:${recent.map(n => n.id).join(',')}:${steps}`));
     for (let i = 1; i < steps; i++) {
-      const noise = (Math.random() - 0.5) * 0.1;
+      const noise = (rand() - 0.5) * 0.1;
       cur = Math.max(0, Math.min(1, cur + drift + noise));
       trajectory.push(parseFloat(cur.toFixed(3)));
     }
