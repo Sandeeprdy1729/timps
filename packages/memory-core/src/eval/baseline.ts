@@ -11,8 +11,16 @@ export class BaselineManager {
   }
 
   private baselinePath(datasetName: string, branch: string): string {
-    const safeName = `${branch}__${datasetName}`.replace(/[^a-zA-Z0-9_-]/g, '_');
-    return path.join(this.baselineDir, `${safeName}.json`);
+    const safeName = `${branch}__${datasetName}`
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .slice(0, 180);
+    const baseDir = path.resolve(this.baselineDir);
+    const filePath = path.resolve(baseDir, `${safeName}.json`);
+    // Refuse anything that would escape the baseline directory.
+    if (!filePath.startsWith(baseDir + path.sep)) {
+      throw new Error(`Invalid baseline name: ${JSON.stringify(datasetName)}`);
+    }
+    return filePath;
   }
 
   saveBaseline(result: EvalResult, branch: string = 'main'): EvalBaseline {
