@@ -133,15 +133,20 @@ function npmInvocation(): { command: string; args: string[] } {
 }
 
 function runNpmAudit(code: string): ScanResult {
-  // `[^{}]+`, not `[^}]+`: the old class could run past a nested `{`, so input
-  // with many `"dependencies":{{` repeats was scanned to the end from each one
-  // (CodeQL js/polynomial-redos). A dependencies object never nests braces.
-  const pkgMatch = code.match(/"dependencies"\s*:\s*\{([^{}]+)\}/);
-  if (!pkgMatch) return { rule: 'npm-audit', severity: 'info', passed: true, message: 'No npm dependencies declared' };
+  const noDeps: ScanResult = { rule: 'npm-audit', severity: 'info', passed: true, message: 'No npm dependencies declared' };
+  // Located by index instead of a regex: the old pattern had two adjacent
+  // `\s*` runs around the colon and could run past a nested brace, so long
+  // input made it backtrack or rescan (CodeQL js/polynomial-redos).
+  const keyAt = code.indexOf('"dependencies"');
+  if (keyAt === -1) return noDeps;
+  const openAt = code.indexOf('{', keyAt + '"dependencies"'.length);
+  if (openAt === -1) return noDeps;
+  const closeAt = code.indexOf('}', openAt);
+  if (closeAt === -1) return noDeps;
 
-  const deps = pkgMatch[1];
-  const depNames = [...deps.matchAll(/"([^"]+)"\s*:/g)].map(m => m[1]);
-  if (depNames.length === 0) return { rule: 'npm-audit', severity: 'info', passed: true, message: 'No npm dependencies declared' };
+  const deps = code.slice(openAt + 1, closeAt);
+  const depNames = [...deps.matchAll(/"([^"]{1,200})"\s{0,8}:/g)].map(m => m[1]);
+  if (depNames.length === 0) return noDeps;
 
   const pkgJson = JSON.stringify({
     name: 'tmp-scan',
