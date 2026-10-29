@@ -252,9 +252,13 @@ function nanoid(prefix = "en"): string {
 }
 
 /** MurmurHash-inspired fast integer hash for embedding */
+/** Upper bound on characters hashed so a huge input cannot stall the loop */
+const MAX_HASH_INPUT_CHARS = 100_000;
+
 function murmurhash(str: string): number {
   let h = 0xdeadbeef;
-  for (let i = 0; i < str.length; i++) {
+  const limit = Math.min(str.length, MAX_HASH_INPUT_CHARS);
+  for (let i = 0; i < limit; i++) {
     h = Math.imul(h ^ str.charCodeAt(i), 0x9e3779b9);
     h ^= h >>> 16;
   }
