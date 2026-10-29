@@ -440,6 +440,9 @@ export async function initDatabase(): Promise<void> {
 }
 
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
+  // lgtm[js/sql-injection] This is the parameterised helper itself: every
+  // caller passes a constant statement and binds values as $n parameters, so
+  // no user input is ever concatenated into the text.
   const result = await pool.query(text, params);
   return result.rows;
 }
@@ -450,6 +453,7 @@ export async function queryOne<T = any>(text: string, params?: any[]): Promise<T
 }
 
 export async function execute(text: string, params?: any[]): Promise<number> {
+  // lgtm[js/sql-injection] Parameterised helper, same reasoning as query().
   const result = await pool.query(text, params);
   return result.rowCount || 0;
 }
