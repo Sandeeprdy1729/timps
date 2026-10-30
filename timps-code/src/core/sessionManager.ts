@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 
 export interface Session {
   id: string;
@@ -45,7 +46,9 @@ export class SessionManager {
   }
   
   private generateSessionId(): string {
-    return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Session ids double as filenames and resume tokens, so they come from the
+    // CSPRNG. Math.random was predictable and made ids guessable.
+    return `sess_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   }
   
   private loadSessions(): void {
