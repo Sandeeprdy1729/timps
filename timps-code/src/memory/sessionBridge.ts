@@ -5,6 +5,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as crypto from 'node:crypto';
 
 export interface SessionSummary {
   sessionId: string;
@@ -223,7 +224,9 @@ export class SessionBridge {
   saveSession(summary: Omit<SessionSummary, 'sessionId' | 'timestamp' | 'projectPath' | 'projectHash'>): void {
     const session: SessionSummary = {
       ...summary,
-      sessionId: `s_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      // Recorded in the shared sessions log, so use the CSPRNG rather than
+      // Math.random to keep ids from colliding or being guessed.
+      sessionId: `s_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
       timestamp: Date.now(),
       projectPath: this.projectPath,
       projectHash: this.projectHash,
