@@ -89,11 +89,19 @@ class NotifierService {
   private sendNative(options: NotificationOptions): NotificationMethod {
     try {
       if (process.platform === 'darwin') {
-        const { execSync } = require('child_process')
+        const { execFileSync } = require('child_process')
         const title = options.title || 'TIMPS'
-        const message = options.message.replace(/"/g, '\\"')
-        execSync(
-          `osascript -e 'display notification "${message}" with title "${title}"'`,
+        // Escaped for an AppleScript string literal: backslash first, then the
+        // quote. Newlines would break the single `-e` script, so they collapse.
+        const quote = (value: string) =>
+          String(value)
+            .replace(/[\r\n]+/g, ' ')
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+        // execFile takes the script as one argument, so no shell ever parses it.
+        execFileSync(
+          'osascript',
+          ['-e', `display notification "${quote(options.message)}" with title "${quote(title)}"`],
           { stdio: 'ignore' },
         )
         return 'native'
