@@ -45,8 +45,28 @@ export interface TeamSession {
 export interface TeamConfig {
   projectName: string;
   passwordHash: string;
+  /** Salt for passwordHash. Absent on configs written before scrypt was used. */
+  passwordSalt?: string;
   createdAt: number;
   members: TeamMember[];
+}
+
+const PASSWORD_KEY_LENGTH = 64;
+const PASSWORD_SALT_BYTES = 32;
+
+function newPasswordSalt(): string {
+  return crypto.randomBytes(PASSWORD_SALT_BYTES).toString('hex');
+}
+
+/** scrypt with a per-team random salt — the same scheme userStore uses. */
+function hashPassword(password: string, salt: string): string {
+  return crypto.scryptSync(password, salt, PASSWORD_KEY_LENGTH).toString('hex');
+}
+
+function hashesMatch(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'hex');
+  const right = Buffer.from(b, 'hex');
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
 export class Team {
@@ -139,11 +159,13 @@ export class Team {
   create(name: string, password: string): boolean {
     if (this.config) return false;
 
-    const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
-    
+    const passwordSalt = newPasswordSalt();
+    const passwordHash = hashPassword(password, passwordSalt);
+
     this.config = {
       projectName: name,
       passwordHash,
+      passwordSalt,
       createdAt: Date.now(),
       members: [{
         id: crypto.randomUUID(),
@@ -160,8 +182,23 @@ export class Team {
 
   validate(password: string): boolean {
     if (!this.config) return false;
-    const hash = crypto.createHash('sha256').update(password).digest('hex');
-    return hash === this.config.passwordHash;
+    const { passwordHash, passwordSalt } = this.config;
+
+    if (passwordSalt) {
+      return hashesMatch(hashPassword(password, passwordSalt), passwordHash);
+    }
+
+    // Config written before the switch to scrypt: the stored value is a plain
+    // sha256 digest, so the only way to check it is to compute the same digest
+    // once. A match immediately rewrites the config with a salted scrypt hash.
+    // lgtm[js/insufficient-password-hash]
+    const legacyHash = crypto.createHash('sha256').update(password).digest('hex');
+    if (!hashesMatch(legacyHash, passwordHash)) return false;
+
+    this.config.passwordSalt = newPasswordSalt();
+    this.config.passwordHash = hashPassword(password, this.config.passwordSalt);
+    this.save();
+    return true;
   }
 
   join(name: string): TeamMember | null {
