@@ -1,5 +1,5 @@
 import type { RegisteredTool } from '../_shared/index.js';
-import { isPrivateUrl } from '../_shared/index.js';
+import { isPrivateUrl, htmlToText } from '../_shared/index.js';
 
 export const fetchUrl: RegisteredTool = {
   definition: {
@@ -40,14 +40,9 @@ export const fetchUrl: RegisteredTool = {
         } catch { return { content: text.slice(0, maxLen), isError: false }; }
       }
 
-      const stripped = text
-        .replace(/<script[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
-        .replace(/\s+/g, ' ').trim();
-
-      return { content: stripped.slice(0, maxLen), isError: false };
+      // Single-pass flattening in _shared: regex tag stripping was easy to
+      // slip past and decoded `&amp;lt;` into a real `<`.
+      return { content: htmlToText(text).slice(0, maxLen), isError: false };
     } catch (e) {
       return { content: `Fetch error: ${(e as Error).message}`, isError: true };
     }
