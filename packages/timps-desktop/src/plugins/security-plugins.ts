@@ -1,4 +1,5 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
+import { secureRandomString } from '../utils/random';
 
 export interface WebhookEvent {
   id: string;
@@ -510,11 +511,8 @@ export class PasswordPlugin implements Plugin {
     if (options?.numbers) chars += numbers;
     if (options?.symbols) chars += symbols;
 
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      password += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return password;
+    // Generated passwords have to be unguessable, so draw from the CSPRNG.
+    return secureRandomString(length, chars);
   }
 
   async checkStrength(password: string): Promise<{
