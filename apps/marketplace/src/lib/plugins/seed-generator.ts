@@ -7,7 +7,10 @@ const EMAIL_DOMAINS = ['example.com', 'test.org', 'demo.net', 'sample.io'];
 const CITIES = ['New York', 'London', 'Tokyo', 'Paris', 'Berlin', 'Sydney', 'Mumbai', 'Toronto', 'Seoul', 'Dubai'];
 
 function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(crypto.randomBytes(1)[0] / 256 * arr.length)];
+  // crypto.randomInt rejects the biased tail of the range for us; dividing a
+  // single random byte by 256 favours the first entries whenever the array
+  // length does not divide 256 evenly.
+  return arr[crypto.randomInt(arr.length)];
 }
 
 export class SeedGeneratorPlugin extends BasePlugin {
