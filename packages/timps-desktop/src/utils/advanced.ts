@@ -3,6 +3,8 @@
  * More utility functions and components.
  */
 
+import { stripHtmlTags } from './html';
+
 // Date utilities
 export function formatRelativeDate(date: Date | number): string {
   const now = new Date();
@@ -140,7 +142,7 @@ export function truncate(str: string, maxLength: number, suffix = '...'): string
 }
 
 export function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
+  return stripHtmlTags(html);
 }
 
 export function escapeHtml(str: string): string {
