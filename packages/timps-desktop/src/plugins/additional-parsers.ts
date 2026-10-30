@@ -608,10 +608,16 @@ export class TomlParserPlugin implements Plugin {
     }
 
     if (typeof value === 'string') {
-      if (value.includes('"') || value.includes("'") || value.includes('\n')) {
-        return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
-      }
-      return `"${value}"`;
+      // The backslash has to be escaped before the quote; otherwise an
+      // existing `\"` in the input would pick up a second slash and stop
+      // round-tripping. Control characters are escaped for a TOML basic string.
+      const escaped = value
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+      return `"${escaped}"`;
     }
 
     return String(value);
