@@ -17,6 +17,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -35,8 +36,30 @@ import { getTeamPlan, createCheckoutSession, handleWebhook, setTeamPlan, PLANS }
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
+
+// Every route below either touches the file system or checks a token, so a
+// blanket limiter sits in front of all of them.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' },
+});
+app.use(globalLimiter);
+
+// Login and registration guess passwords, so they get a much tighter budget.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many authentication attempts. Try again later.' },
+});
 
 // Serve admin panel
 app.use('/admin', express.static(path.join(__dirname, '../public')));
@@ -46,7 +69,7 @@ app.get('/admin', (_req, res) => {
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 
-app.post('/auth/register', async (req, res) => {
+app.post('/auth/register', authLimiter, async (req, res) => {
   const { email, password, teamId, role, inviteToken } = req.body as {
     email?: string; password?: string; teamId?: string; role?: 'admin' | 'member' | 'viewer';
     inviteToken?: string;
@@ -84,7 +107,7 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body as { email?: string; password?: string };
   if (!email || !password) {
     res.status(400).json({ error: 'email and password are required' });
