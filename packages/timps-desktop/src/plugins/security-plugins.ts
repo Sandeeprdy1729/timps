@@ -568,7 +568,9 @@ export class SessionPlugin implements Plugin {
   private currentSession: string | null = null;
 
   async createSession(userId: string, duration?: number): Promise<string> {
-    const sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // Session ids must not be guessable — they are the only handle to the
+    // session. Use the CSPRNG rather than Math.random.
+    const sessionId = `session-${Date.now()}-${secureRandomString(24, '0123456789abcdef')}`;
     const now = new Date();
     this.sessions.set(sessionId, {
       userId,
