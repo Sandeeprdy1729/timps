@@ -1,4 +1,5 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
+import { decodeHtmlEntities } from '../utils/html';
 
 export class ArrayUtilsPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -546,12 +547,7 @@ export class StringUtilsPlugin implements Plugin {
   }
 
   unescape(str: string): string {
-    return str
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+    return decodeHtmlEntities(str);
   }
 
   escape(str: string): string {
