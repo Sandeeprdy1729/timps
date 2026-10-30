@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as https from 'https';
 import * as http from 'http';
 import * as os from 'os';
+import * as crypto from 'crypto';
 import * as path from 'path';
 import { NexusForgeExplorerProvider } from './nexusExplorer';
 import { SynapseMetabolonExplorerProvider } from './synapseExplorer';
@@ -484,7 +485,9 @@ class TIMPSChatViewProvider implements vscode.WebviewViewProvider {
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private _createSession(): string {
-    return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    // Session ids are persisted in globalState and used to reload a chat, so
+    // they should not be predictable. Use the CSPRNG, not Math.random.
+    return `sess_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   }
 
   private _newSession(): Session {
