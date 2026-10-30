@@ -1758,11 +1758,16 @@ export async function handleSlashCommand(
     case 'cm': {
       const msg = args || 'chore: update';
       try {
-        const out = childProcess.execSync(`git add -A && git commit -m "${msg.replace(/"/g, '\\"')}"`, {
-          cwd, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000,
+        // git gets the message as its own argv entry, so quotes, backslashes
+        // and `$(...)` in it can never reach a shell.
+        childProcess.execFileSync('git', ['add', '-A'], {
+          cwd, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000,
+        });
+        childProcess.execFileSync('git', ['commit', '-m', msg], {
+          cwd, stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000,
         });
         console.log(`\n  ${t.success(icons.success)} Committed: ${t.accent(`"${msg}"`)}`);
-        const hash = childProcess.execSync('git rev-parse --short HEAD', { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim();
+        const hash = childProcess.execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd, encoding: 'utf-8', stdio: 'pipe' }).trim();
         console.log(`  ${t.dim(`commit ${hash}`)}\n`);
       } catch (e: any) {
         const err = (e.stderr || e.message || '').toString().trim();
