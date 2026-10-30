@@ -2069,8 +2069,10 @@ export async function handleSlashCommand(
         console.log(`  API key:  ${hasKey ? t.success('configured') : t.error('not set')}`);
         console.log(`  Provider: ${t.accent(oauthCfg.defaultProvider || 'ollama')}`);
         if (hasKey) {
-          const key = ((oauthCfg as any).apiKey as string);
-          console.log(`  Key:      ${t.dim(key.slice(0, 8) + '…' + key.slice(-4))}`);
+          // Only the length is shown. Printing the first/last few characters
+          // still leaked most of the secret into terminal scrollback and logs.
+          const keyLength = String((oauthCfg as any).apiKey).length;
+          console.log(`  Key:      ${t.dim(`${keyLength} characters`)}`);
         }
         console.log(`\n  ${t.dim('Subcommands: login | logout | status | set-key <key>')}\n`);
         break;
