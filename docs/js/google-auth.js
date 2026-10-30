@@ -20,7 +20,11 @@ const GOOGLE_CLIENT_ID = '';
     });
   };
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID.endsWith('apps.googleusercontent.com')) {
+  // A client id is `1234567890-abc123.apps.googleusercontent.com` (Google's
+  // docs). Match the whole shape rather than a suffix, which also accepted
+  // domains that merely ended in the same characters.
+  const GOOGLE_CLIENT_ID_RE = /^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/;
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID_RE.test(GOOGLE_CLIENT_ID)) {
     const a = document.createElement('a');
     a.href = 'gmail.html';
     a.className = 'btn btn-primary btn-lg';
