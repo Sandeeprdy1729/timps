@@ -3,6 +3,7 @@
 // and HTML-stripping so email bodies become plain text for the summarizer.
 
 import { getAccessToken } from './oauth.js';
+import { decodeEntities } from '../../tools/_shared/index.js';
 
 const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
@@ -120,17 +121,14 @@ export function decodeBase64Url(data: string): string {
 
 function stripHtml(text: string): string {
   if (!/<[a-z][\s\S]*>/i.test(text)) return text;
-  return text
+  const withoutTags = text
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/<[^>]+>/g, ' ');
+  // One decode pass: replacing `&amp;` before `&lt;` turned a literal
+  // `&amp;lt;` in the source into a real `<`.
+  return decodeEntities(withoutTags)
     .replace(/\r\n/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')

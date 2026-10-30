@@ -89,7 +89,7 @@ const NAMED_ENTITIES: Record<string, string> = {
 };
 
 /** Decode entities in a single pass, so nothing is decoded twice. */
-function decodeEntities(input: string): string {
+export function decodeEntities(input: string): string {
   let out = '';
   let i = 0;
   while (i < input.length) {
