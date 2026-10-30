@@ -1,5 +1,5 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
-import { decodeHtmlEntities } from '../utils/html';
+import { decodeHtmlEntities, stripHtmlTags } from '../utils/html';
 
 export class ValidationPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -294,7 +294,7 @@ export class SanitizationPlugin implements Plugin {
   }
 
   stripTags(str: unknown): string {
-    return String(str).replace(/<[^>]*>/g, '');
+    return stripHtmlTags(String(str));
   }
 
   removeNonWord(str: unknown): string {
