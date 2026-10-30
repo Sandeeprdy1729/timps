@@ -1,4 +1,5 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
+import { decodeHtmlEntities } from '../utils/html';
 
 export class ValidationPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -289,12 +290,7 @@ export class SanitizationPlugin implements Plugin {
   }
 
   unescapeHtml(str: unknown): string {
-    return String(str)
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+    return decodeHtmlEntities(String(str));
   }
 
   stripTags(str: unknown): string {
