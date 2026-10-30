@@ -150,7 +150,15 @@ export async function processTerminalMessage(text: string) {
         // Show "thinking" indicator
         activeTerminal.sendText(`echo -e "${color('Thinking...', DIM, GRAY)}"`);
 
-        // Stream the response
+        // Stream the response. The text goes through base64 so no character in
+        // the model output can close the quote, start a substitution, or be
+        // eaten by the shell. base64 only uses [A-Za-z0-9+/=], which is safe
+        // inside single quotes.
+        const emit = (text: string) => {
+            const encoded = Buffer.from(text, 'utf8').toString('base64');
+            activeTerminal.sendText(`printf '%s' '${encoded}' | base64 -d`);
+        };
+
         let fullResponse = '';
         let buffer = '';
         const CHUNK_SIZE = 8; // Characters to buffer before sending to terminal
@@ -161,16 +169,14 @@ export async function processTerminalMessage(text: string) {
 
             // Send to terminal periodically
             if (buffer.length >= CHUNK_SIZE) {
-                const escaped = buffer.replace(/"/g, '\\"').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/\n/g, '\\n');
-                activeTerminal.sendText(`echo -n "${escaped}"`);
+                emit(buffer);
                 buffer = '';
             }
         }
 
         // Send remaining buffer
         if (buffer) {
-            const escaped = buffer.replace(/"/g, '\\"').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/\n/g, '\\n');
-            activeTerminal.sendText(`echo -n "${escaped}"`);
+            emit(buffer);
         }
 
         // Newline after response
