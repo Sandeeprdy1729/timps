@@ -1,5 +1,5 @@
 import type { RegisteredTool, ToolExecutor } from '../../tools/tools.js';
-import { isPrivateUrl } from '../_shared/index.js';
+import { isPrivateUrl, htmlToText } from '../_shared/index.js';
 
 export const webFetchTool: RegisteredTool = {
   definition: {
@@ -40,12 +40,10 @@ export const webFetchTool: RegisteredTool = {
           content = JSON.stringify(JSON.parse(content), null, 2);
         } catch { /* keep as text */ }
       } else {
-        content = content
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/\s+/g, ' ').trim();
+        // Same shared single-pass extractor as fetch_url: the chained regexes
+        // here could be slipped past with malformed markup and double-decoded
+        // `&amp;lt;` into a real `<`.
+        content = htmlToText(content);
       }
       const truncated = content.length > 8000 ? content.slice(0, 8000) + '...(truncated)' : content;
       const durationMs = Date.now() - start;
