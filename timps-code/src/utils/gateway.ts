@@ -110,6 +110,13 @@ function isSnowflake(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9]{1,32}$/.test(value);
 }
 
+/** Clamp a heartbeat interval announced by a remote gateway. */
+function clampHeartbeat(value: unknown, fallbackMs: number): number {
+  const ms = Number(value);
+  if (!Number.isFinite(ms) || ms <= 0) return fallbackMs;
+  return Math.min(Math.max(Math.trunc(ms), 1_000), 300_000);
+}
+
 /** Hosts we are willing to POST replies to. */
 const WEBHOOK_HOST_SUFFIXES = ['.dingtalk.com', '.qq.com', '.weixin.qq.com'];
 
@@ -754,8 +761,12 @@ export class Gateway {
           };
 
           if (payload.op === 10) {
-            // Hello — start heartbeating and identify
-            const interval = (payload.d as { heartbeat_interval: number }).heartbeat_interval;
+            // Hello — start heartbeating and identify. The interval comes from
+            // the server, so it is clamped to a sane range before use.
+            const interval = clampHeartbeat(
+              (payload.d as { heartbeat_interval?: number }).heartbeat_interval,
+              41_250,
+            );
             heartbeatInterval = setInterval(() => {
               ws.send(JSON.stringify({ op: 1, d: null }));
             }, interval);
@@ -1292,8 +1303,11 @@ export class Gateway {
           if (payload.s) seq = payload.s;
 
           if (payload.op === 10) {
-            // Hello — identify
-            const interval = (payload.d as { heartbeat_interval: number }).heartbeat_interval;
+            // Hello — identify. Clamped like the Discord gateway interval.
+            const interval = clampHeartbeat(
+              (payload.d as { heartbeat_interval?: number }).heartbeat_interval,
+              30_000,
+            );
             setInterval(() => ws.send(JSON.stringify({ op: 1, d: seq })), interval);
             ws.send(JSON.stringify({
               op: 2,
