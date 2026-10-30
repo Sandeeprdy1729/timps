@@ -1,5 +1,113 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
 
+// ── Tag scanning helpers ───────────────────────────────────────────────────
+// HTML is sanitized and flattened with a left-to-right scan instead of
+// regexes. Regex stripping missed tags with odd whitespace (`</script >`),
+// could be defeated by nesting (`<<script>script>`), and decoding/rebuilding
+// around them was the classic way to smuggle markup through.
+
+function isSpace(ch: string): boolean {
+  return ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r' || ch === '\f';
+}
+
+/** Read a tag name starting at `start`, lowercased. */
+function readTagName(html: string, start: number): { name: string; after: number } {
+  let i = start;
+  while (i < html.length && isSpace(html[i])) i++;
+  let name = '';
+  while (i < html.length) {
+    const ch = html[i];
+    const isLower = ch >= 'a' && ch <= 'z';
+    const isUpper = ch >= 'A' && ch <= 'Z';
+    const isDigit = ch >= '0' && ch <= '9';
+    if (isLower || isUpper || isDigit || ch === '-' || ch === ':') {
+      name += ch.toLowerCase();
+      i++;
+    } else {
+      break;
+    }
+  }
+  return { name, after: i };
+}
+
+/** Remove `<tag ...> ... </tag>` blocks, including malformed and unclosed ones. */
+function dropElementBlocks(html: string, tags: Set<string>): string {
+  const lower = html.toLowerCase();
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) { out += html.slice(i); break; }
+    out += html.slice(i, lt);
+    const gt = html.indexOf('>', lt + 1);
+    if (gt === -1) { out += html.slice(lt); break; }
+    const closing = html[lt + 1] === '/';
+    const { name } = readTagName(html, lt + (closing ? 2 : 1));
+    if (tags.has(name)) {
+      if (closing) { i = gt + 1; continue; }
+      const closeAt = lower.indexOf('</' + name, gt + 1);
+      if (closeAt === -1) { i = html.length; break; }
+      const closeGt = html.indexOf('>', closeAt);
+      if (closeGt === -1) { i = html.length; break; }
+      i = closeGt + 1;
+      continue;
+    }
+    out += html.slice(lt, gt + 1);
+    i = gt + 1;
+  }
+  return out;
+}
+
+/** Flatten tags to text in one pass; the result is never re-parsed. */
+function stripTags(html: string): string {
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) { out += html.slice(i); break; }
+    out += html.slice(i, lt);
+    const gt = html.indexOf('>', lt + 1);
+    if (gt === -1) { out += html.slice(lt); break; }
+    i = gt + 1;
+  }
+  return out.trim();
+}
+
+/** Parse the attribute list inside a tag. */
+function readAttributes(raw: string): Array<{ name: string; value: string }> {
+  const attrs: Array<{ name: string; value: string }> = [];
+  let i = 0;
+  while (i < raw.length) {
+    while (i < raw.length && isSpace(raw[i])) i++;
+    if (i >= raw.length) break;
+    const nameStart = i;
+    while (i < raw.length && !isSpace(raw[i]) && raw[i] !== '=' && raw[i] !== '/' && raw[i] !== '>') i++;
+    const name = raw.slice(nameStart, i).toLowerCase();
+    while (i < raw.length && isSpace(raw[i])) i++;
+    let value = '';
+    if (raw[i] === '=') {
+      i++;
+      while (i < raw.length && isSpace(raw[i])) i++;
+      const quote = raw[i];
+      if (quote === '"' || quote === "'") {
+        i++;
+        const close = raw.indexOf(quote, i);
+        if (close === -1) { value = raw.slice(i); i = raw.length; }
+        else { value = raw.slice(i, close); i = close + 1; }
+      } else {
+        const valueStart = i;
+        while (i < raw.length && !isSpace(raw[i]) && raw[i] !== '>') i++;
+        value = raw.slice(valueStart, i);
+      }
+    }
+    if (name) attrs.push({ name, value });
+  }
+  return attrs;
+}
+
+const DANGEROUS_SCHEME = /^\s*(?:javascript|vbscript|data)\s*:/i;
+
+
 export class MarkdownRendererPlugin implements Plugin {
   public manifest: PluginManifest = {
     id: '@timps/markdown-renderer',
@@ -153,15 +261,39 @@ export class HtmlParserPlugin implements Plugin {
     };
 
     const opts = { ...defaultOptions, ...options };
-    let result = html;
+    const allowedTags = new Set((opts.allowedTags ?? []).map(t => t.toLowerCase()));
+    const allowedAttributes = new Set((opts.allowedAttributes ?? []).map(a => a.toLowerCase()));
 
-    result = result.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    result = result.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-    result = result.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+    // Step 1: drop the contents of elements that must never survive, including
+    // malformed and unclosed forms.
+    const blocked = new Set(['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta', 'base']);
+    const withoutBlocks = dropElementBlocks(html, blocked);
 
-    for (const tag of ['script', 'style', 'iframe', 'object', 'embed']) {
-      const regex = new RegExp(`<${tag}[\\s\\S]*?<\\/${tag}>`, 'gi');
-      result = result.replace(regex, '');
+    // Step 2: rebuild only permitted tags and attributes. Anything else is
+    // removed as a tag and its text kept, so handler attributes and unknown
+    // elements cannot survive whatever quoting they use.
+    let result = '';
+    let i = 0;
+    while (i < withoutBlocks.length) {
+      const lt = withoutBlocks.indexOf('<', i);
+      if (lt === -1) { result += withoutBlocks.slice(i); break; }
+      result += withoutBlocks.slice(i, lt);
+      const gt = withoutBlocks.indexOf('>', lt + 1);
+      if (gt === -1) { result += withoutBlocks.slice(lt); break; }
+      const raw = withoutBlocks.slice(lt + 1, gt);
+      i = gt + 1;
+
+      const closing = raw.startsWith('/');
+      const { name, after } = readTagName(raw, closing ? 1 : 0);
+      if (!name || !allowedTags.has(name)) continue;
+      if (closing) { result += `</${name}>`; continue; }
+
+      const selfClosing = raw.trimEnd().endsWith('/');
+      const kept = readAttributes(raw.slice(after))
+        .filter(a => allowedAttributes.has(a.name))
+        .filter(a => (a.name !== 'href' && a.name !== 'src') || !DANGEROUS_SCHEME.test(a.value))
+        .map(a => `${a.name}="${a.value.replace(/"/g, '&quot;')}"`);
+      result += `<${name}${kept.length ? ' ' + kept.join(' ') : ''}${selfClosing ? ' /' : ''}>`;
     }
 
     return result;
@@ -224,7 +356,7 @@ export class HtmlDocument {
   }
 
   textContent(): string {
-    return this.html.replace(/<[^>]+>/g, '').trim();
+    return stripTags(this.html);
   }
 }
 
@@ -237,7 +369,7 @@ export class HtmlElement {
   }
 
   textContent(): string {
-    return this.innerHtml.replace(/<[^>]+>/g, '').trim();
+    return stripTags(this.innerHtml);
   }
 
   get children(): HtmlElement[] {
@@ -497,7 +629,7 @@ export class XmlElement {
   }
 
   textContent(): string {
-    return this.innerXml.replace(/<[^>]+>/g, '').trim();
+    return stripTags(this.innerXml);
   }
 }
 
