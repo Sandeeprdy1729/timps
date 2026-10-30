@@ -4,6 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as childProcess from 'node:child_process';
+import * as crypto from 'node:crypto';
 import { spawn, ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
@@ -199,7 +200,9 @@ export class RemoteSessionManager extends EventEmitter {
   }
 
   private generateId(): string {
-    return `remote_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // The id becomes a file name under ~/.timps/sessions/remote, so it needs to
+    // be unguessable — Math.random could be predicted from earlier ids.
+    return `remote_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   }
 
   private persistSession(session: RemoteSession): void {
