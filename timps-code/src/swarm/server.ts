@@ -74,8 +74,12 @@ export async function startSwarmServer(
         res.end(JSON.stringify({ error: 'Not found' }));
 
       } catch (error) {
+        // The stack and message are for the operator's console only. Sending
+        // them over HTTP handed internal paths and library versions to any
+        // caller that could make the server throw.
+        console.error('[Swarm] request failed:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: String(error) }));
+        res.end(JSON.stringify({ error: 'Internal server error' }));
       }
     });
 
