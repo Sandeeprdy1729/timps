@@ -1,4 +1,5 @@
 import { Plugin, PluginManifest, PluginCapabilities } from './types';
+import { secureRandomString } from '../utils/random';
 
 export class CryptoPlugin implements Plugin {
   public manifest: PluginManifest = {
@@ -400,12 +401,10 @@ export class OtpPlugin implements Plugin {
   }
 
   generateSecret(length: number = 20): string {
+    // A TOTP seed is the whole secret, so it has to come from the CSPRNG —
+    // Math.random made it recoverable from earlier output.
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let secret = '';
-    for (let i = 0; i < length; i++) {
-      secret += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return secret;
+    return secureRandomString(length, chars);
   }
 
   getUri(secret: string, account: string, issuer: string, options: OtpOptions = {}): string {
