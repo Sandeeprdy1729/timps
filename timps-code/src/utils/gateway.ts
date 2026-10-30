@@ -101,6 +101,36 @@ export interface GatewayManifest {
 const GATEWAY_DIR = path.join(os.homedir(), '.timps', 'gateway');
 const MANIFEST_FILE = path.join(GATEWAY_DIR, 'config.json');
 
+// ── Validation helpers ──
+// Gateway frames and message payloads come from remote servers, so anything
+// they contribute to a URL, a timer, or a request gets checked first.
+
+/** Discord/QQ channel and guild ids are decimal snowflakes. */
+function isSnowflake(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9]{1,32}$/.test(value);
+}
+
+/** Hosts we are willing to POST replies to. */
+const WEBHOOK_HOST_SUFFIXES = ['.dingtalk.com', '.qq.com', '.weixin.qq.com'];
+
+/**
+ * Accept a reply webhook only when it is an https URL on a known vendor host.
+ * DingTalk's session webhook arrives inside the message frame, so a forged
+ * frame would otherwise make the bot POST anywhere.
+ */
+function isAllowedWebhook(raw: unknown): raw is string {
+  if (typeof raw !== 'string' || raw.length > 2048) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:') return false;
+  const host = parsed.hostname.toLowerCase();
+  return WEBHOOK_HOST_SUFFIXES.some(suffix => host === suffix.slice(1) || host.endsWith(suffix));
+}
+
 // ── Platform Connection Logic ──
 
 export class GatewayPlatform {
@@ -741,6 +771,7 @@ export class Gateway {
             if (!text || !userId) return;
             if (allowedUsers?.length && !allowedUsers.includes(userId)) return;
             if (this.agentCallback) {
+              if (!isSnowflake(msg.channel_id)) return;
               const reply = await this.agentCallback(text, 'discord', userId);
               await fetch(`https://discord.com/api/v10/channels/${msg.channel_id}/messages`, {
                 method: 'POST',
@@ -964,7 +995,9 @@ export class Gateway {
           if (this.agentCallback) {
             const reply = await this.agentCallback(text, 'dingtalk', userId);
             const sessionWebhook = msg.sessionWebhook;
-            if (sessionWebhook) {
+            // Only https URLs on a DingTalk host are accepted — the frame that
+            // carries this value is remote-controlled.
+            if (isAllowedWebhook(sessionWebhook)) {
               await fetch(sessionWebhook, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1274,6 +1307,7 @@ export class Gateway {
             const guildId = d.guild_id as string ?? '';
             if (!text || !userId) return;
             if (allowedUsers?.length && !allowedUsers.includes(userId)) return;
+            if (!isSnowflake(channelId)) return;
 
             const reply = await this.agentCallback(text, 'qqbot', userId);
             await fetch(`https://api.sgroup.qq.com/channels/${channelId}/messages`, {
