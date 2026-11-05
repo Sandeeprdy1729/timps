@@ -281,7 +281,11 @@
       "properties": {
         "timps.provider": {
           "type": "string",
-          "enum": ["ollama", "openai", "gemini"],
+          "enum": [
+            "ollama",
+            "openai",
+            "gemini"
+          ],
           "default": "ollama",
           "description": "AI provider to use"
         },
@@ -329,7 +333,10 @@
         },
         "timps.theme": {
           "type": "string",
-          "enum": ["timps-dark", "timps-light"],
+          "enum": [
+            "timps-dark",
+            "timps-light"
+          ],
           "default": "timps-dark",
           "description": "Chat panel theme"
         },
@@ -386,7 +393,11 @@
         },
         "timps.lsp.contradictionSeverity": {
           "type": "string",
-          "enum": ["error", "warning", "information"],
+          "enum": [
+            "error",
+            "warning",
+            "information"
+          ],
           "default": "warning",
           "description": "Severity level for contradiction diagnostics"
         }
@@ -402,7 +413,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "@types/vscode": "^1.144.0",
+    "@types/vscode": "1.115.0",
     "@vscode/vsce": "^4.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
