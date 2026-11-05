@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { checkOllamaRunning, checkModelExists, listModels } from '../../src/ollama';
 
 describe('ollama module', () => {
