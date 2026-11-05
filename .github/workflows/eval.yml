@@ -22,7 +22,7 @@ jobs:
     outputs:
       enabled: ${{ steps.check.outputs.enabled }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: check
         run: |
           if [ -f packages/memory-core/src/eval/cli.ts ]; then
@@ -37,11 +37,11 @@ jobs:
     if: needs.eval-preflight.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: 'npm'
@@ -61,7 +61,7 @@ jobs:
 
       - name: Restore eval baseline cache
         id: baseline_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .timps/eval-baselines
           key: eval-baselines-${{ github.sha }}
@@ -101,14 +101,14 @@ jobs:
 
       - name: Save eval baseline cache (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .timps/eval-baselines
           key: eval-baselines-${{ github.sha }}
 
       - name: Upload eval results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-results-${{ github.sha }}
           path: .timps/eval-results.json
@@ -118,7 +118,7 @@ jobs:
         if: github.event_name == 'pull_request' && always()
         # Fork PRs get a read-only token; a missing comment must not fail the gate.
         continue-on-error: true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
